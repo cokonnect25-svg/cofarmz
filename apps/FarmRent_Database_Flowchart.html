@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="utf-8">
+<title>FarmRent Database Architecture & Flowchart</title>
+<style>
+body {
+    font-family: Calibri, Arial, sans-serif;
+    line-height: 1.6;
+    margin: 40px;
+    color: #333;
+}
+h1 {
+    color: #2c3e50;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 10px;
+    text-align: center;
+    font-size: 24pt;
+}
+h2 {
+    color: #34495e;
+    border-bottom: 2px solid #95a5a6;
+    padding-bottom: 8px;
+    margin-top: 30px;
+    font-size: 18pt;
+}
+h3 {
+    color: #7f8c8d;
+    margin-top: 20px;
+    font-size: 14pt;
+}
+h4 {
+    color: #95a5a6;
+    font-size: 12pt;
+}
+pre, code {
+    background-color: #f4f4f4;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    font-family: 'Courier New', monospace;
+    font-size: 9pt;
+    overflow-x: auto;
+    white-space: pre;
+    page-break-inside: avoid;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 20px 0;
+    page-break-inside: avoid;
+}
+th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+    font-size: 10pt;
+}
+th {
+    background-color: #3498db;
+    color: white;
+    font-weight: bold;
+}
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+ul, ol {
+    margin-left: 20px;
+}
+li {
+    margin: 5px 0;
+}
+.page-break {
+    page-break-before: always;
+}
+@page {
+    size: A4;
+    margin: 2cm;
+}
+</style>
+</head>
+<body>
+
+<h1>🚜 FarmRent Database Architecture & Flowchart</h1>
+
+<h2>📊 Entity Relationship Diagram (ERD)</h2>
+
+<pre>
+┌──────────────────────────────────────────────────────────────────────────┐
+│                        DATABASE ARCHITECTURE                              │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────┐
+│     ROLES       │ ◄──────────────────────────────────────┐
+├─────────────────┤                                         │
+│ id (PK)         │                                         │
+│ name (UNIQUE)   │                                         │
+│ display_name    │                                         │
+│ description     │                                         │
+│ permissions     │                                         │
+└────────┬────────┘                                         │
+         │                                                  │
+         │ 1:N                                              │
+         ▼                                                  │
+┌─────────────────┐                                         │
+│      USER       │                                         │
+├─────────────────┤                                         │
+│ id (PK)         │◄────┐                                   │
+│ name            │     │                                   │
+│ email (UNIQUE)  │     │                                   │
+│ role_id (FK)────┼─────┘ role_id REFERENCES roles(id)
+│ phone           │
+│ location        │
+│ latitude        │
+│ longitude       │
+└────────┬────────┘
+         │
+         │ 1:N (user owns multiple entities)
+         │
+         ├──────────────────────────┬────────────────────────┬────────────────┐
+         │                          │                        │                │
+         ▼                          ▼                        ▼                ▼
+┌────────────────┐        ┌─────────────────┐     ┌─────────────┐   ┌──────────────┐
+│   MACHINERY    │        │      CROPS      │     │   REELS     │   │   FOLLOWS    │
+├────────────────┤        ├─────────────────┤     ├─────────────┤   ├──────────────┤
+│ id (PK)        │        │ id (PK)         │     │ id (PK)     │   │ id (PK)      │
+│ owner_id (FK)──┼──┐     │ user_id (FK)────┼─┐   │ user_id(FK)─┼┐  │ user_id (FK)─┼┐
+│ name           │  │     │ crop_name       │ │   │ video_url   ││  │ following_id ││
+│ model          │  │     │ crop_type       │ │   │ caption     ││  │              ││
+│ daily_rate     │  │     │ is_crop_waste   │ │   └─────┬───────┘│  └──────────────┘│
+│ location       │  │     │ expected_yield  │ │         │        │                   │
+│ is_unavailable │  │     └─────────────────┘ │         │        │                   │
+└────────┬───────┘  │                         │         │        │                   │
+         │          │                         │         │        │                   │
+         │          └─────────────────────────┼─────────┼────────┘                   │
+         │                                    │         │                            │
+         │                                    │         │                            │
+         ├────────────┬──────────────┬────────┤         │                            │
+         │            │              │        │         │                            │
+         ▼            ▼              ▼        ▼         ▼                            ▼
+┌─────────────┐ ┌──────────────┐ ┌─────────────┐ ┌──────────────┐           ┌──────────────┐
+│ RESERVATIONS│ │  FAVORITES   │ │   REVIEWS   │ │  REEL_LIKES  │           │   MESSAGES   │
+├─────────────┤ ├──────────────┤ ├─────────────┤ ├──────────────┤           ├──────────────┤
+│ id (PK)     │ │ id (PK)      │ │ id (PK)     │ │ id (PK)      │           │ id (PK)      │
+│ user_id(FK)─┼┐│ user_id(FK)──┼┐│ user_id(FK)─┼┐│ user_id (FK)─┼┐          │ sender_id(FK)┼┐
+│machinery_id ││└─machinery_id││└─machinery_id││└─ reel_id(FK)──┼│          │receiver_id   ││
+│   (FK)──────┼┘    (FK)──────┼┘    (FK)──────┼┘               ││          │   (FK)───────┼┘
+│ owner_id    │                │reservation_id │                ││          │ machinery_id │
+│ start_date  │                │   (FK)────────┼─┐              ││          │ message      │
+│ end_date    │                │ rating (1-5)  │ │              ││          └──────────────┘
+│ status      │                │ review_text   │ │              ││
+│ total_price │                └───────────────┘ │              ││
+└─────────────┘                                  │              ││
+                                                 │              ││
+                                                 │              ││
+                              ┌──────────────────┘              ││
+                              │                                 ││
+                              ▼                                 ││
+                     ┌──────────────────┐                       ││
+                     │ REEL_COMMENTS    │                       ││
+                     ├──────────────────┤                       ││
+                     │ id (PK)          │                       ││
+                     │ user_id (FK)─────┼───────────────────────┘│
+                     │ reel_id (FK)─────┼────────────────────────┘
+                     │ comment          │
+                     └──────────────────┘
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│                  AUTHENTICATION & SESSION TABLES                      │
+└──────────────────────────────────────────────────────────────────────┘
+
+         ┌─────────────────┐
+         │      USER       │
+         └────────┬────────┘
+                  │
+                  │ 1:N
+                  │
+         ┌────────┴──────────┬─────────────────┬────────────────────┐
+         │                   │                 │                    │
+         ▼                   ▼                 ▼                    ▼
+┌────────────────┐   ┌──────────────┐  ┌──────────────┐   ┌──────────────────┐
+│    ACCOUNT     │   │   SESSION    │  │ VERIFICATION │   │  PASSWORD_RESET  │
+├────────────────┤   ├──────────────┤  ├──────────────┤   │     _TOKENS      │
+│ id (PK)        │   │ id (PK)      │  │ id (PK)      │   ├──────────────────┤
+│ userId (FK)    │   │ userId (FK)  │  │ identifier   │   │ user_id (FK)     │
+│ providerId     │   │ token        │  │ value        │   │ token            │
+│ accountId      │   │ expiresAt    │  │ expiresAt    │   │ expires_at       │
+│ accessToken    │   │ ipAddress    │  └──────────────┘   └──────────────────┘
+└────────────────┘   └──────────────┘
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│                    MACHINERY AVAILABILITY TRACKING                    │
+└──────────────────────────────────────────────────────────────────────┘
+
+         ┌─────────────────┐
+         │    MACHINERY    │
+         └────────┬────────┘
+                  │
+                  │ 1:N
+                  ▼
+         ┌────────────────────────┐
+         │ MACHINERY_UNAVAILABILITY│
+         ├────────────────────────┤
+         │ id (PK)                │
+         │ machinery_id (FK)      │
+         │ start_date             │
+         │ end_date               │
+         │ is_globally_unavailable│
+         │ reason                 │
+         └────────────────────────┘
+</pre>
+
+<div class="page-break"></div>
+
+<h2>🔄 Data Flow Diagrams</h2>
+
+<h3>1. User Registration & Authentication Flow</h3>
+<pre>
+┌─────────────┐
+│   SIGNUP    │
+└──────┬──────┘
+       │
+       ▼
+┌──────────────────┐
+│  Create "user"   │ ← Default role_id = 2 (buyer)
+│  record          │
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│ Create "account" │ ← OAuth or password
+│  record          │
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│ Create "session" │ ← Session token
+│  record          │
+└──────────────────┘
+</pre>
+
+<h3>2. Machinery Rental Flow</h3>
+<pre>
+┌──────────────┐
+│ Browse       │
+│ Machinery    │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────────┐
+│ Check            │ ← Query machinery_unavailability
+│ Availability     │   & reservations tables
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│ Create           │
+│ RESERVATION      │ ← status: 'pending'
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│ Owner Approves   │
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│ Update status    │ ← 'confirmed' → 'completed'
+│ to 'confirmed'   │
+└──────┬───────────┘
+       │
+       ▼
+┌──────────────────┐
+│ After rental,    │
+│ Create REVIEW    │ ← rating (1-5) + review_text
+└──────────────────┘
+</pre>
+
+<h3>3. Crop Waste Marketplace Flow</h3>
+<pre>
+┌─────────────────┐
+│ Farmer lists    │
+│ crop waste      │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────┐
+│ Create CROP record  │ ← is_crop_waste = true
+│ crop_type = 'waste' │
+└────────┬────────────┘
+         │
+         ▼
+┌─────────────────────┐
+│ Buyers search       │ ← Filter: is_crop_waste = true
+│ crop waste          │
+└────────┬────────────┘
+         │
+         ▼
+┌─────────────────────┐
+│ Buyer sends MESSAGE │
+│ to farmer           │
+└─────────────────────┘
+</pre>
+
+<h3>4. Social Features Flow (Reels, Follows, Messages)</h3>
+<pre>
+┌────────────────┐
+│ User creates   │
+│ REEL           │
+└───────┬────────┘
+        │
+        ▼
+┌────────────────┐
+│ Other users    │
+│ view reel      │
+└───────┬────────┘
+        │
+        ├─────────────┬──────────────┐
+        │             │              │
+        ▼             ▼              ▼
+┌─────────────┐ ┌──────────┐ ┌─────────────┐
+│ REEL_LIKES  │ │ REEL_    │ │  Follow     │
+│             │ │ COMMENTS │ │  user       │
+└─────────────┘ └──────────┘ └──────┬──────┘
+                                    │
+                                    ▼
+                             ┌─────────────┐
+                             │  FOLLOWS    │
+                             │  record     │
+                             └─────────────┘
+</pre>
+
+<div class="page-break"></div>
+
+<h2>📋 Table Relationships Summary</h2>
+
+<table>
+<thead>
+<tr>
+<th>Parent Table</th>
+<th>Child Table</th>
+<th>Relationship</th>
+<th>Foreign Key</th>
+<th>Cascade</th>
+</tr>
+</thead>
+<tbody>
+<tr><td><strong>roles</strong></td><td>user</td><td>1:N</td><td>role_id</td><td>-</td></tr>
+<tr><td><strong>user</strong></td><td>account</td><td>1:N</td><td>userId</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>user</strong></td><td>session</td><td>1:N</td><td>userId</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>user</strong></td><td>password_reset_tokens</td><td>1:N</td><td>user_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>user</strong></td><td>machinery</td><td>1:N</td><td>owner_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>user</strong></td><td>crops</td><td>1:N</td><td>user_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>user</strong></td><td>reels</td><td>1:N</td><td>user_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>user</strong></td><td>reservations</td><td>1:N</td><td>user_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>user</strong></td><td>favorites</td><td>1:N</td><td>user_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>user</strong></td><td>follows (follower)</td><td>1:N</td><td>user_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>user</strong></td><td>follows (followed)</td><td>1:N</td><td>following_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>user</strong></td><td>messages (sender)</td><td>1:N</td><td>sender_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>user</strong></td><td>messages (receiver)</td><td>1:N</td><td>receiver_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>user</strong></td><td>reviews</td><td>1:N</td><td>user_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>user</strong></td><td>reel_likes</td><td>1:N</td><td>user_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>user</strong></td><td>reel_comments</td><td>1:N</td><td>user_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>machinery</strong></td><td>reservations</td><td>1:N</td><td>machinery_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>machinery</strong></td><td>reviews</td><td>1:N</td><td>machinery_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>machinery</strong></td><td>favorites</td><td>1:N</td><td>machinery_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>machinery</strong></td><td>machinery_unavailability</td><td>1:N</td><td>machinery_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>reels</strong></td><td>reel_likes</td><td>1:N</td><td>reel_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>reels</strong></td><td>reel_comments</td><td>1:N</td><td>reel_id</td><td>DELETE CASCADE</td></tr>
+<tr><td><strong>reservations</strong></td><td>reviews</td><td>1:1</td><td>reservation_id</td><td>DELETE CASCADE</td></tr>
+</tbody>
+</table>
+
+<div class="page-break"></div>
+
+<h2>🎯 Key Features & Their Tables</h2>
+
+<h3>🚜 Machinery Rental System</h3>
+<ul>
+<li><strong>machinery</strong> - Equipment listings</li>
+<li><strong>machinery_unavailability</strong> - Date blocking</li>
+<li><strong>reservations</strong> - Booking records</li>
+<li><strong>reviews</strong> - Post-rental feedback</li>
+<li><strong>favorites</strong> - Saved machinery</li>
+</ul>
+
+<h3>🌾 Crop Management</h3>
+<ul>
+<li><strong>crops</strong> - Farmer crop listings
+  <ul>
+  <li><code>crop_type</code>: 'grow' or 'waste'</li>
+  <li><code>is_crop_waste</code>: Boolean flag</li>
+  <li><code>expected_yield_date</code>, <code>expected_yield_quantity</code></li>
+  </ul>
+</li>
+</ul>
+
+<h3>👥 Social Network</h3>
+<ul>
+<li><strong>follows</strong> - User connections</li>
+<li><strong>reels</strong> - Video content</li>
+<li><strong>reel_likes</strong> - Engagement</li>
+<li><strong>reel_comments</strong> - User interaction</li>
+</ul>
+
+<h3>💬 Communication</h3>
+<ul>
+<li><strong>messages</strong> - Direct messaging (can reference machinery_id for context)</li>
+</ul>
+
+<h3>🔐 Authentication (Better Auth)</h3>
+<ul>
+<li><strong>user</strong> - Core user profile</li>
+<li><strong>account</strong> - OAuth providers</li>
+<li><strong>session</strong> - Active sessions</li>
+<li><strong>verification</strong> - Email verification</li>
+<li><strong>password_reset_tokens</strong> - Password recovery</li>
+</ul>
+
+<h3>🎭 Role-Based Access</h3>
+<ul>
+<li><strong>roles</strong> - Master role definitions
+  <ul>
+  <li>Farmer (id=1)</li>
+  <li>Buyer (id=2)</li>
+  <li>Admin (id=3)</li>
+  </ul>
+</li>
+<li><strong>user.role_id</strong> - Foreign key to roles</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h2>🔍 Common Query Patterns</h2>
+
+<h3>Get all farmers with their stats</h3>
+<pre><code>SELECT * FROM user_profile_stats WHERE role_name = 'farmer';</code></pre>
+
+<h3>Find available machinery near a location</h3>
+<pre><code>SELECT * FROM machinery_with_details 
+WHERE is_unavailable = FALSE 
+  AND location ILIKE '%Bangalore%'
+ORDER BY average_rating DESC;</code></pre>
+
+<h3>Get crop waste listings</h3>
+<pre><code>SELECT c.*, u.name, u.phone 
+FROM crops c 
+JOIN "user" u ON c.user_id = u.id 
+WHERE c.is_crop_waste = TRUE;</code></pre>
+
+<h3>Get user's reservations</h3>
+<pre><code>SELECT * FROM reservations 
+WHERE user_id = 'user_id_here' 
+ORDER BY created_at DESC;</code></pre>
+
+<h3>Get conversation between two users</h3>
+<pre><code>SELECT * FROM messages 
+WHERE (sender_id = 'user1' AND receiver_id = 'user2') 
+   OR (sender_id = 'user2' AND receiver_id = 'user1')
+ORDER BY created_at ASC;</code></pre>
+
+<h2>🎨 Database Views</h2>
+
+<h3>machinery_with_details</h3>
+<p>Combines machinery with owner info and ratings:</p>
+<ul>
+<li>owner_name, owner_phone, owner_image</li>
+<li>average_rating, review_count, total_bookings</li>
+</ul>
+
+<h3>user_profile_stats</h3>
+<p>Complete user profile with aggregated stats:</p>
+<ul>
+<li>role_name, role_display_name, role_permissions</li>
+<li>machinery_count, crops_count</li>
+<li>followers_count, following_count</li>
+<li>total_reservations</li>
+</ul>
+
+<h2>📊 Indexing Strategy</h2>
+
+<h3>Performance Indexes</h3>
+<ul>
+<li><strong>user</strong>: email, role_id, location (lat/lng)</li>
+<li><strong>machinery</strong>: owner_id, is_unavailable</li>
+<li><strong>reservations</strong>: user_id, machinery_id, owner_id, status</li>
+<li><strong>messages</strong>: sender_id, receiver_id, conversation pair</li>
+<li><strong>follows</strong>: user_id, following_id</li>
+<li><strong>favorites</strong>: user_id</li>
+<li><strong>reviews</strong>: machinery_id, user_id</li>
+<li><strong>crops</strong>: user_id, is_crop_waste</li>
+<li><strong>reels</strong>: user_id, created_at (DESC)</li>
+</ul>
+
+<h2>🔒 Data Integrity</h2>
+
+<h3>Constraints</h3>
+<ul>
+<li><strong>Unique</strong>: email, roles.name, provider+accountId pairs</li>
+<li><strong>Check</strong>: rating 1-5, status enum, role enum, crop_type enum</li>
+<li><strong>Foreign Keys</strong>: All with ON DELETE CASCADE where appropriate</li>
+<li><strong>Not Null</strong>: Critical fields like user.name, user.email, machinery.name</li>
+</ul>
+
+<h3>Cascading Deletes</h3>
+<p>When a user is deleted:</p>
+<ul>
+<li>All their machinery listings → deleted</li>
+<li>All their reservations → deleted</li>
+<li>All their sessions → deleted</li>
+<li>All their follows → deleted</li>
+<li>All their messages → deleted</li>
+<li>All their reels → deleted</li>
+</ul>
+
+<h2>🚀 Setup Instructions</h2>
+
+<pre><code># 1. Install PostgreSQL
+# Ubuntu: sudo apt-get install postgresql postgresql-contrib
+# macOS: brew install postgresql
+# Windows: Download from postgresql.org
+
+# 2. Create database
+createdb farmrent
+
+# 3. Run schema
+psql -d farmrent -f farmrent_complete_schema.sql
+
+# 4. Verify
+psql -d farmrent -c "\dt"
+
+# 5. Test with views
+psql -d farmrent -c "SELECT * FROM user_profile_stats;"
+
+# 6. Update .env
+DATABASE_URL=postgresql://username:password@localhost:5432/farmrent
+</code></pre>
+
+<hr>
+
+<p><strong>✅ Database is production-ready with:</strong></p>
+<ul>
+<li>Normalized structure with roles table</li>
+<li>Comprehensive indexing</li>
+<li>Foreign key constraints</li>
+<li>Cascading deletes</li>
+<li>Sample data for testing</li>
+<li>Useful views for complex queries</li>
+</ul>
+
+</body>
+</html>
