@@ -536,7 +536,7 @@ function FarmerProfileContent() {
               <div
                 key={reel.id}
                 className="relative aspect-[9/16] rounded-xl overflow-hidden bg-black cursor-pointer group active:scale-95 transition-transform"
-                onClick={() => router.push(`/reels?reelId=${reel.id}`)}
+                onClick={() => router.push(`/reels?reelId=${reel.id}&userId=${profile.id}`)}
               >
                 {/* Video thumbnail */}
                 <video

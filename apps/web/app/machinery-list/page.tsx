@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { Capacitor } from '@capacitor/core';
+import { Geolocation } from '@capacitor/geolocation';
 
 
 export default function MachineryListPage() {
@@ -24,6 +26,7 @@ export default function MachineryListPage() {
   const [machineryData, setMachineryData] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -39,10 +42,70 @@ export default function MachineryListPage() {
 
   useEffect(() => {
     if (mounted && isAuthenticated && user?.id) {
-      fetchMachinery();
+      getUserLocation().then(() => {
+        fetchMachinery();
+      });
       fetchUserFavorites();
     }
   }, [mounted, isAuthenticated, user?.id]);
+
+  const getUserLocation = async () => {
+    try {
+      let position;
+      let hasLocation = false;
+
+      if (Capacitor.isNativePlatform()) {
+        try {
+          position = await Geolocation.getCurrentPosition();
+          hasLocation = true;
+        } catch (e) {
+          console.warn('Native geolocation failed:', e);
+        }
+      } else {
+        try {
+          position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => resolve({
+                coords: {
+                  latitude: pos.coords.latitude,
+                  longitude: pos.coords.longitude
+                }
+              }),
+              reject,
+              { timeout: 5000 }
+            );
+          });
+          hasLocation = true;
+        } catch (e) {
+          console.warn('Web geolocation failed:', e);
+        }
+      }
+
+      if (hasLocation && position) {
+        const pos = position as any;
+        setUserLocation({
+          latitude: pos.coords?.latitude || pos.latitude,
+          longitude: pos.coords?.longitude || pos.longitude
+        });
+      }
+    } catch (error) {
+      console.error('Error getting location:', error);
+    }
+  };
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
 
   const fetchUserFavorites = async () => {
     if (!user?.id) return;
@@ -168,19 +231,40 @@ export default function MachineryListPage() {
       
       console.log('Formatting machinery data, count:', data.length);
       // Transform database machinery to match the UI format
-      const formattedData = data.map((item: any) => ({
-        id: item.id,
-        name: item.name || 'Unknown Equipment',
-        model: item.model || 'Equipment',
-        category: item.model || 'Equipment',
-        price: parseFloat(item.daily_rate) || 0,
-        distance: Math.random() * 50, // Random distance for demo
-        availability: item.is_unavailable ? 'Not Available' : 'Available Now',
-        is_unavailable: item.is_unavailable || false,
-        rating: 4.8,
-        image: (item.image_url && item.image_url.startsWith('http')) ? item.image_url : null,
-        location: item.location || null
-      }));
+      const formattedData = data.map((item: any) => {
+        let dist = 99; // Default if no location available
+        
+        if (userLocation && item.latitude && item.longitude) {
+          dist = calculateDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            parseFloat(item.latitude),
+            parseFloat(item.longitude)
+          );
+        } else if (item.distance) {
+          // Use distance from API if already calculated there
+          dist = parseFloat(item.distance);
+        } else if (!userLocation) {
+          // Fallback to a consistent "pseudo-random" number based on ID if we can't get location
+          // so it doesn't change on every refresh
+          const seed = item.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+          dist = (seed % 45) + 5; 
+        }
+
+        return {
+          id: item.id,
+          name: item.name || 'Unknown Equipment',
+          model: item.model || 'Equipment',
+          category: item.model || 'Equipment',
+          price: parseFloat(item.daily_rate) || 0,
+          distance: dist,
+          availability: item.is_unavailable ? 'Not Available' : 'Available Now',
+          is_unavailable: item.is_unavailable || false,
+          rating: 4.8,
+          image: (item.image_url && item.image_url.startsWith('http')) ? item.image_url : null,
+          location: item.location || null
+        };
+      });
       console.log('Setting machinery data with', formattedData.length, 'items');
       setMachineryData(formattedData);
     } catch (error: any) {

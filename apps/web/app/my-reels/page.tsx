@@ -403,7 +403,7 @@ function MyReelsContent() {
             <div
               key={reel.id}
               className="relative aspect-[9/16] rounded-3xl overflow-hidden bg-gray-50 group cursor-pointer shadow-sm hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 border border-gray-100"
-              onClick={() => router.push(`/reels?id=${reel.id}`)}
+              onClick={() => router.push(`/reels?reelId=${reel.id}&userId=${user.id}`)}
             >
               {/* Thumbnail fallback */}
               <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">

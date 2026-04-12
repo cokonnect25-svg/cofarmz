@@ -24,7 +24,7 @@ export default function TopNav() {
     { href: '/about', label: 'About', icon: 'ph-info' },
     { href: '/machinery-list', label: 'Fleet', icon: 'ph-tractor' },
     { href: '/reels', label: 'Reels', icon: 'ph-video' },
-    { href: '/nearby-farmers', label: 'Farmers', icon: 'ph-users' },
+    { href: '/nearby-farmers', label: 'Farmers & Buyers', icon: 'ph-users' },
     { href: '/chat', label: 'Messages', icon: 'ph-chat-circle' },
   ];
 
@@ -106,7 +106,7 @@ export default function TopNav() {
                   className="hidden md:flex items-center gap-1.5 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-xl text-[13px] font-bold transition-colors shadow-sm"
                 >
                   <i className="ph-bold ph-video-camera text-sm"></i>
-                  Post Reel
+                  Post Reels
                 </Link>
                 <div className="hidden md:block w-px h-6 bg-gray-200" />
                 <button

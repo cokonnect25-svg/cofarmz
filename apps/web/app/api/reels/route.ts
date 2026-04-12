@@ -23,7 +23,9 @@ export async function GET(request: Request) {
             u.name, u.image,
             (SELECT COUNT(*) FROM reel_likes WHERE reel_id = r.id) as likes,
             (SELECT COUNT(*) FROM reel_comments WHERE reel_id = r.id) as comments,
-            COALESCE(r.views, 0) as views
+            COALESCE(r.views, 0) as views,
+            ${currentUserId ? sql`EXISTS(SELECT 1 FROM reel_likes WHERE reel_id = r.id AND user_id = ${currentUserId})` : sql`false`} as is_liked,
+            ${currentUserId ? sql`EXISTS(SELECT 1 FROM follows WHERE user_id = ${currentUserId} AND following_id = r.user_id)` : sql`false`} as is_followed
           FROM reels r
           JOIN "user" u ON r.user_id = u.id
           WHERE r.user_id = ${userId}
@@ -38,7 +40,9 @@ export async function GET(request: Request) {
             u.name, u.image,
             (SELECT COUNT(*) FROM reel_likes WHERE reel_id = r.id) as likes,
             (SELECT COUNT(*) FROM reel_comments WHERE reel_id = r.id) as comments,
-            COALESCE(r.views, 0) as views
+            COALESCE(r.views, 0) as views,
+            ${currentUserId ? sql`EXISTS(SELECT 1 FROM reel_likes WHERE reel_id = r.id AND user_id = ${currentUserId})` : sql`false`} as is_liked,
+            ${currentUserId ? sql`EXISTS(SELECT 1 FROM follows WHERE user_id = ${currentUserId} AND following_id = r.user_id)` : sql`false`} as is_followed
           FROM reels r
           JOIN "user" u ON r.user_id = u.id
           WHERE r.user_id = ${userId}

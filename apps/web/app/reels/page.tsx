@@ -62,9 +62,12 @@ function ReelsContent() {
 
     const fetchReels = async () => {
       try {
-        const res = await fetch(
-          `/api/reels?currentUserId=${user.id}&limit=20`
-        );
+        const filterUserId = searchParams.get('userId');
+        const apiUrl = filterUserId 
+          ? `/api/reels?userId=${filterUserId}&currentUserId=${user.id}&limit=50`
+          : `/api/reels?currentUserId=${user.id}&limit=20`;
+
+        const res = await fetch(apiUrl);
         if (res.ok) {
           const response = await res.json();
           // Handle both old and new API response formats
@@ -82,7 +85,7 @@ function ReelsContent() {
           const targetReelId = searchParams.get('reelId');
           if (targetReelId) {
             const idx = data.findIndex((r: Reel) => r.id === targetReelId);
-            if (idx > 0) {
+            if (idx >= 0) {
               setTimeout(() => {
                 if (scrollContainerRef.current) {
                   scrollContainerRef.current.scrollTop = idx * scrollContainerRef.current.clientHeight;
