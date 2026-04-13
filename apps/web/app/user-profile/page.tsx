@@ -1140,14 +1140,12 @@ function ProfileContent() {
         <div className="px-6 py-8 bg-surface-muted">
           {(() => {
             const userCropNames = farmerCrops.map(c => c.crop_name.toLowerCase());
-            const userWasteCropNames = farmerCrops.filter(c => c.is_crop_waste).map(c => c.crop_name.toLowerCase());
             const userCropSet = new Set(userCropNames);
-            const userWasteCropSet = new Set(userWasteCropNames);
 
             const matchedWasteBuyers = matchingResults
               .map(r => {
                 const matchingWasteCrops = r.crops
-                  .filter((c: any) => c.is_crop_waste && userWasteCropSet.has(c.crop_name.toLowerCase()))
+                  .filter((c: any) => c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
                   .map((c: any) => c.crop_name);
                 return matchingWasteCrops.length > 0 ? { ...r, matchingCrops: matchingWasteCrops } : null;
               })
@@ -1192,7 +1190,7 @@ function ProfileContent() {
 
             return (
               <div className="space-y-12">
-                {userWasteCropNames.length > 0 && (
+                {matchedWasteBuyers.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-5">
                       <div>

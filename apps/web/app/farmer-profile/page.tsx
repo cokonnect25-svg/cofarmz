@@ -43,6 +43,7 @@ interface Crop {
   expertise_level: string;
   expected_yield_date?: string | null;
   expected_yield_quantity?: number | null;
+  is_crop_waste: boolean;
 }
 
 interface Equipment {
@@ -74,6 +75,8 @@ function FarmerProfileContent() {
   const [dataLoaded, setDataLoaded] = useState(false);
   const [showCallModal, setShowCallModal] = useState(false);
   const [callType, setCallType] = useState<'audio' | 'video'>('audio');
+  const [matchingResults, setMatchingResults] = useState<any[]>([]);
+  const [loadingMatches, setLoadingMatches] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     if (!farmerId || !user) return;
@@ -118,10 +121,16 @@ function FarmerProfileContent() {
       setReels(Array.isArray(data.reels) ? data.reels : []);
       setFollowers(Array.isArray(data.followers) ? data.followers : []);
       setFollowing(Array.isArray(data.following) ? data.following : []);
-      setCrops(Array.isArray(data.crops) ? data.crops : []);
+      const cropsData = Array.isArray(data.crops) ? data.crops : [];
+      setCrops(cropsData);
       setEquipment(Array.isArray(data.equipment) ? data.equipment : []);
       setDataLoaded(true);
       setError(null);
+
+      // Fetch matches if viewing own profile
+      if (user?.id === farmerId && cropsData.length > 0) {
+        fetchMatches(cropsData, data);
+      }
     } catch (error: any) {
       const errorMessage = error?.message || 'Unknown error occurred';
       console.error('Error fetching profile:', errorMessage);
@@ -136,6 +145,36 @@ function FarmerProfileContent() {
       fetchProfile();
     }
   }, [mounted, farmerId, user, fetchProfile]);
+
+  const fetchMatches = async (profileCrops: Crop[], profileData: FarmerProfile) => {
+    if (!user?.id) return;
+    setLoadingMatches(true);
+    try {
+      const uniqueCrops = [...new Set(profileCrops.map(c => c.crop_name))];
+      // Basic location fallback
+      let lat = profileData.location ? 0 : 0; // The API profile doesn't have lat/lon directly in the interface yet
+      let lon = 0;
+
+      const buyersRes = await fetch(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${user.id}`);
+      const buyersData = await buyersRes.json();
+      
+      const mapped = (Array.isArray(buyersData) ? buyersData : []).map((f: any) => ({
+        ...f,
+        crops: Array.isArray(f.crops) 
+          ? f.crops.map((c: any) => ({ 
+              crop_name: c.crop_name || c, 
+              is_crop_waste: !!c.is_crop_waste 
+            })) 
+          : [],
+        distance: parseFloat(f.distance) || 9999,
+      }));
+      setMatchingResults(mapped);
+    } catch (err) {
+      console.error("Error fetching matches for public profile:", err);
+    } finally {
+      setLoadingMatches(false);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -361,6 +400,67 @@ function FarmerProfileContent() {
           )}
         </div>
       </div>
+
+      {/* Matching Sections for Profile Owner */}
+      {user?.id === profile.id && crops.length > 0 && !loadingMatches && (
+        <div className="px-6 py-6 border-b bg-gray-50/50">
+          {(() => {
+            const userCropNames = crops.map(c => c.crop_name.toLowerCase());
+            const userCropSet = new Set(userCropNames);
+
+            const matchedWasteBuyers = matchingResults
+              .map(r => {
+                const matchingWasteCrops = r.crops
+                  .filter((c: any) => c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
+                  .map((c: any) => c.crop_name);
+                return matchingWasteCrops.length > 0 ? { ...r, matchingCrops: matchingWasteCrops } : null;
+              })
+              .filter(Boolean);
+
+            const renderCard = (person: any, color: string) => (
+              <div key={person.id}
+                onClick={() => router.push(`/farmer-profile?id=${person.id}`)}
+                className="flex-shrink-0 w-40 bg-white rounded-3xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all text-center">
+                <div className="mb-3 mx-auto w-16 h-16">
+                  <img
+                    src={person.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(person.name)}`}
+                    alt={person.name}
+                    className="w-full h-full rounded-full object-cover border-2 border-white shadow-sm"
+                  />
+                </div>
+                <p className="text-sm font-black text-gray-900 truncate mb-0.5">{person.name}</p>
+                <div className="flex flex-wrap gap-1 justify-center mt-2">
+                  {person.matchingCrops.map((crop: string) => (
+                    <span key={crop} className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${color}`}>
+                      {crop}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+
+            if (matchedWasteBuyers.length === 0) return null;
+
+            return (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-lg font-black text-gray-900 leading-tight">Buyers Interest For Your Wastage Crops</h2>
+                    <p className="text-amber-600 text-[10px] font-bold uppercase tracking-wider">Potential waste buyers nearby</p>
+                  </div>
+                  <button onClick={() => router.push('/nearby-farmers?type=buyers')}
+                    className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-600">
+                    <i className="ph-bold ph-arrow-right text-xs"></i>
+                  </button>
+                </div>
+                <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
+                  {matchedWasteBuyers.slice(0, 5).map((p: any) => renderCard(p, 'bg-amber-100 text-amber-700'))}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Expandable Sections */}
       <div className="bg-white border-b">

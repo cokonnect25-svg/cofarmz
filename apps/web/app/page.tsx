@@ -364,8 +364,8 @@ function HomePageContent() {
                   .filter(r => r.role === 'buyer' && r.distance <= 200)
                   .map(r => {
                     const matchingWasteCrops = r.crops
-                      .filter(c => c.is_crop_waste && userWasteCropSet.has(c.crop_name.toLowerCase()))
-                      .map(c => c.crop_name);
+                      .filter((c: any) => c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
+                      .map((c: any) => c.crop_name);
                     return matchingWasteCrops.length > 0 ? { ...r, matchingCrops: matchingWasteCrops } : null;
                   })
                   .filter(Boolean);
@@ -433,7 +433,7 @@ function HomePageContent() {
                 return (
                   <div>
                     {/* Potential Buyers for your AGRICULTURAL WASTE */}
-                    {userProfile?.role === 'farmer' && userWasteCropNames.length > 0 && (
+                    {userProfile?.role === 'farmer' && matchedWasteBuyers.length > 0 && (
                       <div className="mb-12">
                         <div className="flex items-center justify-between mb-5">
                           <div>
