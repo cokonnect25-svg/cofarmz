@@ -21,7 +21,7 @@ export default function Footer() {
             </div>
 
             <p className="text-gray-400 text-sm leading-relaxed mb-8 max-w-xs">
-              Your Global Farmer &amp; Buyer Network — Growing Together, Selling Smarter.
+              Your Global Farmer &amp; Buyer Networks — Growing Together, Selling Smarter.
               Connect, rent machinery, trade, and grow — all in one platform.
             </p>
 
