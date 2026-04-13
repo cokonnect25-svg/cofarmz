@@ -2,11 +2,13 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
+# go inside correct folder
+COPY apps/web/package*.json ./
 
 RUN npm install --legacy-peer-deps
 
-COPY . .
+# copy only web app
+COPY apps/web .
 
 RUN npm run build
 
