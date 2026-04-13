@@ -1,6 +1,7 @@
 steps:
   # Build the Docker image using the existing Dockerfile
   - name: 'gcr.io/cloud-builders/docker'
+    dir: 'apps/web'
     args:
       - 'build'
       - '-t'

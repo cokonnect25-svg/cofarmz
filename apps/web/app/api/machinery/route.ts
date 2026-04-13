@@ -13,24 +13,13 @@ export async function GET(request: Request) {
     if (owner_id) {
       console.log("Fetching machinery for owner:", owner_id);
       query = await sql`
-        SELECT m.*, 
-               COALESCE(m.latitude, u.latitude) as latitude, 
-               COALESCE(m.longitude, u.longitude) as longitude
-        FROM machinery m
-        LEFT JOIN "user" u ON m.owner_id = u.id
-        WHERE m.owner_id = ${owner_id}
-        ORDER BY m.created_at DESC
+        SELECT * FROM machinery 
+        WHERE owner_id = ${owner_id}
+        ORDER BY created_at DESC
       `;
     } else {
       console.log("Fetching all machinery");
-      query = await sql`
-        SELECT m.*, 
-               COALESCE(m.latitude, u.latitude) as latitude, 
-               COALESCE(m.longitude, u.longitude) as longitude
-        FROM machinery m
-        LEFT JOIN "user" u ON m.owner_id = u.id
-        ORDER BY m.created_at DESC
-      `;
+      query = await sql`SELECT * FROM machinery ORDER BY created_at DESC`;
     }
 
     console.log("Query result:", query);
