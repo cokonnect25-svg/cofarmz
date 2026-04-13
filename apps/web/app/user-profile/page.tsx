@@ -1203,7 +1203,7 @@ function ProfileContent() {
                     ))}
                   </div>
                 )}
-                
+
                 <button
                   onClick={() => setShowAddCropForm(true)}
                   className="w-full mt-4 text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2"
@@ -1231,7 +1231,7 @@ function ProfileContent() {
                             className="w-12 h-12 rounded object-cover cursor-pointer flex-shrink-0"
                             onClick={() => router.push(`/machinery-details?id=${equipment.id}`)}
                           />
-                          <div className="flex-1 min-w-0" onClick={() => router.push(`/machinery-details?id=${equipment.id}`)} style={{cursor:'pointer'}}>
+                          <div className="flex-1 min-w-0" onClick={() => router.push(`/machinery-details?id=${equipment.id}`)} style={{ cursor: 'pointer' }}>
                             <h4 className="font-semibold text-sm text-gray-900 truncate">{equipment.name}</h4>
                             <p className="text-xs text-gray-600">{equipment.model}</p>
                             <p className="text-sm font-bold text-green-600 mt-1">₹{equipment.daily_rate}/day</p>
@@ -1257,7 +1257,7 @@ function ProfileContent() {
                                   if (res.ok) {
                                     setMyEquipment(prev => prev.map(e => e.id === equipment.id ? { ...e, is_unavailable: newVal } : e));
                                   }
-                                } catch {}
+                                } catch { }
                               }}
                               className="flex flex-col items-center gap-0.5"
                               title={equipment.is_unavailable ? 'Set Available' : 'Set Unavailable'}
@@ -1275,7 +1275,7 @@ function ProfileContent() {
                     ))}
                   </div>
                 )}
-                
+
                 <button
                   onClick={() => router.push('/rent-machinery')}
                   className="w-full mt-4 text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2"
@@ -1297,11 +1297,10 @@ function ProfileContent() {
               setActiveTab('bookings');
               fetchBookings();
             }}
-            className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${
-              activeTab === 'bookings'
+            className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${activeTab === 'bookings'
                 ? 'border-green-600 text-green-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             My Bookings
           </button>
@@ -1310,11 +1309,10 @@ function ProfileContent() {
               setActiveTab('rentals');
               fetchRentals();
             }}
-            className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${
-              activeTab === 'rentals'
+            className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${activeTab === 'rentals'
                 ? 'border-green-600 text-green-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             Booking Requests
           </button>
@@ -1323,11 +1321,10 @@ function ProfileContent() {
               setActiveTab('favourites');
               fetchFavoriteEquipment();
             }}
-            className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${
-              activeTab === 'favourites'
+            className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${activeTab === 'favourites'
                 ? 'border-green-600 text-green-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             Favourites
           </button>
@@ -1336,11 +1333,10 @@ function ProfileContent() {
               setActiveTab('reels');
               fetchMyReels();
             }}
-            className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${
-              activeTab === 'reels'
+            className={`flex-1 py-3 text-sm font-semibold border-b-2 transition ${activeTab === 'reels'
                 ? 'border-green-600 text-green-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             My Reels
           </button>
@@ -1395,12 +1391,11 @@ function ProfileContent() {
                         <div className="flex items-center gap-2 mt-2 flex-wrap">
                           <button
                             onClick={() => router.push(`/machinery-details?id=${booking.machinery_id}`)}
-                            className={`text-xs px-2 py-1 rounded-full font-semibold ${
-                              booking.status === 'accepted' ? 'bg-green-100 text-green-700 hover:bg-green-200' :
-                              booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                              booking.status === 'completed' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' :
-                              'bg-red-100 text-red-700'
-                            } ${booking.status === 'accepted' || booking.status === 'completed' ? 'cursor-pointer active:scale-95 transition-transform' : 'cursor-default'}`}
+                            className={`text-xs px-2 py-1 rounded-full font-semibold ${booking.status === 'accepted' ? 'bg-green-100 text-green-700 hover:bg-green-200' :
+                                booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                  booking.status === 'completed' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' :
+                                    'bg-red-100 text-red-700'
+                              } ${booking.status === 'accepted' || booking.status === 'completed' ? 'cursor-pointer active:scale-95 transition-transform' : 'cursor-default'}`}
                           >
                             {booking.status}
                           </button>
@@ -1478,19 +1473,18 @@ function ProfileContent() {
                             alt={rental.machinery_name}
                             className="w-24 h-24 rounded-xl object-cover shadow-sm"
                           />
-                          <div className={`absolute -top-2 -right-2 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-tight shadow-md ${
-                            rental.status === 'accepted' ? 'bg-green-600 text-white' :
-                            rental.status === 'pending' ? 'bg-amber-500 text-white' :
-                            rental.status === 'completed' ? 'bg-blue-600 text-white' :
-                            'bg-red-600 text-white'
-                          }`}>
+                          <div className={`absolute -top-2 -right-2 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-tight shadow-md ${rental.status === 'accepted' ? 'bg-green-600 text-white' :
+                              rental.status === 'pending' ? 'bg-amber-500 text-white' :
+                                rental.status === 'completed' ? 'bg-blue-600 text-white' :
+                                  'bg-red-600 text-white'
+                            }`}>
                             {rental.status}
                           </div>
                         </div>
-                        
+
                         <div className="flex-1 min-w-0">
                           <h3 className="font-bold text-gray-900 text-lg truncate">{rental.machinery_name}</h3>
-                          
+
                           {/* Renter Info — clickable */}
                           <div
                             className="flex items-center gap-2 mt-2 py-2 border-y border-gray-50 cursor-pointer hover:bg-gray-50 rounded-lg px-1 transition"
@@ -1513,8 +1507,8 @@ function ProfileContent() {
                               <p className="text-xs font-bold text-gray-800">{rental.total_days} nights</p>
                             </div>
                             <div>
-                               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Earnings</p>
-                               <p className="text-xs font-black text-brand-700">₹{rental.total_price}</p>
+                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Earnings</p>
+                              <p className="text-xs font-black text-brand-700">₹{rental.total_price}</p>
                             </div>
                           </div>
                         </div>
@@ -1522,10 +1516,10 @@ function ProfileContent() {
 
                       <div className="mt-4 pt-3 flex items-center justify-between border-t border-gray-50">
                         <div className="flex items-center gap-2">
-                           <i className="ph ph-calendar text-gray-400"></i>
-                           <span className="text-xs font-bold text-gray-600">
-                             {new Date(rental.start_date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} - {new Date(rental.end_date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
-                           </span>
+                          <i className="ph ph-calendar text-gray-400"></i>
+                          <span className="text-xs font-bold text-gray-600">
+                            {new Date(rental.start_date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} - {new Date(rental.end_date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+                          </span>
                         </div>
                       </div>
 
@@ -1586,7 +1580,7 @@ function ProfileContent() {
                       <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative">
                         {equipment.image_url ? (
                           <img src={equipment.image_url} alt={equipment.name} className="w-full h-full object-cover"
-                            onError={(e) => { e.currentTarget.style.display='none'; }} />
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                         ) : null}
                         {!equipment.image_url && (
                           <div className="absolute inset-0 flex items-center justify-center">
@@ -1621,7 +1615,7 @@ function ProfileContent() {
                 Create New Reel
               </button>
             </div>
-            
+
             {loadingReels ? (
               <div className="flex justify-center py-12">
                 <div className="w-10 h-10 rounded-full border-4 border-green-600 border-t-transparent animate-spin"></div>
@@ -2230,9 +2224,9 @@ function ProfileContent() {
       {/* Profile Image Modal */}
       {showProfileImageModal && user?.image && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
-        onClick={() => setShowProfileImageModal(false)}>
+          onClick={() => setShowProfileImageModal(false)}>
           <div className="bg-white rounded-2xl overflow-hidden shadow-2xl max-w-md w-full"
-          onClick={(e) => e.stopPropagation()}>
+            onClick={(e) => e.stopPropagation()}>
             <div className="relative bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-white">Your Profile Picture</h3>
               <button
@@ -2249,7 +2243,7 @@ function ProfileContent() {
                 alt={user.name}
                 className="w-64 h-64 rounded-lg object-cover border-4 border-green-100 shadow-md mb-6"
               />
-              
+
               <button
                 onClick={handleProfilePhotoClick}
                 disabled={isUploadingPhoto}
