@@ -1,6 +1,7 @@
 steps:
   # Build using Dockerfile (NOT buildpack — buildpack fails with EOF on Cloud Build)
   - name: 'gcr.io/cloud-builders/docker'
+    dir: 'apps/web'
     args:
       - 'build'
       - '-t'
