@@ -97,7 +97,7 @@ export async function GET(request: Request) {
     }
 
     try {
-      crops = await sql`SELECT crop_name, years_of_experience, expertise_level FROM crops WHERE user_id = ${farmerId} LIMIT 50`;
+      crops = await sql`SELECT crop_name, years_of_experience, expertise_level, is_crop_waste FROM crops WHERE user_id = ${farmerId} LIMIT 50`;
     } catch (e) {
       console.error("Error fetching crops:", e);
       crops = [];

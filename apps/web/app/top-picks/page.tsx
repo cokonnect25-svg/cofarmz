@@ -117,12 +117,6 @@ export default function TopPicksPage() {
                   {/* Gradient overlay for text readability */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
 
-                  {/* Rating badge */}
-                  <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-sm px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm">
-                    <i className="ph-fill ph-star text-amber-400 text-sm"></i>
-                    <span className="text-xs font-bold text-gray-900">4.8</span>
-                  </div>
-
                   {/* Favorite button */}
                   <button
                     onClick={e => toggleFavorite(e, item.id)}

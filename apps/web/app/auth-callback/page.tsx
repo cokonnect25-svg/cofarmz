@@ -26,8 +26,10 @@ export default function AuthCallbackPage() {
             console.error('Error applying pending role:', e);
           }
         }
-        // Redirect to home — RoleSelectionGuard will handle the role_confirmed check
-        window.location.replace('/');
+        // Redirect to selection — SelectRole page will double-check role_confirmed
+        // and redirect to home if already completed. This ensures new users
+        // always see the full Terms & Conditions page.
+        window.location.replace('/select-role');
       } else if (!loading) {
         // No session found — go to login
         window.location.replace('/login');

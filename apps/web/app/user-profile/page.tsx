@@ -139,7 +139,8 @@ function ProfileContent() {
   const [bookings, setBookings] = useState<Reservation[]>([]);
   const [cancelDialog, setCancelDialog] = useState<{ booking: any; refundAmt: number; pct: number } | null>(null);
   const [cancelling, setCancelling] = useState(false);
-
+  const [matchingResults, setMatchingResults] = useState<any[]>([]);
+  const [loadingMatches, setLoadingMatches] = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
 
   const handleAcceptBooking = async (id: number) => {
@@ -268,7 +269,10 @@ function ProfileContent() {
       const fetchInitialData = async () => {
         await fetchUserProfile();
         await fetchFollowersCounts();
-        await fetchUserCrops();
+        const crops = await fetchUserCrops();
+        if (crops && crops.length > 0) {
+          fetchMatches(crops);
+        }
         await fetchUserEquipment();
         await fetchFavoriteEquipment();
         await fetchBookings();
@@ -277,6 +281,47 @@ function ProfileContent() {
       fetchInitialData();
     }
   }, [mounted, user?.id]);
+
+  const fetchMatches = async (crops: FarmerCrop[]) => {
+    if (!user?.id) return;
+    setLoadingMatches(true);
+    try {
+      const uniqueCrops = [...new Set(crops.map(c => c.crop_name))];
+      // Get location from profile or GPS
+      let lat = 0, lon = 0;
+      if (Capacitor.isNativePlatform()) {
+        const { Geolocation } = await import('@capacitor/geolocation');
+        const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+        lat = pos.coords.latitude;
+        lon = pos.coords.longitude;
+      } else {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject)
+        );
+        lat = pos.coords.latitude;
+        lon = pos.coords.longitude;
+      }
+
+      const buyersRes = await fetch(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${user.id}`);
+      const buyersData = await buyersRes.json();
+      
+      const mapped = (Array.isArray(buyersData) ? buyersData : []).map((f: any) => ({
+        ...f,
+        crops: Array.isArray(f.crops) 
+          ? f.crops.map((c: any) => ({ 
+              crop_name: c.crop_name || c, 
+              is_crop_waste: !!c.is_crop_waste 
+            })) 
+          : [],
+        distance: parseFloat(f.distance) || 9999,
+      }));
+      setMatchingResults(mapped);
+    } catch (err) {
+      console.error("Error fetching matches for profile:", err);
+    } finally {
+      setLoadingMatches(false);
+    }
+  };
 
   // Listen for location update from popup — auto-refresh profile location
   useEffect(() => {
@@ -326,7 +371,7 @@ function ProfileContent() {
   };
 
   const fetchUserCrops = async () => {
-    if (!user?.id) return;
+    if (!user?.id) return [];
     try {
       const url = `/api/farmer-crops?user_id=${user.id}`;
       const response = await fetch(url);
@@ -336,9 +381,11 @@ function ProfileContent() {
       const data = await response.json();
       const crops = Array.isArray(data) ? data : [];
       setFarmerCrops(crops);
+      return crops;
     } catch (error) {
       console.error('Failed to fetch crops:', error);
       setFarmerCrops([]);
+      return [];
     }
   };
 
@@ -670,11 +717,23 @@ function ProfileContent() {
 
   const handleEditCropClick = (crop: FarmerCrop) => {
     setEditingCrop(crop);
+    let formattedDate = '';
+    if (crop.expected_yield_date) {
+      try {
+        const d = new Date(crop.expected_yield_date);
+        if (!isNaN(d.getTime())) {
+          formattedDate = d.toISOString().split('T')[0];
+        }
+      } catch (e) {
+        console.error('Error formatting date for edit:', e);
+      }
+    }
+
     setEditCropForm({
       crop_name: crop.crop_name,
       years_of_experience: crop.years_of_experience ? String(crop.years_of_experience) : '',
       expertise_level: crop.expertise_level,
-      expected_yield_date: crop.expected_yield_date || '',
+      expected_yield_date: formattedDate,
       expected_yield_quantity: crop.expected_yield_quantity ? String(crop.expected_yield_quantity) : '',
       expected_yield_quantity_uom: crop.expected_yield_quantity_uom || 'kg',
       is_crop_waste: crop.is_crop_waste || false,
@@ -754,6 +813,8 @@ function ProfileContent() {
         location: p.location || '',
         gender: p.gender || '',
         age: p.age ? String(p.age) : '',
+        latitude: p.latitude || null,
+        longitude: p.longitude || null,
       });
       setShowEditModal(true);
     }
@@ -1073,6 +1134,114 @@ function ProfileContent() {
           </div>
         </div>
       </div>
+
+      {/* Matching Sections for Farmers */}
+      {userRole === 'farmer' && farmerCrops.length > 0 && !loadingMatches && (
+        <div className="px-6 py-8 bg-surface-muted">
+          {(() => {
+            const userCropNames = farmerCrops.map(c => c.crop_name.toLowerCase());
+            const userWasteCropNames = farmerCrops.filter(c => c.is_crop_waste).map(c => c.crop_name.toLowerCase());
+            const userCropSet = new Set(userCropNames);
+            const userWasteCropSet = new Set(userWasteCropNames);
+
+            const matchedWasteBuyers = matchingResults
+              .map(r => {
+                const matchingWasteCrops = r.crops
+                  .filter((c: any) => c.is_crop_waste && userWasteCropSet.has(c.crop_name.toLowerCase()))
+                  .map((c: any) => c.crop_name);
+                return matchingWasteCrops.length > 0 ? { ...r, matchingCrops: matchingWasteCrops } : null;
+              })
+              .filter(Boolean);
+
+            const matchedBuyers = matchingResults
+              .map(r => {
+                const matchingCrops = r.crops
+                  .filter((c: any) => !c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
+                  .map((c: any) => c.crop_name);
+                return matchingCrops.length > 0 ? { ...r, matchingCrops } : null;
+              })
+              .filter(Boolean);
+
+            const renderCard = (person: any, color: string) => (
+              <div key={person.id}
+                onClick={() => router.push(`/farmer-profile?id=${person.id}`)}
+                className="flex-shrink-0 w-44 bg-white rounded-[32px] p-5 shadow-premium border border-gray-50 cursor-pointer hover:shadow-float hover:-translate-y-1 transition-all text-center group">
+                <div className="relative mb-4 mx-auto w-20 h-20">
+                  <img
+                    src={person.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(person.name)}`}
+                    alt={person.name}
+                    className="w-full h-full rounded-full object-cover border-2 border-white shadow-sm"
+                  />
+                </div>
+                <p className="text-base font-black text-gray-900 truncate mb-0.5">{person.name}</p>
+                <p className="text-[10px] text-gray-400 flex items-center justify-center gap-1 mb-3 font-bold">
+                  <i className="ph-fill ph-map-pin text-brand-500 text-[10px]"></i>
+                  {person.location
+                    ? `${person.location} · ${Math.round(person.distance)} km away`
+                    : `${Math.round(person.distance)} km away`}
+                </p>
+                <div className="flex flex-wrap gap-1 justify-center">
+                  {person.matchingCrops.map((crop: string) => (
+                    <span key={crop} className={`text-[10px] font-bold px-2 py-1 rounded-lg ${color}`}>
+                      {crop}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+
+            return (
+              <div className="space-y-12">
+                {userWasteCropNames.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-5">
+                      <div>
+                        <h2 className="text-xl font-black text-gray-900 tracking-tight">Buyers Interest For Your Wastage Crops</h2>
+                        <p className="text-amber-600 text-[10px] font-bold uppercase tracking-wider">Interested in your agricultural waste</p>
+                      </div>
+                      <button onClick={() => router.push('/nearby-farmers?type=buyers')}
+                        className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 shadow-sm">
+                        <i className="ph-bold ph-arrow-right"></i>
+                      </button>
+                    </div>
+                    <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 -mx-1 px-1">
+                      {matchedWasteBuyers.length > 0
+                        ? matchedWasteBuyers.slice(0, 5).map((p: any) => renderCard(p, 'bg-amber-100 text-amber-700'))
+                        : (
+                          <div className="w-full py-8 text-center bg-white/50 rounded-3xl border border-dashed border-gray-200">
+                            <p className="text-xs text-gray-400 font-bold">No waste buyers found yet</p>
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h2 className="text-xl font-black text-gray-900 tracking-tight">Buyers Interested in Your Crops</h2>
+                      <p className="text-blue-600 text-[10px] font-bold uppercase tracking-wider">Buyers matching your regular crops</p>
+                    </div>
+                    <button onClick={() => router.push('/nearby-farmers?type=buyers')}
+                      className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm">
+                      <i className="ph-bold ph-arrow-right"></i>
+                    </button>
+                  </div>
+                  <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 -mx-1 px-1">
+                    {matchedBuyers.length > 0
+                      ? matchedBuyers.slice(0, 5).map((p: any) => renderCard(p, 'bg-blue-50 text-blue-700'))
+                      : (
+                        <div className="w-full py-8 text-center bg-white/50 rounded-3xl border border-dashed border-gray-200">
+                          <p className="text-xs text-gray-400 font-bold">No matching buyers found yet</p>
+                        </div>
+                      )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Expanded Sections (Followers/Following/Crops/Equipment) - Above Tab Navigation */}
       {expandedSection && (
@@ -1667,35 +1836,62 @@ function ProfileContent() {
                 </span>
               </div>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {selectedCrop.expertise_level && (
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-sm text-gray-500 font-medium">Level</span>
-                  <span className="text-sm font-bold text-gray-900">{selectedCrop.expertise_level}</span>
+                <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                      <i className="ph-fill ph-chart-bar text-orange-600 text-sm"></i>
+                    </div>
+                    <span className="text-sm font-bold text-gray-500">Expertise Level</span>
+                  </div>
+                  <span className="text-sm font-black text-gray-900 bg-white px-3 py-1 rounded-lg border border-gray-100 shadow-sm">{selectedCrop.expertise_level}</span>
                 </div>
               )}
               {selectedCrop.years_of_experience ? (
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-sm text-gray-500 font-medium">Experience</span>
-                  <span className="text-sm font-bold text-gray-900">{selectedCrop.years_of_experience} years</span>
+                <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <i className="ph-fill ph-briefcase text-blue-600 text-sm"></i>
+                    </div>
+                    <span className="text-sm font-bold text-gray-500">Experience</span>
+                  </div>
+                  <span className="text-sm font-black text-gray-900 bg-white px-3 py-1 rounded-lg border border-gray-100 shadow-sm">{selectedCrop.years_of_experience} years</span>
                 </div>
               ) : null}
               {selectedCrop.expected_yield_date && (
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-sm text-gray-500 font-medium">{selectedCrop.crop_type === 'grow' ? 'Expected Yield' : 'Want to Buy By'}</span>
-                  <span className="text-sm font-bold text-green-700">{new Date(selectedCrop.expected_yield_date).toLocaleDateString()}</span>
+                <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                      <i className="ph-fill ph-calendar-check text-green-600 text-sm"></i>
+                    </div>
+                    <span className="text-sm font-bold text-gray-500">{selectedCrop.crop_type === 'grow' ? 'Expected Yield' : 'Wanted By'}</span>
+                  </div>
+                  <span className="text-sm font-black text-green-700 bg-white px-3 py-1 rounded-lg border border-gray-100 shadow-sm">
+                    {new Date(selectedCrop.expected_yield_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
                 </div>
               )}
               {selectedCrop.expected_yield_quantity && (
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-sm text-gray-500 font-medium">Quantity</span>
-                  <span className="text-sm font-bold text-gray-900">{selectedCrop.expected_yield_quantity} {selectedCrop.expected_yield_quantity_uom}</span>
+                <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <i className="ph-fill ph-scales text-purple-600 text-sm"></i>
+                    </div>
+                    <span className="text-sm font-bold text-gray-500">Total Quantity</span>
+                  </div>
+                  <span className="text-sm font-black text-gray-900 bg-white px-3 py-1 rounded-lg border border-gray-100 shadow-sm">{selectedCrop.expected_yield_quantity} {selectedCrop.expected_yield_quantity_uom}</span>
                 </div>
               )}
               {selectedCrop.is_crop_waste && (
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-sm text-gray-500 font-medium">Type</span>
-                  <span className="text-sm font-bold text-orange-700">🌾 Agricultural Waste</span>
+                <div className="flex items-center justify-between p-3.5 bg-orange-50/50 rounded-2xl border border-orange-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                      <i className="ph-fill ph-recycle text-orange-600 text-sm"></i>
+                    </div>
+                    <span className="text-sm font-bold text-orange-700/70">Category</span>
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-orange-700 bg-white px-2 py-1 rounded-md border border-orange-100">Agricultural Waste</span>
                 </div>
               )}
             </div>
@@ -1882,9 +2078,12 @@ function ProfileContent() {
       {/* Edit Crop Form Modal */}
       {editingCrop && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl overflow-hidden shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 flex items-center justify-between z-10">
-              <h3 className="text-lg font-bold text-white">Edit Crop</h3>
+          <div className="bg-white rounded-3xl overflow-hidden shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-blue-50">
+            <div className="sticky top-0 bg-white px-6 py-5 flex items-center justify-between z-10 border-b border-gray-100/60 backdrop-blur-xl">
+              <div>
+                <h3 className="text-xl font-black text-gray-900 leading-none mb-1">Edit Crop Details</h3>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Update your agricultural profile</p>
+              </div>
               <button
                 onClick={() => {
                   setEditingCrop(null);

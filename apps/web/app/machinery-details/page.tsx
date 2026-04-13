@@ -626,7 +626,6 @@ function MachineryDetailsContent() {
           
           <div className="flex items-center justify-between mt-3 pb-5 border-b border-gray-200/60">
             <div className="flex gap-4 text-sm text-gray-500 font-medium">
-              <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-[8px] shadow-sm"><i className="ph-fill ph-star text-accent"></i> <span className="text-gray-900 font-bold">4.8</span> (12)</span>
               <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-[8px] shadow-sm"><i className="ph-fill ph-map-pin text-brand-600/60"></i> 12 km</span>
             </div>
             
@@ -696,14 +695,17 @@ function MachineryDetailsContent() {
             <div className="space-y-3">
               {reviews.map((review) => (
                 <div key={review.id} className="bg-white rounded-[16px] p-4 shadow-soft border border-gray-100">
-                  <div className="flex items-start gap-3 mb-3">
+                  <div 
+                    className="flex items-start gap-3 mb-3 cursor-pointer hover:bg-gray-50/50 p-1 -m-1 rounded-xl transition-all active:scale-[0.98]"
+                    onClick={() => router.push(`/farmer-profile?id=${review.user_id}`)}
+                  >
                     <img
                       src={review.reviewer_image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${review.user_id}`}
                       alt={review.reviewer_name}
-                      className="w-10 h-10 rounded-full object-cover bg-gray-100"
+                      className="w-10 h-10 rounded-full object-cover bg-gray-100 shadow-sm"
                     />
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-gray-900 text-sm">{review.reviewer_name || 'Anonymous User'}</h4>
+                      <h4 className="font-bold text-gray-900 text-sm hover:text-brand-600 transition-colors">{review.reviewer_name || 'Anonymous User'}</h4>
                       <div className="flex items-center gap-1 mt-1">
                         {[...Array(5)].map((_, i) => (
                           <i

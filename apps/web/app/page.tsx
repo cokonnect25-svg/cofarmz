@@ -21,7 +21,7 @@ interface Farmer {
   name: string;
   image: string | null;
   location: string | null;
-  crops: string[];
+  crops: { crop_name: string; is_crop_waste: boolean }[];
   distance: number;
   role: string;
 }
@@ -29,6 +29,7 @@ interface Farmer {
 interface CropEntry {
   crop_name: string;
   crop_type: string;
+  is_crop_waste: boolean;
 }
 
 interface UserProfile {
@@ -68,6 +69,7 @@ function HomePageContent() {
 
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [roleUpdating, setRoleUpdating] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -140,7 +142,12 @@ function HomePageContent() {
                     ...(Array.isArray(buyersData) ? buyersData : [])
                   ].map((f: any) => ({
                     ...f,
-                    crops: Array.isArray(f.crops) ? f.crops.map((c: any) => c.crop_name || c) : [],
+                    crops: Array.isArray(f.crops) 
+                      ? f.crops.map((c: any) => ({ 
+                          crop_name: c.crop_name || c, 
+                          is_crop_waste: !!c.is_crop_waste 
+                        })) 
+                      : [],
                     distance: parseFloat(f.distance) || 9999,
                   }));
                   setMatchingResults(allResults);
@@ -329,9 +336,10 @@ function HomePageContent() {
           ) : (
             <>
               {(() => {
-                const userCrops = [...new Set(userProfile?.crops?.map(c => c.crop_name) || [])];
+                const userCropNames = userProfile?.crops?.map(c => c.crop_name.toLowerCase()) || [];
+                const userWasteCropNames = userProfile?.crops?.filter(c => c.is_crop_waste).map(c => c.crop_name.toLowerCase()) || [];
 
-                if (userCrops.length === 0) {
+                if (userCropNames.length === 0) {
                   return (
                     <div className="bg-gradient-to-br from-brand-50 to-emerald-50 rounded-3xl p-8 text-center border border-brand-100 mb-6 shadow-premium relative overflow-hidden group">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform"></div>
@@ -348,20 +356,38 @@ function HomePageContent() {
                   );
                 }
 
-                const userCropSet = new Set(userCrops.map(c => c.toLowerCase()));
+                const userCropSet = new Set(userCropNames);
+                const userWasteCropSet = new Set(userWasteCropNames);
 
+                // 1. Buyers interested in your AGRICULTURAL WASTE
+                const matchedWasteBuyers = matchingResults
+                  .filter(r => r.role === 'buyer' && r.distance <= 200)
+                  .map(r => {
+                    const matchingWasteCrops = r.crops
+                      .filter(c => c.is_crop_waste && userWasteCropSet.has(c.crop_name.toLowerCase()))
+                      .map(c => c.crop_name);
+                    return matchingWasteCrops.length > 0 ? { ...r, matchingCrops: matchingWasteCrops } : null;
+                  })
+                  .filter(Boolean);
+
+                // 2. Buyers interested in your REGULAR CROPS (exclude waste crops already shown above)
                 const matchedBuyers = matchingResults
                   .filter(r => r.role === 'buyer' && r.distance <= 100)
                   .map(r => {
-                    const matchingCrops = r.crops.filter((c: string) => userCropSet.has(c.toLowerCase()));
+                    const matchingCrops = r.crops
+                      .filter(c => !c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
+                      .map(c => c.crop_name);
                     return matchingCrops.length > 0 ? { ...r, matchingCrops } : null;
                   })
                   .filter(Boolean);
 
+                // 3. Farmers matching your regular crops
                 const matchedFarmers = matchingResults
                   .filter(r => r.role === 'farmer' && r.distance <= 100)
                   .map(r => {
-                    const matchingCrops = r.crops.filter((c: string) => userCropSet.has(c.toLowerCase()));
+                    const matchingCrops = r.crops
+                      .filter(c => !c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
+                      .map(c => c.crop_name);
                     return matchingCrops.length > 0 ? { ...r, matchingCrops } : null;
                   })
                   .filter(Boolean);
@@ -374,7 +400,7 @@ function HomePageContent() {
                       <img
                         src={person.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(person.name)}`}
                         alt={person.name}
-                        className="w-full h-full rounded-full object-cover border-2 border-white"
+                        className="w-full h-full rounded-full object-cover border-2 border-white shadow-sm"
                       />
                     </div>
                     <p className="text-base font-black text-gray-900 truncate mb-0.5">{person.name}</p>
@@ -406,12 +432,33 @@ function HomePageContent() {
 
                 return (
                   <div>
-                    {/* Buyers matching your crops */}
+                    {/* Potential Buyers for your AGRICULTURAL WASTE */}
+                    {userProfile?.role === 'farmer' && userWasteCropNames.length > 0 && (
+                      <div className="mb-12">
+                        <div className="flex items-center justify-between mb-5">
+                          <div>
+                            <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers Interest For Your Wastage Crops</h2>
+                            <p className="text-amber-600 text-xs font-bold uppercase tracking-wider">Interested in your agricultural waste</p>
+                          </div>
+                          <button onClick={() => router.push('/nearby-farmers?type=buyers')}
+                            className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 hover:bg-amber-600 hover:text-white transition-all shadow-sm">
+                            <i className="ph-bold ph-arrow-right"></i>
+                          </button>
+                        </div>
+                        <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
+                          {matchedWasteBuyers.length > 0
+                            ? matchedWasteBuyers.slice(0, 10).map((p: any) => renderCard(p, 'bg-amber-100 text-amber-700'))
+                            : renderEmpty('No buyers found for your waste crops yet')}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Buyers matching your regular crops */}
                     <div className="mb-10">
                       <div className="flex items-center justify-between mb-5">
                         <div>
                           <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers & Requests</h2>
-                          <p className="text-blue-600 text-xs font-bold uppercase tracking-wider">Buyers matching your crops</p>
+                          <p className="text-blue-600 text-xs font-bold uppercase tracking-wider">Buyers matching your regular crops</p>
                         </div>
                         <button onClick={() => router.push('/nearby-farmers?type=buyers')}
                           className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
@@ -588,10 +635,7 @@ function HomePageContent() {
                         onContextMenu={(e) => e.preventDefault()}
                       />
                     )}
-                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm">
-                      <i className="ph-fill ph-star text-amber-400 text-xs"></i>
-                      <span className="text-xs font-bold text-gray-800">4.8</span>
-                    </div>
+
                     <button
                       onClick={e => { e.stopPropagation(); toggleFavorite(item.id); }}
                       className="absolute top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm hover:scale-110 transition-transform">
@@ -663,13 +707,38 @@ function HomePageContent() {
                 <i className="ph-fill ph-layout text-4xl text-brand-600"></i>
               </div>
               <h2 className="text-2xl font-black text-gray-900 mb-2">Welcome to CoFarmz</h2>
-              <p className="text-gray-500 mb-8 leading-relaxed text-sm">To personalize your experience, please tell us how you'll be using the platform.</p>
+              <p className="text-gray-500 mb-6 leading-relaxed text-sm">To personalize your experience, please tell us how you'll be using the platform.</p>
               
+              {/* Terms & Conditions Summary */}
+              <div className="w-full bg-gray-50 rounded-2xl p-4 mb-6 text-left border border-gray-100">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Terms of Service</p>
+                <div className="space-y-2.5">
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-sm">🌾</span>
+                    <p className="text-[11px] text-gray-600 leading-tight">By continuing, you agree to our <strong>Terms</strong> and <strong>Privacy Policy</strong></p>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-sm">🔒</span>
+                    <p className="text-[11px] text-gray-600 leading-tight">Your data is secure and used only for platform services</p>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-200/60 cursor-pointer group">
+                  <div 
+                    onClick={() => setAgreedToTerms(!agreedToTerms)}
+                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${agreedToTerms ? 'bg-brand-600 border-brand-600' : 'border-gray-300 bg-white group-hover:border-brand-400'}`}
+                  >
+                    {agreedToTerms && <i className="ph-bold ph-check text-white text-[10px]"></i>}
+                  </div>
+                  <span className="text-[11px] font-bold text-gray-700">I agree to the Terms & Conditions</span>
+                </label>
+              </div>
+
               <div className="grid grid-cols-1 gap-4 w-full">
                 <button
-                  onClick={() => handleSelectRole('farmer')}
-                  disabled={roleUpdating}
-                  className="group relative flex items-center gap-4 p-5 rounded-2xl border-2 border-gray-100 hover:border-brand-600 hover:bg-brand-50 transition-all text-left disabled:opacity-50"
+                  onClick={() => agreedToTerms && handleSelectRole('farmer')}
+                  disabled={roleUpdating || !agreedToTerms}
+                  className={`group relative flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${agreedToTerms ? 'border-gray-100 hover:border-brand-600 hover:bg-brand-50 cursor-pointer' : 'border-gray-100 opacity-50 cursor-not-allowed'}`}
                 >
                   <div className="p-3 bg-gray-50 rounded-xl group-hover:bg-white transition-colors">
                     <i className="ph-fill ph-tractor text-2xl text-gray-600 group-hover:text-brand-600"></i>
@@ -682,9 +751,9 @@ function HomePageContent() {
                 </button>
 
                 <button
-                  onClick={() => handleSelectRole('buyer')}
-                  disabled={roleUpdating}
-                  className="group relative flex items-center gap-4 p-5 rounded-2xl border-2 border-gray-100 hover:border-brand-600 hover:bg-brand-50 transition-all text-left disabled:opacity-50"
+                  onClick={() => agreedToTerms && handleSelectRole('buyer')}
+                  disabled={roleUpdating || !agreedToTerms}
+                  className={`group relative flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${agreedToTerms ? 'border-gray-100 hover:border-brand-600 hover:bg-brand-50 cursor-pointer' : 'border-gray-100 opacity-50 cursor-not-allowed'}`}
                 >
                   <div className="p-3 bg-gray-50 rounded-xl group-hover:bg-white transition-colors">
                     <i className="ph-fill ph-users text-2xl text-gray-600 group-hover:text-brand-600"></i>

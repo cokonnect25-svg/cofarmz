@@ -16,8 +16,8 @@ export default function MachineryListPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
     priceMin: 0,
-    priceMax: 50000,
-    distance: 100,
+    priceMax: 500000,
+    distance: 5000,
     startDate: '',
     endDate: '',
     equipmentTypes: [] as string[]
@@ -294,9 +294,13 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
           longitude: item.longitude,
           availability: item.is_unavailable ? 'Not Available' : 'Available Now',
           is_unavailable: item.is_unavailable || false,
-          rating: 4.8,
+
           image: (item.image_url && item.image_url.startsWith('http')) ? item.image_url : null,
-          location: item.location || null
+          location: item.location || null,
+          power: item.power || null,
+          fuel: item.fuel || null,
+          year: item.year || null,
+          description: item.description || null
         };
       });
       console.log('Setting machinery data with', formattedData.length, 'items');
@@ -604,10 +608,6 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
               <div className="absolute inset-0 z-[5]" />
               {/* Overlays */}
               <div className="absolute top-3 left-3 flex flex-row gap-2 z-10">
-                <div className="bg-white/85 backdrop-blur-lg px-2.5 py-1.5 rounded-2xl flex items-center gap-1.5 shadow-md border border-white/50">
-                  <i className="ph-fill ph-star text-amber-500 text-xs"></i>
-                  <span className="text-[12px] font-black text-gray-900">{machine.rating || '4.8'}</span>
-                </div>
                 <div className="bg-emerald-600/85 backdrop-blur-lg px-2.5 py-1.5 rounded-2xl flex items-center gap-1.5 shadow-md border border-emerald-400/30">
                   <i className="ph-fill ph-map-pin text-white text-xs"></i>
                   <span className="text-[12px] font-black text-white">{machine.distance.toFixed(1)} km</span>
@@ -642,6 +642,28 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
                   <h3 className="font-black text-gray-900 text-xl leading-tight group-hover:text-emerald-700 transition-colors">
                     {machine.name}
                   </h3>
+                  
+                  {/* Technical Specs Bar */}
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                    {machine.power && (
+                      <div className="flex items-center gap-1">
+                        <i className="ph ph-engine text-gray-400 text-xs"></i>
+                        <span className="text-[11px] font-bold text-gray-500">{machine.power}</span>
+                      </div>
+                    )}
+                    {machine.fuel && (
+                      <div className="flex items-center gap-1">
+                        <i className="ph ph-gas-pump text-gray-400 text-xs"></i>
+                        <span className="text-[11px] font-bold text-gray-500">{machine.fuel}</span>
+                      </div>
+                    )}
+                    {machine.year && (
+                      <div className="flex items-center gap-1">
+                        <i className="ph ph-calendar text-gray-400 text-xs"></i>
+                        <span className="text-[11px] font-bold text-gray-500">{machine.year}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="text-right ml-4">
                   <span className="text-gray-400 text-[10px] font-bold uppercase tracking-tight block">Daily rate</span>
