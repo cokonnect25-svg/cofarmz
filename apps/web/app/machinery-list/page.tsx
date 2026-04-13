@@ -27,7 +27,38 @@ export default function MachineryListPage() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [profileLocation, setProfileLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const { user } = useAuth();
+
+  // Dynamic distance calculation
+  const machineryWithDistances = React.useMemo(() => {
+    return machineryData.map((item: any) => {
+      let dist = 99; // Default
+      
+      if (userLocation && item.latitude && item.longitude) {
+        dist = calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          parseFloat(item.latitude),
+          parseFloat(item.longitude)
+        );
+      } else if (profileLocation && item.latitude && item.longitude) {
+        dist = calculateDistance(
+          profileLocation.latitude,
+          profileLocation.longitude,
+          parseFloat(item.latitude),
+          parseFloat(item.longitude)
+        );
+      } else if (item.distance) {
+        dist = parseFloat(item.distance);
+      } else if (!userLocation && !profileLocation) {
+        const seed = item.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+        dist = (seed % 45) + 5; 
+      }
+      
+      return { ...item, distance: dist };
+    });
+  }, [machineryData, userLocation, profileLocation]);
 
   useEffect(() => {
     setMounted(true);
@@ -42,12 +73,31 @@ export default function MachineryListPage() {
 
   useEffect(() => {
     if (mounted && isAuthenticated && user?.id) {
+      fetchUserProfile();
       getUserLocation().then(() => {
         fetchMachinery();
       });
       fetchUserFavorites();
     }
   }, [mounted, isAuthenticated, user?.id]);
+
+  const fetchUserProfile = async () => {
+    if (!user?.id) return;
+    try {
+      const response = await fetch(`/api/users/profile?userId=${user.id}`);
+      if (response.ok) {
+        const profile = await response.json();
+        if (profile.latitude && profile.longitude) {
+          setProfileLocation({
+            latitude: parseFloat(profile.latitude),
+            longitude: parseFloat(profile.longitude)
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   const getUserLocation = async () => {
     try {
@@ -129,7 +179,7 @@ export default function MachineryListPage() {
 
   // Filter and sort machinery
   const getFilteredAndSortedMachinery = () => {
-    let filtered = [...machineryData];
+    let filtered = [...machineryWithDistances];
     
     // Filter by search query
     if (searchQuery.trim()) {
@@ -232,32 +282,14 @@ export default function MachineryListPage() {
       console.log('Formatting machinery data, count:', data.length);
       // Transform database machinery to match the UI format
       const formattedData = data.map((item: any) => {
-        let dist = 99; // Default if no location available
-        
-        if (userLocation && item.latitude && item.longitude) {
-          dist = calculateDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            parseFloat(item.latitude),
-            parseFloat(item.longitude)
-          );
-        } else if (item.distance) {
-          // Use distance from API if already calculated there
-          dist = parseFloat(item.distance);
-        } else if (!userLocation) {
-          // Fallback to a consistent "pseudo-random" number based on ID if we can't get location
-          // so it doesn't change on every refresh
-          const seed = item.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-          dist = (seed % 45) + 5; 
-        }
-
         return {
           id: item.id,
           name: item.name || 'Unknown Equipment',
           model: item.model || 'Equipment',
           category: item.model || 'Equipment',
           price: parseFloat(item.daily_rate) || 0,
-          distance: dist,
+          latitude: item.latitude,
+          longitude: item.longitude,
           availability: item.is_unavailable ? 'Not Available' : 'Available Now',
           is_unavailable: item.is_unavailable || false,
           rating: 4.8,
