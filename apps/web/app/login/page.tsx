@@ -10,6 +10,7 @@ import { App } from '@capacitor/app';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { CapacitorCookies } from '@capacitor/core';
 import { getApiUrl } from '@/lib/api';
+import { storeMobileSession } from '@/hooks/useAuth';
 
 function LoginContent() {
   const router = useRouter();
@@ -99,9 +100,14 @@ useEffect(() => {
         throw new Error(data.message || `Login failed (HTTP ${res.status})`);
       }
 
-      // Explicitly set the session cookie in the WebView cookie store.
-      // CapacitorHttp (native HTTP) and WebView have separate cookie stores on
-      // some Android versions — setting it here guarantees the WebView sees it.
+      // Store user in localStorage so useAuth sees the session after redirect.
+      // (CapacitorHttp and WebView use different cookie stores on Android, so
+      // cookie-based session checks fail — localStorage is the reliable path.)
+      if (data.user) {
+        storeMobileSession(data.user);
+      }
+
+      // Also set the cookie as a backup for better-auth API calls
       if (data.signedToken) {
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://co-farm.netlify.app';
         await CapacitorCookies.setCookie({
