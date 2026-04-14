@@ -62,6 +62,12 @@
       "static/chunks/4745.45799034a9a87c4a.js"
     ]
   },
+  "node_modules\\@codetrix-studio\\capacitor-google-auth\\dist\\esm\\index.js -> ./web": {
+    "id": 445,
+    "files": [
+      "static/chunks/445.9a1729134ef40885.js"
+    ]
+  },
   "node_modules\\next\\dist\\client\\index.js -> ../pages/_app": {
     "id": 5203,
     "files": [

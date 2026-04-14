@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "866114557322",
+    "project_id": "cofarmz-492212",
+    "storage_bucket": "cofarmz-492212.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:866114557322:android:d4520d4c195d49bc326473",
+        "android_client_info": {
+          "package_name": "com.cofarmz.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "866114557322-aadfdk4qgtsooej4qokvs4oqribi572i.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAVQMDVcZtoVELw_XMkyxg-2JCZxe4ewVg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "866114557322-aadfdk4qgtsooej4qokvs4oqribi572i.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

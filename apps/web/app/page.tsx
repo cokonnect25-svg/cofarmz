@@ -481,7 +481,7 @@ function HomePageContent() {
                     <div className="mb-10">
                       <div className="flex items-center justify-between mb-5">
                         <div>
-                          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers & Requests</h2>
+                          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers Matching Your Crops</h2>
                           <p className="text-blue-600 text-xs font-bold uppercase tracking-wider">Buyers matching your regular crops</p>
                         </div>
                         <button onClick={() => router.push('/nearby-farmers?type=buyers')}
@@ -500,7 +500,7 @@ function HomePageContent() {
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-5">
                         <div>
-                          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Nearby Farmers</h2>
+                          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Nearby Farmers intrested in your crops</h2>
                           <p className="text-emerald-600 text-xs font-bold uppercase tracking-wider">Farmers growing your crops</p>
                         </div>
                         <button onClick={() => router.push('/nearby-farmers?type=farmers')}

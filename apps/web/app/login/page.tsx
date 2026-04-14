@@ -8,6 +8,7 @@ import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { getApiUrl } from '@/lib/api';
 
 function LoginContent() {
   const router = useRouter();
@@ -25,8 +26,9 @@ function LoginContent() {
 useEffect(() => {
   if (Capacitor.isNativePlatform()) {
     GoogleAuth.initialize({
-      clientId: process.env.GOOGLE_CLIENT_ID_MOBILE, // 🔥 replace this
+      clientId: '866114557322-aadfdk4qgtsooej4qokvs4oqribi572i.apps.googleusercontent.com',
       scopes: ['profile', 'email'],
+      grantOfflineAccess: true,
     });
   }
 }, []);
@@ -78,7 +80,7 @@ useEffect(() => {
       }
 
       // 🔥 send token to backend
-      const res = await fetch('https://co-farm.netlify.app/api/mobile/google-login', {
+      const res = await fetch(getApiUrl('/api/auth/mobile/google-login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: idToken }),

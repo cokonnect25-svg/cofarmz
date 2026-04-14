@@ -1,4 +1,4 @@
-// File: C:\Users\nivet\Downloads\cofarmzfinalwebsitee (2)\cofarmzfinalwebsitee\finalzaccc\apps\web\app\api\reels\[id]\like\route.ts
+// File: C:\Users\sures\Downloads\cofarmzfinalwebsitee (2)\cofarmzfinalwebsitee\finalzaccc\apps\web\app\api\reels\[id]\like\route.ts
 import * as entry from '../../../../../../../app/api/reels/[id]/like/route.js'
 import type { NextRequest } from 'next/server.js'
 

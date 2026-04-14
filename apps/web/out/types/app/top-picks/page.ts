@@ -1,4 +1,4 @@
-// File: C:\Users\nivet\Downloads\cofarmzfinalwebsitee (2)\cofarmzfinalwebsitee\finalzaccc\apps\web\app\top-picks\page.tsx
+// File: C:\Users\sures\Downloads\cofarmzfinalwebsitee (2)\cofarmzfinalwebsitee\finalzaccc\apps\web\app\top-picks\page.tsx
 import * as entry from '../../../../app/top-picks/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

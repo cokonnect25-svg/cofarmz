@@ -446,7 +446,7 @@ function FarmerProfileContent() {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-lg font-black text-gray-900 leading-tight">Buyers Interest For Your Wastage Crops</h2>
+                    <h2 className="text-lg font-black text-gray-900 leading-tight">Buyers Interest For Your Crop Waste</h2>
                     <p className="text-amber-600 text-[10px] font-bold uppercase tracking-wider">Potential waste buyers nearby</p>
                   </div>
                   <button onClick={() => router.push('/nearby-farmers?type=buyers')}
