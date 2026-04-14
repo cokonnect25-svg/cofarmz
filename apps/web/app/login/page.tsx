@@ -8,6 +8,7 @@ import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { CapacitorCookies } from '@capacitor/core';
 import { getApiUrl } from '@/lib/api';
 
 function LoginContent() {
@@ -26,7 +27,7 @@ function LoginContent() {
 useEffect(() => {
   if (Capacitor.isNativePlatform()) {
     GoogleAuth.initialize({
-      clientId: '866114557322-aadfdk4qgtsooej4qokvs4oqribi572i.apps.googleusercontent.com',
+      clientId: '866114557322-neeln0vj5sa2rslac9h8dvfvvceaoina.apps.googleusercontent.com',
       scopes: ['profile', 'email'],
       grantOfflineAccess: true,
     });
@@ -83,13 +84,31 @@ useEffect(() => {
       const res = await fetch(getApiUrl('/api/auth/mobile/google-login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ token: idToken }),
       });
 
-      const data = await res.json();
+      let data: any;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`Server error (HTTP ${res.status})`);
+      }
 
       if (!data.success) {
-        throw new Error('Mobile login failed');
+        throw new Error(data.message || `Login failed (HTTP ${res.status})`);
+      }
+
+      // Explicitly set the session cookie in the WebView cookie store.
+      // CapacitorHttp (native HTTP) and WebView have separate cookie stores on
+      // some Android versions — setting it here guarantees the WebView sees it.
+      if (data.signedToken) {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://co-farm.netlify.app';
+        await CapacitorCookies.setCookie({
+          url: backendUrl,
+          key: 'cofarmz.session_token',
+          value: data.signedToken,
+        });
       }
 
       // ✅ redirect inside app

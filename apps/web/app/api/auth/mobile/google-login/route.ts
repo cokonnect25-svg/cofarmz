@@ -3,7 +3,16 @@ import { OAuth2Client } from 'google-auth-library';
 import sql from '@/app/api/utils/sql';
 import { randomUUID } from 'crypto';
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID_MOBILE);
+// Accept tokens issued for either the mobile web client or the main web client.
+// This handles old APKs (old client ID) and new APKs (new client ID) without breaking.
+function getValidAudiences(): string[] {
+  return [
+    process.env.GOOGLE_CLIENT_ID_MOBILE,
+    process.env.GOOGLE_CLIENT_ID,
+  ].filter(Boolean) as string[];
+}
+
+const client = new OAuth2Client();
 
 /**
  * Sign a cookie value using HMAC-SHA256 — must match better-call's signCookieValue:
@@ -31,12 +40,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Token missing' }, { status: 400 });
     }
 
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID_MOBILE,
-    });
+    const audiences = getValidAudiences();
+    if (audiences.length === 0) {
+      console.error('GOOGLE_CLIENT_ID_MOBILE env var is not set');
+      return NextResponse.json({ success: false, message: 'Server misconfiguration' }, { status: 500 });
+    }
 
-    const payload = ticket.getPayload();
+    let payload;
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: audiences,
+      });
+      payload = ticket.getPayload();
+    } catch (verifyErr: any) {
+      console.error('Token verification failed:', verifyErr?.message);
+      return NextResponse.json(
+        { success: false, message: `Token verification failed: ${verifyErr?.message}` },
+        { status: 401 }
+      );
+    }
 
     if (!payload?.email) {
       return NextResponse.json({ success: false, message: 'Invalid token payload' }, { status: 400 });
@@ -72,6 +95,10 @@ export async function POST(req: NextRequest) {
 
     // Sign the session token using the same algorithm as better-auth/better-call
     const secret = process.env.BETTER_AUTH_SECRET!;
+    if (!secret) {
+      console.error('BETTER_AUTH_SECRET env var is not set');
+      return NextResponse.json({ success: false, message: 'Server misconfiguration' }, { status: 500 });
+    }
     const signedToken = await signCookieValue(sessionToken, secret);
 
     // Cookie name = prefix + ".session_token" (matches auth.ts cookiePrefix: "cofarmz")
@@ -87,12 +114,16 @@ export async function POST(req: NextRequest) {
       ...(isProduction ? ['Secure'] : []),
     ].join('; ');
 
-    const response = NextResponse.json({ success: true, user });
+    // Return signedToken in body so Capacitor client can set it explicitly via CapacitorCookies
+    const response = NextResponse.json({ success: true, user, signedToken });
     response.headers.append('Set-Cookie', cookieStr);
     return response;
 
-  } catch (error) {
-    console.error('Mobile Google login error:', error);
-    return NextResponse.json({ success: false, message: 'Authentication failed' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Mobile Google login error:', error?.message, error?.stack);
+    return NextResponse.json(
+      { success: false, message: error?.message || 'Authentication failed' },
+      { status: 500 }
+    );
   }
 }
