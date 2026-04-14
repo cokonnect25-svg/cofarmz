@@ -25,7 +25,7 @@ function LoginContent() {
 useEffect(() => {
   if (Capacitor.isNativePlatform()) {
     GoogleAuth.initialize({
-      clientId: 'YOUR_WEB_CLIENT_ID', // 🔥 replace this
+      clientId: process.env.GOOGLE_CLIENT_ID_MOBILE, // 🔥 replace this
       scopes: ['profile', 'email'],
     });
   }
