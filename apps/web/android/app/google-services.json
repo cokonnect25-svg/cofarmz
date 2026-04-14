@@ -14,7 +14,23 @@
       },
       "oauth_client": [
         {
-          "client_id": "866114557322-aadfdk4qgtsooej4qokvs4oqribi572i.apps.googleusercontent.com",
+          "client_id": "866114557322-ccd6hv4q4eo70mu7unbpnfj9vbov2jh3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.cofarmz.app",
+            "certificate_hash": "d6e4ec39a2e00c0caa5d5ea9ccfdd7c1cacc8074"
+          }
+        },
+        {
+          "client_id": "866114557322-scbse9oh35at0114mo5ktdq7uruug7hq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.cofarmz.app",
+            "certificate_hash": "38debd4620def9f5a6250f591dde753f08d5474a"
+          }
+        },
+        {
+          "client_id": "866114557322-neeln0vj5sa2rslac9h8dvfvvceaoina.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
