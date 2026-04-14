@@ -2,7 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   trailingSlash: true,
-  distDir: 'out',
   devIndicators: { buildActivity: false },
   images: {
     unoptimized: true,
