@@ -22,8 +22,9 @@ export const auth = betterAuth({
   },
 trustedOrigins: [
   "http://localhost:3000",
-  "https://cofarmz.com", // keep if you use custom domain
-  "https://co-farmz.netlify.app"
+  "https://cofarmz.com",
+  "https://co-farm.netlify.app/",
+  "com.cofarmz.app://"
 ],
   advanced: {
     crossOriginCookies: true,

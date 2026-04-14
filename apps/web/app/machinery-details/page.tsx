@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { getApiUrl } from '@/lib/api';
 
 import InAppCall from '@/app/components/InAppCall';
 
@@ -106,7 +107,7 @@ function MachineryDetailsContent() {
     if (!user || !machineryId) return;
     try {
       const response = await fetch(
-        `/api/reservations?user_id=${user.id}`
+        getApiUrl(`/api/reservations?user_id=${user.id}`)
       );
       if (response.ok) {
         const data = await response.json();
@@ -129,7 +130,7 @@ function MachineryDetailsContent() {
           setReservationId(completedBooking.id);
           setUserBookedMachinery(true);
           const reviewResponse = await fetch(
-            `/api/reviews?reservation_id=${completedBooking.id}`
+            getApiUrl(`/api/reviews?reservation_id=${completedBooking.id}`)
           );
           if (reviewResponse.ok) {
             const reviews = await reviewResponse.json();
@@ -152,12 +153,12 @@ function MachineryDetailsContent() {
   const fetchMachineryDetails = async () => {
     try {
       setLoadingMachinery(true);
-      const response = await fetch(`/api/machinery/${machineryId}`);
+      const response = await fetch(getApiUrl(`/api/machinery/${machineryId}`));
       if (response.ok) {
         const data = await response.json();
         setMachinery(data);
         
-        const userResponse = await fetch(`/api/users/${data.owner_id}`);
+        const userResponse = await fetch(getApiUrl(`/api/users/${data.owner_id}`));
         if (userResponse.ok) {
           const userData = await userResponse.json();
           setOwnerName(userData.name || 'Farm Owner');
@@ -176,7 +177,7 @@ function MachineryDetailsContent() {
     try {
       setLoadingOwnerProfile(true);
       const response = await fetch(
-        `/api/farmers/profile?farmerId=${ownerId}`
+        getApiUrl(`/api/farmers/profile?farmerId=${ownerId}`)
       );
       if (response.ok) {
         const data = await response.json();
@@ -192,7 +193,7 @@ function MachineryDetailsContent() {
   const fetchBookedDates = async () => {
     try {
       const response = await fetch(
-        `/api/machinery/${machinery?.id}/availability`
+        getApiUrl(`/api/machinery/${machinery?.id}/availability`)
       );
       if (response.ok) {
         const data = await response.json();
@@ -208,7 +209,7 @@ function MachineryDetailsContent() {
     try {
       setLoadingReviews(true);
       const response = await fetch(
-        `/api/reviews?machinery_id=${machineryId}`
+        getApiUrl(`/api/reviews?machinery_id=${machineryId}`)
       );
       if (response.ok) {
         const data = await response.json();
@@ -224,7 +225,7 @@ function MachineryDetailsContent() {
   const checkFavoriteStatus = async () => {
     try {
       const response = await fetch(
-        `/api/machinery/${machineryId}/favorite`,
+        getApiUrl(`/api/machinery/${machineryId}/favorite`),
         {
           method: 'GET',
           headers: { 'x-user-id': user?.id || '' }
@@ -244,7 +245,7 @@ function MachineryDetailsContent() {
 
     try {
       const response = await fetch(
-        `/api/machinery/${machineryId}/favorite`,
+        getApiUrl(`/api/machinery/${machineryId}/favorite`),
         {
           method: 'POST',
           headers: { 'x-user-id': user.id }
@@ -268,7 +269,7 @@ function MachineryDetailsContent() {
 
     setIsSubmittingReview(true);
     try {
-      const response = await fetch(`/api/reviews`, {
+      const response = await fetch(getApiUrl(`/api/reviews`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -313,7 +314,7 @@ function MachineryDetailsContent() {
     setAvailabilityError('');
     try {
       const response = await fetch(
-        `/api/machinery/${machinery?.id}/availability`,
+        getApiUrl(`/api/machinery/${machinery?.id}/availability`),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -369,7 +370,7 @@ function MachineryDetailsContent() {
     
     setIsReserving(true);
     try {
-      const response = await fetch(`/api/reservations`, {
+      const response = await fetch(getApiUrl(`/api/reservations`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,6 +1,8 @@
 import sql from "@/app/api/utils/sql";
 import { NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId') || searchParams.get('user_id');

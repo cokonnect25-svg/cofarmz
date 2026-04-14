@@ -48,11 +48,10 @@ export default function TopNav() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`relative flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-semibold transition-all duration-150 ${
-                  isActive(link.href)
+                className={`relative flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-semibold transition-all duration-150 ${isActive(link.href)
                     ? 'text-green-700 bg-green-50'
                     : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 <i className={`${isActive(link.href) ? 'ph-fill' : 'ph'} ${link.icon} text-[15px]`}></i>
                 {link.label}
@@ -155,9 +154,8 @@ export default function TopNav() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1 rounded-xl transition-all ${
-                  isActive(link.href) ? 'text-green-700' : 'text-gray-400'
-                }`}
+                className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1 rounded-xl transition-all ${isActive(link.href) ? 'text-green-700' : 'text-gray-400'
+                  }`}
               >
                 <i className={`${isActive(link.href) ? 'ph-fill' : 'ph'} ${link.icon} text-[22px]`}></i>
                 <span className={`text-[10px] font-semibold ${isActive(link.href) ? 'text-green-700' : 'text-gray-400'}`}>

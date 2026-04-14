@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { getApiUrl } from '@/lib/api';
 
 
 interface BookingRequest {
@@ -49,7 +50,7 @@ export default function BookingRequestsPage() {
 
   const fetchBookingRequests = async () => {
     try {
-      const url = `/api/reservations?owner_id=${user?.id}`;
+      const url = getApiUrl(`/api/reservations?owner_id=${user?.id}`);
       console.log('Fetching booking requests from:', url);
       const response = await fetch(url);
       if (response.ok) {
@@ -62,7 +63,7 @@ export default function BookingRequestsPage() {
             let machineImageUrl = request.image_url;
             if (request.machinery_id && !machineImageUrl) {
               try {
-                const machineRes = await fetch(`/api/machinery/${request.machinery_id}`);
+                const machineRes = await fetch(getApiUrl(`/api/machinery/${request.machinery_id}`));
                 if (machineRes.ok) {
                   const machineData = await machineRes.json();
                   machineImageUrl = machineData.image_url;
@@ -93,7 +94,7 @@ export default function BookingRequestsPage() {
   const handleAcceptBooking = async (id: number) => {
     setProcessingId(id);
     try {
-      const response = await fetch(`/api/reservations`, {
+      const response = await fetch(getApiUrl(`/api/reservations`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status: 'accepted' }),
@@ -119,7 +120,7 @@ export default function BookingRequestsPage() {
 
     setProcessingId(id);
     try {
-      const response = await fetch(`/api/reservations`, {
+      const response = await fetch(getApiUrl(`/api/reservations`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status: 'rejected' }),

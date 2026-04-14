@@ -4,6 +4,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { authClient } from '@/lib/auth-client';
+import { getApiUrl } from '@/lib/api';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -49,7 +52,7 @@ export default function SignupPage() {
       for (let i = 0; i < 3; i++) {
         try {
           if (i > 0) await new Promise(r => setTimeout(r, 500 * i));
-          const res = await fetch('/api/users/profile', {
+          const res = await fetch(getApiUrl('/api/users/profile'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, role: userType }),
@@ -58,7 +61,9 @@ export default function SignupPage() {
         } catch {}
       }
 
-      // Redirect to home — RoleSelectionGuard will handle the details
+      console.log('Signup successful, redirecting home...');
+      console.log('Signup successful, redirecting home...');
+      // Force a hard redirection to reload app content and hydrate cookies
       window.location.replace('/');
     } catch (err: any) {
       const msg = err.message || '';
@@ -79,9 +84,27 @@ export default function SignupPage() {
     setIsLoading(true);
     try {
       localStorage.setItem('pendingGoogleRole', userType);
-      await authClient.signIn.social({ provider: 'google', callbackURL: '/auth-callback' });
+      
+      if (Capacitor.isNativePlatform()) {
+        const callbackURL = 'com.cofarmz.app://auth-callback';
+        
+        let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://co-farm.netlify.app/';
+        // Remove trailing slash if present to avoid broken URLs
+        backendUrl = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
+        
+        const authUrl = `${backendUrl}/api/auth/login/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`;
+        console.log('Opening Google Auth from Signup:', authUrl);
+        await Browser.open({ url: authUrl, windowName: '_self' });
+      } else {
+        const callbackURL = `${window.location.origin}/auth-callback`;
+        await authClient.signIn.social({ 
+          provider: 'google', 
+          callbackURL: callbackURL 
+        });
+      }
     } catch (err: any) {
-      setError(err.message || 'Google sign-in failed.');
+      console.error('Google Sign-in Error:', err);
+      setError(err.message || 'Google sign-in failed. Please try again.');
       setIsLoading(false);
     }
   };
@@ -141,24 +164,22 @@ export default function SignupPage() {
       </div>
 
       {/* Right Panel — Form */}
-      <div className="w-full lg:w-7/12 flex flex-col justify-center items-center px-6 py-10 overflow-y-auto">
+      <div className="w-full lg:w-7/12 flex flex-col justify-center items-center px-6 py-4 lg:py-10 bg-white min-h-[100dvh] overflow-y-auto overflow-x-hidden">
         {/* Mobile logo */}
-        <div className="lg:hidden flex flex-col items-center gap-3 mb-8">
-          <div className="w-24 h-24 rounded-3xl bg-green-700 p-2 shadow-2xl border-4 border-green-100">
-            <img src="/assets/cofarmz-logo.png" alt="CoFarmz" className="w-full h-full rounded-2xl object-cover" />
+        <div className="lg:hidden flex flex-col items-center gap-2 mb-4 mt-2">          <div className="w-16 h-16 rounded-2xl bg-green-700 p-1.5 shadow-xl border-2 border-green-100">
+            <img src="/assets/cofarmz-logo.png" alt="CoFarmz" className="w-full h-full rounded-xl object-cover" />
           </div>
           <div className="text-center">
-            <span className="text-gray-900 font-black text-2xl block">CoFarmz</span>
-            <span className="text-gray-400 text-xs font-medium">Your Agri Network</span>
+            <span className="text-gray-900 font-black text-xl block">CoFarmz</span>
+            <span className="text-gray-400 text-[10px] uppercase tracking-widest font-bold">Agri Network</span>
           </div>
         </div>
 
         <div className="w-full max-w-lg">
-          <div className="mb-7">
-            <h1 className="text-3xl font-black text-gray-900 mb-1">Create your account</h1>
-            <p className="text-gray-500 text-sm">Start renting and listing farm equipment today</p>
+          <div className="mb-5">
+            <h1 className="text-2xl lg:text-3xl font-black text-gray-900 mb-1">Create your account</h1>
+            <p className="text-gray-500 text-xs lg:text-sm">Start renting and listing farm equipment today</p>
           </div>
-
           {/* Error */}
           {error && (
             <div className="mb-5 bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3 items-start">

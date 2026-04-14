@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { getApiUrl } from '@/lib/api';
 
 function SelectRoleContent() {
   const router = useRouter();
@@ -20,7 +21,7 @@ function SelectRoleContent() {
       window.location.replace('/login');
       return;
     }
-    fetch(`/api/users/profile?userId=${user.id}`)
+    fetch(getApiUrl(`/api/users/profile?userId=${user.id}`))
       .then(r => r.json())
       .then(profile => {
         // Redirect to home if user already has a confirmed role
@@ -35,7 +36,7 @@ function SelectRoleContent() {
     setSelecting(true);
     setError('');
     try {
-      const res = await fetch('/api/users/profile', {
+      const res = await fetch(getApiUrl('/api/users/profile'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, email: user.email, role }),

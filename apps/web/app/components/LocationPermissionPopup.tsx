@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePathname } from 'next/navigation';
+import { getApiUrl } from '@/lib/api';
+import { Capacitor } from '@capacitor/core';
 
 export default function LocationPermissionPopup() {
   const { user, isAuthenticated } = useAuth();
@@ -19,7 +21,7 @@ export default function LocationPermissionPopup() {
     // Always check DB — show popup if no lat/lon saved, regardless of localStorage
     const checkAndShow = async () => {
       try {
-        const res = await fetch(`/api/farmers/profile?farmerId=${user.id}`, {
+        const res = await fetch(getApiUrl(`/api/farmers/profile?farmerId=${user.id}`), {
           headers: { 'x-user-id': user.id }
         });
         if (res.ok) {
@@ -43,10 +45,19 @@ export default function LocationPermissionPopup() {
   const allowLocation = async () => {
     setSaving(true);
     try {
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
-      );
-      const { latitude, longitude } = pos.coords;
+      let latitude: number, longitude: number;
+      if (Capacitor.isNativePlatform()) {
+        const { Geolocation } = await import('@capacitor/geolocation');
+        const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
+        latitude = pos.coords.latitude;
+        longitude = pos.coords.longitude;
+      } else {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
+        );
+        latitude = pos.coords.latitude;
+        longitude = pos.coords.longitude;
+      }
 
       // Reverse geocode
       let locationText = '';
@@ -63,7 +74,7 @@ export default function LocationPermissionPopup() {
       } catch {}
 
       // Save to user profile
-      await fetch('/api/users/profile', {
+      await fetch(getApiUrl('/api/users/profile'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-user-id': user!.id },
         body: JSON.stringify({ userId: user!.id, latitude, longitude, location: locationText }),

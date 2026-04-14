@@ -1,0 +1,77 @@
+{
+  "app\\components\\LocationPermissionPopup.tsx -> @capacitor/geolocation": {
+    "id": 1177,
+    "files": [
+      "static/chunks/1177.3d9af196958e286d.js"
+    ]
+  },
+  "app\\my-reels\\page.tsx -> @capacitor/camera": {
+    "id": 8521,
+    "files": [
+      "static/chunks/9250-0fcad6e4bc8022f0.js",
+      "static/chunks/8521.bcb726f63586af85.js"
+    ]
+  },
+  "app\\my-reels\\page.tsx -> @capacitor/core": {
+    "id": 9250,
+    "files": [
+      "static/chunks/9250-0fcad6e4bc8022f0.js"
+    ]
+  },
+  "app\\page.tsx -> @capacitor/geolocation": {
+    "id": 1177,
+    "files": [
+      "static/chunks/1177.3d9af196958e286d.js"
+    ]
+  },
+  "app\\rent-machinery\\page.tsx -> @capacitor/geolocation": {
+    "id": 1177,
+    "files": [
+      "static/chunks/1177.3d9af196958e286d.js"
+    ]
+  },
+  "app\\user-profile\\page.tsx -> @/app/components/MapPicker": {
+    "id": 1211,
+    "files": [
+      "static/css/fc1c9daac70c093b.css",
+      "static/chunks/d0deef33.84a0ce786aefbddf.js",
+      "static/chunks/1211.a67381a37a8ddeea.js"
+    ]
+  },
+  "app\\user-profile\\page.tsx -> @capacitor/geolocation": {
+    "id": 1177,
+    "files": [
+      "static/chunks/1177.3d9af196958e286d.js"
+    ]
+  },
+  "node_modules\\@capacitor\\app\\dist\\esm\\index.js -> ./web": {
+    "id": 8310,
+    "files": [
+      "static/chunks/8310.e9cce5210985d000.js"
+    ]
+  },
+  "node_modules\\@capacitor\\browser\\dist\\esm\\index.js -> ./web": {
+    "id": 2987,
+    "files": [
+      "static/chunks/2987.d9a1c7bcf4046d26.js"
+    ]
+  },
+  "node_modules\\@capacitor\\geolocation\\dist\\esm\\index.js -> ./web": {
+    "id": 4745,
+    "files": [
+      "static/chunks/4745.45799034a9a87c4a.js"
+    ]
+  },
+  "node_modules\\next\\dist\\client\\index.js -> ../pages/_app": {
+    "id": 5203,
+    "files": [
+      "static/chunks/5203.f4b97ab553880bca.js"
+    ]
+  },
+  "node_modules\\next\\dist\\client\\index.js -> ../pages/_error": {
+    "id": 6218,
+    "files": [
+      "static/chunks/6218.ba8ff6176d4fd6f6.js"
+    ]
+  }
+}

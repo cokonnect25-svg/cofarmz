@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense, useCallback } from 'react';
 import { ArrowLeft, MessageCircle, Phone, MapPin, Heart, MessageSquare, ChevronUp, Leaf, ShoppingCart } from 'lucide-react';
 import InAppCall from '@/app/components/InAppCall';
+import { getApiUrl } from '@/lib/api';
 
 interface FarmerProfile {
   id: string;
@@ -81,7 +82,7 @@ function FarmerProfileContent() {
   const fetchProfile = useCallback(async () => {
     if (!farmerId || !user) return;
     try {
-      const url = `/api/farmers/profile?farmerId=${encodeURIComponent(farmerId)}`;
+      const url = getApiUrl(`/api/farmers/profile?farmerId=${encodeURIComponent(farmerId)}`);
       console.log('Fetching farmer profile from:', url);
 
       const res = await fetch(url, {
@@ -155,7 +156,7 @@ function FarmerProfileContent() {
       let lat = profileData.location ? 0 : 0; // The API profile doesn't have lat/lon directly in the interface yet
       let lon = 0;
 
-      const buyersRes = await fetch(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${user.id}`);
+      const buyersRes = await fetch(getApiUrl(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${user.id}`));
       const buyersData = await buyersRes.json();
       
       const mapped = (Array.isArray(buyersData) ? buyersData : []).map((f: any) => ({
@@ -185,7 +186,7 @@ function FarmerProfileContent() {
 
     try {
       if (isFollowing) {
-        const response = await fetch(`/api/follows`, {
+        const response = await fetch(getApiUrl(`/api/follows`), {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
@@ -203,7 +204,7 @@ function FarmerProfileContent() {
           console.error('Unfollow error:', error);
         }
       } else {
-        const response = await fetch(`/api/follows`, {
+        const response = await fetch(getApiUrl(`/api/follows`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

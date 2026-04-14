@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
+import { getApiUrl } from '@/lib/api';
 
 interface FarmerCrop {
   crop_name: string;
@@ -175,7 +176,7 @@ export default function NearbyFarmersClient() {
       if (filters.yieldDateTo) params.append('yieldDateTo', filters.yieldDateTo);
       if (type === 'buyers' && filters.wasteOnly) params.append('wasteOnly', 'true');
 
-      const url = `/api/nearby-farmers?${params.toString()}`;
+      const url = getApiUrl(`/api/nearby-farmers?${params.toString()}`);
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       

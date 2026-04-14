@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
 import { Send, ArrowLeft } from 'lucide-react';
+import { getApiUrl } from '@/lib/api';
 
 function MessagesContent() {
   const searchParams = useSearchParams();
@@ -25,7 +26,7 @@ function MessagesContent() {
       try {
         setLoading(true);
         const response = await fetch(
-          `/api/messages?userId=${user.id}&otherUserId=${ownerId}`
+          getApiUrl(`/api/messages?userId=${user.id}&otherUserId=${ownerId}`)
         );
         if (response.ok) {
           const data = await response.json();
@@ -49,7 +50,7 @@ function MessagesContent() {
     try {
       setSending(true);
       const response = await fetch(
-        `/api/messages`,
+        getApiUrl(`/api/messages`),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

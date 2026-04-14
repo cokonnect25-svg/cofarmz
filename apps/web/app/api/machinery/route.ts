@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
@@ -160,3 +161,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

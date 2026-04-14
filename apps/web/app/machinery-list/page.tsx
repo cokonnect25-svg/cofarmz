@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
+import { getApiUrl } from '@/lib/api';
 
 
 export default function MachineryListPage() {
@@ -99,7 +100,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   const fetchUserProfile = async () => {
     if (!user?.id) return;
     try {
-      const response = await fetch(`/api/users/profile?userId=${user.id}`);
+      const response = await fetch(getApiUrl(`/api/users/profile?userId=${user.id}`));
       if (response.ok) {
         const profile = await response.json();
         if (profile.latitude && profile.longitude) {
@@ -162,7 +163,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   const fetchUserFavorites = async () => {
     if (!user?.id) return;
     try {
-      const response = await fetch(`/api/machinery/favorites`, {
+      const response = await fetch(getApiUrl(`/api/machinery/favorites`), {
         headers: {
           'x-user-id': user.id,
         },
@@ -262,7 +263,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   const fetchMachinery = async () => {
     try {
       console.log('Starting fetchMachinery...');
-      const response = await fetch(`/api/machinery`);
+      const response = await fetch(getApiUrl(`/api/machinery`));
       console.log('API response status:', response.status);
       
       if (!response.ok) {
@@ -327,7 +328,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     });
 
     try {
-      const response = await fetch(`/api/machinery/${machineryId}/favorite`, {
+      const response = await fetch(getApiUrl(`/api/machinery/${machineryId}/favorite`), {
         method: 'POST',
         headers: {
           'x-user-id': user.id,

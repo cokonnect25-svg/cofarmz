@@ -4,6 +4,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { authClient } from '@/lib/auth-client';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
 function LoginContent() {
   const router = useRouter();
@@ -18,6 +22,15 @@ function LoginContent() {
 
   useEffect(() => { setMounted(true); }, []);
 
+useEffect(() => {
+  if (Capacitor.isNativePlatform()) {
+    GoogleAuth.initialize({
+      clientId: 'YOUR_WEB_CLIENT_ID', // 🔥 replace this
+      scopes: ['profile', 'email'],
+    });
+  }
+}, []);
+
   // useEffect removed to avoid double-redirection conflict with manual sign-in flow
 
 
@@ -29,39 +42,80 @@ function LoginContent() {
     );
   }
 
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
     try {
-      // Sign in — don't rely on result.data.user (Better Auth often returns null)
+      console.log('Attempting login for:', email);
       await signIn(email, password);
+      console.log('Login successful, redirecting home...');
 
-      // Redirect to home — RoleSelectionGuard will handle the details
+      console.log('Login successful, redirecting home...');
+      // Force a hard redirection to reload app content and hydrate cookies
       window.location.replace('/');
     } catch (err: any) {
+      console.error('Login Error:', err);
       setError(err.message || 'Invalid email or password.');
       setIsLoading(false);
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setError('');
-    setIsLoading(true);
-    try {
-      const result = await authClient.signIn.social({ provider: 'google', callbackURL: '/auth-callback' });
-      // Manually redirect if better-auth doesn't auto-redirect
+ const handleGoogleSignIn = async () => {
+  setError('');
+  setIsLoading(true);
+
+  try {
+    // 📱 MOBILE FLOW
+    if (Capacitor.isNativePlatform()) {
+      const user = await GoogleAuth.signIn();
+
+      const idToken = user.authentication?.idToken;
+
+      if (!idToken) {
+        throw new Error('No ID token received');
+      }
+
+      // 🔥 send token to backend
+      const res = await fetch('https://co-farm.netlify.app/api/mobile/google-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: idToken }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error('Mobile login failed');
+      }
+
+      // ✅ redirect inside app
+      window.location.href = '/';
+    }
+
+    // 🌐 WEB FLOW (keep your existing)
+    else {
+      const callbackURL = `${window.location.origin}/auth-callback`;
+
+      const result = await authClient.signIn.social({
+        provider: 'google',
+        callbackURL,
+      });
+
       if (result?.data?.url) {
         window.location.href = result.data.url;
       } else if ((result as any)?.url) {
         window.location.href = (result as any).url;
       }
-    } catch (err: any) {
-      setError(err.message || 'Google sign-in failed. Please try again.');
-      setIsLoading(false);
     }
-  };
-
+  } catch (err: any) {
+    console.error('Google Sign-in Error:', err);
+    setError(err.message || 'Google sign-in failed');
+  } finally {
+    setIsLoading(false);
+  }
+};
   return (
     <div className="min-h-screen flex bg-gray-50">
       {/* Left Panel — Branding */}
@@ -117,28 +171,27 @@ function LoginContent() {
       </div>
 
       {/* Right Panel — Form */}
-      <div className="w-full lg:w-[45%] flex flex-col justify-center items-center px-6 py-12 bg-white">
+      <div className="w-full lg:w-[45%] flex flex-col justify-center items-center px-6 py-4 lg:py-12 bg-white min-h-[100dvh]">
         {/* Mobile logo — full branded header */}
-        <div className="lg:hidden flex flex-col items-center gap-3 mb-10">
-          <div className="w-24 h-24 rounded-3xl bg-green-700 p-2 shadow-2xl border-4 border-green-100">
+        <div className="lg:hidden flex flex-col items-center gap-2 mb-6 mt-4">
+          <div className="w-16 h-16 rounded-2xl bg-green-700 p-1.5 shadow-xl border-2 border-green-100">
             <img
               src="/assets/cofarmz-logo.png"
               alt="CoFarmz"
-              className="w-full h-full rounded-2xl object-cover"
+              className="w-full h-full rounded-xl object-cover"
             />
           </div>
           <div className="text-center">
-            <span className="text-gray-900 font-black text-2xl block">CoFarmz</span>
-            <span className="text-gray-400 text-xs font-medium">Your Agri Network</span>
+            <span className="text-gray-900 font-black text-xl block">CoFarmz</span>
+            <span className="text-gray-400 text-[10px] font-medium uppercase tracking-widest">Agri Network</span>
           </div>
         </div>
 
         <div className="w-full max-w-md">
-          <div className="mb-8">
-            <h1 className="text-3xl font-black text-gray-900 mb-2">Welcome back</h1>
-            <p className="text-gray-500 text-sm">Sign in to your CoFarmz account</p>
+          <div className="mb-6">
+            <h1 className="text-2xl lg:text-3xl font-black text-gray-900 mb-1">Welcome back</h1>
+            <p className="text-gray-500 text-xs lg:text-sm">Sign in to your CoFarmz account</p>
           </div>
-
           {/* Error */}
           {error && (
             <div className="mb-5 bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3 items-start">

@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -115,30 +116,13 @@ export async function GET(request: NextRequest) {
         const farmersWithCrops = await sql`
           SELECT DISTINCT user_id
           FROM crops
-          WHERE LOWER(crop_name) = LOWER(${crops[0]})
+          WHERE LOWER(crop_name) IN (${sql.join(crops.map(c => c.toLowerCase()), sql`, `)})
           ${yieldDateFrom || yieldDateTo ? sql`AND expected_yield_date IS NOT NULL` : sql``}
           ${yieldDateFrom && yieldDateTo ? sql`AND expected_yield_date BETWEEN ${yieldDateFrom}::date AND ${yieldDateTo}::date` :
             yieldDateFrom ? sql`AND expected_yield_date >= ${yieldDateFrom}::date` :
               yieldDateTo ? sql`AND expected_yield_date <= ${yieldDateTo}::date` : sql``}
         `;
         farmerWithCropsIds = (farmersWithCrops as any[]).map((row: any) => row.user_id);
-
-        // If multiple crops, include users with any of those crops
-        if (crops.length > 1) {
-          for (let i = 1; i < crops.length; i++) {
-            const moreFarmers = await sql`
-              SELECT DISTINCT user_id
-              FROM crops
-              WHERE LOWER(crop_name) = LOWER(${crops[i]})
-              ${yieldDateFrom || yieldDateTo ? sql`AND expected_yield_date IS NOT NULL` : sql``}
-              ${yieldDateFrom && yieldDateTo ? sql`AND expected_yield_date BETWEEN ${yieldDateFrom}::date AND ${yieldDateTo}::date` :
-                yieldDateFrom ? sql`AND expected_yield_date >= ${yieldDateFrom}::date` :
-                  yieldDateTo ? sql`AND expected_yield_date <= ${yieldDateTo}::date` : sql``}
-            `;
-            const moreIds = (moreFarmers as any[]).map((row: any) => row.user_id);
-            farmerWithCropsIds = [...new Set([...farmerWithCropsIds, ...moreIds])];
-          }
-        }
       }
     }
 
@@ -276,3 +260,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
