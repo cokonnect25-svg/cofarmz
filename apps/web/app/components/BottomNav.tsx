@@ -1,21 +1,27 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function BottomNav() {
+function BottomNavContent() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const nearbyType = searchParams.get('type');
 
-  const isActive = (path: string) => {
+  const isActive = (path: string, queryType?: string) => {
     if (path === '/') return pathname === '/';
+    if (path === '/nearby-farmers' && queryType) {
+      return pathname?.startsWith('/nearby-farmers') && nearbyType === queryType;
+    }
     return pathname?.startsWith(path);
   };
 
   const navItems = [
     { href: '/', label: 'Home', icon: 'ph-house' },
+    { href: '/nearby-farmers?type=farmers', basePath: '/nearby-farmers', queryType: 'farmers', label: 'Farmers', icon: 'ph-plant' },
+    { href: '/nearby-farmers?type=buyers', basePath: '/nearby-farmers', queryType: 'buyers', label: 'Buyers', icon: 'ph-handshake' },
     { href: '/machinery-list', label: 'Fleet', icon: 'ph-tractor' },
-    { href: '/reels', label: 'Reels', icon: 'ph-video' },
-    { href: '/chat', label: 'Messages', icon: 'ph-chat-circle' },
     { href: '/user-profile', label: 'Profile', icon: 'ph-user' },
   ];
 
@@ -23,7 +29,7 @@ export default function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-[60] md:hidden bg-white/90 backdrop-blur-xl border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.06)] pb-safe">
       <div className="flex items-center justify-around h-[64px] px-1 relative">
         {navItems.map((item) => {
-          const active = isActive(item.href);
+          const active = isActive(item.basePath || item.href, item.queryType);
           return (
             <Link
               key={item.href}
@@ -50,5 +56,13 @@ export default function BottomNav() {
         })}
       </div>
     </nav>
+  );
+}
+
+export default function BottomNav() {
+  return (
+    <Suspense fallback={null}>
+      <BottomNavContent />
+    </Suspense>
   );
 }

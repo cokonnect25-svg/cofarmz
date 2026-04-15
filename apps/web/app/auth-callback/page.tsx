@@ -13,23 +13,26 @@ export default function AuthCallbackPage() {
       if (loading) return;
 
       if (isAuthenticated && user?.id) {
-        // Handle pending Google role from signup page
-        const pendingRole = localStorage.getItem('pendingGoogleRole');
-        if (pendingRole && (pendingRole === 'farmer' || pendingRole === 'buyer')) {
-          try {
-            await fetch(getApiUrl('/api/users/profile'), {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId: user.id, email: user.email, role: pendingRole }),
-            });
-            localStorage.removeItem('pendingGoogleRole');
-          } catch (e) {
-            console.error('Error applying pending role:', e);
+        // Clean up any leftover pendingGoogleRole from older flow
+        localStorage.removeItem('pendingGoogleRole');
+
+        // Check if this user has already selected a role
+        try {
+          const res = await fetch(getApiUrl(`/api/users/profile?userId=${user.id}`));
+          if (res.ok) {
+            const profile = await res.json();
+            if (profile.role_confirmed === true) {
+              // Returning user — go home
+              window.location.replace('/');
+              return;
+            }
           }
+        } catch (e) {
+          console.error('Error checking profile:', e);
         }
-        // Redirect to Home — RoleSelectionGuard and Home page modal will handle the rest.
-        // This ensures a smoother flow for both new and returning users.
-        window.location.replace('/');
+
+        // New user — show full Terms & Conditions + role selection
+        window.location.replace('/select-role');
       } else if (!loading) {
         // No session found — go to login
         window.location.replace('/login');

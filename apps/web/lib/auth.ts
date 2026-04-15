@@ -21,9 +21,11 @@ export const auth = betterAuth({
     },
   },
 trustedOrigins: [
+  "http://localhost",
   "http://localhost:3000",
   "https://cofarmz.com",
   "https://co-farm.netlify.app",
+  "capacitor://localhost",
   "com.cofarmz.app://"
 ],
   advanced: {

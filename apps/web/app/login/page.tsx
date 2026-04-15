@@ -121,7 +121,7 @@ useEffect(() => {
       window.location.href = '/';
     }
 
-    // 🌐 WEB FLOW (keep your existing)
+    // 🌐 WEB FLOW
     else {
       const callbackURL = `${window.location.origin}/auth-callback`;
 
@@ -130,16 +130,24 @@ useEffect(() => {
         callbackURL,
       });
 
-      if (result?.data?.url) {
-        window.location.href = result.data.url;
-      } else if ((result as any)?.url) {
-        window.location.href = (result as any).url;
+      // Surface any auth error to the user instead of silently failing
+      if (result?.error) {
+        throw new Error(result.error.message || 'Google sign-in failed. Please try again.');
       }
+
+      // Redirect to Google's account picker
+      const redirectUrl = result?.data?.url || (result as any)?.url;
+      if (redirectUrl) {
+        // Force account picker to always show
+        const url = new URL(redirectUrl);
+        url.searchParams.set('prompt', 'select_account');
+        window.location.href = url.toString();
+      }
+      // If no URL, better-auth handled the redirect internally — do nothing
     }
   } catch (err: any) {
     console.error('Google Sign-in Error:', err);
-    setError(err.message || 'Google sign-in failed');
-  } finally {
+    setError(err.message || 'Google sign-in failed. Check your connection and try again.');
     setIsLoading(false);
   }
 };

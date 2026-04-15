@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { authClient } from '@/lib/auth-client';
-import { getApiUrl } from '@/lib/api';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 
@@ -46,25 +45,9 @@ export default function SignupPage() {
 
     setIsLoading(true);
     try {
-      const signUpResult = await signUp(email, password, name);
-
-      // Assign role — retry up to 3 times
-      for (let i = 0; i < 3; i++) {
-        try {
-          if (i > 0) await new Promise(r => setTimeout(r, 500 * i));
-          const res = await fetch(getApiUrl('/api/users/profile'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, role: userType }),
-          });
-          if (res.ok) break;
-        } catch {}
-      }
-
-      console.log('Signup successful, redirecting home...');
-      console.log('Signup successful, redirecting home...');
-      // Force a hard redirection to reload app content and hydrate cookies
-      window.location.replace('/');
+      await signUp(email, password, name);
+      // Redirect to select-role which shows full Terms & Conditions and lets user pick their role
+      window.location.replace('/select-role');
     } catch (err: any) {
       const msg = err.message || '';
       if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exist')) {
@@ -83,24 +66,29 @@ export default function SignupPage() {
     setError('');
     setIsLoading(true);
     try {
-      localStorage.setItem('pendingGoogleRole', userType);
-      
       if (Capacitor.isNativePlatform()) {
         const callbackURL = 'com.cofarmz.app://auth-callback';
-        
-        let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://co-farm.netlify.app/';
-        // Remove trailing slash if present to avoid broken URLs
+
+        let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://co-farm.netlify.app';
         backendUrl = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
-        
+
         const authUrl = `${backendUrl}/api/auth/login/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`;
-        console.log('Opening Google Auth from Signup:', authUrl);
         await Browser.open({ url: authUrl, windowName: '_self' });
       } else {
         const callbackURL = `${window.location.origin}/auth-callback`;
-        await authClient.signIn.social({ 
-          provider: 'google', 
-          callbackURL: callbackURL 
+        const result = await authClient.signIn.social({
+          provider: 'google',
+          callbackURL: callbackURL
         });
+        if (result?.error) {
+          throw new Error(result.error.message || 'Google sign-in failed. Please try again.');
+        }
+        const redirectUrl = result?.data?.url || (result as any)?.url;
+        if (redirectUrl) {
+          const url = new URL(redirectUrl);
+          url.searchParams.set('prompt', 'select_account');
+          window.location.href = url.toString();
+        }
       }
     } catch (err: any) {
       console.error('Google Sign-in Error:', err);
