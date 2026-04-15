@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  trailingSlash: true,
   devIndicators: { buildActivity: false },
   images: {
     unoptimized: true,
