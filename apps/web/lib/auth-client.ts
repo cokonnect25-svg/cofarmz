@@ -3,7 +3,7 @@
 import { createAuthClient } from "better-auth/react";
 
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "https://cofarmz.netlify.app//",
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "https://cofarmz.com//",
   fetchOptions: {
     credentials: "include",
   },

@@ -88,7 +88,7 @@ export default function SignupPage() {
       if (Capacitor.isNativePlatform()) {
         const callbackURL = 'com.cofarmz.app://auth-callback';
         
-        let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cofarmz.netlify.app/';
+        let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cofarmz.com/';
         // Remove trailing slash if present to avoid broken URLs
         backendUrl = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
         

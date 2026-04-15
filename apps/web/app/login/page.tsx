@@ -78,7 +78,7 @@ useEffect(() => {
       }
 
       // 🔥 send token to backend
-      const res = await fetch('https://cofarmz.netlify.app/api/mobile/google-login', {
+      const res = await fetch('https://cofarmz.com/api/mobile/google-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: idToken }),
