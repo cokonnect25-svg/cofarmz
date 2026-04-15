@@ -20,5 +20,5 @@ export const getApiUrl = (path: string) => {
     return `${baseUrl}${cleanPath}`;
   }
 
-  return cleanPath;
+ return `${process.env.NEXT_PUBLIC_BACKEND_URL}${cleanPath}`;
 };

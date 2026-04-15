@@ -28,13 +28,13 @@ trustedOrigins: [
   "capacitor://localhost",
   "com.cofarmz.app://"
 ],
-  advanced: {
-    crossOriginCookies: true,
-    cookiePrefix: "cofarmz",
-    defaultCookieAttributes: {
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-    }
+advanced: {
+  crossOriginCookies: true,
+  cookiePrefix: "cofarmz",
+  defaultCookieAttributes: {
+    sameSite: "none",   // ✅ FIXED
+    secure: true,       // ✅ REQUIRED for SameSite=None
+    httpOnly: true,
   }
+}
 });
