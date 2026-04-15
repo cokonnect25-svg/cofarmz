@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   webDir: 'out', // keep for fallback (not primary)
 
   server: {
-    url: 'https://cofarmz.com', // 🔥 your deployed app
+    url: 'https://cofarmz.netlify.app', // 🔥 your deployed app
     cleartext: true
   },
 
