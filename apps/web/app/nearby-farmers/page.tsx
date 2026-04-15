@@ -236,10 +236,10 @@ function NearbyFarmersContent() {
   };
 
   const handleApplyFilters = () => {
-    if (userLocation) {
-      fetchNearbyFarmers(userLocation.latitude, userLocation.longitude, searchType);
-      setShowFilter(false);
-    }
+    const lat = userLocation?.latitude ?? 0;
+    const lon = userLocation?.longitude ?? 0;
+    fetchNearbyFarmers(lat, lon, searchType);
+    setShowFilter(false);
   };
 
   const toggleCropFilter = (crop: string) => {

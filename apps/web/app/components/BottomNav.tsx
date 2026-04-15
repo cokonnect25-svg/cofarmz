@@ -21,7 +21,7 @@ function BottomNavContent() {
     { href: '/', label: 'Home', icon: 'ph-house' },
     { href: '/nearby-farmers?type=farmers', basePath: '/nearby-farmers', queryType: 'farmers', label: 'Farmers', icon: 'ph-plant' },
     { href: '/nearby-farmers?type=buyers', basePath: '/nearby-farmers', queryType: 'buyers', label: 'Buyers', icon: 'ph-handshake' },
-    { href: '/machinery-list', label: 'Fleet', icon: 'ph-tractor' },
+    { href: '/reels', label: 'Reels', icon: 'ph-video' },
     { href: '/user-profile', label: 'Profile', icon: 'ph-user' },
   ];
 

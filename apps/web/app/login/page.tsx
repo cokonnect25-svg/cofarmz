@@ -121,29 +121,13 @@ useEffect(() => {
       window.location.href = '/';
     }
 
-    // 🌐 WEB FLOW
+    // 🌐 WEB FLOW — same direct-URL approach as mobile
     else {
+      const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://co-farm.netlify.app').replace(/\/$/, '');
       const callbackURL = `${window.location.origin}/auth-callback`;
-
-      const result = await authClient.signIn.social({
-        provider: 'google',
-        callbackURL,
-      });
-
-      // Surface any auth error to the user instead of silently failing
-      if (result?.error) {
-        throw new Error(result.error.message || 'Google sign-in failed. Please try again.');
-      }
-
-      // Redirect to Google's account picker
-      const redirectUrl = result?.data?.url || (result as any)?.url;
-      if (redirectUrl) {
-        // Force account picker to always show
-        const url = new URL(redirectUrl);
-        url.searchParams.set('prompt', 'select_account');
-        window.location.href = url.toString();
-      }
-      // If no URL, better-auth handled the redirect internally — do nothing
+      const authUrl = `${backendUrl}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`;
+      window.location.href = authUrl;
+      // Page navigates away — no further code runs
     }
   } catch (err: any) {
     console.error('Google Sign-in Error:', err);

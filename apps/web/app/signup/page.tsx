@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { authClient } from '@/lib/auth-client';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 
@@ -66,29 +65,15 @@ export default function SignupPage() {
     setError('');
     setIsLoading(true);
     try {
+      const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://co-farm.netlify.app').replace(/\/$/, '');
       if (Capacitor.isNativePlatform()) {
         const callbackURL = 'com.cofarmz.app://auth-callback';
-
-        let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://co-farm.netlify.app';
-        backendUrl = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
-
-        const authUrl = `${backendUrl}/api/auth/login/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`;
+        const authUrl = `${backendUrl}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`;
         await Browser.open({ url: authUrl, windowName: '_self' });
       } else {
         const callbackURL = `${window.location.origin}/auth-callback`;
-        const result = await authClient.signIn.social({
-          provider: 'google',
-          callbackURL: callbackURL
-        });
-        if (result?.error) {
-          throw new Error(result.error.message || 'Google sign-in failed. Please try again.');
-        }
-        const redirectUrl = result?.data?.url || (result as any)?.url;
-        if (redirectUrl) {
-          const url = new URL(redirectUrl);
-          url.searchParams.set('prompt', 'select_account');
-          window.location.href = url.toString();
-        }
+        const authUrl = `${backendUrl}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`;
+        window.location.href = authUrl;
       }
     } catch (err: any) {
       console.error('Google Sign-in Error:', err);
