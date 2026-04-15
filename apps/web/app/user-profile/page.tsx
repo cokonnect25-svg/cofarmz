@@ -495,7 +495,7 @@ function ProfileContent() {
 
           if (reservation.machinery_id) {
             try {
-              const machineUrl = `/api/machinery/${reservation.machinery_id}`;
+              const machineUrl = getApiUrl(`/api/machinery/${reservation.machinery_id}`);
               const machineRes = await fetch(machineUrl);
               if (machineRes.ok) {
                 const machineData = await machineRes.json();
@@ -507,7 +507,7 @@ function ProfileContent() {
 
                 if (machineData.owner_id) {
                   try {
-                    const ownerUrl = `/api/farmers/profile?userId=${machineData.owner_id}`;
+                    const ownerUrl = getApiUrl(`/api/farmers/profile?userId=${machineData.owner_id}`);
                     const ownerRes = await fetch(ownerUrl);
                     if (ownerRes.ok) {
                       const ownerData = await ownerRes.json();
@@ -577,7 +577,7 @@ function ProfileContent() {
         data.map(async (reservation: Reservation) => {
           if (reservation.machinery_id) {
             try {
-              const machineUrl = `/api/machinery/${reservation.machinery_id}`;
+              const machineUrl = getApiUrl(`/api/machinery/${reservation.machinery_id}`);
               const machineRes = await fetch(machineUrl);
               if (machineRes.ok) {
                 const machineData = await machineRes.json();

@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { getApiUrl } from '@/lib/api';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function ForgotPasswordPage() {
 
     try {
       const response = await fetch(
-        `/api/auth/forgot-password`,
+        getApiUrl(`/api/auth/forgot-password`),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

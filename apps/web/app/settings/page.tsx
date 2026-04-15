@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { getApiUrl } from '@/lib/api';
 
 
 function SettingsContent() {
@@ -30,7 +31,7 @@ function SettingsContent() {
       setLoadingSaved(true);
       setSavedEquipment([]);
       
-      const url = `/api/machinery/favorites`;
+      const url = getApiUrl(`/api/machinery/favorites`);
       const response = await fetch(url, {
         headers: { 'x-user-id': user.id }
       });
@@ -53,7 +54,7 @@ function SettingsContent() {
   const handleRemoveFavorite = useCallback(async (machineryId: string) => {
     if (!user) return;
     try {
-      await fetch(`/api/machinery/${machineryId}/favorite`, {
+      await fetch(getApiUrl(`/api/machinery/${machineryId}/favorite`), {
         method: 'POST',
         headers: { 'x-user-id': user.id }
       });

@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
+import { getApiUrl } from '@/lib/api';
 
 function ResetPasswordContent() {
   const router = useRouter();
@@ -26,7 +27,7 @@ function ResetPasswordContent() {
     const verifyToken = async () => {
       try {
         const response = await fetch(
-          `/api/auth/verify-reset-token?token=${token}`,
+          getApiUrl(`/api/auth/verify-reset-token?token=${token}`),
           { method: 'GET' }
         );
 
@@ -65,7 +66,7 @@ function ResetPasswordContent() {
 
     try {
       const response = await fetch(
-        `/api/auth/reset-password`,
+        getApiUrl(`/api/auth/reset-password`),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

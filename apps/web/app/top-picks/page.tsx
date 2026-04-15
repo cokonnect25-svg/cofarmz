@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { getApiUrl } from '@/lib/api';
 
 interface Machinery {
   id: string;
@@ -31,7 +32,7 @@ export default function TopPicksPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetch(`/api/machinery/featured`)
+      fetch(getApiUrl(`/api/machinery/featured`))
         .then(r => r.ok ? r.json() : [])
         .then(data => setMachinery(Array.isArray(data) ? data : []))
         .catch(() => setMachinery([]))

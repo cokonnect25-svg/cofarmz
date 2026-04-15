@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { Trash2, ArrowLeft, Video, Upload as UploadIcon, X, Plus, Eye, EyeOff } from 'lucide-react';
+import { getApiUrl } from '@/lib/api';
 
 interface Reel {
   id: string;
@@ -44,7 +45,7 @@ function MyReelsContent() {
     const fetchReels = async () => {
       try {
         const res = await fetch(
-          `/api/reels?userId=${user.id}&limit=20`
+          getApiUrl(`/api/reels?userId=${user.id}&limit=20`)
         );
         if (res.ok) {
           const response = await res.json();
@@ -131,7 +132,7 @@ function MyReelsContent() {
         formData.append('file', videoFile);
 
         const uploadRes = await fetch(
-          `/api/upload`,
+          getApiUrl(`/api/upload`),
           {
             method: 'POST',
             body: formData,
@@ -147,7 +148,7 @@ function MyReelsContent() {
       }
 
       const res = await fetch(
-        `/api/reels`,
+        getApiUrl(`/api/reels`),
         {
           method: 'POST',
           headers: { 'x-user-id': user.id },

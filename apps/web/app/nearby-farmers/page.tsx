@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { getApiUrl } from '@/lib/api';
 
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
@@ -175,7 +176,7 @@ function NearbyFarmersContent() {
       return;
     }
     try {
-      const res = await fetch(`/api/farmers/profile?farmerId=${user.id}`, { headers: { 'x-user-id': user.id } });
+      const res = await fetch(getApiUrl(`/api/farmers/profile?farmerId=${user.id}`), { headers: { 'x-user-id': user.id } });
       if (res.ok) {
         const data = await res.json();
         if (data.latitude && data.longitude) {
@@ -210,7 +211,7 @@ function NearbyFarmersContent() {
       if (filters.yieldDateTo) params.append('yieldDateTo', filters.yieldDateTo);
       if (type === 'buyers' && filters.wasteOnly) params.append('wasteOnly', 'true');
 
-      const url = `/api/nearby-farmers?${params.toString()}`;
+      const url = getApiUrl(`/api/nearby-farmers?${params.toString()}`);
       console.log('Fetching', type, 'from:', url);
 
       const response = await fetch(url);
