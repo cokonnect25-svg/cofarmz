@@ -385,7 +385,7 @@ function HomePageContent() {
 
                 // 1. Buyers interested in your AGRICULTURAL WASTE
                 const matchedWasteBuyers = matchingResults
-                  .filter(r => r.role === 'buyer' && r.distance <= 200)
+                  .filter(r => r.role === 'buyer' && r.distance <= 99999)
                   .map(r => {
                     const matchingWasteCrops = r.crops
                       .filter((c: any) => c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
@@ -396,7 +396,7 @@ function HomePageContent() {
 
                 // 2. Buyers interested in your REGULAR CROPS (exclude waste crops already shown above)
                 const matchedBuyers = matchingResults
-                  .filter(r => r.role === 'buyer' && r.distance <= 100)
+                  .filter(r => r.role === 'buyer' && r.distance <= 99999)
                   .map(r => {
                     const matchingCrops = r.crops
                       .filter(c => !c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
@@ -407,7 +407,7 @@ function HomePageContent() {
 
                 // 3. Farmers matching your regular crops
                 const matchedFarmers = matchingResults
-                  .filter(r => r.role === 'farmer' && r.distance <= 100)
+                  .filter(r => r.role === 'farmer' && r.distance <= 99999)
                   .map(r => {
                     const matchingCrops = r.crops
                       .filter(c => !c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))

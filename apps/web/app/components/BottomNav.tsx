@@ -19,17 +19,18 @@ function BottomNavContent() {
 
   const navItems = [
     { href: '/', label: 'Home', icon: 'ph-house' },
-    { href: '/nearby-farmers?type=farmers', basePath: '/nearby-farmers', queryType: 'farmers', label: 'Farmers', icon: 'ph-plant' },
-    { href: '/nearby-farmers?type=buyers', basePath: '/nearby-farmers', queryType: 'buyers', label: 'Buyers', icon: 'ph-handshake' },
+    { href: '/machinery-list', label: 'Fleet', icon: 'ph-tractor' },
+    { href: '/nearby-farmers', basePath: '/nearby-farmers', label: 'Nearby', icon: 'ph-users' },
     { href: '/reels', label: 'Reels', icon: 'ph-video' },
+    { href: '/chat', label: 'Messages', icon: 'ph-chat-circle' },
     { href: '/user-profile', label: 'Profile', icon: 'ph-user' },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-[60] md:hidden bg-white/90 backdrop-blur-xl border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.06)] pb-safe">
-      <div className="flex items-center justify-around h-[64px] px-1 relative">
+    <nav className="fixed bottom-0 left-0 right-0 z-[60] md:hidden bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] pb-safe">
+      <div className="flex items-center justify-around h-[60px] px-1 relative">
         {navItems.map((item) => {
-          const active = isActive(item.basePath || item.href, item.queryType);
+          const active = isActive(item.basePath || item.href, (item as any).queryType);
           return (
             <Link
               key={item.href}
@@ -38,18 +39,18 @@ function BottomNavContent() {
                 active ? 'text-green-700' : 'text-gray-400'
               }`}
             >
-              <div className={`relative flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-300 ${
+              <div className={`relative flex items-center justify-center w-7 h-7 rounded-xl transition-all duration-300 ${
                 active ? 'bg-green-50 scale-110' : 'bg-transparent shadow-none'
               }`}>
-                <i className={`${active ? 'ph-fill' : 'ph'} ${item.icon} text-[22px] transition-transform duration-300 active:scale-75`}></i>
+                <i className={`${active ? 'ph-fill' : 'ph'} ${item.icon} text-[20px] transition-transform duration-300 active:scale-75`}></i>
               </div>
-              <span className={`text-[9px] font-black mt-1 tracking-tighter transition-all duration-300 ${
-                active ? 'opacity-100 translate-y-0' : 'opacity-80'
+              <span className={`text-[9px] font-bold mt-1 tracking-tighter transition-all duration-300 ${
+                active ? 'text-green-700 opacity-100 translate-y-0' : 'text-gray-400 opacity-90'
               }`}>
                 {item.label}
               </span>
               {active && (
-                <div className="absolute top-0 w-8 h-1 bg-green-600 rounded-b-full animate-in slide-in-from-top-1 duration-300" />
+                <div className="absolute top-0 w-6 h-0.5 bg-green-600 rounded-b-full duration-300" />
               )}
             </Link>
           );

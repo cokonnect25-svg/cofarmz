@@ -146,29 +146,6 @@ export default function TopNav() {
         <div className="h-[2px] bg-gradient-to-r from-green-700 via-green-500 to-emerald-400" />
       </nav>
 
-      {/* ── BOTTOM NAV (mobile only) ── */}
-      {isAuthenticated && (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
-          <div className="flex items-center justify-around h-[60px] px-2">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1 rounded-xl transition-all ${isActive(link.href) ? 'text-green-700' : 'text-gray-400'
-                  }`}
-              >
-                <i className={`${isActive(link.href) ? 'ph-fill' : 'ph'} ${link.icon} text-[22px]`}></i>
-                <span className={`text-[10px] font-semibold ${isActive(link.href) ? 'text-green-700' : 'text-gray-400'}`}>
-                  {link.label}
-                </span>
-                {isActive(link.href) && (
-                  <span className="absolute bottom-0 w-6 h-0.5 bg-green-600 rounded-full" />
-                )}
-              </Link>
-            ))}
-          </div>
-        </nav>
-      )}
     </>
   );
 }
