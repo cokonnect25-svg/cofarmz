@@ -13,22 +13,25 @@ import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { useEffect } from "react";
 import { authClient } from "@/lib/auth-client";
+import { useAuth } from "@/hooks/useAuth";
+
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const hideNav = ['/login', '/signup', '/forgot-password', '/reset-password', '/select-role', '/auth-callback'].includes(pathname);
+  const { user } = useAuth();
+
+  // ✅ Show BottomNav only when user is logged in
+  const showBottomNav = !!user;
 
   useEffect(() => {
     const handleUrlOpen = async (event: any) => {
       const url = event.url;
+
       if (url.includes('auth-callback')) {
         await Browser.close();
-        
-        // Give Capacitor a moment to sync cookies before refreshing
+
         setTimeout(async () => {
           await authClient.getSession();
-          // Force a full page reload to ensure all guards and state are reset
           window.location.replace('/');
         }, 500);
       }
@@ -43,14 +46,20 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {!hideNav && <TopNav />}
-      <main className={!hideNav ? 'pt-16 pb-28 md:pb-0' : ''}>
+      {/* ✅ Always visible */}
+      <TopNav />
+
+      <main className="pt-16 pb-28 md:pb-0">
         <RoleSelectionGuard>
           {children}
         </RoleSelectionGuard>
       </main>
-      {!hideNav && <Footer />}
-      {!hideNav && <BottomNav />}
+
+      <Footer />
+
+      {/* ✅ Only when logged in */}
+      {showBottomNav && <BottomNav />}
+
       <LocationPermissionPopup />
     </>
   );
