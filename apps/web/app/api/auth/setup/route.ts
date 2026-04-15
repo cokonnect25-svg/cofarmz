@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import bcrypt from 'bcrypt';
 import sql from '@/app/api/utils/sql';
 import { NextResponse } from 'next/server';
@@ -26,3 +27,4 @@ export async function POST() {
     );
   }
 }
+

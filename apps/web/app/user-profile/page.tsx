@@ -9,6 +9,7 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { MapPin, ChevronUp, LogOut, X, Phone, MessageCircle, MapPinIcon, Heart, Send, Trash2, Star } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import InAppCall from '@/app/components/InAppCall';
+import { getApiUrl } from '@/lib/api';
 
 const MapPicker = dynamic(() => import('@/app/components/MapPicker'), { ssr: false });
 
@@ -146,7 +147,7 @@ function ProfileContent() {
   const handleAcceptBooking = async (id: number) => {
     setProcessingId(id);
     try {
-      const response = await fetch(`/api/reservations`, {
+      const response = await fetch(getApiUrl(`/api/reservations`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status: 'accepted' }),
@@ -171,7 +172,7 @@ function ProfileContent() {
 
     setProcessingId(id);
     try {
-      const response = await fetch(`/api/reservations`, {
+      const response = await fetch(getApiUrl(`/api/reservations`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status: 'rejected' }),
@@ -207,7 +208,7 @@ function ProfileContent() {
     if (!cancelDialog) return;
     setCancelling(true);
     try {
-      await fetch(`/api/reservations/${cancelDialog.booking.id}`, {
+      await fetch(getApiUrl(`/api/reservations/${cancelDialog.booking.id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'cancelled' }),
@@ -302,7 +303,7 @@ function ProfileContent() {
         lon = pos.coords.longitude;
       }
 
-      const buyersRes = await fetch(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${user.id}`);
+      const buyersRes = await fetch(getApiUrl(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${user.id}`));
       const buyersData = await buyersRes.json();
       
       const mapped = (Array.isArray(buyersData) ? buyersData : []).map((f: any) => ({
@@ -337,7 +338,7 @@ function ProfileContent() {
     if (!user?.id) return;
     try {
       const url = `/api/users/profile?userId=${user.id}`;
-      const response = await fetch(url);
+      const response = await fetch(getApiUrl(url));
       if (response.ok) {
         const data = await response.json();
         setProfileData(data);
@@ -352,7 +353,7 @@ function ProfileContent() {
     if (!user?.id) return;
     try {
       const url = `/api/follows?user_id=${user.id}&type=both`;
-      const res = await fetch(url);
+      const res = await fetch(getApiUrl(url));
       if (res.ok) {
         const data = await res.json();
         const followers = data.followers_count ?? 0;
@@ -374,7 +375,7 @@ function ProfileContent() {
     if (!user?.id) return [];
     try {
       const url = `/api/farmer-crops?user_id=${user.id}`;
-      const response = await fetch(url);
+      const response = await fetch(getApiUrl(url));
       if (!response.ok) {
         throw new Error('Failed to fetch crops');
       }
@@ -393,7 +394,7 @@ function ProfileContent() {
     if (!user?.id) return;
     try {
       const url = `/api/machinery?owner_id=${user.id}`;
-      const response = await fetch(url);
+      const response = await fetch(getApiUrl(url));
       if (!response.ok) {
         throw new Error('Failed to fetch equipment');
       }
@@ -410,7 +411,7 @@ function ProfileContent() {
     if (!user?.id) return;
     setLoadingFavorites(true);
     try {
-      const response = await fetch('/api/machinery/favorites', {
+      const response = await fetch(getApiUrl('/api/machinery/favorites'), {
         headers: { 'x-user-id': user.id },
       });
       if (!response.ok) throw new Error('Failed to fetch favorites');
@@ -429,7 +430,7 @@ function ProfileContent() {
     setLoadingReels(true);
     try {
       const url = `/api/reels?userId=${user.id}`;
-      const response = await fetch(url);
+      const response = await fetch(getApiUrl(url));
       if (!response.ok) {
         throw new Error('Failed to fetch my reels');
       }
@@ -454,7 +455,7 @@ function ProfileContent() {
     setDeletingReelId(reelId);
     try {
       const url = `/api/reels/${reelId}`;
-      const response = await fetch(url, {
+      const response = await fetch(getApiUrl(url), {
         method: 'DELETE',
         headers: {
           'x-user-id': user.id,
@@ -482,7 +483,7 @@ function ProfileContent() {
     setLoadingBookings(true);
     try {
       const url = `/api/reservations?user_id=${user.id}`;
-      const response = await fetch(url);
+      const response = await fetch(getApiUrl(url));
       if (!response.ok) {
         throw new Error('Failed to fetch bookings');
       }
@@ -547,7 +548,7 @@ function ProfileContent() {
     if (!user?.id) return;
     try {
       const url = `/api/reviews?user_id=${user.id}`;
-      const response = await fetch(url);
+      const response = await fetch(getApiUrl(url));
       if (response.ok) {
         const reviews = await response.json();
         const reviewMap: { [key: number]: any } = {};
@@ -566,7 +567,7 @@ function ProfileContent() {
     setLoadingRentals(true);
     try {
       const url = `/api/reservations?owner_id=${user.id}`;
-      const response = await fetch(url);
+      const response = await fetch(getApiUrl(url));
       if (!response.ok) {
         throw new Error('Failed to fetch rentals');
       }
@@ -603,7 +604,7 @@ function ProfileContent() {
     if (!user?.id) return;
     try {
       const url = `/api/follows?user_id=${user.id}&type=followers`;
-      const response = await fetch(url);
+      const response = await fetch(getApiUrl(url));
       if (!response.ok) {
         throw new Error('Failed to fetch followers');
       }
@@ -619,7 +620,7 @@ function ProfileContent() {
     if (!user?.id) return;
     try {
       const url = `/api/follows?user_id=${user.id}&type=following`;
-      const response = await fetch(url);
+      const response = await fetch(getApiUrl(url));
       if (!response.ok) {
         throw new Error('Failed to fetch following');
       }
@@ -659,7 +660,7 @@ function ProfileContent() {
 
     setAddingCrop(true);
     try {
-      const response = await fetch(`/api/farmer-crops`, {
+      const response = await fetch(getApiUrl(`/api/farmer-crops`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -699,7 +700,7 @@ function ProfileContent() {
     if (!confirm('Remove this crop from your expertise?')) return;
 
     try {
-      const response = await fetch(`/api/farmer-crops?id=${cropId}`, {
+      const response = await fetch(getApiUrl(`/api/farmer-crops?id=${cropId}`), {
         method: 'DELETE',
       });
 
@@ -771,7 +772,7 @@ function ProfileContent() {
 
     setSavingCrop(true);
     try {
-      const response = await fetch(`/api/farmer-crops`, {
+      const response = await fetch(getApiUrl(`/api/farmer-crops`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -830,7 +831,7 @@ function ProfileContent() {
 
     setIsUpdatingProfile(true);
     try {
-      const response = await fetch(`/api/users/profile`, {
+      const response = await fetch(getApiUrl(`/api/users/profile`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -929,7 +930,7 @@ function ProfileContent() {
       const formData = new FormData();
       formData.append('file', blob, 'profile-photo.jpg');
 
-      const apiUrl = `/api/upload`;
+      const apiUrl = getApiUrl(`/api/upload`);
 
       const uploadRes = await fetch(apiUrl, {
         method: 'POST',
@@ -963,7 +964,7 @@ function ProfileContent() {
       }
 
       if (user?.id) {
-        const updateUrl = `/api/users/${user.id}`;
+        const updateUrl = getApiUrl(`/api/users/${user.id}`);
         const updateRes = await fetch(updateUrl, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -1416,7 +1417,7 @@ function ProfileContent() {
                               onClick={async () => {
                                 const newVal = !equipment.is_unavailable;
                                 try {
-                                  const res = await fetch(`/api/machinery/${equipment.id}`, {
+                                  const res = await fetch(getApiUrl(`/api/machinery/${equipment.id}`), {
                                     method: 'PATCH',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ is_unavailable: newVal }),

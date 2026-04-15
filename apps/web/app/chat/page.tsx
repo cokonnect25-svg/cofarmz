@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { getApiUrl } from '@/lib/api';
 
 import { MessageCircle, Search } from 'lucide-react';
 
@@ -51,7 +52,7 @@ function ChatContent() {
   const fetchAllUsers = async () => {
     setLoadingUsers(true);
     try {
-      const res = await fetch(`/api/nearby-farmers?type=all&latitude=0&longitude=0&currentUserId=${user?.id}`);
+      const res = await fetch(getApiUrl(`/api/nearby-farmers?type=all&latitude=0&longitude=0&currentUserId=${user?.id}`));
       const data = await res.json();
       setAllUsers(Array.isArray(data) ? data.filter((u: any) => u.id !== user?.id) : []);
     } catch {
@@ -65,7 +66,7 @@ function ChatContent() {
     try {
       setLoadingConversations(true);
       const response = await fetch(
-        `/api/messages/conversations?userId=${user?.id}`
+        getApiUrl(`/api/messages/conversations?userId=${user?.id}`)
       );
       if (response.ok) {
         const data = await response.json();

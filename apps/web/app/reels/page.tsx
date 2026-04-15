@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Suspense } from 'react';
 import { Heart, MessageCircle, Send, ArrowLeft, X } from 'lucide-react';
+import { getApiUrl } from '@/lib/api';
 
 interface Reel {
   id: string;
@@ -63,9 +64,9 @@ function ReelsContent() {
     const fetchReels = async () => {
       try {
         const filterUserId = searchParams.get('userId');
-        const apiUrl = filterUserId 
-          ? `/api/reels?userId=${filterUserId}&currentUserId=${user.id}&limit=50`
-          : `/api/reels?currentUserId=${user.id}&limit=20`;
+        const apiUrl = filterUserId
+          ? getApiUrl(`/api/reels?userId=${filterUserId}&currentUserId=${user.id}&limit=50`)
+          : getApiUrl(`/api/reels?currentUserId=${user.id}&limit=20`);
 
         const res = await fetch(apiUrl);
         if (res.ok) {
@@ -124,7 +125,7 @@ function ReelsContent() {
     const reelId = reels[currentReelIndex]?.id;
     if (!reelId) return;
     const viewTimeout = setTimeout(() => {
-      fetch(`/api/reels/${reelId}/view`, { method: 'POST' })
+      fetch(getApiUrl(`/api/reels/${reelId}/view`), { method: 'POST' })
         .then(() => {
           // Update view count in UI
           setReels(prev => prev.map((r, i) => i === currentReelIndex ? { ...r, views: (r.views || 0) + 1 } : r));
@@ -140,7 +141,7 @@ function ReelsContent() {
 
     try {
       await fetch(
-        `/api/reels/${reelId}/like`,
+        getApiUrl(`/api/reels/${reelId}/like`),
         {
           method: 'POST',
           headers: { 'x-user-id': user.id }
@@ -183,7 +184,7 @@ function ReelsContent() {
       const method = isCurrentlyFollowing ? 'DELETE' : 'POST';
 
       const res = await fetch(
-        `/api/follows`,
+        getApiUrl(`/api/follows`),
         {
           method,
           headers: {
@@ -229,7 +230,7 @@ function ReelsContent() {
     setCommentsLoading(true);
     try {
       const res = await fetch(
-        `/api/reels/${reelId}/comments`
+        getApiUrl(`/api/reels/${reelId}/comments`)
       );
       if (res.ok) {
         const data = await res.json();
@@ -253,7 +254,7 @@ function ReelsContent() {
     setPostingComment(true);
     try {
       const res = await fetch(
-        `/api/reels/${reels[currentReelIndex].id}/comments`,
+        getApiUrl(`/api/reels/${reels[currentReelIndex].id}/comments`),
         {
           method: 'POST',
           headers: {

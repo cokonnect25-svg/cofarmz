@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import sql from '@/app/api/utils/sql';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

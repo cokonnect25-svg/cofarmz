@@ -8,17 +8,25 @@ export function RoleSelectionGuard({ children }: { children: React.ReactNode }) 
   const { isAuthenticated, loading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const [mounted, setMounted] = React.useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Normalize pathname to handle trailing slashes from static export
+  const normalizedPathname = pathname?.replace(/\/$/, '') || '/';
+  
   // Publicly accessible paths that don't need login
   const publicPaths = [
     '/login', '/signup', '/forgot-password', '/reset-password',
     '/auth-callback', '/terms', '/privacy', '/help', '/about'
   ];
-  const isPublicRoute = publicPaths.includes(pathname);
+  const isPublicRoute = publicPaths.includes(normalizedPathname);
 
   useEffect(() => {
-    // Wait for the auth session to load
-    if (loading) return;
+    // Wait for mount and auth session to load
+    if (!mounted || loading) return;
 
     // If already on a login/signup page, don't redirect
     if (isPublicRoute) return;
@@ -27,12 +35,15 @@ export function RoleSelectionGuard({ children }: { children: React.ReactNode }) 
     if (!isAuthenticated) {
       router.replace('/login');
     }
+  }, [mounted, isAuthenticated, loading, isPublicRoute, router]);
 
-    // NOTE: Role selection is now handled directly on the Home Page (/) 
-    // using a popup modal. We no longer force-redirect to /select-role here.
-  }, [isAuthenticated, loading, isPublicRoute, router]);
+  // Prevent hydration mismatch: always render null or children initially
+  // On the client, after mount, we can show the spinner if needed
+  if (!mounted) {
+    return <>{children}</>;
+  }
 
-  // Show a clean loading state ONLY for non-public routes
+  // Show a clean loading state ONLY for non-public routes after mount
   if (loading && !isPublicRoute) {
     return (
       <div className="w-full h-screen bg-white flex flex-col items-center justify-center">

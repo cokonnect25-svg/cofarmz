@@ -1,6 +1,8 @@
 import sql from "@/app/api/utils/sql";
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 // Test if HMAC verification works exactly like better-call does
 async function verifyCookieSignature(signedValue: string, signature: string, secret: string): Promise<boolean> {
   try {

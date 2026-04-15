@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Capacitor } from '@capacitor/core';
+import { getApiUrl } from '@/lib/api';
 
 interface Machinery {
   id: string;
@@ -73,13 +74,20 @@ function HomePageContent() {
 
   useEffect(() => { setMounted(true); }, []);
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [loading, isAuthenticated, router]);
+
   // Check if role is confirmed
   useEffect(() => {
     if (!user?.id) return;
     
     const checkRole = async () => {
       try {
-        const res = await fetch(`/api/users/profile?userId=${user.id}`);
+        const res = await fetch(getApiUrl(`/api/users/profile?userId=${user.id}`));
         if (res.ok) {
           const profile = await res.json();
           if (profile.role_confirmed !== true) {
@@ -96,7 +104,7 @@ function HomePageContent() {
   const handleSelectRole = async (role: 'farmer' | 'buyer') => {
     setRoleUpdating(true);
     try {
-      const res = await fetch('/api/users/profile', {
+      const res = await fetch(getApiUrl('/api/users/profile'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user?.id, email: user?.email, role }),
@@ -118,7 +126,7 @@ function HomePageContent() {
     const uid = user?.id;
     if (uid) {
       // 1. Fetch User Profile & Crops
-      fetch(`/api/farmers/profile?userId=${uid}`)
+      fetch(getApiUrl(`/api/farmers/profile?userId=${uid}`))
         .then(r => r.ok ? r.json() : null)
         .then(profile => {
           if (profile) {
@@ -134,8 +142,8 @@ function HomePageContent() {
               // Get real user location, fallback to 0,0 (shows all users sorted by distance=9999)
               const fetchMatches = (lat: number, lon: number) => {
                 Promise.all([
-                  fetch(`/api/nearby-farmers?type=farmers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`).then(r => r.json()),
-                  fetch(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`).then(r => r.json())
+                  fetch(getApiUrl(`/api/nearby-farmers?type=farmers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.json()),
+                  fetch(getApiUrl(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.json())
                 ]).then(([farmersData, buyersData]) => {
                   const allResults = [
                     ...(Array.isArray(farmersData) ? farmersData : []),
@@ -188,13 +196,13 @@ function HomePageContent() {
         });
 
       // Existing Machinery & Favorites fetches
-      fetch(`/api/machinery/featured`)
+      fetch(getApiUrl(`/api/machinery/featured`))
         .then(r => r.ok ? r.json() : [])
         .then(data => setMachinery(Array.isArray(data) ? data : []))
         .catch(() => setMachinery([]))
         .finally(() => setLoadingMachinery(false));
 
-      fetch(`/api/machinery/favorites`, { headers: { 'x-user-id': uid } })
+      fetch(getApiUrl(`/api/machinery/favorites`), { headers: { 'x-user-id': uid } })
         .then(r => r.ok ? r.json() : { favorites: [] })
         .then(data => {
           const ids = (data.favorites || []).map((f: any) => f.id || f.machinery_id);
@@ -222,7 +230,7 @@ function HomePageContent() {
     });
     // Save to DB
     try {
-      await fetch(`/api/machinery/${id}/favorite`, {
+      await fetch(getApiUrl(`/api/machinery/${id}/favorite`), {
         method: 'POST',
         headers: { 'x-user-id': user.id },
       });
@@ -237,6 +245,22 @@ function HomePageContent() {
   };
 
   const effectiveUser = user;
+
+  // Show splash/loading while checking auth
+  if (!mounted || loading) {
+    return (
+      <div className="w-full h-screen bg-gradient-to-br from-green-800 to-emerald-600 flex flex-col items-center justify-center gap-4">
+        <div className="w-20 h-20 bg-white rounded-3xl p-2 shadow-2xl mb-2">
+          <img src="/assets/cofarmz-logo.png" alt="CoFarmz" className="w-full h-full rounded-2xl object-cover" />
+        </div>
+        <span className="text-white font-black text-2xl tracking-tight">CoFarmz</span>
+        <div className="w-8 h-8 rounded-full border-4 border-white border-t-transparent animate-spin mt-4"></div>
+      </div>
+    );
+  }
+
+  // If not authenticated, show nothing (redirect is happening)
+  if (!isAuthenticated) return null;
 
   const filteredMachinery = selectedCategory === 'All'
     ? machinery
@@ -281,22 +305,22 @@ function HomePageContent() {
         </div>
 
         {/* Search Bar */}
-        <form onSubmit={handleSearch} className="flex gap-2.5 mb-7 relative z-10">
-          <div className="flex-1 relative">
-            <i className="ph ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl"></i>
+        <form onSubmit={handleSearch} className="flex gap-3 mb-7 relative z-10">
+          <div className="flex-1 relative group">
+            <div className="absolute inset-0 bg-white/20 blur-xl rounded-full transition-opacity opacity-0 group-hover:opacity-100"></div>
+            <i className="ph-bold ph-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-emerald-700 text-xl z-20"></i>
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search tractors, harvesters..."
-              className="w-full bg-white pl-12 pr-4 py-[14px] rounded-2xl text-gray-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.18)] border-none"
+              className="w-full bg-white/95 backdrop-blur-md pl-14 pr-5 py-[16px] rounded-full text-gray-900 font-bold text-sm focus:outline-none focus:ring-4 focus:ring-white/40 shadow-[0_12px_40px_-10px_rgba(0,0,0,0.3)] border border-white/60 transition-all relative z-10"
             />
           </div>
           <button
             type="submit"
-            className="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white px-5 py-[14px] rounded-2xl flex items-center gap-2 font-black shadow-[0_8px_24px_rgba(217,119,6,0.45)] transition-all">
-            <i className="ph-bold ph-magnifying-glass text-lg"></i>
-            <span className="text-sm hidden sm:block">Search</span>
+            className="bg-gradient-to-br from-amber-400 to-amber-600 hover:to-amber-500 active:scale-90 text-white px-6 py-[16px] rounded-full flex items-center gap-2 font-black shadow-[0_8px_24px_rgba(217,119,6,0.45)] hover:shadow-[0_12px_32px_rgba(217,119,6,0.6)] transition-all relative z-10 border border-amber-300/50">
+            <i className="ph-bold ph-arrow-right text-lg"></i>
           </button>
         </form>
 
@@ -505,52 +529,52 @@ function HomePageContent() {
           <div className="grid grid-cols-2 gap-5">
             {/* Equipment Rentals */}
             <div onClick={() => router.push('/machinery-list')}
-              className="bg-white rounded-[32px] p-6 cursor-pointer hover:bg-brand-50 transition-all group border border-gray-100 shadow-premium active:scale-95">
-              <div className="w-12 h-12 bg-brand-600 rounded-[20px] flex items-center justify-center mb-5 shadow-lg shadow-brand-600/20 group-hover:scale-110 transition-transform">
-                <i className="ph-fill ph-tractor text-white text-2xl"></i>
+              className="bg-white/80 backdrop-blur-xl rounded-[36px] p-6 cursor-pointer hover:bg-brand-50 transition-all group border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 active:scale-95">
+              <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-brand-700 rounded-[22px] flex items-center justify-center mb-5 shadow-lg shadow-brand-500/30 group-hover:scale-110 transition-transform">
+                <i className="ph-fill ph-tractor text-white text-3xl"></i>
               </div>
-              <h3 className="text-gray-900 font-black text-lg leading-tight mb-1">Fleet & Hire</h3>
+              <h3 className="text-gray-900 font-extrabold text-xl leading-tight mb-1">Fleet & Hire</h3>
               <p className="text-gray-400 text-[10px] leading-relaxed mb-4 uppercase font-bold tracking-wider">Professional Equipment</p>
-              <div className="flex items-center gap-1 text-brand-600 font-black text-xs">
+              <div className="flex items-center gap-1 text-brand-600 font-black text-xs opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
                 Explore <i className="ph-bold ph-arrow-right"></i>
               </div>
             </div>
 
             {/* Nearby Farmers */}
             <div onClick={() => router.push('/nearby-farmers?type=farmers')}
-              className="bg-white rounded-[32px] p-6 cursor-pointer hover:bg-blue-50 transition-all group border border-gray-100 shadow-premium active:scale-95">
-              <div className="w-12 h-12 bg-blue-600 rounded-[20px] flex items-center justify-center mb-5 shadow-lg shadow-blue-600/20 group-hover:scale-110 transition-transform">
-                <i className="ph-fill ph-users-three text-white text-2xl"></i>
+              className="bg-white/80 backdrop-blur-xl rounded-[36px] p-6 cursor-pointer hover:bg-blue-50 transition-all group border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 active:scale-95">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-700 rounded-[22px] flex items-center justify-center mb-5 shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
+                <i className="ph-fill ph-users-three text-white text-3xl"></i>
               </div>
-              <h3 className="text-gray-900 font-black text-lg leading-tight mb-1">Farmer Hub</h3>
+              <h3 className="text-gray-900 font-extrabold text-xl leading-tight mb-1">Farmer Hub</h3>
               <p className="text-gray-400 text-[10px] leading-relaxed mb-4 uppercase font-bold tracking-wider">Collaborate Nearby</p>
-              <div className="flex items-center gap-1 text-blue-600 font-black text-xs">
+              <div className="flex items-center gap-1 text-blue-600 font-black text-xs opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
                 Discover <i className="ph-bold ph-arrow-right"></i>
               </div>
             </div>
 
             {/* Nearby Buyers */}
             <div onClick={() => router.push('/nearby-farmers?type=buyers')}
-              className="bg-white rounded-[32px] p-6 cursor-pointer hover:bg-amber-50 transition-all group border border-gray-100 shadow-premium active:scale-95">
-              <div className="w-12 h-12 bg-amber-500 rounded-[20px] flex items-center justify-center mb-5 shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform">
-                <i className="ph-fill ph-handshake text-white text-2xl"></i>
+              className="bg-white/80 backdrop-blur-xl rounded-[36px] p-6 cursor-pointer hover:bg-amber-50 transition-all group border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 active:scale-95">
+              <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-amber-600 rounded-[22px] flex items-center justify-center mb-5 shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform">
+                <i className="ph-fill ph-handshake text-white text-3xl"></i>
               </div>
-              <h3 className="text-gray-900 font-black text-lg leading-tight mb-1">Crop Market</h3>
+              <h3 className="text-gray-900 font-extrabold text-xl leading-tight mb-1">Crop Market</h3>
               <p className="text-gray-400 text-[10px] leading-relaxed mb-4 uppercase font-bold tracking-wider">Find Active Buyers</p>
-              <div className="flex items-center gap-1 text-amber-600 font-black text-xs">
+              <div className="flex items-center gap-1 text-amber-600 font-black text-xs opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
                 Sell Now <i className="ph-bold ph-arrow-right"></i>
               </div>
             </div>
 
             {/* Reels & Videos */}
             <div onClick={() => router.push('/reels')}
-              className="bg-white rounded-[32px] p-6 cursor-pointer hover:bg-purple-50 transition-all group border border-gray-100 shadow-premium active:scale-95">
-              <div className="w-12 h-12 bg-purple-600 rounded-[20px] flex items-center justify-center mb-5 shadow-lg shadow-purple-600/20 group-hover:scale-110 transition-transform">
-                <i className="ph-fill ph-video text-white text-2xl"></i>
+              className="bg-white/80 backdrop-blur-xl rounded-[36px] p-6 cursor-pointer hover:bg-purple-50 transition-all group border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 active:scale-95">
+              <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded-[22px] flex items-center justify-center mb-5 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
+                <i className="ph-fill ph-video text-white text-3xl"></i>
               </div>
-              <h3 className="text-gray-900 font-black text-lg leading-tight mb-1">Farm Reels</h3>
+              <h3 className="text-gray-900 font-extrabold text-xl leading-tight mb-1">Farm Reels</h3>
               <p className="text-gray-400 text-[10px] leading-relaxed mb-4 uppercase font-bold tracking-wider">Showcase Your Work</p>
-              <div className="flex items-center gap-1 text-purple-600 font-black text-xs">
+              <div className="flex items-center gap-1 text-purple-600 font-black text-xs opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
                 Watch <i className="ph-bold ph-arrow-right"></i>
               </div>
             </div>

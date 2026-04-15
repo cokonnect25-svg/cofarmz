@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextResponse } from "next/server";
 
@@ -105,3 +106,4 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Failed to delete review" }, { status: 500 });
   }
 }
+

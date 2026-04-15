@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { getApiUrl } from '@/lib/api';
 
 
 interface Reservation {
@@ -48,9 +49,9 @@ export default function MyReservationsPage() {
   const fetchReservations = async () => {
     try {
       // Auto-cancel pending bookings with no response after 2 days
-      await fetch(`/api/reservations/auto-cancel`, { method: 'POST' }).catch(() => {});
+      await fetch(getApiUrl(`/api/reservations/auto-cancel`), { method: 'POST' }).catch(() => {});
 
-      const url = `/api/reservations?user_id=${user?.id}`;
+      const url = getApiUrl(`/api/reservations?user_id=${user?.id}`);
       console.log('Fetching reservations from:', url);
       const response = await fetch(url);
       if (response.ok) {
@@ -62,7 +63,7 @@ export default function MyReservationsPage() {
           data.map(async (reservation: Reservation) => {
             if (reservation.machinery_id) {
               try {
-                const machineRes = await fetch(`/api/machinery/${reservation.machinery_id}`);
+                const machineRes = await fetch(getApiUrl(`/api/machinery/${reservation.machinery_id}`));
                 if (machineRes.ok) {
                   const machineData = await machineRes.json();
                   return { ...reservation, image_url: machineData.image_url };

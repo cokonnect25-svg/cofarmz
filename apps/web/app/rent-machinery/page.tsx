@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { getApiUrl } from '@/lib/api';
 
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
@@ -64,7 +65,7 @@ function RentMachineryContent() {
     setIsLoadingEdit(true);
     setEditingId(id);
     try {
-      const apiUrl = `/api/machinery/${id}`;
+      const apiUrl = getApiUrl(`/api/machinery/${id}`);
       const response = await fetch(apiUrl);
       if (!response.ok) throw new Error('Failed to load equipment');
       const equipment = await response.json();
@@ -115,50 +116,43 @@ function RentMachineryContent() {
     setFormData(prev => ({ ...prev, available_now: !prev.available_now }));
   };
 
-  const handleDetectLocation = () => {
-    if (!navigator.geolocation) {
-      setSubmitError('Geolocation not supported. Please type your location manually.');
-      return;
-    }
+  const handleDetectLocation = async () => {
     setDetectingLocation(true);
     setSubmitError(null);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
-            { headers: { 'Accept-Language': 'en' } }
-          );
-          const data = await res.json();
-          // Build short address: village/town/city + state
-          const addr = data.address || {};
-          const parts = [
-            addr.village || addr.suburb || addr.town || addr.city_district || addr.city,
-            addr.state_district || addr.county,
-            addr.state,
-          ].filter(Boolean);
-          const locationName = parts.length > 0 ? parts.join(', ') : `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-          setFormData(prev => ({ ...prev, location: locationName, latitude: lat.toString(), longitude: lon.toString() }));
-        } catch {
-          setFormData(prev => ({ ...prev, location: `${lat.toFixed(4)}, ${lon.toFixed(4)}`, latitude: lat.toString(), longitude: lon.toString() }));
-        } finally {
-          setDetectingLocation(false);
-        }
-      },
-      (err) => {
-        setDetectingLocation(false);
-        if (err.code === 1) {
-          setSubmitError('Location permission denied. Please allow location in browser settings, or type your location manually.');
-        } else if (err.code === 2) {
-          setSubmitError('Location unavailable. Please type your location manually.');
-        } else {
-          setSubmitError('Location detection timed out. Please type your location manually.');
-        }
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+    try {
+      let lat: number, lon: number;
+      if (Capacitor.isNativePlatform()) {
+        const { Geolocation } = await import('@capacitor/geolocation');
+        const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+        lat = pos.coords.latitude;
+        lon = pos.coords.longitude;
+      } else {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject)
+        );
+        lat = pos.coords.latitude;
+        lon = pos.coords.longitude;
+      }
+
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      const data = await res.json();
+      const addr = data.address || {};
+      const parts = [
+        addr.village || addr.suburb || addr.town || addr.city_district || addr.city,
+        addr.state_district || addr.county,
+        addr.state,
+      ].filter(Boolean);
+      const locationName = parts.length > 0 ? parts.join(', ') : `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+      setFormData(prev => ({ ...prev, location: locationName, latitude: lat.toString(), longitude: lon.toString() }));
+    } catch (err: any) {
+      console.error('Location error:', err);
+      setSubmitError('Failed to detect location. Please type manually.');
+    } finally {
+      setDetectingLocation(false);
+    }
   };
 
   const handleLocationInput = (value: string) => {
@@ -256,7 +250,7 @@ function RentMachineryContent() {
     const blob = await fetchRes.blob();
     const fd = new FormData();
     fd.append('file', blob, filename);
-    const uploadRes = await fetch(`/api/upload`, { method: 'POST', body: fd });
+    const uploadRes = await fetch(getApiUrl(`/api/upload`), { method: 'POST', body: fd });
     if (!uploadRes.ok) {
       const err = await uploadRes.text();
       throw new Error(`Photo upload failed (${uploadRes.status}): ${err}`);
@@ -342,7 +336,7 @@ function RentMachineryContent() {
           images: images,
         };
 
-        const res = await fetch(`${apiBaseUrl}/api/machinery/${editingId}`, {
+        const res = await fetch(getApiUrl(`/api/machinery/${editingId}`), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updateBody),
@@ -356,7 +350,7 @@ function RentMachineryContent() {
         setTimeout(() => router.push('/user-profile?tab=equipment'), 2000);
       } else {
         // CREATE new equipment — include imageUrl from the start
-        const res = await fetch(`${apiBaseUrl}/api/machinery`, {
+        const res = await fetch(getApiUrl(`/api/machinery`), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

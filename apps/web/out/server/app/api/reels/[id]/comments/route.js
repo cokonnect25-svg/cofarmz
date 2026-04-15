@@ -1,0 +1,16 @@
+(()=>{var e={};e.id=4858,e.ids=[4858],e.modules={10846:e=>{"use strict";e.exports=require("next/dist/compiled/next-server/app-page.runtime.prod.js")},44870:e=>{"use strict";e.exports=require("next/dist/compiled/next-server/app-route.runtime.prod.js")},3295:e=>{"use strict";e.exports=require("next/dist/server/app-render/after-task-async-storage.external.js")},29294:e=>{"use strict";e.exports=require("next/dist/server/app-render/work-async-storage.external.js")},63033:e=>{"use strict";e.exports=require("next/dist/server/app-render/work-unit-async-storage.external.js")},55511:e=>{"use strict";e.exports=require("crypto")},29021:e=>{"use strict";e.exports=require("fs")},91645:e=>{"use strict";e.exports=require("net")},21820:e=>{"use strict";e.exports=require("os")},74998:e=>{"use strict";e.exports=require("perf_hooks")},27910:e=>{"use strict";e.exports=require("stream")},34631:e=>{"use strict";e.exports=require("tls")},47582:(e,r,t)=>{"use strict";t.r(r),t.d(r,{patchFetch:()=>f,routeModule:()=>m,serverHooks:()=>R,workAsyncStorage:()=>l,workUnitAsyncStorage:()=>x});var s={};t.r(s),t.d(s,{GET:()=>d,POST:()=>p,dynamic:()=>c});var o=t(42706),i=t(28203),n=t(45994),a=t(97662),u=t(39187);let c="force-dynamic";async function d(e,{params:r}){try{let{id:e}=await r,t=await (0,a.A)`
+      SELECT 
+        rc.id, rc.user_id, rc.comment, rc.created_at,
+        u.name, u.image
+      FROM reel_comments rc
+      JOIN "user" u ON rc.user_id = u.id
+      WHERE rc.reel_id = ${e}
+      ORDER BY rc.created_at DESC
+      LIMIT 100
+    `;return u.NextResponse.json(t)}catch(e){return console.error("Get comments error:",e),u.NextResponse.json({error:"Failed to get comments"},{status:500})}}async function p(e,{params:r}){try{let{id:t}=await r,{comment:s}=await e.json(),o=e.headers.get("x-user-id");if(!o||!s)return u.NextResponse.json({error:"Missing required fields"},{status:400});let i=await (0,a.A)`
+      INSERT INTO reel_comments (user_id, reel_id, comment)
+      VALUES (${o}, ${t}, ${s})
+      RETURNING id, user_id, comment, created_at
+    `;if(0===i.length)return u.NextResponse.json({error:"Failed to create comment"},{status:500});let n=await (0,a.A)`
+      SELECT id, name, image FROM "user" WHERE id = ${o}
+    `,c={...i[0],name:n[0]?.name||"Unknown",image:n[0]?.image||null};return u.NextResponse.json(c,{status:201})}catch(e){return console.error("Create comment error:",e),u.NextResponse.json({error:"Failed to create comment"},{status:500})}}let m=new o.AppRouteRouteModule({definition:{kind:i.RouteKind.APP_ROUTE,page:"/api/reels/[id]/comments/route",pathname:"/api/reels/[id]/comments",filename:"route",bundlePath:"app/api/reels/[id]/comments/route"},resolvedPagePath:"C:\\Users\\nivet\\Downloads\\cofarmzfinalwebsitee (2)\\cofarmzfinalwebsitee\\finalzaccc\\apps\\web\\app\\api\\reels\\[id]\\comments\\route.ts",nextConfigOutput:"",userland:s}),{workAsyncStorage:l,workUnitAsyncStorage:x,serverHooks:R}=m;function f(){return(0,n.patchFetch)({workAsyncStorage:l,workUnitAsyncStorage:x})}},96487:()=>{},78335:()=>{},97662:(e,r,t)=>{"use strict";t.d(r,{A:()=>s});let s=(0,t(73186).A)(process.env.DATABASE_URL,{ssl:{rejectUnauthorized:!1},max:10,idle_timeout:30,connect_timeout:10})}};var r=require("../../../../../webpack-runtime.js");r.C(e);var t=e=>r(r.s=e),s=r.X(0,[5994,5452,3186],()=>t(47582));module.exports=s})();

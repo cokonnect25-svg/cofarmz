@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import sql from '@/app/api/utils/sql';
 import { randomBytes } from 'crypto';
@@ -82,3 +83,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

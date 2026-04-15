@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextResponse, NextRequest } from "next/server";
 
@@ -97,3 +98,4 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Failed to update reservation" }, { status: 500 });
   }
 }
+

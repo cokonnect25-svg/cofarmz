@@ -5,23 +5,52 @@ import { AppGenProvider } from "@/components/appgen-provider";
 import TopNav from "@/app/components/TopNav";
 import Footer from "@/app/components/Footer";
 import GoogleTranslate from "@/app/components/GoogleTranslate";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { RoleSelectionGuard } from "@/components/RoleSelectionGuard";
 import LocationPermissionPopup from "@/app/components/LocationPermissionPopup";
+import BottomNav from "@/app/components/BottomNav";
+import { App } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
+import { useEffect } from "react";
+import { authClient } from "@/lib/auth-client";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const hideNav = ['/login', '/signup', '/forgot-password', '/reset-password', '/select-role', '/auth-callback'].includes(pathname);
+
+  useEffect(() => {
+    const handleUrlOpen = async (event: any) => {
+      const url = event.url;
+      if (url.includes('auth-callback')) {
+        await Browser.close();
+        
+        // Give Capacitor a moment to sync cookies before refreshing
+        setTimeout(async () => {
+          await authClient.getSession();
+          // Force a full page reload to ensure all guards and state are reset
+          window.location.replace('/');
+        }, 500);
+      }
+    };
+
+    const listener = App.addListener('appUrlOpen', handleUrlOpen);
+
+    return () => {
+      listener.then(l => l.remove());
+    };
+  }, []);
 
   return (
     <>
       {!hideNav && <TopNav />}
-      <main className={!hideNav ? 'pt-16 pb-16 md:pb-0' : ''}>
+      <main className={!hideNav ? 'pt-16 pb-28 md:pb-0' : ''}>
         <RoleSelectionGuard>
           {children}
         </RoleSelectionGuard>
       </main>
       {!hideNav && <Footer />}
+      {!hideNav && <BottomNav />}
       <LocationPermissionPopup />
     </>
   );
