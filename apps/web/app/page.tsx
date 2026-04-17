@@ -296,6 +296,7 @@ function HomePageContent() {
 
         {/* Main Title */}
         <div className="mb-8 relative z-10">
+
           <h1 className="text-[38px] leading-[1.1] font-black text-white tracking-tighter mb-3 drop-shadow-lg">
             Your Global Farmer<br />& Buyer Network
           </h1>
@@ -394,6 +395,8 @@ function HomePageContent() {
                   })
                   .filter(Boolean);
 
+                  console.log("Matched Waste Buyers:", matchedWasteBuyers);
+
                 // 2. Buyers interested in your REGULAR CROPS (exclude waste crops already shown above)
                 const matchedBuyers = matchingResults
                   .filter(r => r.role === 'buyer' && r.distance <= 100)
@@ -453,6 +456,7 @@ function HomePageContent() {
                     <p className="text-[10px] text-gray-300 mt-1">We'll notify you when a match is found.</p>
                   </div>
                 );
+                
 
                 return (
                   <div>
@@ -461,7 +465,7 @@ function HomePageContent() {
                       <div className="mb-12">
                         <div className="flex items-center justify-between mb-5">
                           <div>
-                            <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers Interest For Your Wastage Crops</h2>
+                            <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers Interest For Your Crops wastage</h2>
                             <p className="text-amber-600 text-xs font-bold uppercase tracking-wider">Interested in your agricultural waste</p>
                           </div>
                           <button onClick={() => router.push('/nearby-farmers?type=buyers')}

@@ -102,7 +102,7 @@ function NearbyFarmersContent() {
     const lat = userLocation?.latitude ?? 0;
     const lon = userLocation?.longitude ?? 0;
     fetchNearbyFarmers(lat, lon, searchType);
-  }, [searchType, userLocation]);
+}, [searchType, userLocation, filters.wasteOnly]);
 
   // Listen for location update from popup
   useEffect(() => {
@@ -297,7 +297,11 @@ function NearbyFarmersContent() {
           {/* Toggle Farmers/Buyers */}
           <div className="flex gap-2 mb-4">
             <button
-              onClick={() => { setSearchType('farmers'); setSortBy('nearby'); }}
+  onClick={() => { 
+    setSearchType('farmers'); 
+    setSortBy('nearby');
+    setFilters(prev => ({ ...prev, wasteOnly: false }));
+  }}
               className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === 'farmers'
                 ? 'bg-brand-700 text-white'
                 : 'bg-gray-100 text-gray-700'
@@ -306,7 +310,11 @@ function NearbyFarmersContent() {
               <i className="ph-bold ph-leaf mr-2"></i>Farmers
             </button>
             <button
-              onClick={() => { setSearchType('buyers'); setSortBy('nearby'); }}
+              onClick={() => { 
+  setSearchType('buyers'); 
+  setSortBy('nearby');
+  setFilters(prev => ({ ...prev, wasteOnly: true }));
+}}
               className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === 'buyers'
                 ? 'bg-brand-700 text-white'
                 : 'bg-gray-100 text-gray-700'

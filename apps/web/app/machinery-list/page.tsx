@@ -581,7 +581,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
             </button>
           </div>
         )}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-6 pb-20 mb-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-6 pb-20">
         {sortedMachinery.map(machine => (
           <div
             key={machine.id}
@@ -668,14 +668,14 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
                 </div>
                 <div className="text-right ml-4">
                   <span className="text-gray-400 text-[10px] font-bold uppercase tracking-tight block">Daily rate</span>
-                  <span className="text-emerald-700 font-black text-2xl">₹{machine.price}</span>
+                  <span className="text-emerald-700 font-black text-lg">₹{machine.price}</span>
                   <span className="text-gray-400 text-sm font-bold">/day</span>
                 </div>
               </div>
               <button
                 disabled={!!machine.is_unavailable}
                 className={`w-full h-[50px] rounded-[18px] font-black text-[14px] transition-all flex items-center justify-center gap-2 ${machine.is_unavailable ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-lg shadow-emerald-700/20 active:scale-95'}`}>
-                {machine.is_unavailable ? 'Not Available' : 'Rent This Equipment'}
+                {machine.is_unavailable ? 'Not Available' : 'Rent'}
                 {!machine.is_unavailable && <i className="ph-bold ph-arrow-right text-sm"></i>}
               </button>
             </div>
