@@ -47,13 +47,14 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <>
       {/* ✅ Always visible */}
-      <div className="min-h-screen flex flex-col">
+<div className="min-h-screen flex flex-col">
   <TopNav />
 
-  {/* Main Content */}
-  <main className="flex-1 pt-[calc(64px+env(safe-area-inset-top))] pb-[calc(80px+env(safe-area-inset-bottom))]">
+  <main className="flex-1 pt-[calc(64px+env(safe-area-inset-top))] pb-20">
     {children}
   </main>
+
+  {showBottomNav && <BottomNav />}
 
   <Footer />
 </div>

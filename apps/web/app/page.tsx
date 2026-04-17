@@ -163,33 +163,50 @@ function HomePageContent() {
               };
 
               // Try to get user's GPS location (native + web)
-              const getLocation = async () => {
-                try {
-                  let lat: number, lon: number;
-                  if (Capacitor.isNativePlatform()) {
-                    const { Geolocation } = await import('@capacitor/geolocation');
-                    const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 8000 });
-                    lat = pos.coords.latitude;
-                    lon = pos.coords.longitude;
-                  } else {
-                    const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-                      navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 })
-                    );
-                    lat = pos.coords.latitude;
-                    lon = pos.coords.longitude;
-                  }
-                  fetchMatches(lat, lon);
-                } catch {
-                  // Fallback: use stored profile location coords
-                  const storedLat = parseFloat(profile.latitude);
-                  const storedLon = parseFloat(profile.longitude);
-                  if (storedLat && storedLon && (storedLat !== 0 || storedLon !== 0)) {
-                    fetchMatches(storedLat, storedLon);
-                  } else {
-                    fetchMatches(0, 0);
-                  }
+          const getLocation = async () => {
+            try {
+              let lat: number, lon: number;
+
+              
+
+              if (Capacitor.isNativePlatform()) {
+                const { Geolocation } = await import('@capacitor/geolocation');
+
+                // 🔥 request permission explicitly
+                const permission = await Geolocation.requestPermissions();
+
+                if (permission.location !== 'granted') {
+                  throw new Error('Location permission denied');
                 }
-              };
+
+                const pos = await Geolocation.getCurrentPosition({
+                  enableHighAccuracy: true,
+                });
+
+                lat = pos.coords.latitude;
+                lon = pos.coords.longitude;
+
+                console.log('User Location:', lat, lon);
+
+              } else {
+                const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+                  navigator.geolocation.getCurrentPosition(resolve, reject)
+                );
+
+                lat = pos.coords.latitude;
+                lon = pos.coords.longitude;
+              }
+
+              console.log('User Location:', lat, lon);
+              fetchMatches(lat, lon);
+
+            } catch (err) {
+              console.error('Location Error:', err);
+
+              // fallback
+              fetchMatches(0, 0);
+            }
+          };
               getLocation();
             }
           }
