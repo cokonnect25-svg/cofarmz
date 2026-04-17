@@ -581,7 +581,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
             </button>
           </div>
         )}
-        <div className="flex flex-col gap-4 pb-20 mb-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-6 pb-20 mb-2">
         {sortedMachinery.map(machine => (
           <div
             key={machine.id}
@@ -627,11 +627,11 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
             </div>
 
             {/* Info Section */}
-            <div className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+            <div className="p-3 md:p-5 flex flex-col justify-between flex-1">
+              <div className="flex flex-col items-start justify-between mb-2">
+                <div className="w-full">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span className="text-[8px] md:text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100">
                       {machine.category || 'Equipment'}
                     </span>
                     {machine.availability === 'Available Now' ? (
@@ -640,12 +640,12 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
                       <span className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Not Available</span>
                     )}
                   </div>
-                  <h3 className="font-black text-gray-900 text-xl leading-tight group-hover:text-emerald-700 transition-colors">
+                  <h3 className="font-black text-gray-900 text-sm md:text-xl leading-tight group-hover:text-emerald-700 transition-colors mt-0.5 truncate w-full">
                     {machine.name}
                   </h3>
                   
                   {/* Technical Specs Bar */}
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                  <div className="flex flex-wrap gap-x-2 gap-y-1 mt-1.5">
                     {machine.power && (
                       <div className="flex items-center gap-1">
                         <i className="ph ph-engine text-gray-400 text-xs"></i>
@@ -666,15 +666,15 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
                     )}
                   </div>
                 </div>
-                <div className="text-right ml-4">
-                  <span className="text-gray-400 text-[10px] font-bold uppercase tracking-tight block">Daily rate</span>
-                  <span className="text-emerald-700 font-black text-2xl">₹{machine.price}</span>
-                  <span className="text-gray-400 text-sm font-bold">/day</span>
+                <div className="text-left mt-3">
+                  <span className="text-gray-400 text-[9px] md:text-[10px] font-bold uppercase tracking-tight block">Daily rate</span>
+                  <span className="text-emerald-700 font-black text-lg md:text-2xl">₹{machine.price}</span>
+                  <span className="text-gray-400 text-[10px] md:text-sm font-bold">/day</span>
                 </div>
               </div>
               <button
                 disabled={!!machine.is_unavailable}
-                className={`w-full h-[50px] rounded-[18px] font-black text-[14px] transition-all flex items-center justify-center gap-2 ${machine.is_unavailable ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-lg shadow-emerald-700/20 active:scale-95'}`}>
+                className={`w-full h-[36px] md:h-[50px] rounded-[12px] md:rounded-[18px] font-black text-[11px] md:text-[14px] transition-all flex items-center justify-center gap-1.5 mt-2 ${machine.is_unavailable ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-md active:scale-95'}`}>
                 {machine.is_unavailable ? 'Not Available' : 'Rent This Equipment'}
                 {!machine.is_unavailable && <i className="ph-bold ph-arrow-right text-sm"></i>}
               </button>

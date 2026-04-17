@@ -399,7 +399,7 @@ function HomePageContent() {
                   .filter(r => r.role === 'buyer' && r.distance <= 99999)
                   .map(r => {
                     const matchingCrops = r.crops
-                      .filter(c => !c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
+                      .filter(c => userCropSet.has(c.crop_name.toLowerCase()))
                       .map(c => c.crop_name);
                     return matchingCrops.length > 0 ? { ...r, matchingCrops } : null;
                   })
@@ -410,7 +410,7 @@ function HomePageContent() {
                   .filter(r => r.role === 'farmer' && r.distance <= 99999)
                   .map(r => {
                     const matchingCrops = r.crops
-                      .filter(c => !c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
+                      .filter(c => userCropSet.has(c.crop_name.toLowerCase()))
                       .map(c => c.crop_name);
                     return matchingCrops.length > 0 ? { ...r, matchingCrops } : null;
                   })

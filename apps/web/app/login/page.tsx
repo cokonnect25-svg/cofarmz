@@ -109,7 +109,7 @@ useEffect(() => {
 
       // Also set the cookie as a backup for better-auth API calls
       if (data.signedToken) {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://co-farm.netlify.app';
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cofarmz-backend-866114557322.asia-south1.run.app';
         await CapacitorCookies.setCookie({
           url: backendUrl,
           key: 'cofarmz.session_token',
@@ -123,7 +123,7 @@ useEffect(() => {
 
     // 🌐 WEB FLOW — same direct-URL approach as mobile
     else {
-      const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://co-farm.netlify.app').replace(/\/$/, '');
+      const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cofarmz-backend-866114557322.asia-south1.run.app').replace(/\/$/, '');
       const callbackURL = `${window.location.origin}/auth-callback`;
       const authUrl = `${backendUrl}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`;
       window.location.href = authUrl;

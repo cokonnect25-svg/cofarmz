@@ -12,7 +12,7 @@ import { toNextJsHandler } from "better-auth/next-js";
 
 const handler = toNextJsHandler(auth);
 
-const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://cofarms.netlify.app";
+const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://cofarmz-backend-866114557322.asia-south1.run.app";
 
 function addCors(res: Response) {
   res.headers.set("Access-Control-Allow-Origin", ALLOWED_ORIGIN);

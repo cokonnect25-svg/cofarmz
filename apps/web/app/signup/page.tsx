@@ -65,7 +65,7 @@ export default function SignupPage() {
     setError('');
     setIsLoading(true);
     try {
-      const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://co-farm.netlify.app').replace(/\/$/, '');
+      const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cofarmz-backend-866114557322.asia-south1.run.app').replace(/\/$/, '');
       if (Capacitor.isNativePlatform()) {
         const callbackURL = 'com.cofarmz.app://auth-callback';
         const authUrl = `${backendUrl}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`;

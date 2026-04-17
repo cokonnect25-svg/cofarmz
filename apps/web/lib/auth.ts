@@ -24,7 +24,7 @@ trustedOrigins: [
   "http://localhost",
   "http://localhost:3000",
   "https://cofarmz.com",
-  "https://cofarms.netlify.app",
+  "https://cofarmz-backend-866114557322.asia-south1.run.app",
   "capacitor://localhost",
   "com.cofarmz.app://"
 ],
