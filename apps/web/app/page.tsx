@@ -143,8 +143,8 @@ function HomePageContent() {
               // Get real user location, fallback to 0,0 (shows all users sorted by distance=9999)
               const fetchMatches = (lat: number, lon: number) => {
                 Promise.all([
-                  fetch(getApiUrl(`/api/nearby-farmers?type=farmers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
-                  fetch(getApiUrl(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+                  fetch(getApiUrl(`/api/nearby-farmers?type=farmers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+                  fetch(getApiUrl(`/api/nearby-farmers?type=buyers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
                   fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
                 ]).then(([farmersData, buyersData, wasteBuyersData]) => {
                   const normalize = (arr: any[]) => arr.map((f: any) => ({
@@ -240,8 +240,8 @@ function HomePageContent() {
       const uniqueCrops = [...new Set(userCrops)];
       setLoadingMatches(true);
       Promise.all([
-        fetch(getApiUrl(`/api/nearby-farmers?type=farmers&crops=${uniqueCrops.join(',')}&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
-        fetch(getApiUrl(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+        fetch(getApiUrl(`/api/nearby-farmers?type=farmers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+        fetch(getApiUrl(`/api/nearby-farmers?type=buyers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
         fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
       ]).then(([farmersData, buyersData, wasteBuyersData]) => {
         const normalize = (arr: any[]) => arr.map((f: any) => ({
@@ -431,27 +431,29 @@ function HomePageContent() {
                   })
                   .filter(Boolean);
 
-                // 2. Buyers interested in your REGULAR CROPS (exclude waste crops already shown above)
+                // 2. ALL nearby buyers — show matching crops as tags, fallback to their own crops
                 const matchedBuyers = matchingResults
-                  .filter(r => r.role === 'buyer' && r.distance <= 99999)
+                  .filter(r => r.role === 'buyer')
                   .map(r => {
                     const matchingCrops = r.crops
-                      .filter(c => userCropSet.has(c.crop_name.toLowerCase()))
-                      .map(c => c.crop_name);
-                    return matchingCrops.length > 0 ? { ...r, matchingCrops } : null;
+                      .filter((c: any) => !c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
+                      .map((c: any) => c.crop_name);
+                    const fallbackCrops = r.crops.filter((c: any) => !c.is_crop_waste).slice(0, 3).map((c: any) => c.crop_name);
+                    return { ...r, matchingCrops: matchingCrops.length > 0 ? matchingCrops : fallbackCrops, isExactMatch: matchingCrops.length > 0 };
                   })
-                  .filter(Boolean);
+                  .sort((a: any, b: any) => (b.isExactMatch ? 1 : 0) - (a.isExactMatch ? 1 : 0) || a.distance - b.distance);
 
-                // 3. Farmers matching your regular crops
+                // 3. ALL nearby farmers — show matching crops as tags, fallback to their own crops
                 const matchedFarmers = matchingResults
-                  .filter(r => r.role === 'farmer' && r.distance <= 99999)
+                  .filter(r => r.role === 'farmer')
                   .map(r => {
                     const matchingCrops = r.crops
-                      .filter(c => userCropSet.has(c.crop_name.toLowerCase()))
-                      .map(c => c.crop_name);
-                    return matchingCrops.length > 0 ? { ...r, matchingCrops } : null;
+                      .filter((c: any) => userCropSet.has(c.crop_name.toLowerCase()))
+                      .map((c: any) => c.crop_name);
+                    const fallbackCrops = r.crops.slice(0, 3).map((c: any) => c.crop_name);
+                    return { ...r, matchingCrops: matchingCrops.length > 0 ? matchingCrops : fallbackCrops, isExactMatch: matchingCrops.length > 0 };
                   })
-                  .filter(Boolean);
+                  .sort((a: any, b: any) => (b.isExactMatch ? 1 : 0) - (a.isExactMatch ? 1 : 0) || a.distance - b.distance);
 
                 const renderCard = (person: any, color: string) => (
                   <div key={person.id}
@@ -471,12 +473,18 @@ function HomePageContent() {
                         ? `${person.location} · ${Math.round(person.distance)} km away`
                         : `${Math.round(person.distance)} km away`}
                     </p>
+                    {person.isExactMatch && (
+                      <p className="text-[9px] font-black text-emerald-500 uppercase tracking-wider mb-1">Crop Match</p>
+                    )}
                     <div className="flex flex-wrap gap-1 justify-center">
-                      {person.matchingCrops.map((crop: string) => (
-                        <span key={crop} className={`text-[10px] font-bold px-2 py-1 rounded-lg ${color}`}>
-                          {crop}
-                        </span>
-                      ))}
+                      {(person.matchingCrops || []).length > 0
+                        ? person.matchingCrops.map((crop: string) => (
+                            <span key={crop} className={`text-[10px] font-bold px-2 py-1 rounded-lg ${color}`}>
+                              {crop}
+                            </span>
+                          ))
+                        : <span className="text-[10px] text-gray-300 font-bold">No crops listed</span>
+                      }
                     </div>
                   </div>
                 );
@@ -535,7 +543,9 @@ function HomePageContent() {
                       <div className="flex items-center justify-between mb-5">
                         <div>
                           <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers Matching Your Crops</h2>
-                          <p className="text-blue-600 text-xs font-bold uppercase tracking-wider">Buyers matching your regular crops</p>
+                          <p className="text-blue-600 text-xs font-bold uppercase tracking-wider">
+                            {matchedBuyers.some((b: any) => b.isExactMatch) ? 'Buyers interested in your crops' : 'Nearby buyers'}
+                          </p>
                         </div>
                         <button onClick={() => router.push('/nearby-farmers?type=buyers')}
                           className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
@@ -545,16 +555,18 @@ function HomePageContent() {
                       <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
                         {matchedBuyers.length > 0
                           ? matchedBuyers.slice(0, 10).map((p: any) => renderCard(p, 'bg-blue-50 text-blue-700'))
-                          : renderEmpty('No buyers found for your crops')}
+                          : renderEmpty('No buyers registered yet in your area')}
                       </div>
                     </div>
 
-                    {/* Farmers matching your crops */}
+                    {/* Nearby Farmers */}
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-5">
                         <div>
-                          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Nearby Farmers intrested in your crops</h2>
-                          <p className="text-emerald-600 text-xs font-bold uppercase tracking-wider">Farmers growing your crops</p>
+                          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Nearby Farmers Interested In Your Crops</h2>
+                          <p className="text-emerald-600 text-xs font-bold uppercase tracking-wider">
+                            {matchedFarmers.some((f: any) => f.isExactMatch) ? 'Farmers growing your crops' : 'Nearby farmers'}
+                          </p>
                         </div>
                         <button onClick={() => router.push('/nearby-farmers?type=farmers')}
                           className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
@@ -564,7 +576,7 @@ function HomePageContent() {
                       <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
                         {matchedFarmers.length > 0
                           ? matchedFarmers.slice(0, 10).map((p: any) => renderCard(p, 'bg-emerald-50 text-emerald-700'))
-                          : renderEmpty('No farmers found for your crops')}
+                          : renderEmpty('No farmers registered yet in your area')}
                       </div>
                     </div>
                   </div>
