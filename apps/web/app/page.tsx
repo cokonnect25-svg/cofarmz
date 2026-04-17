@@ -65,6 +65,7 @@ function HomePageContent() {
   // New matching states
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [matchingResults, setMatchingResults] = useState<Farmer[]>([]);
+  const [wasteBuyerResults, setWasteBuyerResults] = useState<Farmer[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [farmers, setFarmers] = useState<Farmer[]>([]);
 
@@ -142,24 +143,23 @@ function HomePageContent() {
               // Get real user location, fallback to 0,0 (shows all users sorted by distance=9999)
               const fetchMatches = (lat: number, lon: number) => {
                 Promise.all([
-                  fetch(getApiUrl(`/api/nearby-farmers?type=farmers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.json()),
-                  fetch(getApiUrl(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.json())
-                ]).then(([farmersData, buyersData]) => {
-                  const allResults = [
-                    ...(Array.isArray(farmersData) ? farmersData : []),
-                    ...(Array.isArray(buyersData) ? buyersData : [])
-                  ].map((f: any) => ({
+                  fetch(getApiUrl(`/api/nearby-farmers?type=farmers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+                  fetch(getApiUrl(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+                  fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+                ]).then(([farmersData, buyersData, wasteBuyersData]) => {
+                  const normalize = (arr: any[]) => arr.map((f: any) => ({
                     ...f,
-                    crops: Array.isArray(f.crops) 
-                      ? f.crops.map((c: any) => ({ 
-                          crop_name: c.crop_name || c, 
-                          is_crop_waste: !!c.is_crop_waste 
-                        })) 
+                    crops: Array.isArray(f.crops)
+                      ? f.crops.map((c: any) => ({ crop_name: c.crop_name || c, is_crop_waste: !!c.is_crop_waste }))
                       : [],
                     distance: parseFloat(f.distance) || 9999,
                   }));
-                  setMatchingResults(allResults);
-                }).finally(() => setLoadingMatches(false));
+                  setMatchingResults([
+                    ...normalize(Array.isArray(farmersData) ? farmersData : []),
+                    ...normalize(Array.isArray(buyersData) ? buyersData : []),
+                  ]);
+                  setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
+                }).catch(() => {}).finally(() => setLoadingMatches(false));
               };
 
               // Try to get user's GPS location (native + web)
@@ -240,21 +240,23 @@ function HomePageContent() {
       const uniqueCrops = [...new Set(userCrops)];
       setLoadingMatches(true);
       Promise.all([
-        fetch(getApiUrl(`/api/nearby-farmers?type=farmers&crops=${uniqueCrops.join(',')}&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.json()),
-        fetch(getApiUrl(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.json()),
-      ]).then(([farmersData, buyersData]) => {
-        const allResults = [
-          ...(Array.isArray(farmersData) ? farmersData : []),
-          ...(Array.isArray(buyersData) ? buyersData : []),
-        ].map((f: any) => ({
+        fetch(getApiUrl(`/api/nearby-farmers?type=farmers&crops=${uniqueCrops.join(',')}&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+        fetch(getApiUrl(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+        fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+      ]).then(([farmersData, buyersData, wasteBuyersData]) => {
+        const normalize = (arr: any[]) => arr.map((f: any) => ({
           ...f,
           crops: Array.isArray(f.crops)
             ? f.crops.map((c: any) => ({ crop_name: c.crop_name || c, is_crop_waste: !!c.is_crop_waste }))
             : [],
           distance: parseFloat(f.distance) || 9999,
         }));
-        setMatchingResults(allResults);
-      }).finally(() => setLoadingMatches(false));
+        setMatchingResults([
+          ...normalize(Array.isArray(farmersData) ? farmersData : []),
+          ...normalize(Array.isArray(buyersData) ? buyersData : []),
+        ]);
+        setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
+      }).catch(() => {}).finally(() => setLoadingMatches(false));
     };
     window.addEventListener('userLocationUpdated', handler);
     return () => window.removeEventListener('userLocationUpdated', handler);
@@ -414,14 +416,18 @@ function HomePageContent() {
                 const userCropSet = new Set(userCropNames);
                 const userWasteCropSet = new Set(userWasteCropNames);
 
-                // 1. Buyers interested in your AGRICULTURAL WASTE
-                const matchedWasteBuyers = matchingResults
-                  .filter(r => r.role === 'buyer' && r.distance <= 99999)
+                // 1. Buyers interested in your AGRICULTURAL WASTE (uses dedicated wasteOnly fetch)
+                const matchedWasteBuyers = wasteBuyerResults
                   .map(r => {
                     const matchingWasteCrops = r.crops
                       .filter((c: any) => c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
                       .map((c: any) => c.crop_name);
-                    return matchingWasteCrops.length > 0 ? { ...r, matchingCrops: matchingWasteCrops } : null;
+                    // Fallback: show buyer with all their waste crops if no specific match
+                    const fallbackCrops = r.crops
+                      .filter((c: any) => c.is_crop_waste)
+                      .map((c: any) => c.crop_name);
+                    const displayCrops = matchingWasteCrops.length > 0 ? matchingWasteCrops : fallbackCrops;
+                    return displayCrops.length > 0 ? { ...r, matchingCrops: displayCrops } : null;
                   })
                   .filter(Boolean);
 
@@ -504,7 +510,7 @@ function HomePageContent() {
                     )}
 
                     {/* Potential Buyers for your AGRICULTURAL WASTE */}
-                    {userProfile?.role === 'farmer' && matchedWasteBuyers.length > 0 && (
+                    {userProfile?.role === 'farmer' && (
                       <div className="mb-12">
                         <div className="flex items-center justify-between mb-5">
                           <div>
