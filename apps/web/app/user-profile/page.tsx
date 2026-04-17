@@ -1137,7 +1137,7 @@ function ProfileContent() {
       </div>
 
       {/* Matching Sections for Farmers */}
-      {userRole === 'farmer' && farmerCrops.length > 0 && !loadingMatches && (
+      {/* {userRole === 'farmer' && farmerCrops.length > 0 && !loadingMatches && (
         <div className="px-6 py-8 bg-surface-muted">
           {(() => {
             const userCropNames = farmerCrops.map(c => c.crop_name.toLowerCase());
@@ -1240,7 +1240,7 @@ function ProfileContent() {
             );
           })()}
         </div>
-      )}
+      )} */}
 
       {/* Expanded Sections (Followers/Following/Crops/Equipment) - Above Tab Navigation */}
       {expandedSection && (

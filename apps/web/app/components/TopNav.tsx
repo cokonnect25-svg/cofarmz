@@ -31,7 +31,7 @@ export default function TopNav() {
   return (
     <>
       {/* ── TOP NAV ── */}
-      <nav className="fixed top-0 left-0 right-0 z-[9999] bg-white shadow-sm border-b border-gray-100">
+      <nav className="fixed top-0 left-0 right-0 z-[9999] bg-white shadow-sm border-b border-gray-100" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="max-w-7xl mx-auto px-6 h-[64px] flex items-center gap-6">
 
           {/* Logo */}
