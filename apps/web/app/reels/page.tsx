@@ -7,6 +7,7 @@ import { Suspense } from 'react';
 import { Heart, MessageCircle, Send, ArrowLeft, X } from 'lucide-react';
 import { getApiUrl } from '@/lib/api';
 
+
 interface Reel {
   id: string;
   user_id: string;
@@ -52,6 +53,7 @@ function ReelsContent() {
   const videosRef = useRef<(HTMLVideoElement | null)[]>([]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastTapRef = useRef<number>(0);
+  const [videoReady, setVideoReady] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (authLoading) return;
@@ -110,31 +112,17 @@ function ReelsContent() {
   }, [user, authLoading, router]);
 
   // Manage video playback and track views
-  useEffect(() => {
-    videosRef.current.forEach((video, idx) => {
-      if (video) {
-        if (idx === currentReelIndex) {
-          video.play().catch(() => {});
-        } else {
-          video.pause();
-        }
-      }
-    });
+useEffect(() => {
+  videosRef.current.forEach((video, idx) => {
+    if (!video) return;
 
-    // Track view after 2 seconds of watching
-    const reelId = reels[currentReelIndex]?.id;
-    if (!reelId) return;
-    const viewTimeout = setTimeout(() => {
-      fetch(getApiUrl(`/api/reels/${reelId}/view`), { method: 'POST' })
-        .then(() => {
-          // Update view count in UI
-          setReels(prev => prev.map((r, i) => i === currentReelIndex ? { ...r, views: (r.views || 0) + 1 } : r));
-        })
-        .catch(() => {});
-    }, 2000);
-
-    return () => clearTimeout(viewTimeout);
-  }, [currentReelIndex, reels.length]);
+    if (idx === currentReelIndex && videoReady.has(reels[idx]?.id)) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  });
+}, [currentReelIndex, videoReady]);
 
   const handleLike = async (reelId: string) => {
     if (!user) return;
@@ -363,34 +351,54 @@ function ReelsContent() {
               ) : (
                 <div className="relative w-full h-full max-w-sm md:max-w-md lg:max-w-lg mx-auto overflow-hidden shadow-2xl shadow-green-500/10">
                   <video
-                    ref={(el) => {
-                      videosRef.current[idx] = el;
-                    }}
-                    src={reel.video_url}
-                    className="w-full h-full object-cover"
-                    style={{ maxHeight: '100%' }}
-                    preload={idx === currentReelIndex ? 'auto' : 'none'}
-                    muted={isMuted}
-                    loop
-                    playsInline
-                    onClick={(e) => {
-                      const now = Date.now();
-                      const timeSinceLast = now - lastTapRef.current;
-                      if (timeSinceLast < 300 && timeSinceLast > 0) {
-                        // Double tap → like
-                        handleLike(reel.id);
-                        setShowHeart(true);
-                        setTimeout(() => setShowHeart(false), 800);
-                      } else {
-                        // Single tap → mute/unmute
-                        setIsMuted((prev) => !prev);
-                      }
-                      lastTapRef.current = now;
-                    }}
-                    onError={() => {
-                      setVideoErrors((prev) => new Set(prev).add(reel.id));
-                    }}
-                  />
+  ref={(el) => {
+    videosRef.current[idx] = el;
+  }}
+  src={reel.video_url}
+  className="w-full h-full object-cover"
+  preload="metadata"
+  muted
+  playsInline
+  loop
+  onLoadedMetadata={(e) => {
+    const video = e.currentTarget;
+
+    // Seek to 0.05s → acts like thumbnail
+    if (video.duration > 0.1) {
+      video.currentTime = 0.05;
+    }
+  }}
+  onSeeked={(e) => {
+    const video = e.currentTarget;
+
+    // Pause → freeze frame (thumbnail effect)
+    video.pause();
+
+    setVideoReady((prev) => new Set(prev).add(reel.id));
+
+    // If it's current reel → play
+    if (idx === currentReelIndex) {
+      video.play().catch(() => {});
+    }
+  }}
+  onError={() => {
+    setVideoErrors((prev) => new Set(prev).add(reel.id));
+  }}
+  onClick={(e) => {
+    const now = Date.now();
+    const timeSinceLast = now - lastTapRef.current;
+
+    if (timeSinceLast < 300 && timeSinceLast > 0) {
+      handleLike(reel.id);
+      setShowHeart(true);
+      setTimeout(() => setShowHeart(false), 800);
+    } else {
+      setIsMuted((prev) => !prev);
+    }
+
+    lastTapRef.current = now;
+  }}
+/>
                   {/* Subtle Gradient Overlay for Text Visibility */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 pointer-events-none"></div>
                 </div>

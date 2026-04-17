@@ -57,6 +57,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   {showBottomNav && <BottomNav />}
 
   <Footer />
+  <LocationPermissionPopup />
 </div>
     </>
   );

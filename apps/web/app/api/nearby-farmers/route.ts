@@ -17,52 +17,34 @@ export async function GET(request: NextRequest) {
     const showWasteBuyers = searchParams.get("wasteOnly") === "true";
     const currentUserId = searchParams.get("currentUserId");
 
-    // Ensure lat/lon columns exist
+    // Ensure required columns exist
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION`.catch(() => { });
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION`.catch(() => { });
+    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'buyer'`.catch(() => { });
+    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone TEXT`.catch(() => { });
+    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS location TEXT`.catch(() => { });
 
-    // Allow 0,0 fallback — just means distance will be 9999 (sorted last)
-
-    // Determine role value based on searchType
     const targetRole = searchType === "farmers" ? 'farmer' : 'buyer';
 
-    // Get all farmers/buyers — try u.role directly first, fallback to roles JOIN
-    let farmers: any[];
-    try {
-      farmers = await sql`
-        SELECT
-          u.id, u.name, u.email,
-          COALESCE(u.image, 'https://api.dicebear.com/7.x/avataaars/svg?seed=' || u.id) as image,
-          u.latitude, u.longitude,
-          COALESCE(u.location, '') as location,
-          COALESCE(u.phone, '') as phone,
-          u.role,
-          COUNT(DISTINCT m.id) as equipment_count
-        FROM "user" u
-        LEFT JOIN machinery m ON u.id = m.owner_id
-        WHERE u.role = ${targetRole}
-          ${currentUserId ? sql`AND u.id != ${currentUserId}` : sql``}
-        GROUP BY u.id, u.name, u.email, u.image, u.latitude, u.longitude, u.location, u.phone, u.role
-      `;
-    } catch {
-      // Fallback: role column may not exist — use roles JOIN
-      farmers = await sql`
-        SELECT
-          u.id, u.name, u.email,
-          COALESCE(u.image, 'https://api.dicebear.com/7.x/avataaars/svg?seed=' || u.id) as image,
-          u.latitude, u.longitude,
-          COALESCE(u.location, '') as location,
-          COALESCE(u.phone, '') as phone,
-          r.name as role,
-          COUNT(DISTINCT m.id) as equipment_count
-        FROM "user" u
-        LEFT JOIN roles r ON u.role_id = r.id
-        LEFT JOIN machinery m ON u.id = m.owner_id
-        WHERE (r.name = ${targetRole} OR u.role_id = ${targetRole === 'farmer' ? 1 : 2})
-          ${currentUserId ? sql`AND u.id != ${currentUserId}` : sql``}
-        GROUP BY u.id, u.name, u.email, u.image, u.latitude, u.longitude, u.location, u.phone, r.name
-      `;
-    }
+    // Fetch users matching role — also include users where role_id matches as fallback
+    const farmers = await sql`
+      SELECT
+        u.id, u.name, u.email,
+        COALESCE(u.image, 'https://api.dicebear.com/7.x/avataaars/svg?seed=' || u.id) as image,
+        u.latitude, u.longitude,
+        COALESCE(u.location, '') as location,
+        COALESCE(u.phone, '') as phone,
+        COALESCE(u.role, 'buyer') as role,
+        COUNT(DISTINCT m.id) as equipment_count
+      FROM "user" u
+      LEFT JOIN machinery m ON u.id = m.owner_id
+      WHERE (
+        u.role = ${targetRole}
+        OR (u.role IS NULL AND u.role_id = ${targetRole === 'farmer' ? 1 : 2})
+      )
+      ${currentUserId ? sql`AND u.id != ${currentUserId}` : sql``}
+      GROUP BY u.id, u.name, u.email, u.image, u.latitude, u.longitude, u.location, u.phone, u.role
+    `;
 
     // Calculate distance for all farmers (Haversine formula)
     const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {

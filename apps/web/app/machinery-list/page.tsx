@@ -8,6 +8,7 @@ import { Geolocation } from '@capacitor/geolocation';
 import { getApiUrl } from '@/lib/api';
 
 
+
 export default function MachineryListPage() {
   const router = useRouter();
   const { isAuthenticated, loading } = useAuth();
@@ -23,7 +24,7 @@ export default function MachineryListPage() {
     endDate: '',
     equipmentTypes: [] as string[]
   });
-
+  
   const [machineryData, setMachineryData] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -403,7 +404,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
     {/* Filter Modal - Top Popup */}
     {showFilter && (
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-20" onClick={() => setShowFilter(false)}>
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center" onClick={() => setShowFilter(false)}>
         <div className="w-full mx-4 bg-white rounded-2xl p-6 max-w-sm shadow-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-900">Filter Equipment</h2>
@@ -637,7 +638,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
                       {machine.category || 'Equipment'}
                     </span>
                     {machine.availability === 'Available Now' ? (
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span className="w-2 h-2X rounded-full bg-emerald-500 animate-pulse"></span>
                     ) : (
                       <span className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Not Available</span>
                     )}

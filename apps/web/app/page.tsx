@@ -229,6 +229,37 @@ function HomePageContent() {
     }
   }, [isAuthenticated, user?.id]);
 
+  // Re-fetch matches when location popup grants permission
+  useEffect(() => {
+    const handler = (e: any) => {
+      const { latitude, longitude } = e.detail;
+      const uid = user?.id;
+      if (!uid || !userProfile) return;
+      const userCrops = userProfile.crops?.map((c: any) => c.crop_name) || [];
+      if (userCrops.length === 0) return;
+      const uniqueCrops = [...new Set(userCrops)];
+      setLoadingMatches(true);
+      Promise.all([
+        fetch(getApiUrl(`/api/nearby-farmers?type=farmers&crops=${uniqueCrops.join(',')}&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.json()),
+        fetch(getApiUrl(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.json()),
+      ]).then(([farmersData, buyersData]) => {
+        const allResults = [
+          ...(Array.isArray(farmersData) ? farmersData : []),
+          ...(Array.isArray(buyersData) ? buyersData : []),
+        ].map((f: any) => ({
+          ...f,
+          crops: Array.isArray(f.crops)
+            ? f.crops.map((c: any) => ({ crop_name: c.crop_name || c, is_crop_waste: !!c.is_crop_waste }))
+            : [],
+          distance: parseFloat(f.distance) || 9999,
+        }));
+        setMatchingResults(allResults);
+      }).finally(() => setLoadingMatches(false));
+    };
+    window.addEventListener('userLocationUpdated', handler);
+    return () => window.removeEventListener('userLocationUpdated', handler);
+  }, [user?.id, userProfile]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
