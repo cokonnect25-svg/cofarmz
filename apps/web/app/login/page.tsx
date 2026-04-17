@@ -30,7 +30,6 @@ useEffect(() => {
     GoogleAuth.initialize({
       clientId: '866114557322-neeln0vj5sa2rslac9h8dvfvvceaoina.apps.googleusercontent.com',
       scopes: ['profile', 'email'],
-      grantOfflineAccess: true,
     });
   }
 }, []);
