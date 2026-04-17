@@ -589,10 +589,15 @@ function NearbyFarmersContent() {
           ) : (() => {
             const filteredFarmers = farmers
               .filter((farmer) => {
-                const matchesSearch = searchQuery === '' ||
-                  (farmer.name && farmer.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                  (farmer.location && farmer.location.toLowerCase().includes(searchQuery.toLowerCase()));
-                return matchesSearch;
+                const query = searchQuery.toLowerCase();
+
+                const matchesSearch = query === '' ||
+                  farmer.name?.toLowerCase().includes(query) ||
+                  farmer.location?.toLowerCase().includes(query) ||
+                  farmer.crops?.some(crop =>
+                    crop.crop_name?.toLowerCase().includes(query)
+                  );
+    
               })
               .sort((a, b) => {
                 if (sortBy === 'nearby') {

@@ -47,20 +47,16 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <>
       {/* ✅ Always visible */}
-      <TopNav />
+      <div className="min-h-screen flex flex-col">
+  <TopNav />
 
-      <main className="pt-16 pb-28 md:pb-0">
-        <RoleSelectionGuard>
-          {children}
-        </RoleSelectionGuard>
-      </main>
+  {/* Main Content */}
+  <main className="flex-1 pt-[calc(64px+env(safe-area-inset-top))] pb-[calc(80px+env(safe-area-inset-bottom))]">
+    {children}
+  </main>
 
-      <Footer />
-
-      {/* ✅ Only when logged in */}
-      {showBottomNav && <BottomNav />}
-
-      <LocationPermissionPopup />
+  <Footer />
+</div>
     </>
   );
 }

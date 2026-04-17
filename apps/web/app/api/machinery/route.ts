@@ -14,13 +14,26 @@ export async function GET(request: Request) {
     if (owner_id) {
       console.log("Fetching machinery for owner:", owner_id);
       query = await sql`
-        SELECT * FROM machinery 
-        WHERE owner_id = ${owner_id}
-        ORDER BY created_at DESC
+        SELECT m.*,
+          ROUND(COALESCE(AVG(r.rating), 0)::NUMERIC, 1) as avg_rating,
+          COUNT(r.id)::INT as review_count
+        FROM machinery m
+        LEFT JOIN reviews r ON r.machinery_id = m.id
+        WHERE m.owner_id = ${owner_id}
+        GROUP BY m.id
+        ORDER BY m.created_at DESC
       `;
     } else {
       console.log("Fetching all machinery");
-      query = await sql`SELECT * FROM machinery ORDER BY created_at DESC`;
+      query = await sql`
+        SELECT m.*,
+          ROUND(COALESCE(AVG(r.rating), 0)::NUMERIC, 1) as avg_rating,
+          COUNT(r.id)::INT as review_count
+        FROM machinery m
+        LEFT JOIN reviews r ON r.machinery_id = m.id
+        GROUP BY m.id
+        ORDER BY m.created_at DESC
+      `;
     }
 
     console.log("Query result:", query);

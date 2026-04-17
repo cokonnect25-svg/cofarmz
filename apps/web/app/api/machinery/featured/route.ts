@@ -6,17 +6,21 @@ export async function GET() {
   try {
     const machinery = await sql`
       SELECT
-        id,
-        name,
-        model,
-        daily_rate,
-        image_url,
-        location,
-        year,
-        is_unavailable,
-        ROUND(RANDOM() * 50)::INT as distance
-      FROM machinery
-      ORDER BY created_at DESC
+        m.id,
+        m.name,
+        m.model,
+        m.daily_rate,
+        m.image_url,
+        m.location,
+        m.year,
+        m.is_unavailable,
+        ROUND(RANDOM() * 50)::INT as distance,
+        ROUND(COALESCE(AVG(r.rating), 0)::NUMERIC, 1) as avg_rating,
+        COUNT(r.id)::INT as review_count
+      FROM machinery m
+      LEFT JOIN reviews r ON r.machinery_id = m.id
+      GROUP BY m.id
+      ORDER BY m.created_at DESC
       LIMIT 10
     `;
 

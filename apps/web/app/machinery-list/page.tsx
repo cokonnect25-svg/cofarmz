@@ -301,7 +301,9 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
           power: item.power || null,
           fuel: item.fuel || null,
           year: item.year || null,
-          description: item.description || null
+          description: item.description || null,
+          rating: parseFloat(item.avg_rating) > 0 ? parseFloat(item.avg_rating) : null,
+          review_count: item.review_count || 0
         };
       });
       console.log('Setting machinery data with', formattedData.length, 'items');
@@ -638,6 +640,14 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     ) : (
                       <span className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">Not Available</span>
+                    )}
+                    {machine.rating ? (
+                      <div className="flex items-center gap-0.5 bg-amber-50 px-1.5 py-0.5 rounded-md ml-auto">
+                        <i className="ph-fill ph-star text-amber-500 text-[10px]"></i>
+                        <span className="text-[10px] font-black text-amber-700">{machine.rating}</span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] font-bold text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-md ml-auto">New</span>
                     )}
                   </div>
                   <h3 className="font-black text-gray-900 text-sm md:text-xl leading-tight group-hover:text-emerald-700 transition-colors mt-0.5 truncate w-full">

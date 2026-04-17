@@ -403,7 +403,7 @@ function FarmerProfileContent() {
       </div>
 
       {/* Matching Sections for Profile Owner */}
-      {user?.id === profile.id && crops.length > 0 && !loadingMatches && (
+      {/* {user?.id === profile.id && crops.length > 0 && !loadingMatches && (
         <div className="px-6 py-6 border-b bg-gray-50/50">
           {(() => {
             const userCropNames = crops.map(c => c.crop_name.toLowerCase());
@@ -461,7 +461,8 @@ function FarmerProfileContent() {
             );
           })()}
         </div>
-      )}
+      )} 
+       */}
 
       {/* Expandable Sections */}
       <div className="bg-white border-b">

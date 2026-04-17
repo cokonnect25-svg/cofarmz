@@ -363,23 +363,6 @@ function HomePageContent() {
                 const userCropNames = userProfile?.crops?.map(c => c.crop_name.toLowerCase()) || [];
                 const userWasteCropNames = userProfile?.crops?.filter(c => c.is_crop_waste).map(c => c.crop_name.toLowerCase()) || [];
 
-                if (userCropNames.length === 0) {
-                  return (
-                    <div className="bg-gradient-to-br from-brand-50 to-emerald-50 rounded-3xl p-8 text-center border border-brand-100 mb-6 shadow-premium relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform"></div>
-                      <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-                        <i className="ph-fill ph-plant text-3xl text-brand-500"></i>
-                      </div>
-                      <p className="text-gray-900 font-black text-lg mb-1">Complete your profile</p>
-                      <p className="text-gray-500 text-xs mb-6">Add crops you produce to find buyers nearby!</p>
-                      <button onClick={() => router.push('/user-profile?addCrop=true')}
-                        className="bg-brand-600 text-white px-8 py-3.5 rounded-2xl text-sm font-black shadow-lg shadow-brand-600/30 active:scale-95 transition-transform">
-                        Add Your Crops
-                      </button>
-                    </div>
-                  );
-                }
-
                 const userCropSet = new Set(userCropNames);
                 const userWasteCropSet = new Set(userWasteCropNames);
 
@@ -456,12 +439,28 @@ function HomePageContent() {
 
                 return (
                   <div>
+                    {/* Complete profile prompt when no crops */}
+                    {userCropNames.length === 0 && (
+                      <div className="bg-gradient-to-br from-brand-50 to-emerald-50 rounded-3xl p-8 text-center border border-brand-100 mb-6 shadow-premium relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform"></div>
+                        <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+                          <i className="ph-fill ph-plant text-3xl text-brand-500"></i>
+                        </div>
+                        <p className="text-gray-900 font-black text-lg mb-1">Complete your profile</p>
+                        <p className="text-gray-500 text-xs mb-6">Add crops you produce to find buyers nearby!</p>
+                        <button onClick={() => router.push('/user-profile?addCrop=true')}
+                          className="bg-brand-600 text-white px-8 py-3.5 rounded-2xl text-sm font-black shadow-lg shadow-brand-600/30 active:scale-95 transition-transform">
+                          Add Your Crops
+                        </button>
+                      </div>
+                    )}
+
                     {/* Potential Buyers for your AGRICULTURAL WASTE */}
                     {userProfile?.role === 'farmer' && matchedWasteBuyers.length > 0 && (
                       <div className="mb-12">
                         <div className="flex items-center justify-between mb-5">
                           <div>
-                            <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers Interest For Your Wastage Crops</h2>
+                            <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers Interest For Your Crops Wastage</h2>
                             <p className="text-amber-600 text-xs font-bold uppercase tracking-wider">Interested in your agricultural waste</p>
                           </div>
                           <button onClick={() => router.push('/nearby-farmers?type=buyers')}
