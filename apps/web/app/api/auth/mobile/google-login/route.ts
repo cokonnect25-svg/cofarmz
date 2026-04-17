@@ -6,10 +6,15 @@ import { randomUUID } from 'crypto';
 // Accept tokens issued for either the mobile web client or the main web client.
 // This handles old APKs (old client ID) and new APKs (new client ID) without breaking.
 function getValidAudiences(): string[] {
-  return [
+  const hardcoded = [
+    '866114557322-neeln0vj5sa2rslac9h8dvfvvceaoina.apps.googleusercontent.com',
+    '866114557322-aadfdk4qgtsooej4qokvs4oqribi572i.apps.googleusercontent.com',
+  ];
+  const fromEnv = [
     process.env.GOOGLE_CLIENT_ID_MOBILE,
     process.env.GOOGLE_CLIENT_ID,
   ].filter(Boolean) as string[];
+  return [...new Set([...hardcoded, ...fromEnv])];
 }
 
 const client = new OAuth2Client();
