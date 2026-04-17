@@ -49,30 +49,17 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
   // Dynamic distance calculation
   const machineryWithDistances = React.useMemo(() => {
+    // Priority: real GPS → profile saved location → show location name
+    const refLat = userLocation?.latitude ?? profileLocation?.latitude ?? null;
+    const refLon = userLocation?.longitude ?? profileLocation?.longitude ?? null;
     return machineryData.map((item: any) => {
-      let dist = 99; // Default
-      
-      if (userLocation && item.latitude && item.longitude) {
+      let dist: number | null = null;
+      if (refLat != null && refLon != null && item.latitude && item.longitude) {
         dist = calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          parseFloat(item.latitude),
-          parseFloat(item.longitude)
+          refLat, refLon,
+          parseFloat(item.latitude), parseFloat(item.longitude)
         );
-      } else if (profileLocation && item.latitude && item.longitude) {
-        dist = calculateDistance(
-          profileLocation.latitude,
-          profileLocation.longitude,
-          parseFloat(item.latitude),
-          parseFloat(item.longitude)
-        );
-      } else if (item.distance) {
-        dist = parseFloat(item.distance);
-      } else if (!userLocation && !profileLocation) {
-        const seed = item.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-        dist = (seed % 45) + 5; 
       }
-      
       return { ...item, distance: dist };
     });
   }, [machineryData, userLocation, profileLocation]);
@@ -81,22 +68,23 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     setMounted(true);
   }, []);
 
-  // Redirect if not authenticated (only after mounted)
+  // Redirect if not authenticated
   useEffect(() => {
-    if (mounted && !loading && !isAuthenticated) {
+    if (!loading && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, loading, mounted, router]);
+  }, [isAuthenticated, loading, router]);
 
   useEffect(() => {
-    if (mounted && isAuthenticated && user?.id) {
+    if (isAuthenticated && user?.id) {
+      // Fetch machinery and profile immediately — don't wait for GPS
+      fetchMachinery();
       fetchUserProfile();
-      getUserLocation().then(() => {
-        fetchMachinery();
-      });
       fetchUserFavorites();
+      // Get location in parallel; distances update automatically via useMemo when state changes
+      getUserLocation();
     }
-  }, [mounted, isAuthenticated, user?.id]);
+  }, [isAuthenticated, user?.id]);
 
   const fetchUserProfile = async () => {
     if (!user?.id) return;
@@ -198,9 +186,9 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
       machine.price >= filters.priceMin && machine.price <= filters.priceMax
     );
     
-    // Filter by distance
-    filtered = filtered.filter(machine => 
-      machine.distance <= filters.distance
+    // Filter by distance (skip items with unknown distance)
+    filtered = filtered.filter(machine =>
+      machine.distance == null || machine.distance <= filters.distance
     );
     
     // Filter by equipment types (if any selected)
@@ -232,7 +220,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     
     // Sort machinery based on selected sort option
     if (sortBy === 'distance') {
-      return filtered.sort((a, b) => a.distance - b.distance);
+      return filtered.sort((a, b) => (a.distance ?? 99999) - (b.distance ?? 99999));
     } else if (sortBy === 'price') {
       return filtered.sort((a, b) => a.price - b.price);
     } else if (sortBy === 'rating') {
@@ -292,13 +280,13 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
           model: item.model || 'Equipment',
           category: item.model || 'Equipment',
           price: parseFloat(item.daily_rate) || 0,
-          latitude: item.latitude,
-          longitude: item.longitude,
+          // Use effective_latitude/longitude (machinery own location OR owner's location fallback)
+          latitude: item.effective_latitude ?? item.latitude,
+          longitude: item.effective_longitude ?? item.longitude,
           availability: item.is_unavailable ? 'Not Available' : 'Available Now',
           is_unavailable: item.is_unavailable || false,
-
           image: (item.image_url && item.image_url.startsWith('http')) ? item.image_url : null,
-          location: item.location || null,
+          location: item.effective_location || item.location || null,
           power: item.power || null,
           fuel: item.fuel || null,
           year: item.year || null,
@@ -358,16 +346,8 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     }
   };
 
-  if (!mounted || loading || !isAuthenticated) {
-    return (
-      <div className="w-full h-screen bg-brand-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-full border-4 border-brand-600 border-t-transparent animate-spin"></div>
-          <p className="text-gray-600 text-sm font-medium">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  // Show skeleton while auth is still loading (very brief)
+  if (!mounted) return null;
 
     return (
       <>
@@ -569,7 +549,23 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
     {/* List View — 1 column */}
     <section className="px-4 relative z-10">
-        {sortedMachinery.length === 0 && (
+        {/* Skeleton cards while loading */}
+        {machineryData.length === 0 && isAuthenticated && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pb-20">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-[24px] overflow-hidden border border-gray-100 animate-pulse">
+                <div className="w-full aspect-[16/9] bg-gray-100" />
+                <div className="p-3">
+                  <div className="h-3 bg-gray-100 rounded-full w-1/2 mb-2" />
+                  <div className="h-4 bg-gray-100 rounded-full w-3/4 mb-3" />
+                  <div className="h-3 bg-gray-100 rounded-full w-1/3 mb-4" />
+                  <div className="h-8 bg-gray-100 rounded-xl w-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {sortedMachinery.length === 0 && machineryData.length > 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
               <i className="ph-bold ph-tractor text-4xl text-gray-400"></i>
@@ -614,7 +610,9 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
               <div className="absolute top-3 left-3 flex flex-row gap-2 z-10">
                 <div className="bg-emerald-600/85 backdrop-blur-lg px-2.5 py-1.5 rounded-2xl flex items-center gap-1.5 shadow-md border border-emerald-400/30">
                   <i className="ph-fill ph-map-pin text-white text-xs"></i>
-                  <span className="text-[12px] font-black text-white">{machine.distance.toFixed(1)} km</span>
+                  <span className="text-[12px] font-black text-white">
+                    {machine.distance != null ? `${machine.distance.toFixed(1)} km` : (machine.location || 'Nearby')}
+                  </span>
                 </div>
               </div>
               <button

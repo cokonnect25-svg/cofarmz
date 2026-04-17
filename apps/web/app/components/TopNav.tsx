@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 export default function TopNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isAuthenticated, signOut } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const isActive = (path: string) => pathname === path;
 
@@ -124,9 +124,10 @@ export default function TopNav() {
                 </button>
                 <Link
                   href="/my-reels?action=upload"
-                  className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl bg-green-700 text-white shadow-sm"
+                  className="md:hidden flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-green-500 to-green-700 text-white shadow-lg shadow-green-600/40 active:scale-90 transition-transform"
+                  title="Create Reel"
                 >
-                  <i className="ph-bold ph-plus-circle text-lg"></i>
+                  <i className="ph-bold ph-video-camera-plus text-xl"></i>
                 </Link>
               </>
             ) : (

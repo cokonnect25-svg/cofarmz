@@ -16,11 +16,15 @@ export async function GET(request: Request) {
       query = await sql`
         SELECT m.*,
           ROUND(COALESCE(AVG(r.rating), 0)::NUMERIC, 1) as avg_rating,
-          COUNT(r.id)::INT as review_count
+          COUNT(r.id)::INT as review_count,
+          COALESCE(m.latitude, u.latitude) as effective_latitude,
+          COALESCE(m.longitude, u.longitude) as effective_longitude,
+          COALESCE(m.location, u.location, '') as effective_location
         FROM machinery m
         LEFT JOIN reviews r ON r.machinery_id = m.id
+        LEFT JOIN "user" u ON m.owner_id = u.id
         WHERE m.owner_id = ${owner_id}
-        GROUP BY m.id
+        GROUP BY m.id, u.latitude, u.longitude, u.location
         ORDER BY m.created_at DESC
       `;
     } else {
@@ -28,10 +32,14 @@ export async function GET(request: Request) {
       query = await sql`
         SELECT m.*,
           ROUND(COALESCE(AVG(r.rating), 0)::NUMERIC, 1) as avg_rating,
-          COUNT(r.id)::INT as review_count
+          COUNT(r.id)::INT as review_count,
+          COALESCE(m.latitude, u.latitude) as effective_latitude,
+          COALESCE(m.longitude, u.longitude) as effective_longitude,
+          COALESCE(m.location, u.location, '') as effective_location
         FROM machinery m
         LEFT JOIN reviews r ON r.machinery_id = m.id
-        GROUP BY m.id
+        LEFT JOIN "user" u ON m.owner_id = u.id
+        GROUP BY m.id, u.latitude, u.longitude, u.location
         ORDER BY m.created_at DESC
       `;
     }
