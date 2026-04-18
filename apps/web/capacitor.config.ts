@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.cofarmz.app',
+  appId: 'com.cofarmz.com',
   appName: 'CoFarmz',
 
   webDir: 'out', // keep for fallback (not primary)

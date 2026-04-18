@@ -67,7 +67,7 @@ export default function SignupPage() {
     try {
       const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cofarmz-backend-866114557322.asia-south1.run.app').replace(/\/$/, '');
       if (Capacitor.isNativePlatform()) {
-        const callbackURL = 'com.cofarmz.app://auth-callback';
+        const callbackURL = 'com.cofarmz.com://auth-callback';
         const authUrl = `${backendUrl}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`;
         await Browser.open({ url: authUrl, windowName: '_self' });
       } else {

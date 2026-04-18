@@ -74,6 +74,8 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
         <title>CoFarmz</title>
         <link rel="icon" href="/assets/cofarmz-logo.png" type="image/png" />
+        <link rel="shortcut icon" href="/assets/cofarmz-logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/assets/cofarmz-logo.png" />
         <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,400&display=swap" />
         <script src="https://unpkg.com/@phosphor-icons/web"></script>
         <style>{`

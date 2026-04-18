@@ -1,4 +1,4 @@
-package com.cofarmz.app;
+package com.cofarmz.com;
 
 import com.getcapacitor.BridgeActivity;
 

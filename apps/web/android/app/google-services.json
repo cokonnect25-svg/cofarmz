@@ -7,26 +7,26 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:866114557322:android:d4520d4c195d49bc326473",
+        "mobilesdk_app_id": "1:866114557322:android:8bcfe982f5b4281f326473",
         "android_client_info": {
-          "package_name": "com.cofarmz.app"
+          "package_name": "com.cofarmz.com"
         }
       },
       "oauth_client": [
         {
-          "client_id": "866114557322-ccd6hv4q4eo70mu7unbpnfj9vbov2jh3.apps.googleusercontent.com",
+          "client_id": "866114557322-5e9v294krgq8v0uv986lf1i849f123nd.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.cofarmz.app",
-            "certificate_hash": "d6e4ec39a2e00c0caa5d5ea9ccfdd7c1cacc8074"
+            "package_name": "com.cofarmz.com",
+            "certificate_hash": "3c4bdeb3992089999ebfb1f39ae27d6db7fe4573"
           }
         },
         {
-          "client_id": "866114557322-scbse9oh35at0114mo5ktdq7uruug7hq.apps.googleusercontent.com",
+          "client_id": "866114557322-rknu0fh2dbbaeloudh6qekl3p10d2q86.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.cofarmz.app",
-            "certificate_hash": "38debd4620def9f5a6250f591dde753f08d5474a"
+            "package_name": "com.cofarmz.com",
+            "certificate_hash": "d6e4ec39a2e00c0caa5d5ea9ccfdd7c1cacc8074"
           }
         },
         {

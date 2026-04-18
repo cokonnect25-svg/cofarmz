@@ -26,7 +26,7 @@ trustedOrigins: [
   "https://cofarmz.com",
   "https://cofarmz-backend-866114557322.asia-south1.run.app",
   "capacitor://localhost",
-  "com.cofarmz.app://"
+  "com.cofarmz.com://"
 ],
 advanced: {
   crossOriginCookies: true,
