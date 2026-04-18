@@ -16,7 +16,7 @@ export default function BottomNav() {
     { href: '/machinery-list', label: 'Fleet', icon: 'ph-tractor' },
     { href: '/reels', label: 'Reels', icon: 'ph-video' },
     { href: '/chat', label: 'Messages', icon: 'ph-chat-circle' },
-    { href: '/user-profile', label: 'Profile', icon: 'ph-user' },
+    { href: '/nearby-farmers', label: 'Farmers & Buyers', icon: 'ph-users' },
     { href: '/about', label: 'About Us', icon: 'ph-info' },
   ];
 

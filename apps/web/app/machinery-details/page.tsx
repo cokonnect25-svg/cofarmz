@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { Capacitor } from '@capacitor/core';
 import { getApiUrl } from '@/lib/api';
 
 import InAppCall from '@/app/components/InAppCall';
@@ -28,7 +29,24 @@ interface Machinery {
   location: string;
   owner_id: string;
   contact_phone: string;
+  // ✅ added so we can compute real distance
+  latitude?: string | number;
+  longitude?: string | number;
 }
+
+// ── Haversine ──────────────────────────────────────────────────────────────
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
 
 function MachineryDetailsContent() {
   const router = useRouter();
@@ -69,6 +87,10 @@ function MachineryDetailsContent() {
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [renterPhone, setRenterPhone] = useState('');
 
+  // ✅ Real distance state
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [distanceKm, setDistanceKm] = useState<number | null>(null);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -78,6 +100,62 @@ function MachineryDetailsContent() {
       router.push('/login');
     }
   }, [isAuthenticated, loading, mounted, router]);
+
+  // ✅ Get user GPS on mount
+  useEffect(() => {
+    const getLocation = async () => {
+      try {
+        let lat: number, lon: number;
+        if (Capacitor.isNativePlatform()) {
+          const { Geolocation } = await import('@capacitor/geolocation');
+          const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 8000 });
+          lat = pos.coords.latitude;
+          lon = pos.coords.longitude;
+        } else {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 })
+          );
+          lat = pos.coords.latitude;
+          lon = pos.coords.longitude;
+        }
+        setUserLocation({ latitude: lat, longitude: lon });
+      } catch {
+        // fallback: try profile coords after machinery loads
+      }
+    };
+    getLocation();
+  }, []);
+
+  // ✅ Recompute distance whenever machinery or userLocation changes
+  useEffect(() => {
+    if (!machinery) return;
+
+    const macLat = parseFloat(String(machinery.latitude ?? ''));
+    const macLon = parseFloat(String(machinery.longitude ?? ''));
+    const hasCoords = !isNaN(macLat) && !isNaN(macLon) && (macLat !== 0 || macLon !== 0);
+
+    if (!hasCoords) {
+      setDistanceKm(null);
+      return;
+    }
+
+    if (userLocation) {
+      setDistanceKm(calculateDistance(userLocation.latitude, userLocation.longitude, macLat, macLon));
+      return;
+    }
+
+    // Fallback: try owner profile coords
+    if (ownerProfile?.latitude && ownerProfile?.longitude) {
+      const oLat = parseFloat(ownerProfile.latitude);
+      const oLon = parseFloat(ownerProfile.longitude);
+      if (!isNaN(oLat) && !isNaN(oLon)) {
+        // owner coords are the machine's location — we can't compute without user ref point
+        // so leave null unless we have a stored profile location
+      }
+    }
+
+    setDistanceKm(null);
+  }, [machinery, userLocation, ownerProfile]);
 
   // Fetch machinery details
   useEffect(() => {
@@ -111,7 +189,6 @@ function MachineryDetailsContent() {
       );
       if (response.ok) {
         const data = await response.json();
-        // Check for pending booking on this machine
         const pendingBooking = data.find((r: any) =>
           r.machinery_id === machineryId &&
           r.user_id === user.id &&
@@ -119,7 +196,6 @@ function MachineryDetailsContent() {
         );
         setUserPendingBooking(pendingBooking || null);
 
-        // Filter for this specific machinery AND check that it belongs to current user AND has accepted status
         const completedBooking = data.find((r: any) =>
           r.machinery_id === machineryId &&
           r.user_id === user.id &&
@@ -242,7 +318,6 @@ function MachineryDetailsContent() {
 
   const handleFavorite = async () => {
     if (!user) return;
-
     try {
       const response = await fetch(
         getApiUrl(`/api/machinery/${machineryId}/favorite`),
@@ -251,7 +326,6 @@ function MachineryDetailsContent() {
           headers: { 'x-user-id': user.id }
         }
       );
-
       if (response.ok) {
         const data = await response.json();
         setIsFavorited(data.favorited);
@@ -266,7 +340,6 @@ function MachineryDetailsContent() {
       alert('Please provide a rating');
       return;
     }
-
     setIsSubmittingReview(true);
     try {
       const response = await fetch(getApiUrl(`/api/reviews`), {
@@ -280,7 +353,6 @@ function MachineryDetailsContent() {
           review_text: reviewText,
         }),
       });
-
       if (response.ok) {
         alert('Review submitted successfully!');
         setShowReviewModal(false);
@@ -301,7 +373,6 @@ function MachineryDetailsContent() {
   const getConflictingBookings = (start: string, end: string) => {
     const startDate = new Date(start);
     const endDate = new Date(end);
-    
     return bookedDates.filter((booking) => {
       const bookingStart = new Date(booking.start_date);
       const bookingEnd = new Date(booking.end_date);
@@ -322,7 +393,6 @@ function MachineryDetailsContent() {
         }
       );
       const data = await response.json();
-
       if (!data.available) {
         const conflicting = getConflictingBookings(start, end);
         setAvailabilityError(
@@ -364,7 +434,6 @@ function MachineryDetailsContent() {
 
   const handleReserve = async () => {
     if (!user) return;
-
     const isAvailable = await checkDateAvailability(startDate, endDate);
     if (!isAvailable) return;
     
@@ -386,7 +455,6 @@ function MachineryDetailsContent() {
           renter_phone: renterPhone || null,
         }),
       });
-
       if (response.ok) {
         setShowDatePicker(false);
         await fetchBookedDates();
@@ -426,10 +494,8 @@ function MachineryDetailsContent() {
   const getNextAvailableDates = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
     let startDate: Date | null = null;
     let endDate: Date | null = null;
-    
     for (let i = 0; i < 365; i++) {
       const checkDate = new Date(today);
       checkDate.setDate(checkDate.getDate() + i);
@@ -438,7 +504,6 @@ function MachineryDetailsContent() {
         break;
       }
     }
-    
     if (startDate) {
       for (let i = 1; i < 365; i++) {
         const checkDate = new Date(startDate);
@@ -449,14 +514,12 @@ function MachineryDetailsContent() {
         }
       }
     }
-    
     return { startDate, endDate };
   };
 
   const renderCalendar = () => {
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
-    
     const days = [];
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     
@@ -509,9 +572,15 @@ function MachineryDetailsContent() {
         </div>
       );
     }
-    
     return days;
   };
+
+  // ── Distance display helper ────────────────────────────────────────────────
+  const distanceDisplay = distanceKm !== null
+    ? `${distanceKm.toFixed(1)} km`
+    : machinery?.location
+      ? machinery.location
+      : null;
 
   return (
     <>
@@ -560,7 +629,6 @@ function MachineryDetailsContent() {
 
             return (
               <div>
-                {/* Main swipeable image */}
                 <div
                   className="relative w-full bg-gray-900 overflow-hidden"
                   style={{aspectRatio:'16/9'}}
@@ -584,7 +652,6 @@ function MachineryDetailsContent() {
                       <div className="absolute top-2 right-2 bg-black/50 text-white text-xs font-bold px-2.5 py-1 rounded-full">
                         {activeImageIndex + 1}/{allImages.length}
                       </div>
-                      {/* Dot indicators */}
                       <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
                         {allImages.map((_, i) => (
                           <div key={i} className={`rounded-full transition-all duration-200 ${i === activeImageIndex ? 'w-4 h-2 bg-white' : 'w-2 h-2 bg-white/50'}`} />
@@ -594,7 +661,6 @@ function MachineryDetailsContent() {
                   )}
                 </div>
 
-                {/* Thumbnail horizontal scroll strip */}
                 {allImages.length > 1 && (
                   <div
                     className="flex gap-2 px-3 py-2.5 bg-gray-900 overflow-x-scroll"
@@ -627,7 +693,13 @@ function MachineryDetailsContent() {
           
           <div className="flex items-center justify-between mt-3 pb-5 border-b border-gray-200/60">
             <div className="flex gap-4 text-sm text-gray-500 font-medium">
-              <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-[8px] shadow-sm"><i className="ph-fill ph-map-pin text-brand-600/60"></i> 12 km</span>
+              {/* ✅ FIXED: real distance instead of hardcoded "12 km" */}
+              {distanceDisplay && (
+                <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-[8px] shadow-sm">
+                  <i className="ph-fill ph-map-pin text-brand-600/60"></i>
+                  {distanceDisplay}
+                </span>
+              )}
             </div>
             
             <div className="text-right">
@@ -650,7 +722,6 @@ function MachineryDetailsContent() {
                 </div>
               </div>
             )}
-
             {machinery?.year && (
               <div className="min-w-[100px] bg-white rounded-[16px] p-4 shadow-soft flex flex-col items-start gap-2">
                 <div className="w-8 h-8 rounded-full bg-brand-50 flex items-center justify-center text-brand-600">
@@ -662,7 +733,6 @@ function MachineryDetailsContent() {
                 </div>
               </div>
             )}
-
             {machinery?.drive && (
               <div className="min-w-[100px] bg-white rounded-[16px] p-4 shadow-soft flex flex-col items-start gap-2">
                 <div className="w-8 h-8 rounded-full bg-brand-50 flex items-center justify-center text-brand-600">
@@ -674,7 +744,6 @@ function MachineryDetailsContent() {
                 </div>
               </div>
             )}
-
             {machinery?.fuel && (
               <div className="min-w-[100px] bg-white rounded-[16px] p-4 shadow-soft flex flex-col items-start gap-2">
                 <div className="w-8 h-8 rounded-full bg-brand-50 flex items-center justify-center text-brand-600">
@@ -716,9 +785,7 @@ function MachineryDetailsContent() {
                         ))}
                         <span className="text-xs text-gray-500 ml-1.5 font-medium">
                           {new Date(review.created_at).toLocaleDateString('en-IN', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: '2-digit'
+                            month: 'short', day: 'numeric', year: '2-digit'
                           })}
                         </span>
                       </div>
@@ -1095,10 +1162,7 @@ function MachineryDetailsContent() {
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-900">Select Dates</h2>
                 <button 
-                  onClick={() => {
-                    setShowDatePicker(false);
-                    setAvailabilityError('');
-                  }}
+                  onClick={() => { setShowDatePicker(false); setAvailabilityError(''); }}
                   className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 active:scale-95">
                   <i className="ph-bold ph-x text-lg"></i>
                 </button>
@@ -1119,7 +1183,6 @@ function MachineryDetailsContent() {
                   endDate.setHours(0, 0, 0, 0);
                   return endDate >= today;
                 });
-                
                 return futureBookedDates.length > 0 && (
                   <div className="bg-red-50 border-2 border-red-300 rounded-[16px] p-4 mb-6">
                     <h4 className="text-sm font-bold text-red-900 mb-3 flex items-center gap-2">
@@ -1128,15 +1191,7 @@ function MachineryDetailsContent() {
                     <div className="space-y-2">
                       {futureBookedDates.map((range, idx) => (
                         <div key={idx} className="bg-white border border-red-200 rounded-lg p-3 text-xs text-red-700 font-semibold flex items-center justify-between">
-                          <span>{new Date(range.start_date).toLocaleDateString('en-IN', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: '2-digit'
-                          })} - {new Date(range.end_date).toLocaleDateString('en-IN', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: '2-digit'
-                          })}</span>
+                          <span>{new Date(range.start_date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: '2-digit' })} - {new Date(range.end_date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: '2-digit' })}</span>
                           <i className="ph-bold ph-lock text-red-500"></i>
                         </div>
                       ))}
@@ -1154,18 +1209,9 @@ function MachineryDetailsContent() {
                   {renderCalendar()}
                 </div>
                 <div className="mt-4 flex flex-wrap gap-3 text-xs font-medium">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-brand-600 rounded-lg"></div>
-                    <span className="text-gray-700">Selected</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-brand-100 rounded-lg border border-brand-300"></div>
-                    <span className="text-gray-700">In Range</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-red-100 rounded-lg border border-red-300"></div>
-                    <span className="text-gray-700">Booked</span>
-                  </div>
+                  <div className="flex items-center gap-2"><div className="w-6 h-6 bg-brand-600 rounded-lg"></div><span className="text-gray-700">Selected</span></div>
+                  <div className="flex items-center gap-2"><div className="w-6 h-6 bg-brand-100 rounded-lg border border-brand-300"></div><span className="text-gray-700">In Range</span></div>
+                  <div className="flex items-center gap-2"><div className="w-6 h-6 bg-red-100 rounded-lg border border-red-300"></div><span className="text-gray-700">Booked</span></div>
                 </div>
               </div>
 
@@ -1205,18 +1251,14 @@ function MachineryDetailsContent() {
                     value={startDate}
                     onChange={(e) => {
                       setStartDate(e.target.value);
-                      if (endDate && e.target.value) {
-                        checkDateAvailability(e.target.value, endDate);
-                      } else {
-                        setAvailabilityError('');
-                      }
+                      if (endDate && e.target.value) checkDateAvailability(e.target.value, endDate);
+                      else setAvailabilityError('');
                     }}
                     min={new Date().toISOString().split('T')[0]}
                     className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30" 
                   />
                   <p className="text-[10px] text-gray-500 mt-1">Equipment pickup date</p>
                 </div>
-
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-2">To Date</label>
                   <input 
@@ -1224,11 +1266,8 @@ function MachineryDetailsContent() {
                     value={endDate}
                     onChange={(e) => {
                       setEndDate(e.target.value);
-                      if (startDate && e.target.value) {
-                        checkDateAvailability(startDate, e.target.value);
-                      } else {
-                        setAvailabilityError('');
-                      }
+                      if (startDate && e.target.value) checkDateAvailability(startDate, e.target.value);
+                      else setAvailabilityError('');
                     }}
                     min={startDate || new Date().toISOString().split('T')[0]}
                     className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30" 
@@ -1267,10 +1306,7 @@ function MachineryDetailsContent() {
 
               <div className="flex gap-3">
                 <button 
-                  onClick={() => {
-                    setShowDatePicker(false);
-                    setAvailabilityError('');
-                  }}
+                  onClick={() => { setShowDatePicker(false); setAvailabilityError(''); }}
                   className="flex-1 bg-gray-100 text-gray-900 rounded-[16px] py-3.5 font-bold active:scale-[0.98] transition-transform">
                   Cancel
                 </button>
@@ -1284,10 +1320,7 @@ function MachineryDetailsContent() {
                   disabled={isCheckingAvailability || !!availabilityError}
                   className="flex-1 bg-brand-800 text-white rounded-[16px] py-3.5 font-bold shadow-lg shadow-brand-800/30 active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   {isCheckingAvailability ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Checking...
-                    </>
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>Checking...</>
                   ) : (
                     <>Confirm & Request</>
                   )}
@@ -1303,53 +1336,29 @@ function MachineryDetailsContent() {
             <div className="w-full bg-white rounded-t-[32px] p-6 pb-8 animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-900">Leave a Review</h2>
-                <button
-                  onClick={() => setShowReviewModal(false)}
-                  className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 active:scale-95"
-                >
+                <button onClick={() => setShowReviewModal(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 active:scale-95">
                   <i className="ph-bold ph-x text-lg"></i>
                 </button>
               </div>
-
               <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-[16px]">
                 <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
                   <i className="ph-bold ph-wrench text-lg"></i> {machinery?.name}
                 </h3>
                 <p className="text-sm text-blue-700">{machinery?.model}</p>
               </div>
-
               <div className="mb-6">
                 <label className="block text-sm font-bold text-gray-900 mb-4">Rate Your Experience</label>
                 <div className="flex gap-2 justify-center mb-2">
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      onClick={() => setReviewRating(star)}
-                      className="text-4xl transition-all hover:scale-110 active:scale-95"
-                    >
-                      <i
-                        className={`ph-${reviewRating >= star ? 'fill' : 'bold'} ph-star ${
-                          reviewRating >= star ? 'text-yellow-400' : 'text-gray-300'
-                        }`}
-                      ></i>
+                    <button key={star} onClick={() => setReviewRating(star)} className="text-4xl transition-all hover:scale-110 active:scale-95">
+                      <i className={`ph-${reviewRating >= star ? 'fill' : 'bold'} ph-star ${reviewRating >= star ? 'text-yellow-400' : 'text-gray-300'}`}></i>
                     </button>
                   ))}
                 </div>
                 <p className="text-center text-sm font-bold text-gray-600 mt-2">
-                  {reviewRating === 0
-                    ? 'Select a rating'
-                    : reviewRating === 1
-                    ? 'Poor'
-                    : reviewRating === 2
-                    ? 'Fair'
-                    : reviewRating === 3
-                    ? 'Good'
-                    : reviewRating === 4
-                    ? 'Very Good'
-                    : 'Excellent'}
+                  {reviewRating === 0 ? 'Select a rating' : reviewRating === 1 ? 'Poor' : reviewRating === 2 ? 'Fair' : reviewRating === 3 ? 'Good' : reviewRating === 4 ? 'Very Good' : 'Excellent'}
                 </p>
               </div>
-
               <div className="mb-6">
                 <label className="block text-sm font-bold text-gray-900 mb-2">Your Review (Optional)</label>
                 <textarea
@@ -1361,12 +1370,8 @@ function MachineryDetailsContent() {
                 />
                 <p className="text-xs text-gray-500 mt-1 text-right">{reviewText.length}/500</p>
               </div>
-
               <div className="flex gap-3">
-                <button
-                  onClick={() => setShowReviewModal(false)}
-                  className="flex-1 bg-gray-100 text-gray-900 rounded-[16px] py-3.5 font-bold active:scale-[0.98] transition-transform"
-                >
+                <button onClick={() => setShowReviewModal(false)} className="flex-1 bg-gray-100 text-gray-900 rounded-[16px] py-3.5 font-bold active:scale-[0.98] transition-transform">
                   Cancel
                 </button>
                 <button
@@ -1375,14 +1380,9 @@ function MachineryDetailsContent() {
                   className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-[16px] py-3.5 font-bold shadow-lg active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isSubmittingReview ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Submitting...
-                    </>
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>Submitting...</>
                   ) : (
-                    <>
-                      <i className="ph-bold ph-check-circle"></i> Submit Review
-                    </>
+                    <><i className="ph-bold ph-check-circle"></i> Submit Review</>
                   )}
                 </button>
               </div>
@@ -1394,7 +1394,6 @@ function MachineryDetailsContent() {
         {showBookingSuccess && bookingDetails && (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center">
             <div className="bg-white rounded-t-3xl w-full max-w-md px-6 pt-6 pb-10 animate-slide-up">
-              {/* Success icon */}
               <div className="flex flex-col items-center mb-6">
                 <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-3">
                   <i className="ph-bold ph-check-circle text-4xl text-green-600"></i>
@@ -1402,8 +1401,6 @@ function MachineryDetailsContent() {
                 <h2 className="text-xl font-black text-gray-900">Booking Requested!</h2>
                 <p className="text-sm text-gray-500 mt-1 text-center">Your request has been sent to the owner</p>
               </div>
-
-              {/* Booking summary */}
               <div className="bg-gray-50 rounded-2xl p-4 mb-5 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Equipment</span>
@@ -1427,8 +1424,6 @@ function MachineryDetailsContent() {
                   <span className="font-black text-green-700 text-base">₹{bookingDetails.totalPrice.toLocaleString('en-IN')}</span>
                 </div>
               </div>
-
-              {/* Owner contact */}
               <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-5">
                 <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-3">Owner Contact</p>
                 <div className="flex items-center gap-3">
@@ -1448,23 +1443,15 @@ function MachineryDetailsContent() {
                     )}
                   </div>
                   {ownerProfile?.phone && (
-                    <a
-                      href={`tel:${ownerProfile.phone}`}
-                      className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center shadow-md"
-                    >
+                    <a href={`tel:${ownerProfile.phone}`} className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center shadow-md">
                       <i className="ph-bold ph-phone text-white text-lg"></i>
                     </a>
                   )}
                 </div>
               </div>
-
-              {/* Buttons */}
               <div className="flex gap-3">
                 <button
-                  onClick={() => {
-                    setShowBookingSuccess(false);
-                    router.push('/my-reservations');
-                  }}
+                  onClick={() => { setShowBookingSuccess(false); router.push('/my-reservations'); }}
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-semibold text-sm transition"
                 >
                   View My Bookings
@@ -1493,7 +1480,6 @@ function MachineryDetailsContent() {
           />
         )}
       </div>
-
     </>
   );
 }
