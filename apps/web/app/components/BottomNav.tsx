@@ -17,6 +17,7 @@ export default function BottomNav() {
     { href: '/reels', label: 'Reels', icon: 'ph-video' },
     { href: '/chat', label: 'Messages', icon: 'ph-chat-circle' },
     { href: '/user-profile', label: 'Profile', icon: 'ph-user' },
+    { href: '/about', label: 'About Us', icon: 'ph-info' },
   ];
 
   return (

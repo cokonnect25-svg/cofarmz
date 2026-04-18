@@ -39,6 +39,8 @@ interface UserProfile {
   role: string;
   crops: CropEntry[];
   location: string;
+  latitude?: string;
+  longitude?: string;
 }
 
 const CATEGORIES = [
@@ -62,11 +64,11 @@ function HomePageContent() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
-  // New matching states
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [matchingResults, setMatchingResults] = useState<Farmer[]>([]);
+  // ✅ FIX: separate state for waste buyers (same as mobile)
+  const [wasteBuyerResults, setWasteBuyerResults] = useState<Farmer[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
-  const [farmers, setFarmers] = useState<Farmer[]>([]);
 
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [roleUpdating, setRoleUpdating] = useState(false);
@@ -74,17 +76,14 @@ function HomePageContent() {
 
   useEffect(() => { setMounted(true); }, []);
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.replace('/login');
     }
   }, [loading, isAuthenticated, router]);
 
-  // Check if role is confirmed
   useEffect(() => {
     if (!user?.id) return;
-    
     const checkRole = async () => {
       try {
         const res = await fetch(getApiUrl(`/api/users/profile?userId=${user.id}`));
@@ -111,7 +110,7 @@ function HomePageContent() {
       });
       if (res.ok) {
         setShowRoleModal(false);
-        window.location.reload(); 
+        window.location.reload();
       }
     } catch (err) {
       console.error("Error setting role:", err);
@@ -120,97 +119,114 @@ function HomePageContent() {
     }
   };
 
+  // ✅ FIX: shared normalize + fetch helper (mirrors mobile exactly)
+  const normalize = (arr: any[]) =>
+    arr.map((f: any) => ({
+      ...f,
+      crops: Array.isArray(f.crops)
+        ? f.crops.map((c: any) => ({ crop_name: c.crop_name || c, is_crop_waste: !!c.is_crop_waste }))
+        : [],
+      distance: parseFloat(f.distance) || 9999,
+    }));
 
+  const fetchMatches = (lat: number, lon: number, uid: string) => {
+    // ✅ FIX: 3 separate fetches — same as mobile, no crops filter param needed
+    Promise.all([
+      fetch(getApiUrl(`/api/nearby-farmers?type=farmers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+      fetch(getApiUrl(`/api/nearby-farmers?type=buyers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+      fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+    ])
+      .then(([farmersData, buyersData, wasteBuyersData]) => {
+        setMatchingResults([
+          ...normalize(Array.isArray(farmersData) ? farmersData : []),
+          ...normalize(Array.isArray(buyersData) ? buyersData : []),
+        ]);
+        setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
+      })
+      .catch(() => { })
+      .finally(() => setLoadingMatches(false));
+  };
 
   useEffect(() => {
     const uid = user?.id;
-    if (uid) {
-      // 1. Fetch User Profile & Crops
-      fetch(getApiUrl(`/api/farmers/profile?userId=${uid}`))
-        .then(r => r.ok ? r.json() : null)
-        .then(profile => {
-          if (profile) {
-            setUserProfile(profile);
+    if (!uid) return;
 
-            // 2. Fetch Relevant Crops
-            const userCrops = profile.crops?.map((c: any) => c.crop_name) || [];
+    fetch(getApiUrl(`/api/farmers/profile?userId=${uid}`))
+      .then(r => r.ok ? r.json() : null)
+      .then(profile => {
+        if (profile) {
+          setUserProfile(profile);
 
-            if (userCrops.length > 0) {
-              setLoadingMatches(true);
-              const uniqueCrops = [...new Set(userCrops)];
+          const userCrops = profile.crops?.map((c: any) => c.crop_name) || [];
+          if (userCrops.length > 0) {
+            setLoadingMatches(true);
 
-              // Get real user location, fallback to 0,0 (shows all users sorted by distance=9999)
-              const fetchMatches = (lat: number, lon: number) => {
-                Promise.all([
-                  fetch(getApiUrl(`/api/nearby-farmers?type=farmers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.json()),
-                  fetch(getApiUrl(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.json())
-                ]).then(([farmersData, buyersData]) => {
-                  const allResults = [
-                    ...(Array.isArray(farmersData) ? farmersData : []),
-                    ...(Array.isArray(buyersData) ? buyersData : [])
-                  ].map((f: any) => ({
-                    ...f,
-                    crops: Array.isArray(f.crops) 
-                      ? f.crops.map((c: any) => ({ 
-                          crop_name: c.crop_name || c, 
-                          is_crop_waste: !!c.is_crop_waste 
-                        })) 
-                      : [],
-                    distance: parseFloat(f.distance) || 9999,
-                  }));
-                  setMatchingResults(allResults);
-                }).finally(() => setLoadingMatches(false));
-              };
+            const getLocation = async () => {
+              try {
+                let lat: number, lon: number;
 
-              // Try to get user's GPS location (native + web)
-              const getLocation = async () => {
-                try {
-                  let lat: number, lon: number;
-                  if (Capacitor.isNativePlatform()) {
-                    const { Geolocation } = await import('@capacitor/geolocation');
-                    const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 8000 });
-                    lat = pos.coords.latitude;
-                    lon = pos.coords.longitude;
-                  } else {
-                    const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-                      navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 })
-                    );
-                    lat = pos.coords.latitude;
-                    lon = pos.coords.longitude;
-                  }
-                  fetchMatches(lat, lon);
-                } catch {
-                  // Fallback: use stored profile location coords
-                  const storedLat = parseFloat(profile.latitude);
-                  const storedLon = parseFloat(profile.longitude);
-                  if (storedLat && storedLon && (storedLat !== 0 || storedLon !== 0)) {
-                    fetchMatches(storedLat, storedLon);
-                  } else {
-                    fetchMatches(0, 0);
-                  }
+                if (Capacitor.isNativePlatform()) {
+                  const { Geolocation } = await import('@capacitor/geolocation');
+                  const permission = await Geolocation.requestPermissions();
+                  if (permission.location !== 'granted') throw new Error('Permission denied');
+                  const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+                  lat = pos.coords.latitude;
+                  lon = pos.coords.longitude;
+                } else {
+                  const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 })
+                  );
+                  lat = pos.coords.latitude;
+                  lon = pos.coords.longitude;
                 }
-              };
-              getLocation();
-            }
+
+                fetchMatches(lat, lon, uid);
+              } catch {
+                // ✅ FIX: fallback to stored profile coords (same as mobile)
+                const storedLat = parseFloat(profile.latitude);
+                const storedLon = parseFloat(profile.longitude);
+                if (storedLat && storedLon && (storedLat !== 0 || storedLon !== 0)) {
+                  fetchMatches(storedLat, storedLon, uid);
+                } else {
+                  fetchMatches(0, 0, uid);
+                }
+              }
+            };
+
+            getLocation();
           }
-        });
+        }
+      });
 
-      // Existing Machinery & Favorites fetches
-      fetch(getApiUrl(`/api/machinery/featured`))
-        .then(r => r.ok ? r.json() : [])
-        .then(data => setMachinery(Array.isArray(data) ? data : []))
-        .catch(() => setMachinery([]))
-        .finally(() => setLoadingMachinery(false));
+    fetch(getApiUrl(`/api/machinery/featured`))
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setMachinery(Array.isArray(data) ? data : []))
+      .catch(() => setMachinery([]))
+      .finally(() => setLoadingMachinery(false));
 
-      fetch(getApiUrl(`/api/machinery/favorites`), { headers: { 'x-user-id': uid } })
-        .then(r => r.ok ? r.json() : { favorites: [] })
-        .then(data => {
-          const ids = (data.favorites || []).map((f: any) => f.id || f.machinery_id);
-          setFavorites(new Set(ids));
-        })
-        .catch(() => { });
-    }
+    fetch(getApiUrl(`/api/machinery/favorites`), { headers: { 'x-user-id': uid } })
+      .then(r => r.ok ? r.json() : { favorites: [] })
+      .then(data => {
+        const ids = (data.favorites || []).map((f: any) => f.id || f.machinery_id);
+        setFavorites(new Set(ids));
+      })
+      .catch(() => { });
   }, [isAuthenticated, user?.id]);
+
+  // ✅ FIX: location event handler also uses 3-endpoint fetch
+  useEffect(() => {
+    const handler = (e: any) => {
+      const { latitude, longitude } = e.detail;
+      const uid = user?.id;
+      if (!uid || !userProfile) return;
+      const userCrops = userProfile.crops?.map((c: any) => c.crop_name) || [];
+      if (userCrops.length === 0) return;
+      setLoadingMatches(true);
+      fetchMatches(latitude, longitude, uid);
+    };
+    window.addEventListener('userLocationUpdated', handler);
+    return () => window.removeEventListener('userLocationUpdated', handler);
+  }, [user?.id, userProfile]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,20 +238,17 @@ function HomePageContent() {
   const toggleFavorite = async (id: string) => {
     const uid = user?.id;
     if (!uid) return;
-    // Optimistic update
     setFavorites(prev => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-    // Save to DB
     try {
       await fetch(getApiUrl(`/api/machinery/${id}/favorite`), {
         method: 'POST',
         headers: { 'x-user-id': user.id },
       });
     } catch {
-      // Revert on error
       setFavorites(prev => {
         const next = new Set(prev);
         next.has(id) ? next.delete(id) : next.add(id);
@@ -246,7 +259,6 @@ function HomePageContent() {
 
   const effectiveUser = user;
 
-  // Show splash/loading while checking auth
   if (!mounted || loading) {
     return (
       <div className="w-full h-screen bg-gradient-to-br from-green-800 to-emerald-600 flex flex-col items-center justify-center gap-4">
@@ -259,7 +271,6 @@ function HomePageContent() {
     );
   }
 
-  // If not authenticated, show nothing (redirect is happening)
   if (!isAuthenticated) return null;
 
   const filteredMachinery = selectedCategory === 'All'
@@ -271,12 +282,10 @@ function HomePageContent() {
 
       {/* ── HERO SECTION ── */}
       <section className="bg-hero-green px-6 pt-12 pb-12 rounded-b-[48px] shadow-2xl relative overflow-hidden">
-        {/* Animated background orbs */}
         <div className="absolute top-[-60px] right-[-60px] w-[280px] h-[280px] rounded-full bg-white/5 animate-hero-float pointer-events-none" />
         <div className="absolute bottom-[-80px] left-[-40px] w-[220px] h-[220px] rounded-full bg-emerald-400/10 animate-hero-float-slow pointer-events-none" />
         <div className="absolute top-1/2 right-1/4 w-[120px] h-[120px] rounded-full bg-white/5 animate-hero-float pointer-events-none" style={{ animationDelay: '1.2s' }} />
 
-        {/* Logo */}
         <div className="flex items-center justify-between mb-10 relative z-10">
           <div className="flex items-center gap-2.5 bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/20 shadow-lg">
             <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-md overflow-hidden">
@@ -286,7 +295,6 @@ function HomePageContent() {
           </div>
         </div>
 
-        {/* Welcome Text */}
         <div className="flex items-center gap-2 text-green-100 mb-3 relative z-10">
           <div className="w-5 h-5 rounded-full bg-green-400/30 flex items-center justify-center">
             <i className="ph-fill ph-map-pin text-[10px] text-green-200"></i>
@@ -294,9 +302,7 @@ function HomePageContent() {
           <span className="text-sm font-bold opacity-90 tracking-wide">Welcome back, {effectiveUser?.name?.split(' ')[0] || 'Farmer'}</span>
         </div>
 
-        {/* Main Title */}
         <div className="mb-8 relative z-10">
-
           <h1 className="text-[38px] leading-[1.1] font-black text-white tracking-tighter mb-3 drop-shadow-lg">
             Your Global Farmer<br />& Buyer Network
           </h1>
@@ -305,7 +311,6 @@ function HomePageContent() {
           </p>
         </div>
 
-        {/* Search Bar */}
         <form onSubmit={handleSearch} className="flex gap-3 mb-7 relative z-10">
           <div className="flex-1 relative group">
             <div className="absolute inset-0 bg-white/20 blur-xl rounded-full transition-opacity opacity-0 group-hover:opacity-100"></div>
@@ -325,7 +330,6 @@ function HomePageContent() {
           </button>
         </form>
 
-        {/* Category Quick-Access Chips */}
         <div className="flex gap-2.5 overflow-x-auto hide-scrollbar relative z-10 pb-1">
           {[
             { label: 'Tractor', icon: 'ph-tractor', color: 'from-green-400/20 to-green-300/10' },
@@ -349,6 +353,7 @@ function HomePageContent() {
 
       {/* ── MAIN CONTENT ── */}
       <div className="max-w-7xl mx-auto px-6 py-10">
+
         {/* ── DYNAMIC MATCHING SECTIONS ── */}
         <section className="mb-12">
           {loadingMatches ? (
@@ -362,62 +367,45 @@ function HomePageContent() {
             <>
               {(() => {
                 const userCropNames = userProfile?.crops?.map(c => c.crop_name.toLowerCase()) || [];
-                const userWasteCropNames = userProfile?.crops?.filter(c => c.is_crop_waste).map(c => c.crop_name.toLowerCase()) || [];
-
-                if (userCropNames.length === 0) {
-                  return (
-                    <div className="bg-gradient-to-br from-brand-50 to-emerald-50 rounded-3xl p-8 text-center border border-brand-100 mb-6 shadow-premium relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform"></div>
-                      <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-                        <i className="ph-fill ph-plant text-3xl text-brand-500"></i>
-                      </div>
-                      <p className="text-gray-900 font-black text-lg mb-1">Complete your profile</p>
-                      <p className="text-gray-500 text-xs mb-6">Add crops you produce to find buyers nearby!</p>
-                      <button onClick={() => router.push('/user-profile?addCrop=true')}
-                        className="bg-brand-600 text-white px-8 py-3.5 rounded-2xl text-sm font-black shadow-lg shadow-brand-600/30 active:scale-95 transition-transform">
-                        Add Your Crops
-                      </button>
-                    </div>
-                  );
-                }
-
                 const userCropSet = new Set(userCropNames);
-                const userWasteCropSet = new Set(userWasteCropNames);
 
-                // 1. Buyers interested in your AGRICULTURAL WASTE
-                const matchedWasteBuyers = matchingResults
-                  .filter(r => r.role === 'buyer' && r.distance <= 200)
+                // ✅ FIX: waste buyers from dedicated wasteBuyerResults (same logic as desktop/mobile page.tsx)
+                const matchedWasteBuyers = wasteBuyerResults
                   .map(r => {
                     const matchingWasteCrops = r.crops
                       .filter((c: any) => c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
                       .map((c: any) => c.crop_name);
-                    return matchingWasteCrops.length > 0 ? { ...r, matchingCrops: matchingWasteCrops } : null;
+                    const fallbackCrops = r.crops
+                      .filter((c: any) => c.is_crop_waste)
+                      .map((c: any) => c.crop_name);
+                    const displayCrops = matchingWasteCrops.length > 0 ? matchingWasteCrops : fallbackCrops;
+                    return displayCrops.length > 0 ? { ...r, matchingCrops: displayCrops } : null;
                   })
                   .filter(Boolean);
 
-                  console.log("Matched Waste Buyers:", matchedWasteBuyers);
-
-                // 2. Buyers interested in your REGULAR CROPS (exclude waste crops already shown above)
+                // ✅ FIX: buyers from matchingResults — no distance cap, show all with fallback crops
                 const matchedBuyers = matchingResults
-                  .filter(r => r.role === 'buyer' && r.distance <= 100)
+                  .filter(r => r.role === 'buyer')
                   .map(r => {
                     const matchingCrops = r.crops
-                      .filter(c => !c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
-                      .map(c => c.crop_name);
-                    return matchingCrops.length > 0 ? { ...r, matchingCrops } : null;
+                      .filter((c: any) => !c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
+                      .map((c: any) => c.crop_name);
+                    const fallbackCrops = r.crops.filter((c: any) => !c.is_crop_waste).slice(0, 3).map((c: any) => c.crop_name);
+                    return { ...r, matchingCrops: matchingCrops.length > 0 ? matchingCrops : fallbackCrops, isExactMatch: matchingCrops.length > 0 };
                   })
-                  .filter(Boolean);
+                  .sort((a: any, b: any) => (b.isExactMatch ? 1 : 0) - (a.isExactMatch ? 1 : 0) || a.distance - b.distance);
 
-                // 3. Farmers matching your regular crops
+                // ✅ FIX: farmers from matchingResults — no distance cap, show all with fallback crops
                 const matchedFarmers = matchingResults
-                  .filter(r => r.role === 'farmer' && r.distance <= 100)
+                  .filter(r => r.role === 'farmer')
                   .map(r => {
                     const matchingCrops = r.crops
-                      .filter(c => !c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
-                      .map(c => c.crop_name);
-                    return matchingCrops.length > 0 ? { ...r, matchingCrops } : null;
+                      .filter((c: any) => userCropSet.has(c.crop_name.toLowerCase()))
+                      .map((c: any) => c.crop_name);
+                    const fallbackCrops = r.crops.slice(0, 3).map((c: any) => c.crop_name);
+                    return { ...r, matchingCrops: matchingCrops.length > 0 ? matchingCrops : fallbackCrops, isExactMatch: matchingCrops.length > 0 };
                   })
-                  .filter(Boolean);
+                  .sort((a: any, b: any) => (b.isExactMatch ? 1 : 0) - (a.isExactMatch ? 1 : 0) || a.distance - b.distance);
 
                 const renderCard = (person: any, color: string) => (
                   <div key={person.id}
@@ -437,12 +425,18 @@ function HomePageContent() {
                         ? `${person.location} · ${Math.round(person.distance)} km away`
                         : `${Math.round(person.distance)} km away`}
                     </p>
+                    {person.isExactMatch && (
+                      <p className="text-[9px] font-black text-emerald-500 uppercase tracking-wider mb-1">Crop Match</p>
+                    )}
                     <div className="flex flex-wrap gap-1 justify-center">
-                      {person.matchingCrops.map((crop: string) => (
-                        <span key={crop} className={`text-[10px] font-bold px-2 py-1 rounded-lg ${color}`}>
-                          {crop}
-                        </span>
-                      ))}
+                      {(person.matchingCrops || []).length > 0
+                        ? person.matchingCrops.map((crop: string) => (
+                          <span key={crop} className={`text-[10px] font-bold px-2 py-1 rounded-lg ${color}`}>
+                            {crop}
+                          </span>
+                        ))
+                        : <span className="text-[10px] text-gray-300 font-bold">No crops listed</span>
+                      }
                     </div>
                   </div>
                 );
@@ -456,16 +450,31 @@ function HomePageContent() {
                     <p className="text-[10px] text-gray-300 mt-1">We'll notify you when a match is found.</p>
                   </div>
                 );
-                
 
                 return (
                   <div>
-                    {/* Potential Buyers for your AGRICULTURAL WASTE */}
-                    {userProfile?.role === 'farmer' && matchedWasteBuyers.length > 0 && (
+                    {/* Complete profile prompt when no crops */}
+                    {userCropNames.length === 0 && (
+                      <div className="bg-gradient-to-br from-brand-50 to-emerald-50 rounded-3xl p-8 text-center border border-brand-100 mb-6 shadow-premium relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform"></div>
+                        <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+                          <i className="ph-fill ph-plant text-3xl text-brand-500"></i>
+                        </div>
+                        <p className="text-gray-900 font-black text-lg mb-1">Complete your profile</p>
+                        <p className="text-gray-500 text-xs mb-6">Add crops you produce to find buyers nearby!</p>
+                        <button onClick={() => router.push('/user-profile?addCrop=true')}
+                          className="bg-brand-600 text-white px-8 py-3.5 rounded-2xl text-sm font-black shadow-lg shadow-brand-600/30 active:scale-95 transition-transform">
+                          Add Your Crops
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Buyers for your AGRICULTURAL WASTE */}
+                    {userProfile?.role === 'farmer' && (
                       <div className="mb-12">
                         <div className="flex items-center justify-between mb-5">
                           <div>
-                            <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers Interest For Your Crops wastage</h2>
+                            <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers Interest For Your Crops Wastage</h2>
                             <p className="text-amber-600 text-xs font-bold uppercase tracking-wider">Interested in your agricultural waste</p>
                           </div>
                           <button onClick={() => router.push('/nearby-farmers?type=buyers')}
@@ -485,8 +494,10 @@ function HomePageContent() {
                     <div className="mb-10">
                       <div className="flex items-center justify-between mb-5">
                         <div>
-                          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers & Requests</h2>
-                          <p className="text-blue-600 text-xs font-bold uppercase tracking-wider">Buyers matching your regular crops</p>
+                          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers Matching Your Crops</h2>
+                          <p className="text-blue-600 text-xs font-bold uppercase tracking-wider">
+                            {matchedBuyers.some((b: any) => b.isExactMatch) ? 'Buyers interested in your crops' : 'Nearby buyers'}
+                          </p>
                         </div>
                         <button onClick={() => router.push('/nearby-farmers?type=buyers')}
                           className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
@@ -496,16 +507,18 @@ function HomePageContent() {
                       <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
                         {matchedBuyers.length > 0
                           ? matchedBuyers.slice(0, 10).map((p: any) => renderCard(p, 'bg-blue-50 text-blue-700'))
-                          : renderEmpty('No buyers found for your crops')}
+                          : renderEmpty('No buyers registered yet in your area')}
                       </div>
                     </div>
 
-                    {/* Farmers matching your crops */}
+                    {/* Nearby Farmers */}
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-5">
                         <div>
-                          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Nearby Farmers</h2>
-                          <p className="text-emerald-600 text-xs font-bold uppercase tracking-wider">Farmers growing your crops</p>
+                          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Nearby Farmers Interested In Your Crops</h2>
+                          <p className="text-emerald-600 text-xs font-bold uppercase tracking-wider">
+                            {matchedFarmers.some((f: any) => f.isExactMatch) ? 'Farmers growing your crops' : 'Nearby farmers'}
+                          </p>
                         </div>
                         <button onClick={() => router.push('/nearby-farmers?type=farmers')}
                           className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
@@ -515,7 +528,7 @@ function HomePageContent() {
                       <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
                         {matchedFarmers.length > 0
                           ? matchedFarmers.slice(0, 10).map((p: any) => renderCard(p, 'bg-emerald-50 text-emerald-700'))
-                          : renderEmpty('No farmers found for your crops')}
+                          : renderEmpty('No farmers registered yet in your area')}
                       </div>
                     </div>
                   </div>
@@ -525,13 +538,12 @@ function HomePageContent() {
           )}
         </section>
 
-        {/* ── WHAT WOULD YOU LIKE TO DO (Dynamic Action Grid) ── */}
+        {/* ── SHORTCUTS & TOOLS ── */}
         <section className="mb-14">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-black text-gray-900 tracking-tight">Shortcuts & Tools</h2>
           </div>
           <div className="grid grid-cols-2 gap-5">
-            {/* Equipment Rentals */}
             <div onClick={() => router.push('/machinery-list')}
               className="bg-white/80 backdrop-blur-xl rounded-[36px] p-6 cursor-pointer hover:bg-brand-50 transition-all group border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 active:scale-95">
               <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-brand-700 rounded-[22px] flex items-center justify-center mb-5 shadow-lg shadow-brand-500/30 group-hover:scale-110 transition-transform">
@@ -544,7 +556,6 @@ function HomePageContent() {
               </div>
             </div>
 
-            {/* Nearby Farmers */}
             <div onClick={() => router.push('/nearby-farmers?type=farmers')}
               className="bg-white/80 backdrop-blur-xl rounded-[36px] p-6 cursor-pointer hover:bg-blue-50 transition-all group border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 active:scale-95">
               <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-700 rounded-[22px] flex items-center justify-center mb-5 shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
@@ -557,7 +568,6 @@ function HomePageContent() {
               </div>
             </div>
 
-            {/* Nearby Buyers */}
             <div onClick={() => router.push('/nearby-farmers?type=buyers')}
               className="bg-white/80 backdrop-blur-xl rounded-[36px] p-6 cursor-pointer hover:bg-amber-50 transition-all group border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 active:scale-95">
               <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-amber-600 rounded-[22px] flex items-center justify-center mb-5 shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform">
@@ -570,7 +580,6 @@ function HomePageContent() {
               </div>
             </div>
 
-            {/* Reels & Videos */}
             <div onClick={() => router.push('/reels')}
               className="bg-white/80 backdrop-blur-xl rounded-[36px] p-6 cursor-pointer hover:bg-purple-50 transition-all group border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 active:scale-95">
               <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded-[22px] flex items-center justify-center mb-5 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
@@ -645,7 +654,6 @@ function HomePageContent() {
                 <div key={item.id}
                   className={`bg-white rounded-2xl overflow-hidden shadow-soft transition-all duration-300 group border border-gray-100 ${item.is_unavailable ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-float cursor-pointer'}`}
                   onClick={() => { if (!item.is_unavailable) router.push(`/machinery-details?id=${item.id}`); }}>
-                  {/* Image */}
                   <div className="relative h-52 overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                       <div className="w-14 h-14 rounded-full bg-white/70 flex items-center justify-center shadow-sm">
@@ -663,7 +671,6 @@ function HomePageContent() {
                         onContextMenu={(e) => e.preventDefault()}
                       />
                     )}
-
                     <button
                       onClick={e => { e.stopPropagation(); toggleFavorite(item.id); }}
                       className="absolute top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm hover:scale-110 transition-transform">
@@ -673,8 +680,6 @@ function HomePageContent() {
                       {item.year}
                     </div>
                   </div>
-
-                  {/* Info */}
                   <div className="p-5">
                     <div className="flex items-center justify-between mb-1">
                       <h3 className="font-bold text-gray-900 text-base leading-tight">{item.name}</h3>
@@ -723,10 +728,9 @@ function HomePageContent() {
           </button>
         </section>
 
-
       </div>
 
-      {/* Role Selection Modal Overlay */}
+      {/* Role Selection Modal */}
       {showRoleModal && (
         <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">
@@ -736,8 +740,7 @@ function HomePageContent() {
               </div>
               <h2 className="text-2xl font-black text-gray-900 mb-2">Welcome to CoFarmz</h2>
               <p className="text-gray-500 mb-6 leading-relaxed text-sm">To personalize your experience, please tell us how you'll be using the platform.</p>
-              
-              {/* Terms & Conditions Summary */}
+
               <div className="w-full bg-gray-50 rounded-2xl p-4 mb-6 text-left border border-gray-100">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Terms of Service</p>
                 <div className="space-y-2.5">
@@ -750,9 +753,8 @@ function HomePageContent() {
                     <p className="text-[11px] text-gray-600 leading-tight">Your data is secure and used only for platform services</p>
                   </div>
                 </div>
-
                 <label className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-200/60 cursor-pointer group">
-                  <div 
+                  <div
                     onClick={() => setAgreedToTerms(!agreedToTerms)}
                     className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${agreedToTerms ? 'bg-brand-600 border-brand-600' : 'border-gray-300 bg-white group-hover:border-brand-400'}`}
                   >
