@@ -18,6 +18,22 @@ export default function PrivacyPage() {
             { title: '5. Third-Party Services', body: 'We use Cloudflare for media storage and PostgreSQL for data storage. These services have their own privacy policies. We do not share your personal data with advertisers.' },
             { title: '6. Your Rights', body: 'You may request to view, update, or delete your account data at any time by contacting us via WhatsApp at +91 91777 38383.' },
             { title: '7. Contact Us', body: 'For any privacy concerns, contact CoFarmz support at +91 91777 38383 or via WhatsApp.' },
+            { title: '8. Account Deletion',body: `Users have the right to request deletion of their Cofarmz account and associated personal data.
+                How to request deletion:
+                - Email us at: connect@co-konnect.com
+                - Or contact us via WhatsApp: +91 91777 38383
+
+                Steps:
+                1. Send a request using your registered email ID or phone number
+                2. Mention "Delete my account" in the message
+                3. Our team will verify your identity and process the request
+
+                Data deletion:
+                - All personal data (name, email, phone, profile details) will be deleted within 7 days
+                - Some data may be retained for legal, fraud prevention, or regulatory purposes
+
+                Once the account is deleted, it cannot be recovered.`
+                }
           ].map(s => (
             <div key={s.title}>
               <h2 className="text-gray-900 font-bold text-base mb-2">{s.title}</h2>
