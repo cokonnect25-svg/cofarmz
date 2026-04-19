@@ -978,7 +978,24 @@ function ProfileContent() {
           throw new Error(`Failed to update profile picture: ${updateRes.status} ${errorData}`);
         }
 
-        window.location.reload();
+        // Update mobile localStorage session with new image
+        try {
+          const { storeMobileSession } = await import('@/hooks/useAuth');
+          const { Capacitor } = await import('@capacitor/core');
+          if (Capacitor.isNativePlatform()) {
+            const raw = localStorage.getItem('cofarmz_mobile_user');
+            if (raw) {
+              const stored = JSON.parse(raw);
+              storeMobileSession({ ...stored, image: imageUrl });
+            }
+          }
+        } catch {}
+
+        // Notify TopNav to update profile image without full reload
+        window.dispatchEvent(new CustomEvent('profileImageUpdated', { detail: { image: imageUrl } }));
+        setProfileData((prev: any) => prev ? { ...prev, image: imageUrl } : prev);
+        setPreviewImage(null);
+        setShowImagePreview(false);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
@@ -1035,6 +1052,7 @@ function ProfileContent() {
               >
                 <img
                   src={
+                    profileData?.image ||
                     user?.image ||
                     `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`
                   }

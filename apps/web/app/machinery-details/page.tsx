@@ -515,7 +515,7 @@ function MachineryDetailsContent() {
 
   return (
     <>
-      <div className="pt-4 text-gray-800 relative min-h-screen pb-40 pb-20" suppressHydrationWarning>
+      <div className="pt-4 text-gray-800 relative min-h-screen pb-[120px]" suppressHydrationWarning>
         <div className="ambient-glow"></div>
 
         <header className="w-full px-6 pb-4 relative z-10 flex justify-between items-center">
@@ -627,7 +627,6 @@ function MachineryDetailsContent() {
           
           <div className="flex items-center justify-between mt-3 pb-5 border-b border-gray-200/60">
             <div className="flex gap-4 text-sm text-gray-500 font-medium">
-              <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-[8px] shadow-sm"><i className="ph-fill ph-map-pin text-brand-600/60"></i> 12 km</span>
             </div>
             
             <div className="text-right">

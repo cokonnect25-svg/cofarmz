@@ -111,10 +111,13 @@ function ReelsContent() {
     fetchReels();
   }, [user, authLoading, router]);
 
-  // Manage video playback and track views
+  // Manage video playback, mute state, and track views
 useEffect(() => {
   videosRef.current.forEach((video, idx) => {
     if (!video) return;
+
+    // Sync muted state
+    video.muted = isMuted;
 
     if (idx === currentReelIndex && videoReady.has(reels[idx]?.id)) {
       video.play().catch(() => {});
@@ -122,7 +125,7 @@ useEffect(() => {
       video.pause();
     }
   });
-}, [currentReelIndex, videoReady]);
+}, [currentReelIndex, videoReady, isMuted]);
 
   const handleLike = async (reelId: string) => {
     if (!user) return;
@@ -337,7 +340,7 @@ useEffect(() => {
           {reels.map((reel, idx) => (
             <div
               key={reel.id}
-              className="w-full h-[calc(100dvh-48px)] bg-black flex items-center justify-center overflow-hidden snap-start relative flex-shrink-0"
+              className="w-full h-[calc(100dvh-48px-64px)] md:h-[calc(100dvh-48px)] bg-black flex items-center justify-center overflow-hidden snap-start relative flex-shrink-0"
             >
               {/* Video */}
               {videoErrors.has(reel.id) ? (
@@ -353,11 +356,11 @@ useEffect(() => {
                   <video
   ref={(el) => {
     videosRef.current[idx] = el;
+    if (el) el.muted = isMuted;
   }}
   src={reel.video_url}
   className="w-full h-full object-cover"
   preload="metadata"
-  muted
   playsInline
   loop
   onLoadedMetadata={(e) => {
@@ -414,8 +417,8 @@ useEffect(() => {
                 </div>
               )}
 
-              {/* Bottom Info Section (Calibrated for Mobile Nav) */}
-              <div className="absolute bottom-[100px] md:bottom-10 left-0 right-0 px-5 pr-20 md:px-0 md:pr-0 w-full max-w-sm md:max-w-md lg:max-w-lg mx-auto text-white pointer-events-none z-30">
+              {/* Bottom Info Section (above bottom nav + safe area) */}
+              <div className="absolute bottom-[148px] md:bottom-10 left-0 right-0 px-5 pr-20 md:px-0 md:pr-0 w-full max-w-sm md:max-w-md lg:max-w-lg mx-auto text-white pointer-events-none z-30">
                 <div className="pointer-events-auto flex flex-col gap-4">
                   {/* Creator Info - High Contrast Pill */}
                   <div 
@@ -454,8 +457,19 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* Right Sidebar Actions (Premium Glassmorphism) */}
-              <div className="absolute right-4 md:right-[calc(50%-180px)] lg:right-[calc(50%-230px)] bottom-[110px] md:bottom-24 flex flex-col gap-6 text-white z-30">
+              {/* Mute / Unmute button */}
+              <button
+                onClick={(e) => { e.stopPropagation(); setIsMuted((prev) => !prev); }}
+                className="absolute top-4 right-4 z-40 w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center border border-white/20 active:scale-90 transition-transform"
+              >
+                {isMuted
+                  ? <i className="ph-fill ph-speaker-slash text-white text-xl" />
+                  : <i className="ph-fill ph-speaker-high text-white text-xl" />
+                }
+              </button>
+
+              {/* Right Sidebar Actions (above bottom nav) */}
+              <div className="absolute right-4 md:right-[calc(50%-180px)] lg:right-[calc(50%-230px)] bottom-[156px] md:bottom-24 flex flex-col gap-5 text-white z-30">
                 {/* Views */}
                 <div className="flex flex-col items-center gap-1 group">
                   <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl transition-all group-hover:scale-110">

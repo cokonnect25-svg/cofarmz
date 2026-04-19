@@ -50,7 +50,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 <div className="min-h-screen flex flex-col">
   <TopNav />
 
-  <main className="flex-1 pt-[calc(64px+env(safe-area-inset-top))] pb-20">
+  <main className="flex-1 pt-[calc(64px+env(safe-area-inset-top))]" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
     {children}
   </main>
 

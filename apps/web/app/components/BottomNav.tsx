@@ -18,45 +18,46 @@ function BottomNavContent() {
   };
 
   const navItems = [
-    { href: '/',               label: 'Home',     icon: 'ph-house',       activeColor: 'text-emerald-600', activeBg: 'bg-emerald-50',   activeDot: 'bg-emerald-500' },
-    { href: '/machinery-list', label: 'Fleet',    icon: 'ph-tractor',     activeColor: 'text-blue-600',    activeBg: 'bg-blue-50',      activeDot: 'bg-blue-500'    },
-    { href: '/nearby-farmers', label: 'Nearby',   icon: 'ph-users-three', activeColor: 'text-violet-600',  activeBg: 'bg-violet-50',    activeDot: 'bg-violet-500'  },
-    { href: '/reels',          label: 'Reels',    icon: 'ph-video',       activeColor: 'text-rose-600',    activeBg: 'bg-rose-50',      activeDot: 'bg-rose-500'    },
-    { href: '/chat',           label: 'Messages', icon: 'ph-chat-circle', activeColor: 'text-amber-600',   activeBg: 'bg-amber-50',     activeDot: 'bg-amber-500'   },
-    { href: '/user-profile',   label: 'Profile',  icon: 'ph-user-circle', activeColor: 'text-teal-600',    activeBg: 'bg-teal-50',      activeDot: 'bg-teal-500'    },
-    { href: '/about',          label: 'About',    icon: 'ph-info',        activeColor: 'text-orange-600',  activeBg: 'bg-orange-50',    activeDot: 'bg-orange-500'  },
+    { href: '/',               label: 'Home',     icon: 'ph-house',       activeColor: 'text-emerald-600', activeBg: 'bg-emerald-50',  activeDot: 'bg-emerald-500' },
+    { href: '/machinery-list', label: 'Fleet',    icon: 'ph-tractor',     activeColor: 'text-blue-600',    activeBg: 'bg-blue-50',     activeDot: 'bg-blue-500'    },
+    { href: '/nearby-farmers', label: 'Nearby',   icon: 'ph-users-three', activeColor: 'text-violet-600',  activeBg: 'bg-violet-50',   activeDot: 'bg-violet-500'  },
+    { href: '/reels',          label: 'Reels',    icon: 'ph-video',       activeColor: 'text-rose-600',    activeBg: 'bg-rose-50',     activeDot: 'bg-rose-500'    },
+    { href: '/chat',           label: 'Messages', icon: 'ph-chat-circle', activeColor: 'text-amber-600',   activeBg: 'bg-amber-50',    activeDot: 'bg-amber-500'   },
+    { href: '/user-profile',   label: 'Profile',  icon: 'ph-user-circle', activeColor: 'text-teal-600',    activeBg: 'bg-teal-50',     activeDot: 'bg-teal-500'    },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-[60] md:hidden pb-safe">
-      {/* Frosted glass background */}
-      <div className="bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-8px_32px_rgba(0,0,0,0.10)]">
-        <div className="flex items-center justify-around h-[64px] px-0">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-[60] md:hidden"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      <div className="bg-white/98 backdrop-blur-xl border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
+        <div className="flex items-stretch justify-around h-[60px]">
           {navItems.map((item) => {
             const active = isActive(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className="relative flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-all duration-200 active:scale-90"
+                className="relative flex flex-col items-center justify-center flex-1 py-1.5 gap-0.5 transition-all duration-200 active:scale-90 select-none"
               >
-                {/* Active top bar */}
+                {/* Active indicator bar at top */}
                 {active && (
-                  <span className={`absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-b-full ${item.activeDot}`} />
+                  <span className={`absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-b-full ${item.activeDot}`} />
                 )}
 
-                {/* Icon container */}
-                <div className={`flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-200 ${
-                  active ? `${item.activeBg} scale-110` : 'bg-transparent'
+                {/* Icon */}
+                <div className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 ${
+                  active ? `${item.activeBg} scale-105` : ''
                 }`}>
                   <i className={`${active ? 'ph-fill' : 'ph-bold'} ${item.icon} transition-all duration-200 ${
-                    active ? `${item.activeColor} text-[19px]` : 'text-gray-500 text-[18px]'
+                    active ? `${item.activeColor} text-[20px]` : 'text-gray-400 text-[19px]'
                   }`} />
                 </div>
 
                 {/* Label */}
-                <span className={`text-[8px] font-black tracking-tight leading-none transition-all duration-200 ${
-                  active ? item.activeColor : 'text-gray-400 font-bold'
+                <span className={`text-[9px] font-black tracking-tight leading-none ${
+                  active ? item.activeColor : 'text-gray-400'
                 }`}>
                   {item.label}
                 </span>
