@@ -1672,20 +1672,35 @@ function ProfileContent() {
                           <h3 className="font-bold text-gray-900 text-lg truncate">{rental.machinery_name}</h3>
 
                           {/* Renter Info — clickable */}
-                          <div
-                            className="flex items-center gap-2 mt-2 py-2 border-y border-gray-50 cursor-pointer hover:bg-gray-50 rounded-lg px-1 transition"
-                            onClick={() => rental.user_id && router.push(`/farmer-profile?id=${rental.user_id}`)}
-                          >
-                            <img
-                              src={rental.renter_image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(rental.renter_name || 'U')}&backgroundColor=166534&textColor=ffffff`}
-                              className="w-6 h-6 rounded-full object-cover"
-                              alt=""
-                            />
-                            <p className="text-xs font-bold text-gray-700 truncate flex-1">
-                              {rental.renter_name || 'Anonymous Renter'}
-                            </p>
-                            <i className="ph ph-arrow-right text-gray-400 text-xs"></i>
-                          </div>
+<div className="mt-2 border-y border-gray-50 py-2">
+  <div
+    className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded-lg px-1 transition"
+    onClick={() => rental.user_id && router.push(`/farmer-profile?id=${rental.user_id}`)}
+  >
+    <img
+      src={rental.renter_image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(rental.renter_name || 'U')}&backgroundColor=166534&textColor=ffffff`}
+      className="w-6 h-6 rounded-full object-cover"
+      alt=""
+    />
+    <p className="text-xs font-bold text-gray-700 truncate flex-1">
+      {rental.renter_name || 'Anonymous Renter'}
+    </p>
+    <i className="ph ph-arrow-right text-gray-400 text-xs"></i>
+  </div>
+ 
+  {/* Renter phone — shown if provided at booking time */}
+  {rental.renter_phone && (
+    <a
+      href={`tel:${rental.renter_phone}`}
+      onClick={(e) => e.stopPropagation()}
+      className="ml-auto"
+    >
+      <div className="w-7 h-7 rounded-full bg-green-600 flex items-center justify-center">
+        <i className="ph-bold ph-phone text-white text-xs"></i>
+      </div>
+    </a>
+  )}
+</div>
 
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-3">
                             <div>

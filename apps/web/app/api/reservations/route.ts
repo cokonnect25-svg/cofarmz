@@ -11,20 +11,22 @@ export async function GET(request: NextRequest) {
     if (userId) {
       reservations = await sql`
         SELECT r.*, 
-               u.name as owner_name, 
-               u.email as owner_email, 
-               u.image as owner_image
+               u.name  AS owner_name, 
+               u.email AS owner_email, 
+               u.image AS owner_image
         FROM reservations r
         LEFT JOIN "user" u ON r.owner_id = u.id
         WHERE r.user_id = ${userId} 
         ORDER BY r.created_at DESC
       `;
     } else if (ownerId) {
+      // FIX: include renter_phone so the owner can call the renter from the rental card
       reservations = await sql`
         SELECT r.*, 
-               u.name as renter_name, 
-               u.email as renter_email, 
-               u.image as renter_image
+               u.name        AS renter_name, 
+               u.email       AS renter_email, 
+               u.image       AS renter_image,
+               r.renter_phone                   -- always carry the phone the renter entered at booking
         FROM reservations r
         LEFT JOIN "user" u ON r.user_id = u.id
         WHERE r.owner_id = ${ownerId} 
@@ -44,7 +46,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: Request) {
   try {
-    const { user_id, owner_id, machinery_id, machinery_name, start_date, end_date, total_days, daily_rate, total_price, renter_phone } = await request.json();
+    const {
+      user_id, owner_id, machinery_id, machinery_name,
+      start_date, end_date, total_days, daily_rate, total_price, renter_phone
+    } = await request.json();
 
     if (!user_id || !owner_id || !machinery_id || !machinery_name || !start_date || !end_date || !total_days || !daily_rate || !total_price) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -53,8 +58,16 @@ export async function POST(request: Request) {
     await sql`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS renter_phone TEXT`.catch(() => {});
 
     const result = await sql`
-      INSERT INTO reservations (user_id, owner_id, machinery_id, machinery_name, start_date, end_date, total_days, daily_rate, total_price, status, renter_phone)
-      VALUES (${user_id}, ${owner_id}, ${machinery_id}, ${machinery_name}, ${start_date}, ${end_date}, ${total_days}, ${daily_rate}, ${total_price}, 'pending', ${renter_phone || null})
+      INSERT INTO reservations (
+        user_id, owner_id, machinery_id, machinery_name,
+        start_date, end_date, total_days, daily_rate, total_price,
+        status, renter_phone
+      )
+      VALUES (
+        ${user_id}, ${owner_id}, ${machinery_id}, ${machinery_name},
+        ${start_date}, ${end_date}, ${total_days}, ${daily_rate}, ${total_price},
+        'pending', ${renter_phone || null}
+      )
       RETURNING *
     `;
 
@@ -77,13 +90,14 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
-    // Ensure DB constraint allows 'accepted' status
     await sql`ALTER TABLE reservations DROP CONSTRAINT IF EXISTS reservations_status_check`.catch(() => {});
     await sql`ALTER TABLE reservations ADD CONSTRAINT reservations_status_check CHECK (status IN ('pending', 'accepted', 'rejected', 'cancelled', 'completed'))`.catch(() => {});
 
     const result = await sql`
       UPDATE reservations 
-      SET status = ${status}
+      SET 
+        status     = ${status},
+        updated_at = NOW()
       WHERE id = ${id}
       RETURNING *
     `;
@@ -98,4 +112,3 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Failed to update reservation" }, { status: 500 });
   }
 }
-

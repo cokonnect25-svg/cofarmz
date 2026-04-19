@@ -23,7 +23,7 @@ function BottomNavContent() {
     { href: '/nearby-farmers', label: 'Nearby',   icon: 'ph-users-three', activeColor: 'text-violet-600',  activeBg: 'bg-violet-50',   activeDot: 'bg-violet-500'  },
     { href: '/reels',          label: 'Reels',    icon: 'ph-video',       activeColor: 'text-rose-600',    activeBg: 'bg-rose-50',     activeDot: 'bg-rose-500'    },
     { href: '/chat',           label: 'Messages', icon: 'ph-chat-circle', activeColor: 'text-amber-600',   activeBg: 'bg-amber-50',    activeDot: 'bg-amber-500'   },
-    { href: '/user-profile',   label: 'Profile',  icon: 'ph-user-circle', activeColor: 'text-teal-600',    activeBg: 'bg-teal-50',     activeDot: 'bg-teal-500'    },
+    { href: '/about',          label: 'About Us',  icon: 'ph-info', activeColor: 'text-teal-600',    activeBg: 'bg-teal-50',     activeDot: 'bg-teal-500'    },
   ];
 
   return (

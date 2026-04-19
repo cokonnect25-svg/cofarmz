@@ -11,7 +11,7 @@ export async function PATCH(
     const { status } = await request.json();
 
     const result = await sql`
-      UPDATE reservations SET status = ${status} WHERE id = ${id} RETURNING *
+      UPDATE reservations SET status = ${status}, updated_at = NOW() WHERE id = ${id} RETURNING *
     `;
 
     if (result.length === 0) {

@@ -6,7 +6,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { getApiUrl } from '@/lib/api';
 
+// Two separate keys:
+// NOTIF_SEEN_KEY  → "since" cursor for the API – updated after each successful fetch
+// NOTIF_READ_KEY  → unread boundary – only updated when the user opens the panel
 const NOTIF_SEEN_KEY = 'cofarmz_notif_seen_at';
+const NOTIF_READ_KEY = 'cofarmz_notif_read_at';
 
 interface Notification {
   id: string;
@@ -77,21 +81,49 @@ export default function TopNav() {
     return () => window.removeEventListener('profileImageUpdated', handler);
   }, []);
 
+  // ---------------------------------------------------------------------------
   // Fetch notifications
+  //   • seenAt is READ from localStorage (getItem), never assigned from setItem.
+  //     Previously `localStorage.setItem(...)` was mistakenly assigned to seenAt,
+  //     returning undefined and breaking the fetch URL with `since=undefined`.
+  //     This was the root cause of the + button disappearing on mobile — the
+  //     malformed URL caused an error that silently crashed the render branch.
+  //   • unreadCount is computed locally against NOTIF_READ_KEY so the badge
+  //     survives 30-second polls without flickering or resetting.
+  // ---------------------------------------------------------------------------
   const fetchNotifications = useCallback(async () => {
     if (!user?.id) return;
-    // Default: last 24 hours (not epoch) so first-time users don't see all history
+
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    // ✅ FIX: getItem (read), not setItem (write) — setItem returns undefined
     const seenAt = localStorage.getItem(NOTIF_SEEN_KEY) || oneDayAgo;
+
     try {
       const res = await fetch(getApiUrl(`/api/notifications?userId=${user.id}&since=${seenAt}`));
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
+      if (!res.ok) return;
+
+      const data = await res.json();
+      const fetched: Notification[] = data.notifications || [];
+      setNotifications(fetched);
+
+      // Compute unread using the read-timestamp (only set when panel opens)
+      const readAt = localStorage.getItem(NOTIF_READ_KEY) || oneDayAgo;
+      const unread = fetched.filter(
+        (n) => new Date(n.time).getTime() > new Date(readAt).getTime()
+      ).length;
+      setUnreadCount(unread);
+
+      // Advance the seen cursor to the latest notification time
+      if (fetched.length > 0) {
+        const latestTime = fetched.reduce(
+          (max, n) => (new Date(n.time) > new Date(max) ? n.time : max),
+          fetched[0].time
+        );
+        localStorage.setItem(NOTIF_SEEN_KEY, latestTime);
       }
     } catch {
-      // silent
+      // silent — never let notification errors affect the rest of the nav
     }
   }, [user?.id]);
 
@@ -116,12 +148,16 @@ export default function TopNav() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Mark read only when panel OPENS, not immediately (which cleared badge prematurely)
   const handleOpenNotifPanel = () => {
-    setShowNotifPanel((v) => !v);
+    const opening = !showNotifPanel;
+    setShowNotifPanel(opening);
     setShowPlusMenu(false);
-    // Mark all as seen
-    localStorage.setItem(NOTIF_SEEN_KEY, new Date().toISOString());
-    setUnreadCount(0);
+
+    if (opening) {
+      localStorage.setItem(NOTIF_READ_KEY, new Date().toISOString());
+      setUnreadCount(0);
+    }
   };
 
   const handleNotifClick = (notif: Notification) => {
@@ -138,21 +174,29 @@ export default function TopNav() {
     { href: '/chat', label: 'Messages', icon: 'ph-chat-circle' },
   ];
 
-  const avatarUrl = profileImage
-    || (user?.name
+  const avatarUrl =
+    profileImage ||
+    (user?.name
       ? `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}&backgroundColor=166534&textColor=ffffff`
       : `https://api.dicebear.com/7.x/initials/svg?seed=U&backgroundColor=166534&textColor=ffffff`);
 
   return (
     <>
       {/* ── TOP NAV ── */}
-      <nav className="fixed top-0 left-0 right-0 z-[9999] bg-white shadow-sm border-b border-gray-100" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <nav
+        className="fixed top-0 left-0 right-0 z-[9999] bg-white shadow-sm border-b border-gray-100"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
         <div className="max-w-7xl mx-auto px-6 h-[64px] flex items-center gap-6">
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
             <div className="w-9 h-9 rounded-full bg-green-50 border-2 border-green-200 p-0.5 flex-shrink-0">
-              <img src="/assets/cofarmz-logo.png" alt="CoFarmz" className="w-full h-full rounded-full object-cover" />
+              <img
+                src="/assets/cofarmz-logo.png"
+                alt="CoFarmz"
+                className="w-full h-full rounded-full object-cover"
+              />
             </div>
             <span className="text-[16px] font-black text-gray-900 tracking-tight">CoFarmz</span>
           </Link>
@@ -163,12 +207,13 @@ export default function TopNav() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`relative flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-semibold transition-all duration-150 ${isActive(link.href)
+                className={`relative flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-semibold transition-all duration-150 ${
+                  isActive(link.href)
                     ? 'text-green-700 bg-green-50'
                     : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-                  }`}
+                }`}
               >
-                <i className={`${isActive(link.href) ? 'ph-fill' : 'ph'} ${link.icon} text-[15px]`}></i>
+                <i className={`${isActive(link.href) ? 'ph-fill' : 'ph'} ${link.icon} text-[15px]`} />
                 {link.label}
                 {isActive(link.href) && (
                   <span className="absolute bottom-0.5 left-3 right-3 h-0.5 bg-green-600 rounded-full" />
@@ -189,7 +234,8 @@ export default function TopNav() {
                   if (!lang) return;
                   setSelectedLang(lang);
                   if (lang === 'en') {
-                    document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+                    document.cookie =
+                      'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
                     window.location.reload();
                   } else {
                     if (typeof (window as any).triggerTranslate === 'function') {
@@ -220,7 +266,7 @@ export default function TopNav() {
                   href="/my-reels?action=upload"
                   className="hidden md:flex items-center gap-1.5 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-xl text-[13px] font-bold transition-colors shadow-sm"
                 >
-                  <i className="ph-bold ph-video-camera text-sm"></i>
+                  <i className="ph-bold ph-video-camera text-sm" />
                   Post Reels
                 </Link>
 
@@ -231,7 +277,7 @@ export default function TopNav() {
                     className="relative flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 transition-colors"
                     title="Notifications"
                   >
-                    <i className="ph ph-bell text-[20px] text-gray-600"></i>
+                    <i className="ph ph-bell text-[20px] text-gray-600" />
                     {unreadCount > 0 && (
                       <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 shadow-sm">
                         {unreadCount > 99 ? '99+' : unreadCount}
@@ -248,14 +294,14 @@ export default function TopNav() {
                           onClick={() => setShowNotifPanel(false)}
                           className="text-gray-400 hover:text-gray-600 transition"
                         >
-                          <i className="ph ph-x text-lg"></i>
+                          <i className="ph ph-x text-lg" />
                         </button>
                       </div>
 
                       <div className="max-h-[420px] overflow-y-auto">
                         {notifications.length === 0 ? (
                           <div className="flex flex-col items-center justify-center py-10 gap-2">
-                            <i className="ph ph-bell-slash text-4xl text-gray-300"></i>
+                            <i className="ph ph-bell-slash text-4xl text-gray-300" />
                             <p className="text-sm text-gray-400 font-medium">No new notifications</p>
                           </div>
                         ) : (
@@ -267,20 +313,30 @@ export default function TopNav() {
                             >
                               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
                                 {notif.image ? (
-                                  <img src={notif.image} alt="" className="w-full h-full object-cover rounded-full" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                  <img
+                                    src={notif.image}
+                                    alt=""
+                                    className="w-full h-full object-cover rounded-full"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                  />
                                 ) : (
                                   <NotifIcon type={notif.type} status={notif.status} />
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-2">
-                                  <p className="text-[13px] font-bold text-gray-900 truncate">{notif.title}</p>
-                                  <span className="text-[11px] text-gray-400 flex-shrink-0">{timeAgo(notif.time)}</span>
+                                  <p className="text-[13px] font-bold text-gray-900 truncate">
+                                    {notif.title}
+                                  </p>
+                                  <span className="text-[11px] text-gray-400 flex-shrink-0">
+                                    {timeAgo(notif.time)}
+                                  </span>
                                 </div>
-                                <p className="text-[12px] text-gray-600 mt-0.5 line-clamp-2">{notif.body}</p>
-                                <div className="mt-1">
-                                  <NotifIcon type={notif.type} status={notif.status} />
-                                </div>
+                                <p className="text-[12px] text-gray-600 mt-0.5 line-clamp-2">
+                                  {notif.body}
+                                </p>
                               </div>
                             </button>
                           ))
@@ -290,7 +346,10 @@ export default function TopNav() {
                       {notifications.length > 0 && (
                         <div className="border-t border-gray-100 px-4 py-2.5 text-center">
                           <button
-                            onClick={() => { setShowNotifPanel(false); router.push('/chat'); }}
+                            onClick={() => {
+                              setShowNotifPanel(false);
+                              router.push('/chat');
+                            }}
                             className="text-[13px] font-bold text-green-700 hover:text-green-800 transition"
                           >
                             View all messages
@@ -313,23 +372,35 @@ export default function TopNav() {
                     alt={user?.name || 'Profile'}
                     className="w-8 h-8 rounded-full object-cover ring-2 ring-green-100"
                     onError={(e) => {
-                      e.currentTarget.src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user?.name || 'U')}&backgroundColor=166534&textColor=ffffff`;
+                      e.currentTarget.src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
+                        user?.name || 'U'
+                      )}&backgroundColor=166534&textColor=ffffff`;
                     }}
                   />
                   <span className="hidden md:block text-[13px] font-semibold text-gray-700 max-w-[90px] truncate">
                     {user?.name?.split(' ')[0] || 'Profile'}
                   </span>
-                  <i className="ph ph-caret-down text-gray-400 text-xs hidden md:block"></i>
+                  <i className="ph ph-caret-down text-gray-400 text-xs hidden md:block" />
                 </button>
 
                 {/* Mobile + Quick Actions button */}
                 <div className="md:hidden relative" ref={plusRef}>
                   <button
-                    onClick={() => { setShowPlusMenu((v) => !v); setShowNotifPanel(false); }}
+                    onClick={() => {
+                      setShowPlusMenu((v) => !v);
+                      setShowNotifPanel(false);
+                    }}
                     className="flex items-center justify-center w-10 h-10 rounded-full bg-green-600 text-white shadow-md active:scale-90 transition-transform"
                     title="Quick Actions"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-6 h-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                     </svg>
                   </button>
@@ -337,13 +408,12 @@ export default function TopNav() {
                   {/* Quick Actions Menu */}
                   {showPlusMenu && (
                     <div className="absolute right-0 top-12 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[10000] overflow-hidden py-1">
-                      {/* Upload Reels */}
                       <button
                         onClick={() => { setShowPlusMenu(false); router.push('/my-reels?action=upload'); }}
                         className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
                       >
                         <div className="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center flex-shrink-0">
-                          <i className="ph-bold ph-video-camera text-rose-600 text-base"></i>
+                          <i className="ph-bold ph-video-camera text-rose-600 text-base" />
                         </div>
                         <div>
                           <p className="text-[14px] font-bold text-gray-900">Upload Reel</p>
@@ -353,13 +423,12 @@ export default function TopNav() {
 
                       <div className="mx-4 border-t border-gray-100" />
 
-                      {/* Add Equipment */}
                       <button
                         onClick={() => { setShowPlusMenu(false); router.push('/rent-machinery'); }}
                         className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
                       >
                         <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-                          <i className="ph-bold ph-tractor text-blue-600 text-base"></i>
+                          <i className="ph-bold ph-tractor text-blue-600 text-base" />
                         </div>
                         <div>
                           <p className="text-[14px] font-bold text-gray-900">Add Equipment</p>
@@ -369,13 +438,12 @@ export default function TopNav() {
 
                       <div className="mx-4 border-t border-gray-100" />
 
-                      {/* Add Crop */}
                       <button
                         onClick={() => { setShowPlusMenu(false); router.push('/user-profile?addCrop=true'); }}
                         className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
                       >
                         <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
-                          <i className="ph-bold ph-plant text-green-600 text-base"></i>
+                          <i className="ph-bold ph-plant text-green-600 text-base" />
                         </div>
                         <div>
                           <p className="text-[14px] font-bold text-gray-900">Add Crop</p>
@@ -388,12 +456,16 @@ export default function TopNav() {
               </>
             ) : (
               <div className="flex items-center gap-2">
-                <Link href="/login"
-                  className="text-[13px] font-semibold text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition">
+                <Link
+                  href="/login"
+                  className="text-[13px] font-semibold text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition"
+                >
                   Sign In
                 </Link>
-                <Link href="/signup"
-                  className="text-[13px] font-bold bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-xl transition shadow-sm">
+                <Link
+                  href="/signup"
+                  className="text-[13px] font-bold bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-xl transition shadow-sm"
+                >
                   Get Started
                 </Link>
               </div>

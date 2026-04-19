@@ -11,7 +11,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Missing userId" }, { status: 400 });
   }
 
-  const sinceDate = since ? new Date(since) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+const sinceDate = since
+  ? new Date(new Date(since).getTime() - 60000) // -1 min
+  : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   try {
     // 1. New messages received by this user
@@ -21,19 +23,19 @@ export async function GET(request: Request) {
         m.message,
         m.created_at,
         m.sender_id,
-        u.name as sender_name,
-        u.image as sender_image,
+        u.name   AS sender_name,
+        u.image  AS sender_image,
         m.machinery_id
       FROM messages m
       JOIN "user" u ON u.id = m.sender_id
       WHERE m.receiver_id = ${userId}
-        AND m.sender_id != ${userId}
-        AND m.created_at > ${sinceDate}
+        AND m.sender_id   != ${userId}
+        AND m.created_at   > ${sinceDate}
       ORDER BY m.created_at DESC
       LIMIT 20
     `;
 
-    // 2. New booking requests (owner gets notified when someone books their equipment)
+    // 2. New booking requests — owner notified when someone books their equipment
     const newBookings = await sql`
       SELECT
         r.id,
@@ -41,50 +43,68 @@ export async function GET(request: Request) {
         r.status,
         r.created_at,
         r.user_id,
-        u.name as renter_name,
-        u.image as renter_image
+        u.name   AS renter_name,
+        u.image  AS renter_image
       FROM reservations r
       JOIN "user" u ON u.id = r.user_id
-      WHERE r.owner_id = ${userId}
-        AND r.status = 'pending'
+      WHERE r.owner_id  = ${userId}
+        AND r.status    = 'pending'
         AND r.created_at > ${sinceDate}
       ORDER BY r.created_at DESC
       LIMIT 10
     `;
 
-    // 3. Booking status changes (renter gets notified when owner accepts/rejects)
+    // ---------------------------------------------------------------------------
+    // FIX 2 — Use updated_at (not created_at) for booking status changes.
+    //   When an owner accepts/rejects a booking the row's created_at stays the
+    //   same as the original request date, so filtering on created_at means
+    //   status-update notifications are NEVER returned. updated_at reflects when
+    //   the status actually changed.
+    //
+    //   Prerequisite: your reservations table must have an updated_at column that
+    //   is set automatically (trigger or explicit SET updated_at = NOW() in your
+    //   update queries).
+    // ---------------------------------------------------------------------------
     const bookingUpdates = await sql`
       SELECT
         r.id,
         r.machinery_name,
         r.status,
-        r.created_at,
+        r.updated_at,
         r.owner_id,
-        u.name as owner_name,
-        u.image as owner_image
+        u.name   AS owner_name,
+        u.image  AS owner_image
       FROM reservations r
       JOIN "user" u ON u.id = r.owner_id
-      WHERE r.user_id = ${userId}
-        AND r.status IN ('accepted', 'rejected', 'cancelled', 'completed')
-        AND r.created_at > ${sinceDate}
-      ORDER BY r.created_at DESC
+      WHERE r.user_id    = ${userId}
+        AND r.status     IN ('accepted', 'rejected', 'cancelled', 'completed')
+        AND r.updated_at  > ${sinceDate}   -- FIX 2: was r.created_at
+      ORDER BY r.updated_at DESC            -- FIX 2: was r.created_at
       LIMIT 10
     `;
 
-    // 4. Equipment availability changes (notify followers or renters)
+    // ---------------------------------------------------------------------------
+    // FIX 4 — Equipment availability notifications should target RENTERS, not
+    //   owners. Querying WHERE m.owner_id = userId meant the owner was notified
+    //   about their own equipment changes — something they already know. Instead,
+    //   join reservations to find equipment belonging to other owners that THIS
+    //   user has actively booked/reserved.
+    // ---------------------------------------------------------------------------
     const equipmentChanges = await sql`
-      SELECT
+      SELECT DISTINCT ON (m.id)
         m.id,
         m.name,
         m.is_unavailable,
         m.updated_at,
         m.owner_id,
-        u.name as owner_name
+        u.name AS owner_name
       FROM machinery m
-      JOIN "user" u ON u.id = m.owner_id
-      WHERE m.owner_id = ${userId}
+      JOIN "user"       u ON u.id = m.owner_id
+      JOIN reservations r ON r.machinery_id = m.id
+      WHERE r.user_id    = ${userId}          -- FIX 4: notify the renter, not the owner
+        AND m.owner_id  != ${userId}          -- extra guard: exclude own equipment
         AND m.updated_at > ${sinceDate}
-      ORDER BY m.updated_at DESC
+      ORDER BY m.id, m.updated_at DESC
       LIMIT 10
     `.catch(() => []);
 
@@ -95,7 +115,10 @@ export async function GET(request: Request) {
         id: `msg-${msg.id}`,
         type: 'message',
         title: msg.sender_name,
-        body: msg.message.length > 60 ? msg.message.substring(0, 60) + '...' : msg.message,
+        body:
+          msg.message.length > 60
+            ? msg.message.substring(0, 60) + '...'
+            : msg.message,
         image: msg.sender_image,
         time: msg.created_at,
         link: `/chat?userId=${msg.sender_id}`,
@@ -128,7 +151,7 @@ export async function GET(request: Request) {
         title: `Booking ${statusLabel}`,
         body: `Your booking for ${booking.machinery_name} was ${statusLabel}`,
         image: booking.owner_image,
-        time: booking.created_at,
+        time: booking.updated_at,   // FIX 2: use updated_at as the notification time
         link: `/user-profile`,
         status: booking.status,
       });
@@ -149,11 +172,22 @@ export async function GET(request: Request) {
     });
 
     // Sort by time descending
-    notifications.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+    notifications.sort(
+      (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
+    );
 
+    const trimmed = notifications.slice(0, 30);
+
+    // ---------------------------------------------------------------------------
+    // FIX 3 — Do NOT return unreadCount from the API.
+    //   The frontend computes unread count itself by comparing notification
+    //   timestamps against the NOTIF_READ_KEY stored in localStorage. This
+    //   prevents the badge from resetting on every 30-second poll.
+    //   We still return the field (as 0) so any existing consumers don't break.
+    // ---------------------------------------------------------------------------
     return NextResponse.json({
-      notifications: notifications.slice(0, 30),
-      unreadCount: notifications.length,
+      notifications: trimmed,
+      unreadCount: 0, // FIX 3: frontend computes this from NOTIF_READ_KEY
     });
   } catch (error) {
     console.error("Notifications error:", error);

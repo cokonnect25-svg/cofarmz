@@ -5,8 +5,6 @@ import { AppGenProvider } from "@/components/appgen-provider";
 import TopNav from "@/app/components/TopNav";
 import Footer from "@/app/components/Footer";
 import GoogleTranslate from "@/app/components/GoogleTranslate";
-import { usePathname, useRouter } from "next/navigation";
-import { RoleSelectionGuard } from "@/components/RoleSelectionGuard";
 import LocationPermissionPopup from "@/app/components/LocationPermissionPopup";
 import BottomNav from "@/app/components/BottomNav";
 import { App } from '@capacitor/app';
@@ -15,51 +13,80 @@ import { useEffect } from "react";
 import { authClient } from "@/lib/auth-client";
 import { useAuth } from "@/hooks/useAuth";
 
+const TOP_NAV_H = 64;  // must match TopNav h-[64px]
+const BOTTOM_NAV_H = 80; // must match BottomNav height
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const { user } = useAuth();
-
-  // ✅ Show BottomNav only when user is logged in
   const showBottomNav = !!user;
 
   useEffect(() => {
     const handleUrlOpen = async (event: any) => {
       const url = event.url;
-
       if (url.includes('auth-callback')) {
         await Browser.close();
-
         setTimeout(async () => {
           await authClient.getSession();
           window.location.replace('/');
         }, 500);
       }
     };
-
     const listener = App.addListener('appUrlOpen', handleUrlOpen);
-
-    return () => {
-      listener.then(l => l.remove());
-    };
+    return () => { listener.then(l => l.remove()); };
   }, []);
 
   return (
-    <>
-      {/* ✅ Always visible */}
-<div className="min-h-screen flex flex-col">
-  <TopNav />
+    <div className="min-h-screen flex flex-col">
+      <TopNav />
 
-  <main className="flex-1 pt-[calc(64px+env(safe-area-inset-top))]" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
-    {children}
-  </main>
+      <main
+        className="flex-1 w-full"
+        style={{
+          paddingTop: `calc(${TOP_NAV_H}px + env(safe-area-inset-top))`,
+          // Global bottom padding — every page is safe without per-page changes
+          paddingBottom: showBottomNav
+            ? `calc(${BOTTOM_NAV_H}px + env(safe-area-inset-bottom))`
+            : '0px',
+        }}
+      >
+        {/*
+          Override min-h-screen / h-screen globally when BottomNav is showing.
+          Pages that use these utilities would otherwise overflow the safe area
+          and hide their bottom content behind the nav.
+        */}
+        {showBottomNav && (
+          <style>{`
+            .min-h-screen {
+              min-height: calc(
+                100dvh
+                - ${TOP_NAV_H}px
+                - ${BOTTOM_NAV_H}px
+                - env(safe-area-inset-top)
+                - env(safe-area-inset-bottom)
+              ) !important;
+            }
+            .h-screen {
+              height: calc(
+                100dvh
+                - ${TOP_NAV_H}px
+                - ${BOTTOM_NAV_H}px
+                - env(safe-area-inset-top)
+                - env(safe-area-inset-bottom)
+              ) !important;
+            }
+          `}</style>
+        )}
 
-  {showBottomNav && <BottomNav />}
+        {children}
+      </main>
 
-  <Footer />
-  <LocationPermissionPopup />
-</div>
-    </>
+      {showBottomNav && <BottomNav />}
+
+      {/* Footer only rendered for logged-out users */}
+      {!showBottomNav && <Footer />}
+
+      <LocationPermissionPopup />
+    </div>
   );
 }
 

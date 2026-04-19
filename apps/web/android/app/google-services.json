@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "866114557322-jj0ic4r9nrk3qjeg7p2m8fpp096o2do9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.cofarmz.com",
+            "certificate_hash": "29c2df40abd29c2ca8c4950da81f0c2abed9340f"
+          }
+        },
+        {
           "client_id": "866114557322-rknu0fh2dbbaeloudh6qekl3p10d2q86.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
