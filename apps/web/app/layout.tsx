@@ -14,7 +14,7 @@ import { authClient } from "@/lib/auth-client";
 import { useAuth } from "@/hooks/useAuth";
 
 const TOP_NAV_H = 64;  // must match TopNav h-[64px]
-const BOTTOM_NAV_H = 80; // must match BottomNav height
+const BOTTOM_NAV_H = 60; // must match BottomNav height
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -36,7 +36,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col">
+   <div className="flex flex-col min-h-[100dvh]">
       <TopNav />
 
       <main
@@ -50,13 +50,13 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         }}
       >
         {/*
-          Override min-h-screen / h-screen globally when BottomNav is showing.
+          Override min-min-h-[100dvh] / min-h-[100dvh] globally when BottomNav is showing.
           Pages that use these utilities would otherwise overflow the safe area
           and hide their bottom content behind the nav.
         */}
         {showBottomNav && (
           <style>{`
-            .min-h-screen {
+            .min-min-h-[100dvh] {
               min-height: calc(
                 100dvh
                 - ${TOP_NAV_H}px
@@ -65,7 +65,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                 - env(safe-area-inset-bottom)
               ) !important;
             }
-            .h-screen {
+            .min-h-[100dvh] {
               height: calc(
                 100dvh
                 - ${TOP_NAV_H}px

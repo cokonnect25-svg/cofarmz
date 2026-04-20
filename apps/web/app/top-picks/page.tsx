@@ -51,14 +51,14 @@ export default function TopPicksPage() {
 
   if (!mounted || loading || !isAuthenticated) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-surface-muted">
+      <div className="w-full min-h-[100dvh] flex items-center justify-center bg-surface-muted">
         <div className="w-12 h-12 rounded-full border-4 border-brand-600 border-t-transparent animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-surface-muted">
+    <div className="min-min-h-[100dvh] bg-surface-muted">
       {/* Page Header */}
       <div className="bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-6 flex items-center gap-4">

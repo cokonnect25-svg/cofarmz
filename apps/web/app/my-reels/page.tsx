@@ -193,7 +193,7 @@ function MyReelsContent() {
   // Step 1: Upload Selection Screen
   if (step === 'upload') {
     return (
-      <div className="min-h-screen bg-white flex flex-col">
+      <div className="min-min-h-[100dvh] bg-white flex flex-col">
         {/* Premium Sticky Header */}
         <div className="sticky top-0 bg-white/90 backdrop-blur-xl border-b border-gray-100 px-6 py-5 flex items-center justify-between z-40">
           <div className="flex items-center gap-4">
@@ -265,7 +265,7 @@ function MyReelsContent() {
   // Step 2: Final Details Screen
   if (step === 'edit') {
     return (
-      <div className="min-h-screen bg-white flex flex-col">
+      <div className="min-min-h-[100dvh] bg-white flex flex-col">
         {/* Header */}
         <div className="bg-white px-6 py-5 border-b border-gray-100 flex items-center justify-between sticky top-0 z-40">
           <button onClick={() => resetForm()} className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-900 transition active:scale-95">
@@ -343,14 +343,14 @@ function MyReelsContent() {
   // Step 3: Main Reels List
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center min-h-[100dvh]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-min-h-[100dvh] bg-gray-50">
       {/* Premium Sticky Header */}
       <div className="sticky top-0 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-6 py-5 flex items-center justify-between z-40">
         <div className="flex items-center gap-4">
@@ -461,7 +461,7 @@ function MyReelsContent() {
 export default function MyReelsPage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="flex items-center justify-center min-h-[100dvh] bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
       </div>
     }>

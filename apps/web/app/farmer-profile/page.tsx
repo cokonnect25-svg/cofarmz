@@ -234,7 +234,7 @@ function FarmerProfileContent() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center min-h-[100dvh]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
       </div>
     );
@@ -242,7 +242,7 @@ function FarmerProfileContent() {
 
   if (error || !profile || !user) {
     return (
-      <div className="flex items-center justify-center h-screen flex-col gap-4">
+      <div className="flex items-center justify-center min-h-[100dvh] flex-col gap-4">
         <p className="text-gray-500">{error || 'Profile not found'}</p>
         <button
           onClick={() => router.back()}
@@ -257,7 +257,7 @@ function FarmerProfileContent() {
   const isOwnProfile = user?.id === farmerId;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-min-h-[100dvh] bg-gray-50">
       {/* Header */}
       <div className="sticky top-0 bg-white border-b px-4 py-3 flex items-center z-40">
         <button onClick={() => router.back()} className="mr-3">
@@ -701,7 +701,7 @@ export default function FarmerProfilePage() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center h-screen">
+        <div className="flex items-center justify-center min-h-[100dvh]">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
         </div>
       }

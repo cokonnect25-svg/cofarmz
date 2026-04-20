@@ -300,7 +300,7 @@ useEffect(() => {
 
   if (authLoading || !user) {
     return (
-      <div className="flex items-center justify-center h-screen bg-black">
+      <div className="flex items-center justify-center min-h-[100dvh] bg-black">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
       </div>
     );
@@ -308,14 +308,14 @@ useEffect(() => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-black">
+      <div className="flex items-center justify-center min-h-[100dvh] bg-black">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-screen bg-black overflow-hidden flex flex-col">
+    <div className="w-full min-h-[100dvh] bg-black overflow-hidden flex flex-col">
       {/* Header */}
       <div className="h-12 bg-black border-b border-gray-700 px-4 flex items-center gap-3 z-40">
         <button onClick={() => router.back()} className="text-white hover:text-gray-300">
@@ -633,7 +633,7 @@ export default function ReelsPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center h-screen bg-black">
+        <div className="flex items-center justify-center min-h-[100dvh] bg-black">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
         </div>
       }

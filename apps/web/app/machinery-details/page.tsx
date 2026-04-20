@@ -68,6 +68,8 @@ function MachineryDetailsContent() {
   const [bookingDetails, setBookingDetails] = useState<{ totalDays: number; totalPrice: number; startDate: string; endDate: string } | null>(null);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [renterPhone, setRenterPhone] = useState('');
+  const [showCalendar, setShowCalendar] = useState(false);
+
 
   useEffect(() => {
     setMounted(true);
@@ -405,7 +407,7 @@ function MachineryDetailsContent() {
 
   if (!mounted || loading || !isAuthenticated || loadingMachinery) {
     return (
-      <div className="w-full h-screen bg-brand-50 flex items-center justify-center">
+      <div className="w-full min-h-[100dvh] bg-brand-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-full border-4 border-brand-600 border-t-transparent animate-spin"></div>
           <p className="text-gray-600 text-sm font-medium">Loading...</p>
@@ -423,35 +425,47 @@ function MachineryDetailsContent() {
     });
   };
 
-  const getNextAvailableDates = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    let startDate: Date | null = null;
-    let endDate: Date | null = null;
-    
-    for (let i = 0; i < 365; i++) {
-      const checkDate = new Date(today);
+ const getNextAvailableDates = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  let startDate: Date | null = null;
+  let endDate: Date | null = null;
+  
+  // Find next available start date
+  for (let i = 0; i < 365; i++) {
+    const checkDate = new Date(today);
+    checkDate.setDate(checkDate.getDate() + i);
+    if (!isDateBooked(checkDate.toISOString().split('T')[0])) {
+      startDate = checkDate;
+      break;
+    }
+  }
+  
+  // Find next available end date (3 days after start by default)
+  if (startDate) {
+    let consecutiveDays = 0;
+    for (let i = 1; i <= 30; i++) {
+      const checkDate = new Date(startDate);
       checkDate.setDate(checkDate.getDate() + i);
       if (!isDateBooked(checkDate.toISOString().split('T')[0])) {
-        startDate = checkDate;
-        break;
-      }
-    }
-    
-    if (startDate) {
-      for (let i = 1; i < 365; i++) {
-        const checkDate = new Date(startDate);
-        checkDate.setDate(checkDate.getDate() + i);
-        if (!isDateBooked(checkDate.toISOString().split('T')[0])) {
+        consecutiveDays++;
+        if (consecutiveDays >= 3) {
           endDate = checkDate;
           break;
         }
+      } else {
+        consecutiveDays = 0;
       }
     }
-    
-    return { startDate, endDate };
-  };
+    // If no 3 consecutive days found, just set 1 day
+    if (!endDate) {
+      endDate = startDate;
+    }
+  }
+  
+  return { startDate, endDate };
+};
 
   const renderCalendar = () => {
     const currentDate = new Date();
@@ -460,7 +474,7 @@ function MachineryDetailsContent() {
     const days = [];
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     
-    for (let i = 0; i < 90; i++) {
+    for (let i = 0; i < 30; i++) {
       const date = new Date(currentDate);
       date.setDate(date.getDate() + i);
       const dateStr = date.toISOString().split('T')[0];
@@ -515,7 +529,7 @@ function MachineryDetailsContent() {
 
   return (
     <>
-      <div className="pt-4 text-gray-800 relative min-h-screen pb-[120px]" suppressHydrationWarning>
+      <div className="pt-4 text-gray-800 relative flex flex-col min-h-0 pb-[80px]">
         <div className="ambient-glow"></div>
 
         <header className="w-full px-6 pb-4 relative z-10 flex justify-between items-center">
@@ -984,20 +998,83 @@ function MachineryDetailsContent() {
               <i className="ph-bold ph-calendar-check text-brand-600"></i> Availability
             </h3>
             
-            <div 
-              className="flex justify-between items-center bg-[#F4F5F0] rounded-[16px] p-3 mb-5 cursor-pointer active:scale-[0.98] transition-transform" 
-              onClick={() => setShowDatePicker(true)}>
-              <div>
-                <span className="text-[10px] text-gray-500 font-bold uppercase block mb-0.5">Select Dates</span>
-                <span className="text-sm font-bold text-gray-900">
-                  {startDate && endDate ? `${startDate} - ${endDate}` : 'Click to select dates'}
-                </span>
-              </div>
-              <div className="flex items-center text-sm font-bold text-gray-900">
-                {totalDays > 1 ? `${totalDays} Days` : 'Select'} <i className="ph-bold ph-caret-right ml-2 text-gray-400"></i>
-              </div>
-            </div>
+            {/* Calendar Section with Toggle */}
+<div className="mb-6">
+  <button
+    onClick={() => setShowCalendar(!showCalendar)}
+    className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-brand-50 to-brand-100 rounded-[16px] hover:from-brand-100 hover:to-brand-200 transition-all duration-200 active:scale-[0.98]"
+  >
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-brand-600">
+        <i className={`ph-bold ph-calendar ${showCalendar ? 'ph-fill' : ''} text-lg`}></i>
+      </div>
+      <div className="text-left">
+        <span className="text-sm font-bold text-gray-900 block">
+          {showCalendar ? 'Hide Calendar' : 'View Availability Calendar'}
+        </span>
+        <span className="text-xs text-gray-500">
+          {showCalendar ? 'Tap to close' : 'Check available dates'}
+        </span>
+      </div>
+    </div>
+    <i className={`ph-bold ph-caret-${showCalendar ? 'up' : 'down'} text-gray-400 text-lg transition-transform duration-200`}></i>
+  </button>
 
+  {/* Calendar - Only visible when showCalendar is true */}
+  {showCalendar && (
+    <div className="mt-4 p-4 bg-gray-50 rounded-[16px] animate-in slide-in-from-top-2 duration-200">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-bold text-gray-900 text-sm">Select Dates</h3>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              const next = getNextAvailableDates();
+              if (next.startDate) setStartDate(next.startDate.toISOString().split('T')[0]);
+              if (next.endDate) setEndDate(next.endDate.toISOString().split('T')[0]);
+            }}
+            className="text-xs text-brand-600 font-bold px-2 py-1 rounded-lg bg-brand-50"
+          >
+            Next Available
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-7 gap-2 max-h-[300px] overflow-y-auto">
+        {renderCalendar()}
+      </div>
+    </div>
+  )}
+</div>
+
+{/* Date Inputs - Keep these but make them cleaner */}
+<div className="space-y-4 mb-6">
+  <div>
+    <label className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-2">
+      <i className="ph-bold ph-calendar-blank text-brand-600"></i>
+      From Date
+    </label>
+    <input
+      type="date"
+      value={startDate}
+      onChange={(e) => setStartDate(e.target.value)}
+      className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all"
+      placeholder="Select start date"
+    />
+  </div>
+
+  <div>
+    <label className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-2">
+      <i className="ph-bold ph-calendar-check text-brand-600"></i>
+      To Date
+    </label>
+    <input
+      type="date"
+      value={endDate}
+      onChange={(e) => setEndDate(e.target.value)}
+      className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all"
+      placeholder="Select end date"
+    />
+  </div>
+</div>
             <div className="flex justify-between items-center mb-5 text-sm">
               <span className="text-gray-500 font-medium">Estimated Total ({totalDays} days)</span>
               <span className="font-black text-gray-900 text-lg">₹{totalPrice.toLocaleString()}</span>
@@ -1045,7 +1122,7 @@ function MachineryDetailsContent() {
 
         {/* Phone Number Modal */}
         {showPhoneModal && (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end">
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[70] flex items-end">
             <div className="w-full bg-white rounded-t-[32px] p-6 pb-8">
               <div className="flex justify-between items-center mb-5">
                 <h2 className="text-xl font-bold text-gray-900">Your Mobile Number</h2>
@@ -1088,218 +1165,144 @@ function MachineryDetailsContent() {
         )}
 
         {/* Date Picker Modal */}
-        {showDatePicker && (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end">
-            <div className="w-full bg-white rounded-t-[32px] p-6 pb-8 animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Select Dates</h2>
-                <button 
-                  onClick={() => {
-                    setShowDatePicker(false);
-                    setAvailabilityError('');
-                  }}
-                  className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 active:scale-95">
-                  <i className="ph-bold ph-x text-lg"></i>
-                </button>
-              </div>
+{showDatePicker && (
+  <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[70] flex items-end px-4 pb-[calc(60px+env(safe-area-inset-bottom)+16px)]">
+    
+    <div className="w-full bg-white rounded-t-[32px] max-h-[60vh] flex flex-col shadow-2xl">
+      <div className="w-10 h-1.5 bg-gray-300 rounded-full mx-auto mt-2 mb-2"></div>
 
-              <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-[16px]">
-                <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
-                  <i className="ph-bold ph-info text-lg"></i> Equipment Details
-                </h3>
-                <p className="text-sm text-blue-700">{machinery?.name} - {machinery?.model}</p>
-              </div>
+      {/* 🔵 HEADER (fixed) */}
+      <div className="p-6 pb-4 border-b border-gray-100 shrink-0">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-bold text-gray-900">Select Dates</h2>
+          <button 
+            onClick={() => {
+              setShowDatePicker(false);
+              setAvailabilityError('');
+            }}
+            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 active:scale-95"
+          >
+            <i className="ph-bold ph-x text-lg"></i>
+          </button>
+        </div>
+      </div>
 
-              {(() => {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const futureBookedDates = bookedDates.filter(range => {
-                  const endDate = new Date(range.end_date);
-                  endDate.setHours(0, 0, 0, 0);
-                  return endDate >= today;
-                });
-                
-                return futureBookedDates.length > 0 && (
-                  <div className="bg-red-50 border-2 border-red-300 rounded-[16px] p-4 mb-6">
-                    <h4 className="text-sm font-bold text-red-900 mb-3 flex items-center gap-2">
-                      <i className="ph-bold ph-calendar-x text-lg"></i> Already Booked (Unavailable)
-                    </h4>
-                    <div className="space-y-2">
-                      {futureBookedDates.map((range, idx) => (
-                        <div key={idx} className="bg-white border border-red-200 rounded-lg p-3 text-xs text-red-700 font-semibold flex items-center justify-between">
-                          <span>{new Date(range.start_date).toLocaleDateString('en-IN', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: '2-digit'
-                          })} - {new Date(range.end_date).toLocaleDateString('en-IN', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: '2-digit'
-                          })}</span>
-                          <i className="ph-bold ph-lock text-red-500"></i>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-red-600 mt-3 flex items-center gap-1">
-                      <i className="ph-bold ph-info"></i> Choose dates that don't overlap with these bookings
-                    </p>
+      {/* 🟡 SCROLLABLE CONTENT */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+
+        {/* Equipment Info */}
+        <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-[16px]">
+          <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
+            <i className="ph-bold ph-info text-lg"></i> Equipment Details
+          </h3>
+          <p className="text-sm text-blue-700">{machinery?.name} - {machinery?.model}</p>
+        </div>
+
+        {/* Booked Dates */}
+        {(() => {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          const futureBookedDates = bookedDates.filter(range => {
+            const endDate = new Date(range.end_date);
+            endDate.setHours(0, 0, 0, 0);
+            return endDate >= today;
+          });
+
+          return futureBookedDates.length > 0 && (
+            <div className="bg-red-50 border-2 border-red-300 rounded-[16px] p-4 mb-6">
+              <h4 className="text-sm font-bold text-red-900 mb-3 flex items-center gap-2">
+                <i className="ph-bold ph-calendar-x text-lg"></i> Already Booked
+              </h4>
+              <div className="space-y-2">
+                {futureBookedDates.map((range, idx) => (
+                  <div key={idx} className="bg-white border border-red-200 rounded-lg p-3 text-xs text-red-700 font-semibold flex justify-between">
+                    <span>
+                      {new Date(range.start_date).toLocaleDateString('en-IN')} - {new Date(range.end_date).toLocaleDateString('en-IN')}
+                    </span>
+                    <i className="ph-bold ph-lock text-red-500"></i>
                   </div>
-                );
-              })()}
-
-              <div className="mb-6 p-4 bg-gray-50 rounded-[16px]">
-                <h3 className="font-bold text-gray-900 mb-4">Calendar (Next 90 Days)</h3>
-                <div className="grid grid-cols-7 gap-2">
-                  {renderCalendar()}
-                </div>
-                <div className="mt-4 flex flex-wrap gap-3 text-xs font-medium">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-brand-600 rounded-lg"></div>
-                    <span className="text-gray-700">Selected</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-brand-100 rounded-lg border border-brand-300"></div>
-                    <span className="text-gray-700">In Range</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-red-100 rounded-lg border border-red-300"></div>
-                    <span className="text-gray-700">Booked</span>
-                  </div>
-                </div>
-              </div>
-
-              {(() => {
-                const { startDate: suggestedStart, endDate: suggestedEnd } = getNextAvailableDates();
-                if (suggestedStart && suggestedEnd) {
-                  return (
-                    <div className="bg-green-50 border-2 border-green-300 rounded-[16px] p-4 mb-6">
-                      <h4 className="text-sm font-bold text-green-900 mb-3 flex items-center gap-2">
-                        <i className="ph-bold ph-check-circle"></i> Available Time Slot
-                      </h4>
-                      <button
-                        onClick={() => {
-                          setStartDate(suggestedStart.toISOString().split('T')[0]);
-                          setEndDate(suggestedEnd.toISOString().split('T')[0]);
-                          setAvailabilityError('');
-                        }}
-                        className="w-full bg-white border-2 border-green-300 hover:bg-green-100 text-green-900 rounded-lg p-3 font-bold active:scale-95 transition-all text-sm flex items-center justify-between"
-                      >
-                        <span>
-                          {suggestedStart.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} - {suggestedEnd.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
-                        </span>
-                        <i className="ph-bold ph-arrow-right text-lg"></i>
-                      </button>
-                      <p className="text-xs text-green-600 mt-2 text-center">Click to auto-fill suggested dates</p>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-
-              <div className="space-y-4 mb-6">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-2">From Date</label>
-                  <input 
-                    type="date" 
-                    value={startDate}
-                    onChange={(e) => {
-                      setStartDate(e.target.value);
-                      if (endDate && e.target.value) {
-                        checkDateAvailability(e.target.value, endDate);
-                      } else {
-                        setAvailabilityError('');
-                      }
-                    }}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30" 
-                  />
-                  <p className="text-[10px] text-gray-500 mt-1">Equipment pickup date</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-2">To Date</label>
-                  <input 
-                    type="date" 
-                    value={endDate}
-                    onChange={(e) => {
-                      setEndDate(e.target.value);
-                      if (startDate && e.target.value) {
-                        checkDateAvailability(startDate, e.target.value);
-                      } else {
-                        setAvailabilityError('');
-                      }
-                    }}
-                    min={startDate || new Date().toISOString().split('T')[0]}
-                    className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30" 
-                  />
-                  <p className="text-[10px] text-gray-500 mt-1">Equipment return date</p>
-                </div>
-
-                {availabilityError && (
-                  <div className="bg-red-50 border-2 border-red-300 rounded-[16px] p-4">
-                    <p className="text-sm font-bold text-red-900 mb-2 flex items-start gap-2">
-                      <i className="ph-bold ph-calendar-x text-lg flex-shrink-0 mt-0.5"></i>
-                      <span>Conflict with existing booking</span>
-                    </p>
-                    <p className="text-xs text-red-800 font-semibold">{availabilityError}</p>
-                    <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
-                      <i className="ph-bold ph-info"></i> Please choose different dates from the available slots above
-                    </p>
-                  </div>
-                )}
-
-                <div className="bg-brand-50 rounded-[16px] p-4 mt-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">Daily Rate</span>
-                    <span className="text-lg font-bold text-brand-800">₹{dailyRate}</span>
-                  </div>
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-sm font-medium text-gray-700">{totalDays} Days</span>
-                    <span className="text-lg font-bold text-brand-800">₹{totalPrice.toLocaleString()}</span>
-                  </div>
-                  <div className="border-t border-brand-100 pt-3 flex justify-between items-center">
-                    <span className="text-sm font-bold text-gray-700">Estimated Total</span>
-                    <span className="text-xl font-black text-brand-800">₹{totalPrice.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => {
-                    setShowDatePicker(false);
-                    setAvailabilityError('');
-                  }}
-                  className="flex-1 bg-gray-100 text-gray-900 rounded-[16px] py-3.5 font-bold active:scale-[0.98] transition-transform">
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    if (!availabilityError) {
-                      setShowDatePicker(false);
-                      setShowPhoneModal(true);
-                    }
-                  }}
-                  disabled={isCheckingAvailability || !!availabilityError}
-                  className="flex-1 bg-brand-800 text-white rounded-[16px] py-3.5 font-bold shadow-lg shadow-brand-800/30 active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                  {isCheckingAvailability ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Checking...
-                    </>
-                  ) : (
-                    <>Confirm & Request</>
-                  )}
-                </button>
+                ))}
               </div>
             </div>
+          );
+        })()}
+
+        {/* Calendar */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-[16px]">
+          <h3 className="font-bold text-gray-900 mb-4">Calendar</h3>
+          <div className="grid grid-cols-7 gap-2 max-h-[200px] overflow-y-auto">
+            {renderCalendar()}
           </div>
-        )}
+        </div>
+
+        {/* Date Inputs */}
+        <div className="space-y-4 mb-6">
+          <div>
+            <label className="text-xs font-bold text-gray-700 mb-2 block">From Date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-gray-700 mb-2 block">To Date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold"
+            />
+          </div>
+        </div>
+
+        {/* Price Summary */}
+        <div className="bg-brand-50 rounded-[16px] p-4 mb-6">
+          <div className="flex justify-between">
+            <span>{totalDays} Days</span>
+            <span className="font-bold">₹{totalPrice}</span>
+          </div>
+        </div>
+
+      </div>
+
+      {/* 🔵 FOOTER (fixed CTA) */}
+      <div className="p-4 border-t border-gray-100 bg-white shrink-0">
+        <div className="flex gap-3">
+          
+          <button
+            onClick={() => setShowDatePicker(false)}
+            className="flex-1 bg-gray-100 text-gray-900 rounded-[16px] py-3.5 font-bold"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={() => {
+              if (!startDate || !endDate) return;
+              setShowDatePicker(false);
+              setShowPhoneModal(true);
+            }}
+            disabled={!startDate || !endDate}
+            className="flex-1 bg-brand-800 text-white rounded-[16px] py-3.5 font-bold disabled:opacity-50"
+          >
+            Confirm & Request
+          </button>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+)}
 
         {/* Review Modal */}
         {showReviewModal && (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end">
-            <div className="w-full bg-white rounded-t-[32px] p-6 pb-8 animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[70] flex items-end">
+            <div className="w-full bg-white rounded-t-[32px] p-6 pb-8 animate-in slide-in-from-bottom max-h-[70vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-900">Leave a Review</h2>
                 <button
@@ -1391,7 +1394,7 @@ function MachineryDetailsContent() {
 
         {/* Booking Success Modal */}
         {showBookingSuccess && bookingDetails && (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center">
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[70] flex items-end justify-center">
             <div className="bg-white rounded-t-3xl w-full max-w-md px-6 pt-6 pb-10 animate-slide-up">
               {/* Success icon */}
               <div className="flex flex-col items-center mb-6">
@@ -1500,7 +1503,7 @@ function MachineryDetailsContent() {
 export default function MachineryDetailsPage() {
   return (
     <Suspense fallback={
-      <div className="w-full h-screen bg-brand-50 flex items-center justify-center">
+      <div className="w-full min-h-[100dvh] bg-brand-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-full border-4 border-brand-600 border-t-transparent animate-spin"></div>
           <p className="text-gray-600 text-sm font-medium">Loading...</p>

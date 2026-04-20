@@ -299,7 +299,7 @@ function HomePageContent() {
   // Show splash/loading while checking auth
   if (!mounted || loading) {
     return (
-      <div className="w-full h-screen bg-gradient-to-br from-green-800 to-emerald-600 flex flex-col items-center justify-center gap-4">
+      <div className="w-full min-h-[100dvh] bg-gradient-to-br from-green-800 to-emerald-600 flex flex-col items-center justify-center gap-4">
         <div className="w-20 h-20 bg-white rounded-3xl p-2 shadow-2xl mb-2">
           <img src="/assets/cofarmz-logo.png" alt="CoFarmz" className="w-full h-full rounded-2xl object-cover" />
         </div>
@@ -317,7 +317,7 @@ function HomePageContent() {
     : machinery.filter(m => m.name.toLowerCase().includes(selectedCategory.toLowerCase()));
 
   return (
-    <div className="min-h-screen bg-surface-muted">
+    <div className="min-min-h-[100dvh] bg-surface-muted">
 
       {/* ── HERO SECTION ── */}
       <section className="bg-hero-green px-6 pt-12 pb-12 rounded-b-[48px] shadow-2xl relative overflow-hidden">
@@ -866,7 +866,7 @@ function HomePageContent() {
 export default function HomePage() {
   return (
     <Suspense fallback={
-      <div className="w-full h-screen flex items-center justify-center bg-surface-muted">
+      <div className="w-full min-h-[100dvh] flex items-center justify-center bg-surface-muted">
         <div className="w-12 h-12 rounded-full border-4 border-brand-600 border-t-transparent animate-spin"></div>
       </div>
     }>

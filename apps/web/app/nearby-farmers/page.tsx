@@ -262,7 +262,7 @@ function NearbyFarmersContent() {
 
   if (!mounted || loading || !isAuthenticated) {
     return (
-      <div className="w-full h-screen bg-brand-50 flex items-center justify-center">
+      <div className="w-full min-h-[100dvh] bg-brand-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-full border-4 border-brand-600 border-t-transparent animate-spin"></div>
           <p className="text-gray-600 text-sm font-medium">Loading...</p>
@@ -273,7 +273,7 @@ function NearbyFarmersContent() {
 
   return (
     <>
-      <div className="pt-4 text-gray-800 relative min-h-screen" suppressHydrationWarning>
+      <div className="pt-4 text-gray-800 relative min-min-h-[100dvh]" suppressHydrationWarning>
         <div className="ambient-glow"></div>
 
         {/* Header */}
@@ -287,7 +287,7 @@ function NearbyFarmersContent() {
                 <i className="ph-bold ph-arrow-left text-lg"></i>
               </button>
               <h1 className="text-2xl font-bold text-gray-900">
-                {searchType === 'farmers' ? 'Nearby Farmers' : searchType === 'wastage' ? 'Wastage Crops' : 'Nearby Buyers'}
+                {searchType === 'farmers' ? 'Nearby Farmers' : searchType === 'wastage' ? 'Crop Waste Buyers' : 'Nearby Buyers'}
               </h1>
             </div>
             <button
@@ -827,7 +827,7 @@ function NearbyFarmersContent() {
 export default function NearbyFarmersPage() {
   return (
     <Suspense fallback={
-      <div className="w-full h-screen bg-brand-50 flex items-center justify-center">
+      <div className="w-full min-h-[100dvh] bg-brand-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-full border-4 border-brand-600 border-t-transparent animate-spin"></div>
           <p className="text-gray-600 text-sm font-medium">Loading...</p>

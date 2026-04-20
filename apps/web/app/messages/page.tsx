@@ -76,7 +76,7 @@ function MessagesContent() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col min-h-[100dvh] bg-white">
       {/* Header */}
       <div className="bg-green-600 text-white p-4 flex items-center gap-3">
         <Link href={`/machinery-details?id=${machineryId}`}>

@@ -54,14 +54,14 @@ function SelectRoleContent() {
 
   if (!mounted || loading) {
     return (
-      <div className="w-full h-screen bg-green-700 flex items-center justify-center">
+      <div className="w-full min-h-[100dvh] bg-green-700 flex items-center justify-center">
         <div className="w-10 h-10 rounded-full border-4 border-white border-t-transparent animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-800 via-green-700 to-emerald-600 flex flex-col items-center justify-center px-6 py-12">
+    <div className="min-min-h-[100dvh] bg-gradient-to-br from-green-800 via-green-700 to-emerald-600 flex flex-col items-center justify-center px-6 py-12">
 
       {/* Logo */}
       <div className="flex flex-col items-center mb-8">
@@ -198,7 +198,7 @@ function SelectRoleContent() {
 export default function SelectRolePage() {
   return (
     <Suspense fallback={
-      <div className="w-full h-screen bg-green-700 flex items-center justify-center">
+      <div className="w-full min-h-[100dvh] bg-green-700 flex items-center justify-center">
         <div className="w-10 h-10 rounded-full border-4 border-white border-t-transparent animate-spin"></div>
       </div>
     }>

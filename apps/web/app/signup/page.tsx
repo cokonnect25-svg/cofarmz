@@ -28,7 +28,7 @@ export default function SignupPage() {
 
   if (!mounted || loading) {
     return (
-      <div className="w-full h-screen bg-green-700 flex items-center justify-center">
+      <div className="w-full min-h-[100dvh] bg-green-700 flex items-center justify-center">
         <div className="w-10 h-10 rounded-full border-4 border-white border-t-transparent animate-spin"></div>
       </div>
     );
@@ -87,7 +87,7 @@ export default function SignupPage() {
   const strengthColor = ['', 'bg-red-400', 'bg-yellow-400', 'bg-blue-400', 'bg-green-500'];
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-min-h-[100dvh] flex bg-gray-50">
       {/* Left Panel */}
       <div className="hidden lg:flex lg:w-5/12 bg-gradient-to-br from-green-700 via-green-600 to-emerald-500 flex-col justify-between p-12 relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden">

@@ -16,7 +16,7 @@
 }
 
 /* Prevent overscroll bounce (rubber banding) */
-html, body {
+html {
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
 }
@@ -25,6 +25,11 @@ html, body {
 body {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  background-color: #F4F5F0;
+  -webkit-tap-highlight-color: transparent;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Prevent text selection for native feel */
@@ -66,11 +71,7 @@ main {
    Custom styles extracted from design HTML
    ========================================== */
 
-body {
-/* Safe area top */
-            background-color: #F4F5F0;
-            -webkit-tap-highlight-color: transparent;
-}
+
         
         /* Hide scrollbar for horizontal scrolling elements */
         .hide-scrollbar::-webkit-scrollbar {
@@ -102,11 +103,7 @@ body {
             100% { transform: scale(2.5); opacity: 0; }
         }
 
-body {
-/* Safe area top */
-            background-color: #F4F5F0;
-            -webkit-tap-highlight-color: transparent;
-}
+
         
         /* Hide scrollbar for horizontal scrolling elements */
         .hide-scrollbar::-webkit-scrollbar {

@@ -390,7 +390,7 @@ function RentMachineryContent() {
 
   if (!mounted || loading || !isAuthenticated) {
     return (
-      <div className="w-full h-screen bg-brand-50 flex items-center justify-center">
+      <div className="w-full min-h-[100dvh] bg-brand-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-full border-4 border-brand-600 border-t-transparent animate-spin"></div>
           <p className="text-gray-600 text-sm font-medium">Loading...</p>
@@ -402,7 +402,7 @@ function RentMachineryContent() {
   // Success message
   if (submitSuccess) {
     return (
-      <div className="w-full h-screen bg-gradient-to-br from-green-50 to-brand-50 flex items-center justify-center p-6">
+      <div className="w-full min-h-[100dvh] bg-gradient-to-br from-green-50 to-brand-50 flex items-center justify-center p-6">
         <div className="flex flex-col items-center gap-6 bg-white rounded-[28px] p-10 shadow-lg max-w-sm mx-auto">
           {/* Success Icon */}
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center animate-bounce">
@@ -440,7 +440,7 @@ function RentMachineryContent() {
 
   return (
     <>
-      <div className="pt-4 text-gray-800 relative min-h-screen pb-40 pb-20" suppressHydrationWarning>
+      <div className="pt-4 text-gray-800 relative min-min-h-[100dvh] pb-40 pb-20" suppressHydrationWarning>
         <div className="ambient-glow"></div>
 
         {/* Header */}

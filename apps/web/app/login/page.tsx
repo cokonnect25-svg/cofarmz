@@ -39,7 +39,7 @@ useEffect(() => {
 
   if (!mounted || loading) {
     return (
-      <div className="w-full h-screen bg-green-700 flex items-center justify-center">
+      <div className="w-full min-h-[100dvh] bg-green-700 flex items-center justify-center">
         <div className="w-10 h-10 rounded-full border-4 border-white border-t-transparent animate-spin"></div>
       </div>
     );
@@ -135,7 +135,7 @@ useEffect(() => {
   }
 };
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-min-h-[100dvh] flex bg-gray-50">
       {/* Left Panel — Branding */}
       <div className="hidden lg:flex lg:w-[55%] bg-gradient-to-br from-green-900 via-green-700 to-emerald-600 flex-col justify-between p-14 relative overflow-hidden">
         {/* Background circles */}
@@ -348,7 +348,7 @@ useEffect(() => {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="w-full h-screen bg-green-700 flex items-center justify-center">
+      <div className="w-full min-h-[100dvh] bg-green-700 flex items-center justify-center">
         <div className="w-10 h-10 rounded-full border-4 border-white border-t-transparent animate-spin"></div>
       </div>
     }>

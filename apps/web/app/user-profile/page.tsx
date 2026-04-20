@@ -1008,14 +1008,14 @@ function ProfileContent() {
 
   if (loading || !isAuthenticated || !mounted) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center min-h-[100dvh]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-min-h-[100dvh] bg-gray-50">
       <div className="sticky top-0 bg-white border-b px-4 py-3 flex items-center justify-between z-40">
         <div>
           <h1 className="text-xl font-bold text-gray-900">My Profile</h1>
@@ -2565,7 +2565,7 @@ function ProfileContent() {
             <X className="w-6 h-6 text-white" />
           </button>
 
-          <div className="relative w-full max-w-md h-full max-h-screen bg-black">
+          <div className="relative w-full max-w-md h-full max-min-h-[100dvh] bg-black">
             <video
               ref={(el) => {
                 if (el) videoRefsMap.current[selectedReel.id] = el;
@@ -2695,7 +2695,7 @@ export default function ProfilePage() {
   return (
     <Suspense
       fallback={
-        <div className="w-full h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-full min-h-[100dvh] bg-gray-50 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <div className="w-12 h-12 rounded-full border-4 border-green-600 border-t-transparent animate-spin"></div>
             <p className="text-gray-600 text-sm font-medium">Loading...</p>

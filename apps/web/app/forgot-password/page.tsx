@@ -42,12 +42,12 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-brand-50 to-white relative overflow-hidden">
+    <div className="min-min-h-[100dvh] w-full bg-gradient-to-b from-brand-50 to-white relative overflow-hidden">
       {/* Decorative Elements */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-brand-100/30 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl pointer-events-none"></div>
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/20 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl pointer-events-none"></div>
 
-      <div className="relative z-10 w-full h-screen flex flex-col justify-between px-6 py-8">
+      <div className="relative z-10 w-full min-h-[100dvh] flex flex-col justify-between px-6 py-8">
         {/* Header */}
         <div className="flex flex-col items-center pt-8">
           <button

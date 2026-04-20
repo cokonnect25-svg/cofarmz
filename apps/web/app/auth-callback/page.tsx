@@ -43,7 +43,7 @@ export default function AuthCallbackPage() {
 
   // Blank white screen with a subtle centered loader
   return (
-    <div className="w-full h-screen bg-white flex items-center justify-center">
+    <div className="w-full min-h-[100dvh] bg-white flex items-center justify-center">
       <div className="w-8 h-8 rounded-full border-2 border-green-600 border-t-transparent animate-spin" />
     </div>
   );

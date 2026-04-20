@@ -101,7 +101,7 @@ function ChatContent() {
 
   if (loading || !isAuthenticated) {
     return (
-      <div className="w-full h-screen bg-brand-50 flex items-center justify-center">
+      <div className="w-full min-h-[100dvh] bg-brand-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-full border-4 border-brand-600 border-t-transparent animate-spin"></div>
           <p className="text-gray-600 text-sm font-medium">Loading...</p>
@@ -112,7 +112,7 @@ function ChatContent() {
 
   return (
     <>
-      <div className="pt-4 text-gray-800 relative min-h-screen pb-40 bg-white" suppressHydrationWarning>
+      <div className="pt-4 text-gray-800 relative min-min-h-[100dvh] pb-40 bg-white" suppressHydrationWarning>
         {/* Header */}
         <header className="w-full px-6 pb-4 pt-4 sticky top-[55px] bg-white z-40">
           <div className="flex items-center justify-between mb-4">

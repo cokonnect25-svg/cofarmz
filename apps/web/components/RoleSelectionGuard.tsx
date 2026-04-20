@@ -46,7 +46,7 @@ export function RoleSelectionGuard({ children }: { children: React.ReactNode }) 
   // Show a clean loading state ONLY for non-public routes after mount
   if (loading && !isPublicRoute) {
     return (
-      <div className="w-full h-screen bg-white flex flex-col items-center justify-center">
+      <div className="w-full min-h-[100dvh] bg-white flex flex-col items-center justify-center">
         <div className="w-12 h-12 rounded-full border-4 border-green-600 border-t-transparent animate-spin mb-4"></div>
       </div>
     );

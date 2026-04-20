@@ -234,7 +234,7 @@ export default function NearbyFarmersClient() {
     });
 
   return (
-    <div className="pt-4 text-gray-800 relative min-h-screen">
+    <div className="pt-4 text-gray-800 relative min-min-h-[100dvh]">
       <header className="w-full px-6 pb-6 relative z-10">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-3">

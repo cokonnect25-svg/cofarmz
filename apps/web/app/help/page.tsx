@@ -12,7 +12,7 @@ const topics = [
 
 export default function HelpPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-min-h-[100dvh] bg-gray-50">
       <div className="bg-gradient-to-br from-green-700 to-green-600 py-16 px-6">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-4xl font-black text-white mb-3">Help Center</h1>

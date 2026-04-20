@@ -76,7 +76,7 @@ export default function AboutPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F4F5F0] overflow-x-hidden">
+    <div className="min-min-h-[100dvh] bg-[#F4F5F0] overflow-x-hidden">
       {/* ── AMBIENT BACKGROUND GLOWS ── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-100px] right-[-100px] w-96 h-96 bg-green-500/10 rounded-full blur-3xl animate-pulse"></div>

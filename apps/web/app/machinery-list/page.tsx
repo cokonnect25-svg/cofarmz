@@ -351,7 +351,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
     return (
       <>
-        <div className="pt-4 text-gray-800 relative min-h-screen" suppressHydrationWarning>
+        <div className="pt-4 text-gray-800 relative min-min-h-[100dvh]" suppressHydrationWarning>
           <div className="ambient-glow"></div>
 
     {/* Header */}
