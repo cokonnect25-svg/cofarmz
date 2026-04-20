@@ -315,7 +315,8 @@ useEffect(() => {
   }
 
   return (
-    <div className="w-full min-h-[100dvh] bg-black overflow-hidden flex flex-col">
+    // Outermost div — make it truly fullscreen, breaking out of layout padding
+<div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 55 }}>
       {/* Header */}
       <div className="h-12 bg-black border-b border-gray-700 px-4 flex items-center gap-3 z-40">
         <button onClick={() => router.back()} className="text-white hover:text-gray-300">
@@ -334,13 +335,13 @@ useEffect(() => {
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-scroll snap-y snap-mandatory scroll-smooth"
-          style={{ scrollBehavior: 'smooth' }}
+          className="w-full h-full overflow-y-scroll snap-y snap-mandatory"
+          style={{ scrollSnapType: 'y mandatory' }}
         >
           {reels.map((reel, idx) => (
             <div
               key={reel.id}
-              className="w-full h-[calc(100dvh-48px-64px)] md:h-[calc(100dvh-48px)] bg-black flex items-center justify-center overflow-hidden snap-start relative flex-shrink-0"
+              className="w-full h-full snap-start relative flex-shrink-0 bg-black flex items-center justify-center overflow-hidden"
             >
               {/* Video */}
               {videoErrors.has(reel.id) ? (
@@ -418,7 +419,7 @@ useEffect(() => {
               )}
 
               {/* Bottom Info Section (above bottom nav + safe area) */}
-              <div className="absolute bottom-[148px] md:bottom-10 left-0 right-0 px-5 pr-20 md:px-0 md:pr-0 w-full max-w-sm md:max-w-md lg:max-w-lg mx-auto text-white pointer-events-none z-30">
+              <div className="absolute left-0 right-16  pr-20 md:px-0 md:pr-0 w-full max-w-sm md:max-w-md lg:max-w-lg mx-auto text-white pointer-events-none z-30" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 80px)' }}>
                 <div className="pointer-events-auto flex flex-col gap-4">
                   {/* Creator Info - High Contrast Pill */}
                   <div 
@@ -469,7 +470,7 @@ useEffect(() => {
               </button>
 
               {/* Right Sidebar Actions (above bottom nav) */}
-              <div className="absolute right-4 md:right-[calc(50%-180px)] lg:right-[calc(50%-230px)] bottom-[156px] md:bottom-24 flex flex-col gap-5 text-white z-30">
+              <div className="absolute right-4  md:right-[calc(50%-180px)] lg:right-[calc(50%-230px)] md:bottom-24 flex flex-col gap-5 text-white z-30"  style={{ bottom: 'calc(env(safe-area-inset-bottom) + 88px)' }}>
                 {/* Views */}
                 <div className="flex flex-col items-center gap-1 group">
                   <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl transition-all group-hover:scale-110">
@@ -512,34 +513,42 @@ useEffect(() => {
                 {/* Share */}
                 <button
                 onClick={async () => {
-                  const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`; // your actual domain
-
-                  try {
-                    if (navigator.share) {
-                      await navigator.share({
+                      const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`;
+                      const shareData = {
                         title: reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel',
                         text: reel.caption || 'Check out this reel on CoFarmz!',
                         url: shareUrl,
-                      });
-                    } else {
-                      // Fallback — copy to clipboard
-                      await navigator.clipboard.writeText(shareUrl);
-                      alert('Link copied to clipboard!');
-                    }
-                  } catch (err: any) {
-                    // User cancelled share — this is normal, don't log as error
-                    if (err?.name !== 'AbortError') {
-                      console.error('Share failed:', err);
-                      // Fallback to clipboard
+                      };
+
                       try {
-                        await navigator.clipboard.writeText(shareUrl);
-                        alert('Link copied!');
-                      } catch {
-                        alert('Could not share. Try copying the link manually.');
+                        // Use Capacitor Share on native (shows WhatsApp, Instagram, etc.)
+                        const { Capacitor } = await import('@capacitor/core');
+                        if (Capacitor.isNativePlatform()) {
+                          const { Share } = await import('@capacitor/share');
+                          await Share.share(shareData);
+                          return;
+                        }
+                      } catch {}
+
+                      // Web fallback
+                      try {
+                        if (navigator.share) {
+                          await navigator.share(shareData);
+                        } else {
+                          await navigator.clipboard.writeText(shareUrl);
+                          alert('Link copied to clipboard!');
+                        }
+                      } catch (err: any) {
+                        if (err?.name !== 'AbortError') {
+                          try {
+                            await navigator.clipboard.writeText(shareUrl);
+                            alert('Link copied!');
+                          } catch {
+                            alert('Could not share.');
+                          }
+                        }
                       }
-                    }
-                  }
-                }}
+                    }}
                   className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
                 >
                    <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl">
@@ -556,7 +565,7 @@ useEffect(() => {
 
       {/* Comments Modal */}
       {showComments && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex flex-col">
+        <div className="fixed inset-0 bg-black/50 z-[70] flex flex-col">
           <div className="flex-1 overflow-hidden"></div>
 
           <div className="bg-white rounded-t-3xl h-2/3 flex flex-col overflow-hidden">
@@ -613,7 +622,8 @@ useEffect(() => {
 
             {/* Comment Input */}
             {user && (
-              <div className="border-t border-gray-200 p-4 flex gap-2">
+             <div className="border-t border-gray-200 p-4 flex gap-2"
+  style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
                 <img
                   src={user.image || 'https://via.placeholder.com/32'}
                   alt={user.name}
