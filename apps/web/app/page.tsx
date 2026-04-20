@@ -55,6 +55,7 @@ const CATEGORIES = [
 function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const { user, isAuthenticated, loading } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [machinery, setMachinery] = useState<Machinery[]>([]);
@@ -82,6 +83,16 @@ function HomePageContent() {
       router.replace('/login');
     }
   }, [loading, isAuthenticated, router]);
+
+
+ 
+
+if (loading) return null; // or loader
+
+if (!isAuthenticated) {
+  router.push('/login');
+  return null;
+}
 
   // Check if role is confirmed
   useEffect(() => {

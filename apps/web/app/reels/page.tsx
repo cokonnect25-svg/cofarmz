@@ -139,15 +139,27 @@ useEffect(() => {
         }
       );
 
-      setLikedReels((prev) => {
-        const newSet = new Set(prev);
-        if (newSet.has(reelId)) {
-          newSet.delete(reelId);
-        } else {
-          newSet.add(reelId);
-        }
-        return newSet;
-      });
+setLikedReels((prev) => {
+  const newSet = new Set(prev);
+  const isLiked = newSet.has(reelId);
+
+  if (isLiked) newSet.delete(reelId);
+  else newSet.add(reelId);
+
+  // ✅ update reels INSIDE this
+  setReels((prevReels) =>
+    prevReels.map((reel) =>
+      reel.id === reelId
+        ? {
+            ...reel,
+            likes: isLiked ? reel.likes - 1 : reel.likes + 1
+          }
+        : reel
+    )
+  );
+
+  return newSet;
+});
 
       setReels((prev) =>
         prev.map((reel) =>
@@ -271,7 +283,7 @@ useEffect(() => {
         setReels((prev) =>
           prev.map((reel) =>
             reel.id === reels[currentReelIndex].id
-              ? { ...reel, comments: reel.comments + 1 }
+              ? { ...reel, comments: (reel.comments || 0) + 1 }
               : reel
           )
         );
@@ -565,7 +577,8 @@ useEffect(() => {
 
       {/* Comments Modal */}
       {showComments && (
-        <div className="fixed inset-0 bg-black/50 z-[70] flex flex-col">
+        <div className="fixed inset-0 z-[999] flex flex-col px-4 h-[100dvh]">
+          
           <div className="flex-1 overflow-hidden"></div>
 
           <div className="bg-white rounded-t-3xl h-2/3 flex flex-col overflow-hidden">
@@ -622,8 +635,10 @@ useEffect(() => {
 
             {/* Comment Input */}
             {user && (
-             <div className="border-t border-gray-200 p-4 flex gap-2"
-  style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+    <div
+  className="border-t border-gray-200 p-4 flex gap-2 sticky bottom-0 bg-white"
+  style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+>
                 <img
                   src={user.image || 'https://via.placeholder.com/32'}
                   alt={user.name}

@@ -45,8 +45,16 @@ export function useAuth() {
   const router = useRouter();
 
   // Mobile: read from localStorage synchronously-ish using state
-  const [mobileUser, setMobileUser] = useState<any>(null);
-  const [mobileLoading, setMobileLoading] = useState(true);
+  const [mobileUser, setMobileUser] = useState<any>(() => {
+  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+    return getMobileSession();
+  }
+  return null;
+});
+  const [mobileLoading, setMobileLoading] = useState(() => {
+  return Capacitor.isNativePlatform();
+});
+
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {
@@ -63,7 +71,9 @@ export function useAuth() {
 
   const user: any = isMobile ? mobileUser : (session?.user as any);
   const isAuthenticated = !!user;
+
   const loading = isMobile ? mobileLoading : webLoading;
+  const isReady = !loading;
 
   async function signIn(email: string, password: string) {
     const result = await authClient.signIn.email({ email, password });
@@ -97,5 +107,5 @@ export function useAuth() {
     router.push("/login");
   }
 
-  return { user, isAuthenticated, loading, signIn, signUp, signOut, session };
+  return { user, isAuthenticated, loading,isReady, signIn, signUp, signOut, session };
 }

@@ -17,7 +17,7 @@ interface Reel {
 }
 
 function MyReelsContent() {
-  const { user } = useAuth();
+const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [reels, setReels] = useState<Reel[]>([]);
@@ -185,10 +185,15 @@ function MyReelsContent() {
     setUploadProgress(0);
   };
 
-  if (!user) {
-    router.push('/login');
-    return null;
-  }
+
+
+
+if (authLoading) return null;
+
+if (!user) {
+  router.push('/login');
+  return null;
+}
 
   // Step 1: Upload Selection Screen
   if (step === 'upload') {

@@ -1122,7 +1122,7 @@ function MachineryDetailsContent() {
 
         {/* Phone Number Modal */}
         {showPhoneModal && (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end">
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end px-4 pb-[calc(60px+env(safe-area-inset-bottom)+16px)]">
             <div className="w-full bg-white rounded-t-[32px] p-6 pb-8">
               <div className="flex justify-between items-center mb-5">
                 <h2 className="text-xl font-bold text-gray-900">Your Mobile Number</h2>
