@@ -19,18 +19,18 @@ function BottomNavContent() {
 
   const navItems = [
     { href: '/',               label: 'Home',     icon: 'ph-house',       activeColor: 'text-emerald-600', activeBg: 'bg-emerald-50',  activeDot: 'bg-emerald-500' },
-    { href: '/machinery-list', label: 'Fleet',    icon: 'ph-tractor',     activeColor: 'text-blue-600',    activeBg: 'bg-blue-50',     activeDot: 'bg-blue-500'    },
     { href: '/nearby-farmers', label: 'Nearby',   icon: 'ph-users-three', activeColor: 'text-violet-600',  activeBg: 'bg-violet-50',   activeDot: 'bg-violet-500'  },
-    { href: '/reels',          label: 'Reels',    icon: 'ph-video',       activeColor: 'text-rose-600',    activeBg: 'bg-rose-50',     activeDot: 'bg-rose-500'    },
+    { href: '/machinery-list', label: 'Fleet',    icon: 'ph-tractor',     activeColor: 'text-blue-600',    activeBg: 'bg-blue-50',     activeDot: 'bg-blue-500'    },
     { href: '/chat',           label: 'Messages', icon: 'ph-chat-circle', activeColor: 'text-amber-600',   activeBg: 'bg-amber-50',    activeDot: 'bg-amber-500'   },
+    { href: '/reels',          label: 'Reels',    icon: 'ph-video',       activeColor: 'text-rose-600',    activeBg: 'bg-rose-50',     activeDot: 'bg-rose-500'    },
     { href: '/about',          label: 'About Us',  icon: 'ph-info', activeColor: 'text-teal-600',    activeBg: 'bg-teal-50',     activeDot: 'bg-teal-500'    },
   ];
 
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-[60] md:hidden"
-  
-    >
+<nav
+  className="fixed bottom-0 left-0 right-0 z-[60] md:hidden"
+  style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+>
       <div className="bg-white/98 backdrop-blur-xl border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
         <div className="flex items-stretch justify-around h-[60px]">
           {navItems.map((item) => {

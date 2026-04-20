@@ -511,15 +511,35 @@ useEffect(() => {
 
                 {/* Share */}
                 <button
-                  onClick={() => {
+                onClick={async () => {
+                  const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`; // your actual domain
+
+                  try {
                     if (navigator.share) {
-                      navigator.share({
-                        title: 'CoFarmz Reel',
-                        text: reel.caption,
-                        url: window.location.href
+                      await navigator.share({
+                        title: reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel',
+                        text: reel.caption || 'Check out this reel on CoFarmz!',
+                        url: shareUrl,
                       });
+                    } else {
+                      // Fallback — copy to clipboard
+                      await navigator.clipboard.writeText(shareUrl);
+                      alert('Link copied to clipboard!');
                     }
-                  }}
+                  } catch (err: any) {
+                    // User cancelled share — this is normal, don't log as error
+                    if (err?.name !== 'AbortError') {
+                      console.error('Share failed:', err);
+                      // Fallback to clipboard
+                      try {
+                        await navigator.clipboard.writeText(shareUrl);
+                        alert('Link copied!');
+                      } catch {
+                        alert('Could not share. Try copying the link manually.');
+                      }
+                    }
+                  }
+                }}
                   className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
                 >
                    <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl">

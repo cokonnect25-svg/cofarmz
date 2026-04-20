@@ -1585,6 +1585,31 @@ function ProfileContent() {
                           >
                             {booking.status}
                           </button>
+   
+                        {booking.owner_phone && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+
+                              // Option 1: Direct call
+                              window.location.href = `tel:${booking.owner_phone}`;
+
+                              // Option 2 (better UX): In-app call modal
+                              // setCallRecipient({
+                              //   id: booking.owner_id,
+                              //   name: booking.owner_name,
+                              //   image: booking.owner_image,
+                              // });
+                              // setShowCallModal(true);
+                            }}
+                            className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 font-semibold hover:bg-green-100 transition"
+                          >
+                            <Phone className="w-3 h-3" />
+                            Call
+                          </button>
+                        )}
+
+
                           {(booking.status === 'pending' || booking.status === 'accepted') && (() => {
                             const totalPrice = Number(booking.total_price);
                             const { pct } = getRefundInfo(booking.start_date, totalPrice);

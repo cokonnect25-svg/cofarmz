@@ -233,7 +233,7 @@ export default function AboutPage() {
           <div className="pt-12">
             <div className="inline-block p-4 bg-brand-50 rounded-2xl border border-brand-100 transform rotate-[-2deg] shadow-soft">
               <p className="text-brand-800 text-2xl font-black italic">
-                🔴 "You grow for World. Now let’s grow together."
+                🔴 "You grow Food for EveryOne. Now let’s grow together."
               </p>
             </div>
           </div>

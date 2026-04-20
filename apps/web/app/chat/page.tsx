@@ -117,9 +117,6 @@ function ChatContent() {
         <header className="w-full px-6 pb-4 pt-4 sticky top-[55px] bg-white z-40">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-3xl font-black text-gray-900">Messages</h1>
-            <button onClick={() => { setShowNewChat(true); fetchAllUsers(); }} className="w-10 h-10 rounded-full bg-brand-600 flex items-center justify-center text-white active:scale-95 transition-transform shadow-md">
-              <i className="ph-bold ph-plus text-lg"></i>
-            </button>
           </div>
 
           {/* Search Bar */}

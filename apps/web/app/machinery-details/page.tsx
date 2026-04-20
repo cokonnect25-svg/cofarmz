@@ -467,14 +467,14 @@ function MachineryDetailsContent() {
   return { startDate, endDate };
 };
 
-  const renderCalendar = () => {
+  {/*const renderCalendar = () => {
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
     
     const days = [];
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 90; i++) {
       const date = new Date(currentDate);
       date.setDate(date.getDate() + i);
       const dateStr = date.toISOString().split('T')[0];
@@ -525,11 +525,11 @@ function MachineryDetailsContent() {
     }
     
     return days;
-  };
+  };*/}
 
   return (
     <>
-      <div className="pt-4 text-gray-800 relative flex flex-col min-h-0 pb-[80px]">
+      <div className="pt-4 text-gray-800 relative flex flex-col min-h-0">
         <div className="ambient-glow"></div>
 
         <header className="w-full px-6 pb-4 relative z-10 flex justify-between items-center">
@@ -1038,9 +1038,9 @@ function MachineryDetailsContent() {
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-7 gap-2 max-h-[300px] overflow-y-auto">
+      {/* <div className="grid grid-cols-7 gap-2 max-h-[300px] overflow-y-auto">
         {renderCalendar()}
-      </div>
+      </div> */}
     </div>
   )}
 </div>
@@ -1122,7 +1122,7 @@ function MachineryDetailsContent() {
 
         {/* Phone Number Modal */}
         {showPhoneModal && (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[70] flex items-end">
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end">
             <div className="w-full bg-white rounded-t-[32px] p-6 pb-8">
               <div className="flex justify-between items-center mb-5">
                 <h2 className="text-xl font-bold text-gray-900">Your Mobile Number</h2>
@@ -1166,7 +1166,7 @@ function MachineryDetailsContent() {
 
         {/* Date Picker Modal */}
 {showDatePicker && (
-  <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[70] flex items-end px-4 pb-[calc(60px+env(safe-area-inset-bottom)+16px)]">
+  <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end px-4 pb-[calc(60px+env(safe-area-inset-bottom)+16px)]">
     
     <div className="w-full bg-white rounded-t-[32px] max-h-[60vh] flex flex-col shadow-2xl">
       <div className="w-10 h-1.5 bg-gray-300 rounded-full mx-auto mt-2 mb-2"></div>
@@ -1231,9 +1231,9 @@ function MachineryDetailsContent() {
         {/* Calendar */}
         <div className="mb-6 p-4 bg-gray-50 rounded-[16px]">
           <h3 className="font-bold text-gray-900 mb-4">Calendar</h3>
-          <div className="grid grid-cols-7 gap-2 max-h-[200px] overflow-y-auto">
+          {/* <div className="grid grid-cols-7 gap-2 max-h-[200px] overflow-y-auto">
             {renderCalendar()}
-          </div>
+          </div> */}
         </div>
 
         {/* Date Inputs */}
@@ -1301,7 +1301,7 @@ function MachineryDetailsContent() {
 
         {/* Review Modal */}
         {showReviewModal && (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[70] flex items-end">
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end">
             <div className="w-full bg-white rounded-t-[32px] p-6 pb-8 animate-in slide-in-from-bottom max-h-[70vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-900">Leave a Review</h2>
@@ -1394,7 +1394,7 @@ function MachineryDetailsContent() {
 
         {/* Booking Success Modal */}
         {showBookingSuccess && bookingDetails && (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[70] flex items-end justify-center">
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center">
             <div className="bg-white rounded-t-3xl w-full max-w-md px-6 pt-6 pb-10 animate-slide-up">
               {/* Success icon */}
               <div className="flex flex-col items-center mb-6">

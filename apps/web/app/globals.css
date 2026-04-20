@@ -19,6 +19,7 @@
 html {
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
+   -webkit-text-size-adjust: 100%;
 }
 
 /* Safe area insets (left/right only — top padding is on each page's root element) */

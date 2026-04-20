@@ -5,6 +5,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Capacitor } from '@capacitor/core';
 import { getApiUrl } from '@/lib/api';
+import AdSplash from './components/AdSplash';
 
 interface Machinery {
   id: string;
@@ -120,6 +121,15 @@ function HomePageContent() {
       setRoleUpdating(false);
     }
   };
+
+  const [showAd, setShowAd] = useState(() => {
+  // Show only once per session
+  if (typeof window === 'undefined') return false;
+  const seen = sessionStorage.getItem('ad_seen');
+  if (seen) return false;
+  sessionStorage.setItem('ad_seen', '1');
+  return true;
+});
 
 
 
@@ -319,81 +329,57 @@ function HomePageContent() {
   return (
     <div className="min-min-h-[100dvh] bg-surface-muted">
 
+    {showAd && <AdSplash onDone={() => setShowAd(false)} />}
+
       {/* ── HERO SECTION ── */}
-      <section className="bg-hero-green px-6 pt-12 pb-12 rounded-b-[48px] shadow-2xl relative overflow-hidden">
-        {/* Animated background orbs */}
-        <div className="absolute top-[-60px] right-[-60px] w-[280px] h-[280px] rounded-full bg-white/5 animate-hero-float pointer-events-none" />
-        <div className="absolute bottom-[-80px] left-[-40px] w-[220px] h-[220px] rounded-full bg-emerald-400/10 animate-hero-float-slow pointer-events-none" />
-        <div className="absolute top-1/2 right-1/4 w-[120px] h-[120px] rounded-full bg-white/5 animate-hero-float pointer-events-none" style={{ animationDelay: '1.2s' }} />
+     <section className="bg-hero-green px-6 pt-6 pb-8 rounded-b-[40px] shadow-xl">
+  {/* Greeting */}
+  <div className="flex items-center gap-2 text-green-100 mb-4">
+    <i className="ph-fill ph-map-pin text-[12px] text-green-300"></i>
+    <span className="text-sm font-bold">
+      Welcome back, {effectiveUser?.name?.split(' ')[0] || 'Farmer'} 👋
+    </span>
+  </div>
 
-        {/* Logo */}
-        <div className="flex items-center justify-between mb-10 relative z-10">
-          <div className="flex items-center gap-2.5 bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/20 shadow-lg">
-            <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-md overflow-hidden">
-              <img src="/assets/cofarmz-logo.png" alt="CoFarmz" className="w-full h-full object-cover" />
-            </div>
-            <span className="text-white font-black tracking-tight text-lg drop-shadow">CoFarmz</span>
-          </div>
-        </div>
+  {/* Search Bar — now at the top */}
+  <form onSubmit={handleSearch} className="flex gap-3 mb-4">
+    <div className="flex-1 relative">
+      <i className="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-emerald-700 text-lg z-10"></i>
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={e => setSearchQuery(e.target.value)}
+        placeholder="Search tractors, harvesters..."
+        className="w-full bg-white pl-12 pr-4 py-4 rounded-full text-gray-900 font-bold text-sm focus:outline-none focus:ring-4 focus:ring-white/40 shadow-lg"
+      />
+    </div>
+    <button
+      type="submit"
+      className="bg-amber-500 text-white px-5 py-4 rounded-full font-black shadow-lg active:scale-90 transition-transform">
+      <i className="ph-bold ph-arrow-right text-lg"></i>
+    </button>
+  </form>
 
-        {/* Welcome Text */}
-        <div className="flex items-center gap-2 text-green-100 mb-3 relative z-10">
-          <div className="w-5 h-5 rounded-full bg-green-400/30 flex items-center justify-center">
-            <i className="ph-fill ph-map-pin text-[10px] text-green-200"></i>
-          </div>
-          <span className="text-sm font-bold opacity-90 tracking-wide">Welcome back, {effectiveUser?.name?.split(' ')[0] || 'Farmer'}</span>
-        </div>
-
-        {/* Main Title */}
-        <div className="mb-8 relative z-10">
-          <h1 className="text-[38px] leading-[1.1] font-black text-white tracking-tighter mb-3 drop-shadow-lg">
-            Your Global Farmer<br />& Buyer Network
-          </h1>
-          <p className="text-green-100/80 text-sm leading-relaxed max-w-[85%]">
-            Connect with farmers & buyers, trade crops, rent equipment.
-          </p>
-        </div>
-
-        {/* Search Bar */}
-        <form onSubmit={handleSearch} className="flex gap-3 mb-7 relative z-10">
-          <div className="flex-1 relative group">
-            <div className="absolute inset-0 bg-white/20 blur-xl rounded-full transition-opacity opacity-0 group-hover:opacity-100"></div>
-            <i className="ph-bold ph-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-emerald-700 text-xl z-20"></i>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search tractors, harvesters..."
-              className="w-full bg-white/95 backdrop-blur-md pl-14 pr-5 py-[16px] rounded-full text-gray-900 font-bold text-sm focus:outline-none focus:ring-4 focus:ring-white/40 shadow-[0_12px_40px_-10px_rgba(0,0,0,0.3)] border border-white/60 transition-all relative z-10"
-            />
-          </div>
-          <button
-            type="submit"
-            className="bg-gradient-to-br from-amber-400 to-amber-600 hover:to-amber-500 active:scale-90 text-white px-6 py-[16px] rounded-full flex items-center gap-2 font-black shadow-[0_8px_24px_rgba(217,119,6,0.45)] hover:shadow-[0_12px_32px_rgba(217,119,6,0.6)] transition-all relative z-10 border border-amber-300/50">
-            <i className="ph-bold ph-arrow-right text-lg"></i>
-          </button>
-        </form>
-
-        {/* Category Quick-Access Chips */}
-        <div className="flex gap-2.5 overflow-x-auto hide-scrollbar relative z-10 pb-1">
-          {[
-            { label: 'Tractor', icon: 'ph-tractor', color: 'from-green-400/20 to-green-300/10' },
-            { label: 'Harvester', icon: 'ph-plant', color: 'from-yellow-400/20 to-yellow-300/10' },
-            { label: 'Rotavator', icon: 'ph-wrench', color: 'from-blue-400/20 to-blue-300/10' },
-            { label: 'Sprayer', icon: 'ph-drop', color: 'from-purple-400/20 to-purple-300/10' },
-            { label: 'Loader', icon: 'ph-truck', color: 'from-orange-400/20 to-orange-300/10' },
-          ].map(chip => (
-            <button
-              key={chip.label}
-              onClick={() => router.push(`/machinery-list?search=${encodeURIComponent(chip.label)}`)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-white/25 bg-gradient-to-r ${chip.color} backdrop-blur-sm text-white text-xs font-bold whitespace-nowrap shadow-md hover:border-white/50 hover:scale-105 active:scale-95 transition-all duration-150`}
-            >
-              <i className={`ph-fill ${chip.icon} text-sm`}></i>
-              {chip.label}
-            </button>
-          ))}
-        </div>
-      </section>
+  {/* Category chips — now right below search */}
+  <div className="flex gap-2.5 overflow-x-auto hide-scrollbar pb-1">
+    {[
+      { label: 'Tractor',   icon: 'ph-tractor',  color: 'from-green-400/20 to-green-300/10' },
+      { label: 'Harvester', icon: 'ph-plant',     color: 'from-yellow-400/20 to-yellow-300/10' },
+      { label: 'Rotavator', icon: 'ph-wrench',    color: 'from-blue-400/20 to-blue-300/10' },
+      { label: 'Sprayer',   icon: 'ph-drop',      color: 'from-purple-400/20 to-purple-300/10' },
+      { label: 'Loader',    icon: 'ph-truck',     color: 'from-orange-400/20 to-orange-300/10' },
+    ].map(chip => (
+      <button
+        key={chip.label}
+        onClick={() => router.push(`/machinery-list?search=${encodeURIComponent(chip.label)}`)}
+        className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-white/25 bg-gradient-to-r ${chip.color} backdrop-blur-sm text-white text-xs font-bold whitespace-nowrap active:scale-95 transition-all`}
+      >
+        <i className={`ph-fill ${chip.icon} text-sm`}></i>
+        {chip.label}
+      </button>
+    ))}
+  </div>
+</section>
 
 
       {/* ── MAIN CONTENT ── */}
