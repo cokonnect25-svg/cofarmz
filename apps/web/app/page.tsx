@@ -74,6 +74,7 @@ function HomePageContent() {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [roleUpdating, setRoleUpdating] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+ 
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -85,14 +86,6 @@ function HomePageContent() {
   }, [loading, isAuthenticated, router]);
 
 
- 
-
-if (loading) return null; // or loader
-
-if (!isAuthenticated) {
-  router.push('/login');
-  return null;
-}
 
   // Check if role is confirmed
   useEffect(() => {
@@ -133,15 +126,15 @@ if (!isAuthenticated) {
     }
   };
 
-  const [showAd, setShowAd] = useState(() => {
-  // Show only once per session
-  if (typeof window === 'undefined') return false;
-  const seen = sessionStorage.getItem('ad_seen');
-  if (seen) return false;
-  sessionStorage.setItem('ad_seen', '1');
-  return true;
-});
+  const [showAd, setShowAd] = useState(false);
 
+  useEffect(() => {
+  const seen = sessionStorage.getItem('ad_seen');
+  if (!seen) {
+    sessionStorage.setItem('ad_seen', '1');
+    setShowAd(true);
+  }
+}, []);
 
 
   useEffect(() => {
