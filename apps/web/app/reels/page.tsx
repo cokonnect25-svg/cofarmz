@@ -55,6 +55,7 @@ function ReelsContent() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastTapRef = useRef<number>(0);
   const [videoReady, setVideoReady] = useState<Set<string>>(new Set());
+  const [shareToast, setShareToast] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -130,38 +131,68 @@ useEffect(() => {
 const handleLike = async (reelId: string) => {
   if (!user) return;
 
+  // Optimistic update — capture current state BEFORE update
+  const wasLiked = likedReels.has(reelId);
+
+  // Update UI immediately (optimistic)
+  setLikedReels((prev) => {
+    const newSet = new Set(prev);
+    wasLiked ? newSet.delete(reelId) : newSet.add(reelId);
+    return newSet;
+  });
+
+  setReels((prevReels) =>
+    prevReels.map((reel) =>
+      reel.id === reelId
+        ? { ...reel, likes: wasLiked ? reel.likes - 1 : reel.likes + 1 }
+        : reel
+    )
+  );
+
   try {
-    await fetch(getApiUrl(`/api/reels/${reelId}/like`), {
+    const res = await fetch(getApiUrl(`/api/reels/${reelId}/like`), {
       method: 'POST',
       headers: { 'x-user-id': user.id }
     });
 
+    if (!res.ok) throw new Error('Failed');
+
+    const { liked } = await res.json();
+
+    // Reconcile with server truth
     setLikedReels((prev) => {
       const newSet = new Set(prev);
-      const isLiked = newSet.has(reelId);
-
-      if (isLiked) newSet.delete(reelId);
-      else newSet.add(reelId);
-
-      // ✅ SINGLE source of truth update
-      setReels((prevReels) =>
-        prevReels.map((reel) =>
-          reel.id === reelId
-            ? {
-                ...reel,
-                likes: isLiked ? reel.likes - 1 : reel.likes + 1
-              }
-            : reel
-        )
-      );
-
+      liked ? newSet.add(reelId) : newSet.delete(reelId);
       return newSet;
     });
 
+    setReels((prevReels) =>
+      prevReels.map((reel) => {
+        if (reel.id !== reelId) return reel;
+        // Correct count based on server response vs original state
+        if (liked === !wasLiked) return reel; // already correct
+        // Revert if server disagrees
+        return { ...reel, likes: liked ? reel.likes + 1 : reel.likes - 1 };
+      })
+    );
   } catch (error) {
+    // Revert optimistic update on failure
+    setLikedReels((prev) => {
+      const newSet = new Set(prev);
+      wasLiked ? newSet.add(reelId) : newSet.delete(reelId);
+      return newSet;
+    });
+    setReels((prevReels) =>
+      prevReels.map((reel) =>
+        reel.id === reelId
+          ? { ...reel, likes: wasLiked ? reel.likes + 1 : reel.likes - 1 }
+          : reel
+      )
+    );
     console.error('Error liking reel:', error);
   }
 };
+
 
   const handleFollow = async (e: React.MouseEvent, userId: string) => {
     e.stopPropagation();
@@ -544,24 +575,22 @@ const handleLike = async (reelId: string) => {
   }
 
   // ✅ Final fallback — copy to clipboard with toast
-  try {
-    await navigator.clipboard.writeText(shareUrl);
-    // Show a brief visual feedback instead of alert
-    const btn = document.getElementById(`share-btn-${reel.id}`);
-    if (btn) {
-      btn.textContent = 'Copied!';
-      setTimeout(() => { if (btn) btn.textContent = 'Share'; }, 2000);
-    }
-  } catch {
-    // nothing
-  }
+// Final fallback — copy to clipboard
+try {
+  await navigator.clipboard.writeText(shareUrl);
+  setShareToast('Link copied!');
+  setTimeout(() => setShareToast(null), 2000);
+} catch {
+  setShareToast('Could not copy');
+  setTimeout(() => setShareToast(null), 2000);
+}
 }}
                   className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
                 >
                    <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl">
                     <Send className="w-6 h-6 text-white" strokeWidth={2.5} />
                   </div>
-                  <span id={`share-btn-${reel.id}`} className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase">Share</span>
+                  <span className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase">Share</span>
                 </button>
 
               </div>
@@ -569,6 +598,12 @@ const handleLike = async (reelId: string) => {
           ))}
         </div>
       )}
+
+      {shareToast && (
+  <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[998] bg-white/90 backdrop-blur text-gray-900 text-sm font-semibold px-5 py-2.5 rounded-full shadow-xl animate-fade-in">
+    {shareToast}
+  </div>
+)}
 
       {/* Comments Modal */}
 {/* Comments Modal */}
