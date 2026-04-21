@@ -127,55 +127,41 @@ useEffect(() => {
     }
   });
 }, [currentReelIndex, videoReady, isMuted]);
+const handleLike = async (reelId: string) => {
+  if (!user) return;
 
-  const handleLike = async (reelId: string) => {
-    if (!user) return;
+  try {
+    await fetch(getApiUrl(`/api/reels/${reelId}/like`), {
+      method: 'POST',
+      headers: { 'x-user-id': user.id }
+    });
 
-    try {
-      await fetch(
-        getApiUrl(`/api/reels/${reelId}/like`),
-        {
-          method: 'POST',
-          headers: { 'x-user-id': user.id }
-        }
-      );
+    setLikedReels((prev) => {
+      const newSet = new Set(prev);
+      const isLiked = newSet.has(reelId);
 
-setLikedReels((prev) => {
-  const newSet = new Set(prev);
-  const isLiked = newSet.has(reelId);
+      if (isLiked) newSet.delete(reelId);
+      else newSet.add(reelId);
 
-  if (isLiked) newSet.delete(reelId);
-  else newSet.add(reelId);
-
-  // ✅ update reels INSIDE this
-  setReels((prevReels) =>
-    prevReels.map((reel) =>
-      reel.id === reelId
-        ? {
-            ...reel,
-            likes: isLiked ? reel.likes - 1 : reel.likes + 1
-          }
-        : reel
-    )
-  );
-
-  return newSet;
-});
-
-      setReels((prev) =>
-        prev.map((reel) =>
+      // ✅ SINGLE source of truth update
+      setReels((prevReels) =>
+        prevReels.map((reel) =>
           reel.id === reelId
             ? {
                 ...reel,
-                likes: likedReels.has(reelId) ? reel.likes - 1 : reel.likes + 1
+                likes: isLiked ? reel.likes - 1 : reel.likes + 1
               }
             : reel
         )
       );
-    } catch (error) {
-      console.error('Error liking reel:', error instanceof Error ? error.message : String(error));
-    }
-  };
+
+      return newSet;
+    });
+
+  } catch (error) {
+    console.error('Error liking reel:', error);
+  }
+};
 
   const handleFollow = async (e: React.MouseEvent, userId: string) => {
     e.stopPropagation();
@@ -496,9 +482,11 @@ setLikedReels((prev) => {
 
                 {/* Like */}
                 <button
-                  onClick={() => handleLike(reel.id)}
-                  className="flex flex-col items-center gap-1 group"
-                >
+                onClick={(e) => {
+                  e.stopPropagation(); // 💥 THIS FIXES IT
+                  handleLike(reel.id);
+                }}
+              >
                   <div className={`w-12 h-12 rounded-full backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl transition-all group-hover:scale-110 active:scale-90 ${likedReels.has(reel.id) ? 'bg-red-500/20' : 'bg-black/40'}`}>
                     <Heart
                       className={`w-6 h-6 transition-colors duration-300 ${likedReels.has(reel.id) ? 'fill-red-500 text-red-500' : 'text-white'}`}

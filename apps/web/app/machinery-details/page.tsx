@@ -1401,7 +1401,7 @@ function MachineryDetailsContent() {
 
         {/* Booking Success Modal */}
         {showBookingSuccess && bookingDetails && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 pt-3 z-40">
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end px-4 pb-[calc(60px+env(safe-area-inset-bottom)+16px)]">
             <div className="bg-white rounded-t-3xl w-full max-w-md px-6 pt-6 pb-10 animate-slide-up">
               {/* Success icon */}
               <div className="flex flex-col items-center mb-6">

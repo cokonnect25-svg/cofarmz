@@ -62,6 +62,8 @@ export default function TopNav() {
 
   const notifRef = useRef<HTMLDivElement>(null);
   const plusRef = useRef<HTMLDivElement>(null);
+  // Add this state near the other notification states
+const [showAllNotifications, setShowAllNotifications] = useState(false);
 
   useEffect(() => {
     const match = document.cookie.match(/googtrans=\/en\/([a-z]+)/);
@@ -149,16 +151,20 @@ export default function TopNav() {
   }, []);
 
   // Mark read only when panel OPENS, not immediately (which cleared badge prematurely)
-  const handleOpenNotifPanel = () => {
-    const opening = !showNotifPanel;
-    setShowNotifPanel(opening);
-    setShowPlusMenu(false);
+const handleOpenNotifPanel = () => {
+  const opening = !showNotifPanel;
+  setShowNotifPanel(opening);
+  setShowPlusMenu(false);
 
-    if (opening) {
-      localStorage.setItem(NOTIF_READ_KEY, new Date().toISOString());
-      setUnreadCount(0);
-    }
-  };
+  if (!opening) {
+    setShowAllNotifications(false); // ✅ reset when closing
+  }
+
+  if (opening) {
+    localStorage.setItem(NOTIF_READ_KEY, new Date().toISOString());
+    setUnreadCount(0);
+  }
+};
 
   const handleNotifClick = (notif: Notification) => {
     setShowNotifPanel(false);
@@ -288,22 +294,31 @@ export default function TopNav() {
                   {/* Notification Dropdown */}
 {/* Notification Dropdown */}
 {showNotifPanel && (
-  <div className="absolute right-0 top-12 w-[340px] max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-gray-100 z-[10000] overflow-hidden
-    // ✅ Add this — prevents panel from overflowing off bottom of screen on mobile
-    max-h-[80vh] flex flex-col
-  ">
+  <div
+    className="absolute right-0 top-12 w-[340px] max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-gray-100 z-[10000] overflow-hidden max-h-[80vh] flex flex-col"
+  >
     {/* Header */}
     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-      <span className="text-[15px] font-black text-gray-900">Notifications</span>
+      <span className="text-[15px] font-black text-gray-900">
+        Notifications
+        {unreadCount > 0 && (
+          <span className="ml-2 text-xs font-bold text-red-500">
+            {unreadCount} new
+          </span>
+        )}
+      </span>
       <button
-        onClick={() => setShowNotifPanel(false)}
+        onClick={() => {
+          setShowNotifPanel(false);
+          setShowAllNotifications(false); // reset on close
+        }}
         className="text-gray-400 hover:text-gray-600 transition"
       >
         <i className="ph ph-x text-lg" />
       </button>
     </div>
 
-    {/* Scrollable list — flex-1 so it takes remaining space */}
+    {/* Scrollable list */}
     <div className="flex-1 overflow-y-auto min-h-0">
       {notifications.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10 gap-2">
@@ -311,47 +326,90 @@ export default function TopNav() {
           <p className="text-sm text-gray-400 font-medium">No new notifications</p>
         </div>
       ) : (
-        notifications.map((notif) => (
-          <button
-            key={notif.id}
-            onClick={() => handleNotifClick(notif)}
-            className="w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
-          >
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-              {notif.image ? (
-                <img
-                  src={notif.image}
-                  alt=""
-                  className="w-full h-full object-cover rounded-full"
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
-              ) : (
-                <NotifIcon type={notif.type} status={notif.status} />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[13px] font-bold text-gray-900 truncate">{notif.title}</p>
-                <span className="text-[11px] text-gray-400 flex-shrink-0">{timeAgo(notif.time)}</span>
+        <>
+          {/* Show first 4 or all depending on state */}
+          {(showAllNotifications ? notifications : notifications.slice(0, 4)).map((notif) => (
+            <button
+              key={notif.id}
+              onClick={() => handleNotifClick(notif)}
+              className="w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
+            >
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                {notif.image ? (
+                  <img
+                    src={notif.image}
+                    alt=""
+                    className="w-full h-full object-cover rounded-full"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  <NotifIcon type={notif.type} status={notif.status} />
+                )}
               </div>
-              <p className="text-[12px] text-gray-600 mt-0.5 line-clamp-2">{notif.body}</p>
-            </div>
-          </button>
-        ))
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[13px] font-bold text-gray-900 truncate">
+                    {notif.title}
+                  </p>
+                  <span className="text-[11px] text-gray-400 flex-shrink-0">
+                    {timeAgo(notif.time)}
+                  </span>
+                </div>
+                <p className="text-[12px] text-gray-600 mt-0.5 line-clamp-2">
+                  {notif.body}
+                </p>
+                {/* Show notification type badge */}
+                <span className={`text-[10px] font-bold mt-1 inline-block px-2 py-0.5 rounded-full ${
+                  notif.type === 'message' ? 'bg-blue-50 text-blue-600' :
+                  notif.type === 'booking_new' ? 'bg-green-50 text-green-600' :
+                  notif.type === 'booking_update' ? 'bg-orange-50 text-orange-600' :
+                  'bg-gray-50 text-gray-500'
+                }`}>
+                  {notif.type === 'message' ? '💬 Message' :
+                   notif.type === 'booking_new' ? '📅 New Booking' :
+                   notif.type === 'booking_update' ? '🔄 Booking Update' :
+                   notif.type === 'equipment' ? '🚜 Equipment' : '🔔 Notification'}
+                </span>
+              </div>
+            </button>
+          ))}
+
+          {/* Expand/Collapse toggle — only show if more than 4 */}
+          {notifications.length > 4 && (
+            <button
+              onClick={() => setShowAllNotifications((v) => !v)}
+              className="w-full px-4 py-3 text-[13px] font-bold text-green-700 hover:bg-green-50 transition-colors flex items-center justify-center gap-2 border-t border-gray-100"
+            >
+              {showAllNotifications ? (
+                <>
+                  <i className="ph ph-caret-up text-base" />
+                  Show less
+                </>
+              ) : (
+                <>
+                  <i className="ph ph-caret-down text-base" />
+                  View all {notifications.length} notifications
+                </>
+              )}
+            </button>
+          )}
+        </>
       )}
     </div>
 
-    {/* ✅ Footer — flex-shrink-0 so it's always visible, never pushed off screen */}
-    {notifications.length > 0 && (
-      <div className="border-t border-gray-100 px-4 py-2.5 text-center flex-shrink-0 bg-white">
+    {/* Footer — go to chat for messages specifically */}
+    {notifications.some(n => n.type === 'message') && (
+      <div className="border-t border-gray-100 px-4 py-2.5 flex-shrink-0 bg-white">
         <button
           onClick={() => {
             setShowNotifPanel(false);
+            setShowAllNotifications(false);
             router.push('/chat');
           }}
-          className="text-[13px] font-bold text-green-700 hover:text-green-800 transition"
+          className="w-full text-center text-[13px] font-bold text-blue-600 hover:text-blue-700 transition flex items-center justify-center gap-1.5"
         >
-          View all messages →
+          <i className="ph ph-chat-circle text-base" />
+          Open Messages
         </button>
       </div>
     )}
