@@ -286,78 +286,77 @@ export default function TopNav() {
                   </button>
 
                   {/* Notification Dropdown */}
-                  {showNotifPanel && (
-                    <div className="absolute right-0 top-12 w-[340px] max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-gray-100 z-[10000] overflow-hidden">
-                      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                        <span className="text-[15px] font-black text-gray-900">Notifications</span>
-                        <button
-                          onClick={() => setShowNotifPanel(false)}
-                          className="text-gray-400 hover:text-gray-600 transition"
-                        >
-                          <i className="ph ph-x text-lg" />
-                        </button>
-                      </div>
+{/* Notification Dropdown */}
+{showNotifPanel && (
+  <div className="absolute right-0 top-12 w-[340px] max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-gray-100 z-[10000] overflow-hidden
+    // ✅ Add this — prevents panel from overflowing off bottom of screen on mobile
+    max-h-[80vh] flex flex-col
+  ">
+    {/* Header */}
+    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+      <span className="text-[15px] font-black text-gray-900">Notifications</span>
+      <button
+        onClick={() => setShowNotifPanel(false)}
+        className="text-gray-400 hover:text-gray-600 transition"
+      >
+        <i className="ph ph-x text-lg" />
+      </button>
+    </div>
 
-                      <div className="max-h-[420px] overflow-y-auto">
-                        {notifications.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center py-10 gap-2">
-                            <i className="ph ph-bell-slash text-4xl text-gray-300" />
-                            <p className="text-sm text-gray-400 font-medium">No new notifications</p>
-                          </div>
-                        ) : (
-                          notifications.map((notif) => (
-                            <button
-                              key={notif.id}
-                              onClick={() => handleNotifClick(notif)}
-                              className="w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
-                            >
-                              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                                {notif.image ? (
-                                  <img
-                                    src={notif.image}
-                                    alt=""
-                                    className="w-full h-full object-cover rounded-full"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                    }}
-                                  />
-                                ) : (
-                                  <NotifIcon type={notif.type} status={notif.status} />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-2">
-                                  <p className="text-[13px] font-bold text-gray-900 truncate">
-                                    {notif.title}
-                                  </p>
-                                  <span className="text-[11px] text-gray-400 flex-shrink-0">
-                                    {timeAgo(notif.time)}
-                                  </span>
-                                </div>
-                                <p className="text-[12px] text-gray-600 mt-0.5 line-clamp-2">
-                                  {notif.body}
-                                </p>
-                              </div>
-                            </button>
-                          ))
-                        )}
-                      </div>
+    {/* Scrollable list — flex-1 so it takes remaining space */}
+    <div className="flex-1 overflow-y-auto min-h-0">
+      {notifications.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 gap-2">
+          <i className="ph ph-bell-slash text-4xl text-gray-300" />
+          <p className="text-sm text-gray-400 font-medium">No new notifications</p>
+        </div>
+      ) : (
+        notifications.map((notif) => (
+          <button
+            key={notif.id}
+            onClick={() => handleNotifClick(notif)}
+            className="w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0"
+          >
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+              {notif.image ? (
+                <img
+                  src={notif.image}
+                  alt=""
+                  className="w-full h-full object-cover rounded-full"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              ) : (
+                <NotifIcon type={notif.type} status={notif.status} />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[13px] font-bold text-gray-900 truncate">{notif.title}</p>
+                <span className="text-[11px] text-gray-400 flex-shrink-0">{timeAgo(notif.time)}</span>
+              </div>
+              <p className="text-[12px] text-gray-600 mt-0.5 line-clamp-2">{notif.body}</p>
+            </div>
+          </button>
+        ))
+      )}
+    </div>
 
-                      {notifications.length > 0 && (
-                        <div className="border-t border-gray-100 px-4 py-2.5 text-center">
-                          <button
-                            onClick={() => {
-                              setShowNotifPanel(false);
-                              router.push('/chat');
-                            }}
-                            className="text-[13px] font-bold text-green-700 hover:text-green-800 transition"
-                          >
-                            View all messages
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+    {/* ✅ Footer — flex-shrink-0 so it's always visible, never pushed off screen */}
+    {notifications.length > 0 && (
+      <div className="border-t border-gray-100 px-4 py-2.5 text-center flex-shrink-0 bg-white">
+        <button
+          onClick={() => {
+            setShowNotifPanel(false);
+            router.push('/chat');
+          }}
+          className="text-[13px] font-bold text-green-700 hover:text-green-800 transition"
+        >
+          View all messages →
+        </button>
+      </div>
+    )}
+  </div>
+)}
                 </div>
 
                 <div className="hidden md:block w-px h-6 bg-gray-200" />

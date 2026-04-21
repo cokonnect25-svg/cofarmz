@@ -69,6 +69,7 @@ function MachineryDetailsContent() {
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [renterPhone, setRenterPhone] = useState('');
   const [showCalendar, setShowCalendar] = useState(false);
+  const today = new Date().toISOString().split('T')[0];
 
 
   useEffect(() => {
@@ -1053,12 +1054,18 @@ function MachineryDetailsContent() {
       From Date
     </label>
     <input
-      type="date"
-      value={startDate}
-      onChange={(e) => setStartDate(e.target.value)}
-      className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all"
-      placeholder="Select start date"
-    />
+  type="date"
+  value={startDate}
+  min={today} // ✅ blocks past dates
+  onChange={(e) => {
+    setStartDate(e.target.value);
+    // Reset end date if it's before the new start date
+    if (endDate && e.target.value > endDate) {
+      setEndDate('');
+    }
+  }}
+  className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all"
+/>
   </div>
 
   <div>
@@ -1066,13 +1073,13 @@ function MachineryDetailsContent() {
       <i className="ph-bold ph-calendar-check text-brand-600"></i>
       To Date
     </label>
-    <input
-      type="date"
-      value={endDate}
-      onChange={(e) => setEndDate(e.target.value)}
-      className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all"
-      placeholder="Select end date"
-    />
+<input
+  type="date"
+  value={endDate}
+  min={startDate || today} // ✅ end date can't be before start date
+  onChange={(e) => setEndDate(e.target.value)}
+  className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all"
+/>
   </div>
 </div>
             <div className="flex justify-between items-center mb-5 text-sm">
@@ -1394,7 +1401,7 @@ function MachineryDetailsContent() {
 
         {/* Booking Success Modal */}
         {showBookingSuccess && bookingDetails && (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center">
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 pt-3 z-40">
             <div className="bg-white rounded-t-3xl w-full max-w-md px-6 pt-6 pb-10 animate-slide-up">
               {/* Success icon */}
               <div className="flex flex-col items-center mb-6">

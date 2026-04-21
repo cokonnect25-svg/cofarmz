@@ -6,6 +6,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { Suspense } from 'react';
 import { Heart, MessageCircle, Send, ArrowLeft, X } from 'lucide-react';
 import { getApiUrl } from '@/lib/api';
+import { Capacitor } from '@capacitor/core';
 
 
 interface Reel {
@@ -524,49 +525,55 @@ setLikedReels((prev) => {
 
                 {/* Share */}
                 <button
-                onClick={async () => {
-                      const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`;
-                      const shareData = {
-                        title: reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel',
-                        text: reel.caption || 'Check out this reel on CoFarmz!',
-                        url: shareUrl,
-                      };
+               onClick={async () => {
+  const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`;
+  const shareData = {
+    title: reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel',
+    text: reel.caption || 'Check out this reel on CoFarmz!',
+    url: shareUrl,
+  };
 
-                      try {
-                        // Use Capacitor Share on native (shows WhatsApp, Instagram, etc.)
-                        const { Capacitor } = await import('@capacitor/core');
-                        if (Capacitor.isNativePlatform()) {
-                          const { Share } = await import('@capacitor/share');
-                          await Share.share(shareData);
-                          return;
-                        }
-                      } catch {}
+  // ✅ Capacitor native share — import at top level, not inside handler
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const { Share } = await import('@capacitor/share');
+      await Share.share(shareData);
+      return;
+    } catch (err: any) {
+      // User cancelled share sheet — don't fallback to clipboard
+      if (err?.message?.includes('cancel') || err?.errorMessage?.includes('cancel')) return;
+    }
+  }
 
-                      // Web fallback
-                      try {
-                        if (navigator.share) {
-                          await navigator.share(shareData);
-                        } else {
-                          await navigator.clipboard.writeText(shareUrl);
-                          alert('Link copied to clipboard!');
-                        }
-                      } catch (err: any) {
-                        if (err?.name !== 'AbortError') {
-                          try {
-                            await navigator.clipboard.writeText(shareUrl);
-                            alert('Link copied!');
-                          } catch {
-                            alert('Could not share.');
-                          }
-                        }
-                      }
-                    }}
+  // ✅ Web: use navigator.share if available (Chrome Android shows share sheet)
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+      return;
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return; // user dismissed
+    }
+  }
+
+  // ✅ Final fallback — copy to clipboard with toast
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    // Show a brief visual feedback instead of alert
+    const btn = document.getElementById(`share-btn-${reel.id}`);
+    if (btn) {
+      btn.textContent = 'Copied!';
+      setTimeout(() => { if (btn) btn.textContent = 'Share'; }, 2000);
+    }
+  } catch {
+    // nothing
+  }
+}}
                   className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
                 >
                    <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl">
                     <Send className="w-6 h-6 text-white" strokeWidth={2.5} />
                   </div>
-                  <span className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase">Share</span>
+                  <span id={`share-btn-${reel.id}`} className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase">Share</span>
                 </button>
 
               </div>
@@ -576,100 +583,116 @@ setLikedReels((prev) => {
       )}
 
       {/* Comments Modal */}
-      {showComments && (
-        <div className="fixed inset-0 z-[999] flex flex-col px-4 h-[100dvh]">
-          
-          <div className="flex-1 overflow-hidden"></div>
-
-          <div className="bg-white rounded-t-3xl h-2/3 flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="text-lg font-bold text-gray-900">Comments</h2>
-              <button
-                onClick={() => setShowComments(false)}
-                className="p-1 hover:bg-gray-100 rounded-full transition"
-              >
-                <X className="w-6 h-6 text-gray-600" />
-              </button>
-            </div>
-
-            {/* Comments List */}
-            <div className="flex-1 overflow-y-auto space-y-4 p-4">
-              {commentsLoading ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-                </div>
-              ) : currentReelComments.length === 0 ? (
-                <p className="text-center text-gray-400 py-8">
-                  No comments yet. Be the first!
-                </p>
-              ) : (
-                currentReelComments.map((comment) => (
-                  <div key={comment.id} className="flex gap-3">
-                    <button
-                      onClick={() => router.push(`/farmer-profile?id=${comment.user_id}`)}
-                      className="flex-shrink-0"
-                    >
-                      <img
-                        src={comment.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(comment.name || 'U')}&backgroundColor=166534&textColor=ffffff`}
-                        alt={comment.name}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <button
-                        onClick={() => router.push(`/farmer-profile?id=${comment.user_id}`)}
-                        className="font-bold text-sm text-gray-900 hover:text-green-700 transition-colors"
-                      >
-                        {comment.name}
-                      </button>
-                      <p className="text-sm text-gray-700 break-words">{comment.comment}</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {new Date(comment.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Comment Input */}
-            {user && (
+{/* Comments Modal */}
+{showComments && (
+  <div
+    className="fixed inset-0 z-[999] flex flex-col"
+    style={{ paddingBottom: 0 }}
+  >
+    {/* Backdrop */}
     <div
-  className="border-t border-gray-200 p-4 flex gap-2 sticky bottom-0 bg-white"
-  style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
->
-                <img
-                  src={user.image || 'https://via.placeholder.com/32'}
-                  alt={user.name}
-                  className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                />
-                <div className="flex-1 flex gap-2">
-                  <input
-                    type="text"
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Add a comment..."
-                    className="flex-1 px-3 py-2 bg-gray-100 rounded-full text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-600"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !postingComment) {
-                        handlePostComment();
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={handlePostComment}
-                    disabled={!newComment.trim() || postingComment}
-                    className="px-3 py-2 text-green-600 hover:text-green-700 disabled:text-gray-300 font-bold text-sm transition"
-                  >
-                    Post
-                  </button>
-                </div>
-              </div>
-            )}
+      className="flex-1 bg-black/50"
+      onClick={() => setShowComments(false)}
+    />
+
+    {/* ✅ Sheet — uses dvh so keyboard pushes it up correctly */}
+    <div
+      className="bg-white rounded-t-3xl flex flex-col overflow-hidden"
+      style={{ maxHeight: '75dvh', minHeight: '50dvh' }}
+    >
+      {/* Handle */}
+      <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 flex-shrink-0" />
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+        <h2 className="text-lg font-bold text-gray-900">
+          Comments ({currentReelComments.length})
+        </h2>
+        <button
+          onClick={() => setShowComments(false)}
+          className="p-1 hover:bg-gray-100 rounded-full transition"
+        >
+          <X className="w-5 h-5 text-gray-600" />
+        </button>
+      </div>
+
+      {/* ✅ Scrollable list — flex-1 + min-h-0 so it shrinks when keyboard opens */}
+      <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
+        {commentsLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
           </div>
+        ) : currentReelComments.length === 0 ? (
+          <p className="text-center text-gray-400 py-8 text-sm">
+            No comments yet. Be the first!
+          </p>
+        ) : (
+          currentReelComments.map((comment) => (
+            <div key={comment.id} className="flex gap-3">
+              <button
+                onClick={() => router.push(`/farmer-profile?id=${comment.user_id}`)}
+                className="flex-shrink-0"
+              >
+                <img
+                  src={comment.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(comment.name || 'U')}&backgroundColor=166534&textColor=ffffff`}
+                  alt={comment.name}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              </button>
+              <div className="flex-1 min-w-0">
+                <button
+                  onClick={() => router.push(`/farmer-profile?id=${comment.user_id}`)}
+                  className="font-bold text-sm text-gray-900 hover:text-green-700 transition-colors"
+                >
+                  {comment.name}
+                </button>
+                <p className="text-sm text-gray-700 break-words">{comment.comment}</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {new Date(comment.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* ✅ Input bar — flex-shrink-0 + safe area so it's always visible */}
+      {user && (
+        <div
+          className="flex-shrink-0 border-t border-gray-100 bg-white px-4 pt-3 flex gap-2 items-center"
+          style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+        >
+          <img
+            src={user.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name || 'U')}&backgroundColor=166534&textColor=ffffff`}
+            alt={user.name}
+            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+          />
+          <input
+            type="text"
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Add a comment..."
+            className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !postingComment) handlePostComment();
+            }}
+          />
+          <button
+            onClick={handlePostComment}
+            disabled={!newComment.trim() || postingComment}
+            className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center disabled:opacity-40 active:scale-90 transition-transform flex-shrink-0"
+          >
+            {postingComment ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Send className="w-4 h-4 text-white" />
+            )}
+          </button>
         </div>
       )}
+    </div>
+  </div>
+)}
     </div>
   );
 }
