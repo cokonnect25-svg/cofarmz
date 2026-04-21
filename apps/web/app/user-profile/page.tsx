@@ -863,18 +863,17 @@ function ProfileContent() {
     }
   };
 
-
-const handleSignOut = async () => {
-  setIsSigningOut(true);
-  try {
-    await signOut();
-    router.replace('/login'); // use replace
-  } catch (err) {
-    console.error('Sign out failed:', err);
-  } finally {
-    setIsSigningOut(false);
-  }
-};
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      router.push('/login');
+    } catch (err) {
+      console.error('Sign out failed:', err);
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
 
   const handleProfilePhotoClick = async () => {
     try {

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 
+// ─── Mobile localStorage session (bypasses cookie/CapacitorHttp split-brain) ───
+
 const MOBILE_USER_KEY = "cofarmz_mobile_user";
 const MOBILE_EXPIRY_KEY = "cofarmz_mobile_expiry";
 
@@ -36,37 +38,40 @@ function getMobileSession(): any | null {
   }
 }
 
+// ─── useAuth ────────────────────────────────────────────────────────────────
+
 export function useAuth() {
   const { data: session, isPending: webLoading } = useSession();
+  const router = useRouter();
 
-  // ✅ Safe SSR check — Capacitor guard prevents server crash
-  const isMobile =
-    typeof window !== "undefined" &&
-    typeof Capacitor !== "undefined" &&
-    Capacitor.isNativePlatform();
-
+  // Mobile: read from localStorage synchronously-ish using state
   const [mobileUser, setMobileUser] = useState<any>(null);
-  const [mobileLoading, setMobileLoading] = useState(true); // ✅ always true until effect runs
+  const [mobileLoading, setMobileLoading] = useState(true);
 
   useEffect(() => {
-    if (!isMobile) {
+    if (!Capacitor.isNativePlatform()) {
       setMobileLoading(false);
       return;
     }
     const stored = getMobileSession();
     setMobileUser(stored);
     setMobileLoading(false);
-  }, [isMobile]);
+  }, []);
 
-  const user = isMobile ? mobileUser : session?.user;
-  const loading = isMobile ? mobileLoading : webLoading;
+  const isMobile =
+    typeof window !== "undefined" && Capacitor.isNativePlatform();
+
+  const user: any = isMobile ? mobileUser : (session?.user as any);
   const isAuthenticated = !!user;
-  const isReady = !loading;
+  const loading = isMobile ? mobileLoading : webLoading;
 
   async function signIn(email: string, password: string) {
     const result = await authClient.signIn.email({ email, password });
-    if (result.error) throw new Error(result.error.message || "Invalid email or password");
-    if (isMobile && result.data?.user) {
+    if (result.error) {
+      throw new Error(result.error.message || "Invalid email or password");
+    }
+    // Store for mobile so useAuth sees the session after redirect
+    if (Capacitor.isNativePlatform() && result.data?.user) {
       storeMobileSession(result.data.user);
       setMobileUser(result.data.user);
     }
@@ -75,8 +80,10 @@ export function useAuth() {
 
   async function signUp(email: string, password: string, name: string) {
     const result = await authClient.signUp.email({ email, password, name });
-    if (result.error) throw new Error(result.error.message || "Failed to create account");
-    if (isMobile && result.data?.user) {
+    if (result.error) {
+      throw new Error(result.error.message || "Failed to create account");
+    }
+    if (Capacitor.isNativePlatform() && result.data?.user) {
       storeMobileSession(result.data.user);
       setMobileUser(result.data.user);
     }
@@ -87,7 +94,8 @@ export function useAuth() {
     clearMobileSession();
     setMobileUser(null);
     await authClient.signOut();
+    router.push("/login");
   }
 
-  return { user, isAuthenticated, loading, isReady, signIn, signUp, signOut, session };
+  return { user, isAuthenticated, loading, signIn, signUp, signOut, session };
 }
