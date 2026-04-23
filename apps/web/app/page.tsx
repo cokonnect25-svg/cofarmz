@@ -345,44 +345,6 @@ function HomePageContent() {
     </span>
   </div>
 
-  {/* Search Bar — now at the top */}
-  <form onSubmit={handleSearch} className="flex gap-3 mb-4">
-    <div className="flex-1 relative">
-      <i className="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-emerald-700 text-lg z-10"></i>
-      <input
-        type="text"
-        value={searchQuery}
-        onChange={e => setSearchQuery(e.target.value)}
-        placeholder="Search tractors, harvesters..."
-        className="w-full bg-white pl-12 pr-4 py-4 rounded-full text-gray-900 font-bold text-sm focus:outline-none focus:ring-4 focus:ring-white/40 shadow-lg"
-      />
-    </div>
-    <button
-      type="submit"
-      className="bg-amber-500 text-white px-5 py-4 rounded-full font-black shadow-lg active:scale-90 transition-transform">
-      <i className="ph-bold ph-arrow-right text-lg"></i>
-    </button>
-  </form>
-
-  {/* Category chips — now right below search */}
-  <div className="flex gap-2.5 overflow-x-auto hide-scrollbar pb-1">
-    {[
-      { label: 'Tractor',   icon: 'ph-tractor',  color: 'from-green-400/20 to-green-300/10' },
-      { label: 'Harvester', icon: 'ph-plant',     color: 'from-yellow-400/20 to-yellow-300/10' },
-      { label: 'Rotavator', icon: 'ph-wrench',    color: 'from-blue-400/20 to-blue-300/10' },
-      { label: 'Sprayer',   icon: 'ph-drop',      color: 'from-purple-400/20 to-purple-300/10' },
-      { label: 'Loader',    icon: 'ph-truck',     color: 'from-orange-400/20 to-orange-300/10' },
-    ].map(chip => (
-      <button
-        key={chip.label}
-        onClick={() => router.push(`/machinery-list?search=${encodeURIComponent(chip.label)}`)}
-        className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-white/25 bg-gradient-to-r ${chip.color} backdrop-blur-sm text-white text-xs font-bold whitespace-nowrap active:scale-95 transition-all`}
-      >
-        <i className={`ph-fill ${chip.icon} text-sm`}></i>
-        {chip.label}
-      </button>
-    ))}
-  </div>
 </section>
 
 

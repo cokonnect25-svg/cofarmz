@@ -610,7 +610,7 @@ try {
 {showComments && (
   <div
     className="fixed inset-0 z-[999] flex flex-col"
-    style={{ paddingBottom: 0 }}
+    style={{ paddingBottom: 'calc(60px + env(safe-area-inset-bottom))' }}
   >
     {/* Backdrop */}
     <div
@@ -618,10 +618,10 @@ try {
       onClick={() => setShowComments(false)}
     />
 
-    {/* ✅ Sheet — uses dvh so keyboard pushes it up correctly */}
+    {/* Sheet */}
     <div
       className="bg-white rounded-t-3xl flex flex-col overflow-hidden"
-      style={{ maxHeight: '75dvh', minHeight: '50dvh' }}
+      style={{ maxHeight: '70vh' }}
     >
       {/* Handle */}
       <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 flex-shrink-0" />
@@ -639,7 +639,7 @@ try {
         </button>
       </div>
 
-      {/* ✅ Scrollable list — flex-1 + min-h-0 so it shrinks when keyboard opens */}
+      {/* Scrollable comments list */}
       <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
         {commentsLoading ? (
           <div className="flex justify-center py-8">
@@ -679,12 +679,9 @@ try {
         )}
       </div>
 
-      {/* ✅ Input bar — flex-shrink-0 + safe area so it's always visible */}
+      {/* Input bar */}
       {user && (
-        <div
-          className="flex-shrink-0 border-t border-gray-100 bg-white px-4 pt-3 flex gap-2 items-center"
-          style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
-        >
+        <div className="flex-shrink-0 border-t border-gray-100 bg-white px-4 py-3 flex gap-2 items-center">
           <img
             src={user.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name || 'U')}&backgroundColor=166534&textColor=ffffff`}
             alt={user.name}
@@ -695,6 +692,11 @@ try {
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder="Add a comment..."
+            onFocus={() => {
+              setTimeout(() => {
+                document.activeElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }, 300);
+            }}
             className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !postingComment) handlePostComment();

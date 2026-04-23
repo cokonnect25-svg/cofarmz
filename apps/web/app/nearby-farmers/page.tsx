@@ -333,7 +333,7 @@ function NearbyFarmersContent() {
           <div className="relative mb-4">
             <input
               type="text"
-              placeholder={`Search by name or location...`}
+              placeholder={`Search by name or location or crops...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-brand-600 text-sm"
