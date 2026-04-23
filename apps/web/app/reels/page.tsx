@@ -7,6 +7,7 @@ import { Suspense } from 'react';
 import { Heart, MessageCircle, Send, ArrowLeft, X } from 'lucide-react';
 import { getApiUrl } from '@/lib/api';
 import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
 
 
 interface Reel {
@@ -131,68 +132,63 @@ useEffect(() => {
 const handleLike = async (reelId: string) => {
   if (!user) return;
 
-  // Optimistic update — capture current state BEFORE update
   const wasLiked = likedReels.has(reelId);
 
-  // Update UI immediately (optimistic)
+  // Optimistic update — simple +1 / -1, no reconciliation needed
   setLikedReels((prev) => {
-    const newSet = new Set(prev);
-    wasLiked ? newSet.delete(reelId) : newSet.add(reelId);
-    return newSet;
+    const next = new Set(prev);
+    wasLiked ? next.delete(reelId) : next.add(reelId);
+    return next;
   });
-
-  setReels((prevReels) =>
-    prevReels.map((reel) =>
-      reel.id === reelId
-        ? { ...reel, likes: wasLiked ? reel.likes - 1 : reel.likes + 1 }
-        : reel
+  setReels((prev) =>
+    prev.map((r) =>
+      r.id === reelId
+        ? { ...r, likes: Math.max(0, r.likes + (wasLiked ? -1 : 1)) }
+        : r
     )
   );
 
   try {
     const res = await fetch(getApiUrl(`/api/reels/${reelId}/like`), {
       method: 'POST',
-      headers: { 'x-user-id': user.id }
+      headers: { 'x-user-id': user.id },
     });
-
     if (!res.ok) throw new Error('Failed');
-
+    // ✅ Trust the server's liked boolean, but DON'T touch the count again.
+    // The count was already adjusted optimistically and is correct.
     const { liked } = await res.json();
-
-    // Reconcile with server truth
+    // Only fix the heart icon if server disagrees with our optimistic toggle
+    if (liked === wasLiked) {
+      // Server says state didn't change — revert icon and count
+      setLikedReels((prev) => {
+        const next = new Set(prev);
+        wasLiked ? next.add(reelId) : next.delete(reelId);
+        return next;
+      });
+      setReels((prev) =>
+        prev.map((r) =>
+          r.id === reelId
+            ? { ...r, likes: Math.max(0, r.likes + (wasLiked ? 1 : -1)) }
+            : r
+        )
+      );
+    }
+  } catch {
+    // Revert everything on network error
     setLikedReels((prev) => {
-      const newSet = new Set(prev);
-      liked ? newSet.add(reelId) : newSet.delete(reelId);
-      return newSet;
+      const next = new Set(prev);
+      wasLiked ? next.add(reelId) : next.delete(reelId);
+      return next;
     });
-
-    setReels((prevReels) =>
-      prevReels.map((reel) => {
-        if (reel.id !== reelId) return reel;
-        // Correct count based on server response vs original state
-        if (liked === !wasLiked) return reel; // already correct
-        // Revert if server disagrees
-        return { ...reel, likes: liked ? reel.likes + 1 : reel.likes - 1 };
-      })
-    );
-  } catch (error) {
-    // Revert optimistic update on failure
-    setLikedReels((prev) => {
-      const newSet = new Set(prev);
-      wasLiked ? newSet.add(reelId) : newSet.delete(reelId);
-      return newSet;
-    });
-    setReels((prevReels) =>
-      prevReels.map((reel) =>
-        reel.id === reelId
-          ? { ...reel, likes: wasLiked ? reel.likes + 1 : reel.likes - 1 }
-          : reel
+    setReels((prev) =>
+      prev.map((r) =>
+        r.id === reelId
+          ? { ...r, likes: Math.max(0, r.likes + (wasLiked ? 1 : -1)) }
+          : r
       )
     );
-    console.error('Error liking reel:', error);
   }
 };
-
 
   const handleFollow = async (e: React.MouseEvent, userId: string) => {
     e.stopPropagation();
@@ -544,7 +540,7 @@ const handleLike = async (reelId: string) => {
 
                 {/* Share */}
                 <button
-               onClick={async () => {
+onClick={async () => {
   const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`;
   const shareData = {
     title: reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel',
@@ -552,20 +548,18 @@ const handleLike = async (reelId: string) => {
     url: shareUrl,
   };
 
-  // ✅ Capacitor native share — import at top level, not inside handler
+  // Native app — use Capacitor Share (opens OS share sheet)
   if (Capacitor.isNativePlatform()) {
     try {
-      const { Share } = await import('@capacitor/share');
       await Share.share(shareData);
-      return;
     } catch (err: any) {
-      // User cancelled share sheet — don't fallback to clipboard
-      if (err?.message?.includes('cancel') || err?.errorMessage?.includes('cancel')) return;
+      // User cancelled — do nothing
     }
+    return;
   }
 
-  // ✅ Web: use navigator.share if available (Chrome Android shows share sheet)
-  if (navigator.share) {
+  // Web — use navigator.share if supported (shows OS share sheet on mobile browsers)
+  if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
     try {
       await navigator.share(shareData);
       return;
@@ -574,16 +568,14 @@ const handleLike = async (reelId: string) => {
     }
   }
 
-  // ✅ Final fallback — copy to clipboard with toast
-// Final fallback — copy to clipboard
-try {
-  await navigator.clipboard.writeText(shareUrl);
-  setShareToast('Link copied!');
+  // Desktop fallback — copy to clipboard
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    setShareToast('Link copied!');
+  } catch {
+    setShareToast('Could not copy link');
+  }
   setTimeout(() => setShareToast(null), 2000);
-} catch {
-  setShareToast('Could not copy');
-  setTimeout(() => setShareToast(null), 2000);
-}
 }}
                   className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
                 >

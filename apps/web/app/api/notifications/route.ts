@@ -83,6 +83,25 @@ const sinceDate = since
       LIMIT 10
     `;
 
+
+    const ownerBookingUpdates = await sql`
+  SELECT
+    r.id,
+    r.machinery_name,
+    r.status,
+    r.updated_at,
+    r.user_id,
+    u.name   AS renter_name,
+    u.image  AS renter_image
+  FROM reservations r
+  JOIN "user" u ON u.id = r.user_id
+  WHERE r.owner_id   = ${userId}
+    AND r.status     IN ('cancelled', 'completed')
+    AND r.updated_at  > ${sinceDate}
+  ORDER BY r.updated_at DESC
+  LIMIT 10
+`;
+
     // ---------------------------------------------------------------------------
     // FIX 4 — Equipment availability notifications should target RENTERS, not
     //   owners. Querying WHERE m.owner_id = userId meant the owner was notified
@@ -156,6 +175,25 @@ const sinceDate = since
         status: booking.status,
       });
     });
+
+    // Owner notifications for cancellations / completions
+ownerBookingUpdates.forEach((booking: any) => {
+  const statusLabels: Record<string, string> = {
+    cancelled: 'cancelled',
+    completed: 'completed',
+  };
+  const statusLabel = statusLabels[booking.status] || booking.status;
+  notifications.push({
+    id: `booking-owner-update-${booking.id}`,
+    type: 'booking_update',
+    title: `Booking ${statusLabel}`,
+    body: `${booking.renter_name} ${booking.status === 'cancelled' ? 'cancelled their' : 'completed a'} booking for ${booking.machinery_name}`,
+    image: booking.renter_image,
+    time: booking.updated_at,
+    link: `/user-profile`,
+    status: booking.status,
+  });
+});
 
     equipmentChanges.forEach((eq: any) => {
       if (!eq.updated_at || new Date(eq.updated_at) <= sinceDate) return;

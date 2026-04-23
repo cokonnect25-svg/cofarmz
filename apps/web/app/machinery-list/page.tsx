@@ -19,7 +19,7 @@ export default function MachineryListPage() {
   const [filters, setFilters] = useState({
     priceMin: 0,
     priceMax: 500000,
-    distance: 5000,
+    distance: 100,
     startDate: '',
     endDate: '',
     equipmentTypes: [] as string[]
@@ -31,6 +31,8 @@ export default function MachineryListPage() {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [profileLocation, setProfileLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const { user } = useAuth();
+
+  const today = new Date().toISOString().split('T')[0];
 
   // ✅ MOVE THIS UP
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -346,6 +348,8 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     }
   };
 
+
+
   // Show skeleton while auth is still loading (very brief)
   if (!mounted) return null;
 
@@ -384,7 +388,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
     {/* Filter Modal - Top Popup */}
     {showFilter && (
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center" onClick={() => setShowFilter(false)}>
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={() => setShowFilter(false)}>
         <div className="w-full mx-4 bg-white rounded-2xl p-6 max-w-sm shadow-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-900">Filter Equipment</h2>
@@ -446,21 +450,23 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-2">From Date</label>
-                <input 
-                  type="date" 
-                  value={filters.startDate}
-                  onChange={(e) => setFilters({...filters, startDate: e.target.value})}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-700"
-                />
+<input 
+  type="date"
+  min={today}
+  value={filters.startDate}
+  onChange={(e) => setFilters({...filters, startDate: e.target.value})}
+  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-700"
+/>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-2">To Date</label>
-                <input 
-                  type="date" 
-                  value={filters.endDate}
-                  onChange={(e) => setFilters({...filters, endDate: e.target.value})}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-700"
-                />
+<input 
+  type="date"
+  min={filters.startDate || today}
+  value={filters.endDate}
+  onChange={(e) => setFilters({...filters, endDate: e.target.value})}
+  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-700"
+/>
               </div>
             </div>
           </div>
