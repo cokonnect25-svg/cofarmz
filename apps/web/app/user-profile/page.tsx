@@ -503,6 +503,7 @@ function ProfileContent() {
                   ...booking,
                   image_url: machineData.image_url,
                   machinery_location: machineData.location,
+                  owner_phone: machineData.contact_phone,
                 };
 
                 if (machineData.owner_id) {
@@ -517,7 +518,6 @@ function ProfileContent() {
                         owner_name: ownerData.name,
                         owner_email: ownerData.email,
                         owner_image: ownerData.image,
-                        owner_phone: ownerData.phone,
                         owner_location: ownerData.location,
                       };
                     }

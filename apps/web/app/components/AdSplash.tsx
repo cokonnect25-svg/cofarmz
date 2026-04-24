@@ -14,7 +14,7 @@ export default function AdSplash({ onDone }: { onDone: () => void }) {
       });
     }, 100);
     const fadeTimer = setTimeout(() => setFading(true), 2600);
-    const doneTimer = setTimeout(() => onDone(), 3000);
+    const doneTimer = setTimeout(() => onDone(), 2000);
     return () => { clearInterval(interval); clearTimeout(fadeTimer); clearTimeout(doneTimer); };
   }, [onDone]);
 

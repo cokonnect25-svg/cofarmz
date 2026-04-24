@@ -24,6 +24,19 @@ function MessagesContent() {
   };
 
   useEffect(() => {
+  const input = document.querySelector("input");
+
+  const handler = () => {
+    setTimeout(() => {
+      input?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 300);
+  };
+
+  input?.addEventListener("focus", handler);
+  return () => input?.removeEventListener("focus", handler);
+}, []);
+
+  useEffect(() => {
     const fetchMessages = async () => {
       if (!user?.id || !ownerId) return;
       try {
@@ -86,7 +99,13 @@ function MessagesContent() {
       Android/iOS browsers with virtualKeyboard API or default resize behavior),
       so the layout compresses and the input stays pinned at the bottom.
     */
-    <div className="flex flex-col h-[100dvh] bg-white">
+    <div
+  className="flex flex-col bg-white"
+  style={{
+    height: '100vh',
+
+  }}
+>
 
       {/* Header — flex-shrink-0 so it never compresses */}
       <div className="flex-shrink-0 bg-green-600 text-white px-4 py-3 flex items-center gap-3">

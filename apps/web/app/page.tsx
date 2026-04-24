@@ -74,6 +74,8 @@ function HomePageContent() {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [roleUpdating, setRoleUpdating] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  
  
 
   useEffect(() => { setMounted(true); }, []);

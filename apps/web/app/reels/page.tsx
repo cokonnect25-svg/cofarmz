@@ -132,7 +132,12 @@ useEffect(() => {
 const handleLike = async (reelId: string) => {
   if (!user) return;
 
+    const likingRef = useRef(new Set<string>());
+
   const wasLiked = likedReels.has(reelId);
+    if (likingRef.current.has(reelId)) return;
+      likingRef.current.add(reelId);
+
 
   // Optimistic update — simple +1 / -1, no reconciliation needed
   setLikedReels((prev) => {
@@ -140,13 +145,16 @@ const handleLike = async (reelId: string) => {
     wasLiked ? next.delete(reelId) : next.add(reelId);
     return next;
   });
-  setReels((prev) =>
-    prev.map((r) =>
-      r.id === reelId
-        ? { ...r, likes: Math.max(0, r.likes + (wasLiked ? -1 : 1)) }
-        : r
-    )
-  );
+setReels((prev) =>
+  prev.map((r) =>
+    r.id === reelId
+      ? { 
+          ...r, 
+          likes: Math.max(0, Number(r.likes) + (wasLiked ? -1 : 1)) 
+        }
+      : r
+  )
+);
 
   try {
     const res = await fetch(getApiUrl(`/api/reels/${reelId}/like`), {
@@ -308,6 +316,64 @@ const handleLike = async (reelId: string) => {
       setPostingComment(false);
     }
   };
+
+  const handleShare = async (e: React.MouseEvent, reel: Reel) => {
+  e.stopPropagation();
+
+  const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`;
+  const title = reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel';
+  const text = reel.caption || 'Check out this reel on CoFarmz!';
+
+  // ✅ 1. Native (Capacitor) — MOST RELIABLE
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await Share.share({
+        title,
+        text,
+        url: shareUrl,
+      });
+      return;
+    } catch (err: any) {
+      if (err?.message?.includes('cancel')) return;
+    }
+  }
+
+  // ✅ 2. Web Share API (mobile browsers)
+  if (typeof navigator !== 'undefined' && navigator.share) {
+    try {
+      await navigator.share({ title, text, url: shareUrl });
+      return;
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+    }
+  }
+
+  // ✅ 3. Clipboard fallback (guaranteed)
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    setShareToast('🔗 Link copied!');
+    setTimeout(() => setShareToast(null), 2000);
+    return;
+  } catch {
+    // fallback if clipboard blocked
+  }
+
+  // ✅ 4. LAST fallback (old browsers)
+  try {
+    const input = document.createElement('input');
+    input.value = shareUrl;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    document.body.removeChild(input);
+
+    setShareToast('🔗 Link copied!');
+  } catch {
+    setShareToast('Sharing not supported');
+  }
+
+  setTimeout(() => setShareToast(null), 2000);
+};
 
 
   const handleScroll = useCallback(() => {
@@ -540,54 +606,7 @@ const handleLike = async (reelId: string) => {
 
                 {/* Share */}
                 <button
-onClick={async (e) => {
-  e.stopPropagation();
-  e.preventDefault();
-  
-  const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`;
-
-  // Capacitor native
-  if (Capacitor.isNativePlatform()) {
-    try {
-      const { Share } = await import('@capacitor/share');
-      await Share.share({
-        title: reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel',
-        text: reel.caption || 'Check out this reel on CoFarmz!',
-        url: shareUrl,
-      });
-    } catch (err: any) {
-    if (!err?.message?.includes('cancel')) {
-      setShareToast('Could not share');
-      setTimeout(() => setShareToast(null), 2000);
-    }
-  }
-  return;
-  }
-
-  // Web Share API — must be called synchronously within user gesture
-  if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-    try {
-      await navigator.share({
-        title: reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel',
-        text: reel.caption || 'Check out this reel on CoFarmz!',
-        url: shareUrl,
-      });
-      return;
-    } catch (err: any) {
-      if (err?.name === 'AbortError') return; // user dismissed — do nothing
-      // else fall through to clipboard
-    }
-  }
-
-  // Clipboard fallback (desktop / unsupported browsers)
-  try {
-    await navigator.clipboard.writeText(shareUrl);
-    setShareToast('🔗 Link copied to clipboard!');
-  } catch {
-    setShareToast('Could not copy link');
-  }
-  setTimeout(() => setShareToast(null), 2500);
-}}
+onClick={(e) => handleShare(e, reel)}
                   className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
                 >
                    <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl">

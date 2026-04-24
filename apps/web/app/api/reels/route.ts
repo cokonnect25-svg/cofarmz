@@ -22,8 +22,8 @@ export async function GET(request: Request) {
           SELECT
             r.id, r.user_id, r.video_url, r.caption, r.thumbnail_url, r.created_at,
             u.name, u.image,
-            (SELECT COUNT(*) FROM reel_likes WHERE reel_id = r.id) as likes,
-            (SELECT COUNT(*) FROM reel_comments WHERE reel_id = r.id) as comments,
+            (SELECT COUNT(*)::int FROM reel_likes WHERE reel_id = r.id) as likes,
+            (SELECT COUNT(*)::int FROM reel_comments WHERE reel_id = r.id) as comments,
             COALESCE(r.views, 0) as views,
             ${currentUserId ? sql`EXISTS(SELECT 1 FROM reel_likes WHERE reel_id = r.id AND user_id = ${currentUserId})` : sql`false`} as is_liked,
             ${currentUserId ? sql`EXISTS(SELECT 1 FROM follows WHERE user_id = ${currentUserId} AND following_id = r.user_id)` : sql`false`} as is_followed
@@ -39,8 +39,8 @@ export async function GET(request: Request) {
           SELECT
             r.id, r.user_id, r.video_url, r.caption, r.thumbnail_url, r.created_at,
             u.name, u.image,
-            (SELECT COUNT(*) FROM reel_likes WHERE reel_id = r.id) as likes,
-            (SELECT COUNT(*) FROM reel_comments WHERE reel_id = r.id) as comments,
+            (SELECT COUNT(*)::int FROM reel_likes WHERE reel_id = r.id) as likes,
+            (SELECT COUNT(*)::int FROM reel_comments WHERE reel_id = r.id) as comments,
             COALESCE(r.views, 0) as views,
             ${currentUserId ? sql`EXISTS(SELECT 1 FROM reel_likes WHERE reel_id = r.id AND user_id = ${currentUserId})` : sql`false`} as is_liked,
             ${currentUserId ? sql`EXISTS(SELECT 1 FROM follows WHERE user_id = ${currentUserId} AND following_id = r.user_id)` : sql`false`} as is_followed
@@ -58,8 +58,8 @@ export async function GET(request: Request) {
           SELECT 
             r.id, r.user_id, r.video_url, r.caption, r.thumbnail_url, r.created_at,
             u.name, u.image,
-            (SELECT COUNT(*) FROM reel_likes WHERE reel_id = r.id) as likes,
-            (SELECT COUNT(*) FROM reel_comments WHERE reel_id = r.id) as comments,
+            (SELECT COUNT(*)::int FROM reel_likes WHERE reel_id = r.id) as likes,
+            (SELECT COUNT(*)::int FROM reel_comments WHERE reel_id = r.id) as comments,
             COALESCE(r.views, 0) as views,
             EXISTS(SELECT 1 FROM reel_likes WHERE reel_id = r.id AND user_id = ${currentUserId}) as is_liked,
             EXISTS(SELECT 1 FROM follows WHERE user_id = ${currentUserId} AND following_id = r.user_id) as is_followed
@@ -76,8 +76,8 @@ export async function GET(request: Request) {
           SELECT 
             r.id, r.user_id, r.video_url, r.caption, r.thumbnail_url, r.created_at,
             u.name, u.image,
-            (SELECT COUNT(*) FROM reel_likes WHERE reel_id = r.id) as likes,
-            (SELECT COUNT(*) FROM reel_comments WHERE reel_id = r.id) as comments,
+            (SELECT COUNT(*)::int FROM reel_likes WHERE reel_id = r.id) as likes,
+            (SELECT COUNT(*)::int FROM reel_comments WHERE reel_id = r.id) as comments,
             COALESCE(r.views, 0) as views,
             EXISTS(SELECT 1 FROM reel_likes WHERE reel_id = r.id AND user_id = ${currentUserId}) as is_liked,
             EXISTS(SELECT 1 FROM follows WHERE user_id = ${currentUserId} AND following_id = r.user_id) as is_followed

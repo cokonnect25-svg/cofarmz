@@ -8,6 +8,7 @@ import { getApiUrl } from '@/lib/api';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 
+
 interface FarmerCrop {
   crop_name: string;
   years_of_experience: number | null;
@@ -81,8 +82,14 @@ function NearbyFarmersContent() {
     yieldDateTo: '',
     wasteOnly: false
   });
+  const [visibleCount, setVisibleCount] = useState(50);
 
   const today = new Date().toISOString().split('T')[0];
+
+
+  useEffect(() => {
+  setVisibleCount(50);
+}, [searchType, filters, searchQuery]);
 
   // No in-app call - using native tel: dial
 
@@ -586,53 +593,55 @@ function NearbyFarmersContent() {
 
         {/* Farmers List */}
         <section className="px-6 relative z-10 flex flex-col gap-5">
-          {loadingFarmers ? (
-            <div className="flex items-center justify-center py-10">
-              <div className="w-10 h-10 rounded-full border-4 border-brand-200 border-t-brand-600 animate-spin"></div>
-            </div>
-          ) : (() => {
-            const filteredFarmers = farmers
-              .filter((farmer) => {
-                const query = searchQuery.toLowerCase();
+  {loadingFarmers ? (
+    <div className="flex items-center justify-center py-10">
+      <div className="w-10 h-10 rounded-full border-4 border-brand-200 border-t-brand-600 animate-spin"></div>
+    </div>
+  ) : (() => {
+    const filteredFarmers = farmers
+      .filter((farmer) => {
+        const query = searchQuery.toLowerCase();
 
-                return query === '' ||
-                  farmer.name?.toLowerCase().includes(query) ||
-                  farmer.location?.toLowerCase().includes(query) ||
-                  farmer.crops?.some(crop =>
-                    crop.crop_name?.toLowerCase().includes(query)
-                  );
-              })
-              .sort((a, b) => {
-                if (sortBy === 'nearby') {
-                  const aDist = (!a.distance || a.distance >= 9999) ? 999999 : a.distance;
-                  const bDist = (!b.distance || b.distance >= 9999) ? 999999 : b.distance;
-                  return aDist - bDist;
-                }
-                if (sortBy === 'experience') {
-                  const aExp = a.crops?.reduce((sum: number, c: any) => sum + (c.years_of_experience || 0), 0) || 0;
-                  const bExp = b.crops?.reduce((sum: number, c: any) => sum + (c.years_of_experience || 0), 0) || 0;
-                  return bExp - aExp;
-                }
-                if (sortBy === 'active') return (b.equipment_count || 0) - (a.equipment_count || 0);
-                return 0;
-              });
+        return query === '' ||
+          farmer.name?.toLowerCase().includes(query) ||
+          farmer.location?.toLowerCase().includes(query) ||
+          farmer.crops?.some(crop =>
+            crop.crop_name?.toLowerCase().includes(query)
+          );
+      })
+      .sort((a, b) => {
+        if (sortBy === 'nearby') {
+          const aDist = (!a.distance || a.distance >= 9999) ? 999999 : a.distance;
+          const bDist = (!b.distance || b.distance >= 9999) ? 999999 : b.distance;
+          return aDist - bDist;
+        }
+        if (sortBy === 'experience') {
+          const aExp = a.crops?.reduce((sum: number, c: any) => sum + (c.years_of_experience || 0), 0) || 0;
+          const bExp = b.crops?.reduce((sum: number, c: any) => sum + (c.years_of_experience || 0), 0) || 0;
+          return bExp - aExp;
+        }
+        if (sortBy === 'active') return (b.equipment_count || 0) - (a.equipment_count || 0);
+        return 0;
+      });
 
-            return filteredFarmers.length === 0 ? (
-              <div className="text-center py-10">
-                <i className="ph-bold ph-magnifying-glass text-4xl text-gray-300 mb-3 block"></i>
-                <p className="text-gray-500 font-medium">
-                  {searchQuery
-                    ? `No ${searchType === 'farmers' ? 'farmers' : searchType === 'wastage' ? 'wastage crop buyers' : 'buyers'} found matching "${searchQuery}"`
-                    : `No ${searchType === 'farmers' ? 'farmers' : searchType === 'wastage' ? 'wastage crop buyers' : 'buyers'} found with selected filters`}
-                </p>
-              </div>
-            ) : (
-              filteredFarmers.map((farmer) => (
-                <div
-                  key={farmer.id}
-                  className="bg-white rounded-[24px] p-5 shadow-soft hover:shadow-lg transition-shadow cursor-pointer active:scale-[0.98]"
-                  onClick={() => router.push(`/farmer-profile?id=${farmer.id}`)}
-                >
+    return filteredFarmers.length === 0 ? (
+      <div className="text-center py-10">
+        <i className="ph-bold ph-magnifying-glass text-4xl text-gray-300 mb-3 block"></i>
+        <p className="text-gray-500 font-medium">
+          {searchQuery
+            ? `No ${searchType === 'farmers' ? 'farmers' : searchType === 'wastage' ? 'wastage crop buyers' : 'buyers'} found matching "${searchQuery}"`
+            : `No ${searchType === 'farmers' ? 'farmers' : searchType === 'wastage' ? 'wastage crop buyers' : 'buyers'} found with selected filters`}
+        </p>
+      </div>
+    ) : (
+      <>
+        {/* 🔹 LIST */}
+        {filteredFarmers.slice(0, visibleCount).map((farmer) => (
+          <div
+            key={farmer.id}
+            className="bg-white rounded-[24px] p-5 shadow-soft hover:shadow-lg transition-shadow cursor-pointer active:scale-[0.98]"
+            onClick={() => router.push(`/farmer-profile?id=${farmer.id}`)}
+          >
                   {/* Farmer Header */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3 flex-1">
@@ -827,10 +836,23 @@ function NearbyFarmersContent() {
                     </button>
                   </div>
                 </div>
-              ))
-            );
-          })()}
-        </section>
+        ))}
+
+        {/* 🔹 LOAD MORE BUTTON */}
+        {filteredFarmers.length > visibleCount && (
+          <div className="flex justify-center mt-6">
+            <button
+              onClick={() => setVisibleCount(prev => prev + 50)}
+              className="px-6 py-3 bg-brand-700 text-white rounded-xl font-bold text-sm hover:bg-brand-800 active:scale-95 transition"
+            >
+              Load More
+            </button>
+          </div>
+        )}
+      </>
+    );
+  })()}
+</section>
       </div>
 
     </>

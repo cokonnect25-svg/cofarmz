@@ -175,7 +175,7 @@ const handleOpenNotifPanel = () => {
     { href: '/', label: 'Home', icon: 'ph-house' },
     { href: '/about', label: 'About', icon: 'ph-info' },
     { href: '/machinery-list', label: 'Fleets', icon: 'ph-tractor' },
-    { href: '/reels', label: 'Tales', icon: 'ph-video' },
+    { href: '/reels', label: 'Farmer Tales', icon: 'ph-video' },
     { href: '/nearby-farmers', label: 'Farmers & Buyers', icon: 'ph-users' },
     { href: '/chat', label: 'Messages', icon: 'ph-chat-circle' },
   ];

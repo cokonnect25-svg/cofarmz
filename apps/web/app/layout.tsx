@@ -13,13 +13,19 @@ import { Browser } from '@capacitor/browser';
 import { useEffect } from "react";
 import { authClient } from "@/lib/auth-client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePathname } from "next/navigation";
 
 const TOP_NAV_H = 64;  // must match TopNav h-[64px]
 const BOTTOM_NAV_H = 60; // must match BottomNav height
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const showBottomNav = !!user;
+
+    const { user } = useAuth();
+  const pathname = usePathname();
+
+  // 🚨 disable for chat screen
+  const hideBottomNav = pathname?.startsWith("/chat");
+  const showBottomNav = !!user && !hideBottomNav;
 
   useEffect(() => {
     const handleUrlOpen = async (event: any) => {
@@ -45,9 +51,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         style={{
           paddingTop: `calc(${TOP_NAV_H}px + env(safe-area-inset-top))`,
           // Global bottom padding — every page is safe without per-page changes
-          paddingBottom: showBottomNav
-            ? `calc(${BOTTOM_NAV_H}px + env(safe-area-inset-bottom))`
-            : '0px',
+paddingBottom: showBottomNav
+  ? `calc(${BOTTOM_NAV_H}px + env(safe-area-inset-bottom))`
+  : `env(safe-area-inset-bottom)`,
         }}
       >
         {/*

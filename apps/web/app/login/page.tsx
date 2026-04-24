@@ -348,6 +348,18 @@ const handleGoogleSignIn = async () => {
             </button>
           </p>
 
+          <div className="mt-8 p-4 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm">
+  <p className="text-green-50 text-sm mb-2">
+    Not sure what CoFarmz is?
+  </p>
+  <a
+    href="/about"
+    className="inline-block text-white font-semibold text-sm hover:underline"
+  >
+    Explore About Us →
+  </a>
+</div>
+
           <div className="flex justify-center gap-6 mt-8 text-xs text-gray-400">
             <a href="/terms" className="hover:text-gray-600 transition">Terms of Service</a>
             <a href="/privacy" className="hover:text-gray-600 transition">Privacy Policy</a>

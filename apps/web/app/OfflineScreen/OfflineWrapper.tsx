@@ -5,30 +5,36 @@ import OfflineScreen from './OfflineScreen';
 
 export default function OfflineWrapper({ children }: { children: React.ReactNode }) {
   const [isOffline, setIsOffline] = useState(false);
+  const [ready, setReady] = useState(false); // 🔥 IMPORTANT
 
   const handleOnline  = useCallback(() => setIsOffline(false), []);
-  const handleOffline = useCallback(() => setIsOffline(true),  []);
+  const handleOffline = useCallback(() => setIsOffline(true), []);
 
   useEffect(() => {
-    // Set initial state from browser
-    setIsOffline(!navigator.onLine);
+    const offline = !navigator.onLine;
 
-    window.addEventListener('online',  handleOnline);
+    setIsOffline(offline);
+    setReady(true); // ✅ now we know status
+
+    window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     return () => {
-      window.removeEventListener('online',  handleOnline);
+      window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, [handleOnline, handleOffline]);
 
   const handleRetry = () => {
-    // Re-check live by pinging a tiny endpoint
     fetch('/api/ping', { cache: 'no-store' })
       .then(() => setIsOffline(false))
       .catch(() => setIsOffline(true));
   };
 
+  // 🚫 BLOCK initial render (prevents API calls)
+  if (!ready) return null;
+
   if (isOffline) return <OfflineScreen onRetry={handleRetry} />;
+
   return <>{children}</>;
 }
