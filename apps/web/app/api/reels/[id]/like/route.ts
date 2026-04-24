@@ -11,10 +11,7 @@ export async function POST(
     const userId = request.headers.get("x-user-id");
 
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const existing = await sql`
@@ -22,24 +19,29 @@ export async function POST(
     `;
 
     if (existing.length > 0) {
-      // Unlike
       await sql`
         DELETE FROM reel_likes WHERE user_id = ${userId} AND reel_id = ${id}
       `;
-      return NextResponse.json({ liked: false });
     } else {
-      // Like
       await sql`
         INSERT INTO reel_likes (user_id, reel_id)
         VALUES (${userId}, ${id})
+        ON CONFLICT (user_id, reel_id) DO NOTHING
       `;
-      return NextResponse.json({ liked: true });
     }
+
+    // Always return the real count from DB — single source of truth
+    const countResult = await sql`
+      SELECT COUNT(*)::int AS count FROM reel_likes WHERE reel_id = ${id}
+    `;
+
+    const liked = existing.length === 0; // was not liked → now liked
+    const likes = countResult[0]?.count ?? 0;
+
+    return NextResponse.json({ liked, likes });
+
   } catch (error) {
     console.error("Like error:", error);
-    return NextResponse.json(
-      { error: "Failed to like reel" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to like reel" }, { status: 500 });
   }
 }

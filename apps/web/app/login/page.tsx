@@ -30,6 +30,7 @@ useEffect(() => {
     GoogleAuth.initialize({
       clientId: '866114557322-neeln0vj5sa2rslac9h8dvfvvceaoina.apps.googleusercontent.com',
       scopes: ['profile', 'email'],
+      
     });
   }
 }, []);
@@ -65,13 +66,17 @@ useEffect(() => {
     }
   };
 
- const handleGoogleSignIn = async () => {
+const handleGoogleSignIn = async () => {
   setError('');
   setIsLoading(true);
 
   try {
     // 📱 MOBILE FLOW
     if (Capacitor.isNativePlatform()) {
+
+      // 🔥 FORCE ACCOUNT PICKER EVERY TIME
+      await GoogleAuth.signOut().catch(() => {});
+
       const user = await GoogleAuth.signIn();
 
       const idToken = user.authentication?.idToken;
@@ -99,16 +104,15 @@ useEffect(() => {
         throw new Error(data.message || `Login failed (HTTP ${res.status})`);
       }
 
-      // Store user in localStorage so useAuth sees the session after redirect.
-      // (CapacitorHttp and WebView use different cookie stores on Android, so
-      // cookie-based session checks fail — localStorage is the reliable path.)
       if (data.user) {
         storeMobileSession(data.user);
       }
 
-      // Also set the cookie as a backup for better-auth API calls
       if (data.signedToken) {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cofarmz-backend-866114557322.asia-south1.run.app';
+        const backendUrl =
+          process.env.NEXT_PUBLIC_BACKEND_URL ||
+          'https://cofarmz-backend-866114557322.asia-south1.run.app';
+
         await CapacitorCookies.setCookie({
           url: backendUrl,
           key: 'cofarmz.session_token',
@@ -116,21 +120,31 @@ useEffect(() => {
         });
       }
 
-      // ✅ redirect inside app
       window.location.href = '/';
     }
 
-    // 🌐 WEB FLOW — same direct-URL approach as mobile
+    // 🌐 WEB FLOW
     else {
-      const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || 'https://cofarmz-backend-866114557322.asia-south1.run.app').replace(/\/$/, '');
+      const backendUrl = (
+        process.env.NEXT_PUBLIC_BACKEND_URL ||
+        'https://cofarmz-backend-866114557322.asia-south1.run.app'
+      ).replace(/\/$/, '');
+
       const callbackURL = `${window.location.origin}/auth-callback`;
-      const authUrl = `${backendUrl}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`;
+
+      // 🔥 ADD prompt=select_account FOR WEB
+      const authUrl = `${backendUrl}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(
+        callbackURL
+      )}&prompt=select_account`;
+
       window.location.href = authUrl;
-      // Page navigates away — no further code runs
     }
   } catch (err: any) {
     console.error('Google Sign-in Error:', err);
-    setError(err.message || 'Google sign-in failed. Check your connection and try again.');
+    setError(
+      err.message ||
+        'Google sign-in failed. Check your connection and try again.'
+    );
     setIsLoading(false);
   }
 };

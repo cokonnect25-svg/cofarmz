@@ -82,6 +82,8 @@ function NearbyFarmersContent() {
     wasteOnly: false
   });
 
+  const today = new Date().toISOString().split('T')[0];
+
   // No in-app call - using native tel: dial
 
   useEffect(() => {
@@ -350,10 +352,10 @@ function NearbyFarmersContent() {
 
         {/* Filter Modal */}
         {showFilter && (
-          <div
-            className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-20"
-            onClick={() => setShowFilter(false)}
-          >
+<div
+  className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
+  onClick={() => setShowFilter(false)}
+>
             <div
               className="w-full mx-4 bg-white rounded-2xl p-6 max-w-sm shadow-2xl max-h-[80vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
@@ -417,21 +419,23 @@ function NearbyFarmersContent() {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs text-gray-600 mb-1">From Date</label>
-                    <input
-                      type="date"
-                      value={filters.yieldDateFrom}
-                      onChange={(e) => setFilters({ ...filters, yieldDateFrom: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-brand-600"
-                    />
+<input
+  type="date"
+  min={today}
+  value={filters.yieldDateFrom}
+  onChange={(e) => setFilters({ ...filters, yieldDateFrom: e.target.value })}
+  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-brand-600"
+/>
                   </div>
                   <div>
                     <label className="block text-xs text-gray-600 mb-1">To Date</label>
-                    <input
-                      type="date"
-                      value={filters.yieldDateTo}
-                      onChange={(e) => setFilters({ ...filters, yieldDateTo: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-brand-600"
-                    />
+<input
+  type="date"
+  min={filters.yieldDateFrom || today}
+  value={filters.yieldDateTo}
+  onChange={(e) => setFilters({ ...filters, yieldDateTo: e.target.value })}
+  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-brand-600"
+/>
                   </div>
                 </div>
               </div>

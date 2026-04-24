@@ -540,42 +540,53 @@ const handleLike = async (reelId: string) => {
 
                 {/* Share */}
                 <button
-onClick={async () => {
+onClick={async (e) => {
+  e.stopPropagation();
+  e.preventDefault();
+  
   const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`;
-  const shareData = {
-    title: reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel',
-    text: reel.caption || 'Check out this reel on CoFarmz!',
-    url: shareUrl,
-  };
 
-  // Native app — use Capacitor Share (opens OS share sheet)
+  // Capacitor native
   if (Capacitor.isNativePlatform()) {
     try {
-      await Share.share(shareData);
+      const { Share } = await import('@capacitor/share');
+      await Share.share({
+        title: reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel',
+        text: reel.caption || 'Check out this reel on CoFarmz!',
+        url: shareUrl,
+      });
     } catch (err: any) {
-      // User cancelled — do nothing
+    if (!err?.message?.includes('cancel')) {
+      setShareToast('Could not share');
+      setTimeout(() => setShareToast(null), 2000);
     }
-    return;
+  }
+  return;
   }
 
-  // Web — use navigator.share if supported (shows OS share sheet on mobile browsers)
-  if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+  // Web Share API — must be called synchronously within user gesture
+  if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
     try {
-      await navigator.share(shareData);
+      await navigator.share({
+        title: reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel',
+        text: reel.caption || 'Check out this reel on CoFarmz!',
+        url: shareUrl,
+      });
       return;
     } catch (err: any) {
-      if (err?.name === 'AbortError') return; // user dismissed
+      if (err?.name === 'AbortError') return; // user dismissed — do nothing
+      // else fall through to clipboard
     }
   }
 
-  // Desktop fallback — copy to clipboard
+  // Clipboard fallback (desktop / unsupported browsers)
   try {
     await navigator.clipboard.writeText(shareUrl);
-    setShareToast('Link copied!');
+    setShareToast('🔗 Link copied to clipboard!');
   } catch {
     setShareToast('Could not copy link');
   }
-  setTimeout(() => setShareToast(null), 2000);
+  setTimeout(() => setShareToast(null), 2500);
 }}
                   className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
                 >
