@@ -112,7 +112,10 @@ function ChatContent() {
 
   return (
     <>
-      <div className="pt-4 text-gray-800 relative min-min-h-[100dvh] pb-40 bg-white" suppressHydrationWarning>
+      <div
+  className="flex flex-col bg-white"
+  style={{ height: 'calc(100dvh - 55px)' }}
+>
         {/* Header */}
         <header className="w-full px-6 pb-4 pt-4 sticky top-[55px] bg-white z-40">
           <div className="flex items-center justify-between mb-4">

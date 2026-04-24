@@ -53,6 +53,25 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    if (expected_yield_quantity !== null && expected_yield_quantity !== undefined) {
+  if (isNaN(expected_yield_quantity) || expected_yield_quantity <= 0) {
+    return NextResponse.json(
+      { error: 'Invalid quantity value' },
+      { status: 400 }
+    );
+  }
+}
+
+if (years_of_experience !== null && years_of_experience !== undefined) {
+  if (years_of_experience < 0) {
+    return NextResponse.json(
+      { error: 'Invalid experience value' },
+      { status: 400 }
+    );
+  }
+}
+
     const trimmedCropName = crop_name.trim();
 
     // Ensure optional columns exist (in case table was created before these were added)
@@ -60,6 +79,19 @@ export async function POST(request: Request) {
     await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS is_crop_waste BOOLEAN DEFAULT false`.catch(() => {});
     // Drop restrictive check constraint so 'buy' and other values are allowed
     await sql`ALTER TABLE crops DROP CONSTRAINT IF EXISTS crops_crop_type_check`.catch(() => {});
+
+    const existing = await sql`
+  SELECT id FROM crops 
+  WHERE user_id = ${user_id} 
+  AND LOWER(crop_name) = LOWER(${trimmedCropName})
+`;
+
+if (existing.length > 0) {
+  return NextResponse.json(
+    { error: 'Crop already exists for this user' },
+    { status: 400 }
+  );
+}
 
     const result = await sql`
       INSERT INTO crops (user_id, crop_name, years_of_experience, expertise_level, expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom, crop_type, is_crop_waste)
@@ -76,7 +108,17 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const { id, crop_name, years_of_experience, expertise_level, expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom, crop_type, is_crop_waste } = await request.json();
+    const {
+      id,
+      crop_name,
+      years_of_experience,
+      expertise_level,
+      expected_yield_date,
+      expected_yield_quantity,
+      expected_yield_quantity_uom,
+      crop_type,
+      is_crop_waste
+    } = await request.json();
 
     if (!id || !crop_name) {
       return NextResponse.json(
@@ -85,9 +127,41 @@ export async function PUT(request: Request) {
       );
     }
 
+    const trimmedCropName = crop_name.trim();
+
+    // 🔥 Get user_id of this crop (IMPORTANT FIX)
+    const cropRow = await sql`
+      SELECT user_id FROM crops WHERE id = ${parseInt(id)}
+    `;
+
+    if (cropRow.length === 0) {
+      return NextResponse.json(
+        { error: 'Crop not found' },
+        { status: 404 }
+      );
+    }
+
+    const user_id = cropRow[0].user_id;
+
+    // 🔒 Check duplicate (excluding current crop)
+    const existing = await sql`
+      SELECT id FROM crops 
+      WHERE user_id = ${user_id}
+      AND LOWER(crop_name) = LOWER(${trimmedCropName})
+      AND id != ${parseInt(id)}
+    `;
+
+    if (existing.length > 0) {
+      return NextResponse.json(
+        { error: 'Crop already exists' },
+        { status: 400 }
+      );
+    }
+
+    // ✅ Update
     const result = await sql`
       UPDATE crops 
-      SET crop_name = ${crop_name}, 
+      SET crop_name = ${trimmedCropName}, 
           years_of_experience = ${years_of_experience || null}, 
           expertise_level = ${expertise_level || 'Beginner'},
           expected_yield_date = ${expected_yield_date || null},
@@ -100,9 +174,13 @@ export async function PUT(request: Request) {
     `;
 
     return NextResponse.json(result[0]);
+
   } catch (error) {
     console.error('Error updating crop:', error);
-    return NextResponse.json({ error: 'Failed to update crop' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to update crop' },
+      { status: 500 }
+    );
   }
 }
 

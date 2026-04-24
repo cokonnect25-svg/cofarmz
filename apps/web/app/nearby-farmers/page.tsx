@@ -696,28 +696,37 @@ function NearbyFarmersContent() {
                   </div>
 
                   {/* Crop Tags */}
-                  {farmer.crops && farmer.crops.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                      {farmer.crops.slice(0, 5).map((crop, i) => (
-                        <span
-                          key={i}
-                          className={`px-2.5 py-1 rounded-full text-xs font-semibold ${searchType === 'farmers'
-                              ? 'bg-green-100 text-green-800'
-                              : searchType === 'wastage'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-orange-100 text-orange-800'
-                            }`}
-                        >
-                          {searchType === 'farmers' ? '🌾' : searchType === 'wastage' ? '♻️' : '🛒'} {crop.crop_name}
-                        </span>
-                      ))}
-                      {farmer.crops.length > 5 && (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
-                          +{farmer.crops.length - 5} more
-                        </span>
-                      )}
-                    </div>
-                  )}
+{/* Crop Tags */}
+                    {farmer.crops && farmer.crops.length > 0 && (() => {
+                      // For wastage view, only show crops where is_crop_waste is true
+                      const displayCrops = searchType === 'wastage'
+                        ? farmer.crops.filter((crop: any) => crop.is_crop_waste)
+                        : farmer.crops;
+
+                      return displayCrops.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {displayCrops.slice(0, 5).map((crop, i) => (
+                            <span
+                              key={i}
+                              className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                searchType === 'farmers'
+                                  ? 'bg-green-100 text-green-800'
+                                  : searchType === 'wastage'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-orange-100 text-orange-800'
+                              }`}
+                            >
+                              {searchType === 'farmers' ? '🌾' : searchType === 'wastage' ? '♻️' : '🛒'} {crop.crop_name}
+                            </span>
+                          ))}
+                          {displayCrops.length > 5 && (
+                            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
+                              +{displayCrops.length - 5} more
+                            </span>
+                          )}
+                        </div>
+                      ) : null;
+                    })()}
 
                   {/* Stats Row — different for farmers vs buyers */}
                   <div className="flex gap-3 mb-4">

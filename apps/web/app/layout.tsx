@@ -4,6 +4,7 @@ import "./globals.css";
 import { AppGenProvider } from "@/components/appgen-provider";
 import TopNav from "@/app/components/TopNav";
 import Footer from "@/app/components/Footer";
+import OfflineWrapper from '@/app/OfflineScreen/OfflineWrapper';
 import GoogleTranslate from "@/app/components/GoogleTranslate";
 import LocationPermissionPopup from "@/app/components/LocationPermissionPopup";
 import BottomNav from "@/app/components/BottomNav";
@@ -105,6 +106,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/assets/cofarmz-logo.png" />
         <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,400&display=swap" />
         <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
         <style>{`
           .goog-te-banner-frame { display: none !important; }
           body { top: 0 !important; }
@@ -112,10 +114,16 @@ export default function RootLayout({
           .goog-te-gadget { font-size: 0 !important; }
         `}</style>
       </head>
+
       <body className="antialiased bg-surface-muted" suppressHydrationWarning>
         <AppGenProvider>
-          <GoogleTranslate />
-          <LayoutContent>{children}</LayoutContent>
+
+          {/* 🔥 WRAP HERE */}
+          <OfflineWrapper>
+            <GoogleTranslate />
+            <LayoutContent>{children}</LayoutContent>
+          </OfflineWrapper>
+
         </AppGenProvider>
       </body>
     </html>

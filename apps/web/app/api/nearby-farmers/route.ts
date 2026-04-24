@@ -214,20 +214,27 @@ export async function GET(request: NextRequest) {
     });
 
     // Build farmers with details
-    const farmersWithDetails = result.map((farmer: any) => {
-      const crops = cropsMap.get(farmer.id) || [];
-      const equipment = (equipmentMap.get(farmer.id) || []).slice(0, 5);
-      return {
-        ...farmer,
-        crops: crops,
-        crops_count: crops.length,
-        equipment: equipment,
-        equipment_count: parseInt(farmer.equipment_count) || 0,
-        rating: null,
-        followers_count: followersMap.get(farmer.id) || 0,
-        following_count: followingMap.get(farmer.id) || 0
-      };
-    });
+// Build farmers with details
+const farmersWithDetails = result.map((farmer: any) => {
+  const allFarmerCrops = cropsMap.get(farmer.id) || [];
+  const equipment = (equipmentMap.get(farmer.id) || []).slice(0, 5);
+
+  // For wastage search, only surface waste crops in the crops array
+  const crops = (showWasteBuyers)
+    ? allFarmerCrops.filter((c: any) => c.is_crop_waste)
+    : allFarmerCrops;
+
+  return {
+    ...farmer,
+    crops,
+    crops_count: crops.length,          // reflects filtered count
+    equipment,
+    equipment_count: parseInt(farmer.equipment_count) || 0,
+    rating: null,
+    followers_count: followersMap.get(farmer.id) || 0,
+    following_count: followingMap.get(farmer.id) || 0,
+  };
+});
 
     // Sort by distance
     farmersWithDetails.sort((a: any, b: any) => a.distance - b.distance);

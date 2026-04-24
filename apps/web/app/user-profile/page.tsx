@@ -658,6 +658,82 @@ function ProfileContent() {
       return;
     }
 
+    // 🔒 Trim values
+const name = newCrop.crop_name.trim();
+const qty = newCrop.expected_yield_quantity;
+const exp = newCrop.years_of_experience;
+
+// 🚨 Required
+if (!name) {
+  alert("Crop name is required");
+  return;
+}
+
+// 🚫 Prevent numbers/symbols in name
+if (!/^[A-Za-z\s]+$/.test(name)) {
+  alert("Crop name should contain only letters");
+  return;
+}
+
+// 📅 Date validation (optional but smart)
+if (newCrop.expected_yield_date) {
+  const selectedDate = new Date(newCrop.expected_yield_date);
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  if (selectedDate < today) {
+    alert("Yield date cannot be in the past");
+    return;
+  }
+}
+
+// 🔢 Quantity validation
+if (qty) {
+  const parsedQty = parseFloat(qty);
+
+  if (isNaN(parsedQty)) {
+    alert("Quantity must be a number");
+    return;
+  }
+
+  if (parsedQty <= 0) {
+    alert("Quantity must be greater than 0");
+    return;
+  }
+
+  if (parsedQty > 1000000) {
+    alert("Quantity too large");
+    return;
+  }
+}
+
+// 📊 Experience validation
+if (exp) {
+  const parsedExp = parseInt(exp);
+
+  if (isNaN(parsedExp) || parsedExp < 0) {
+    alert("Experience must be a positive number");
+    return;
+  }
+
+  if (parsedExp > 80) {
+    alert("Experience seems unrealistic");
+    return;
+  }
+}
+
+
+    const normalizedNewCrop = newCrop.crop_name.trim().toLowerCase();
+
+const alreadyExists = farmerCrops.some(
+  (c) => c.crop_name.trim().toLowerCase() === normalizedNewCrop
+);
+
+if (alreadyExists) {
+  alert("Crop already added");
+  return;
+}
+
     setAddingCrop(true);
     try {
       const response = await fetch(getApiUrl(`/api/farmer-crops`), {
@@ -824,10 +900,27 @@ function ProfileContent() {
   const handleUpdateProfile = async () => {
     if (!user?.id) return;
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!editForm.name || !editForm.email || !editForm.phone) {
+  alert("All fields are required");
+  return;
+}
+
     if (!editForm.name.trim()) {
       alert('Name is required');
       return;
     }
+
+    if (editForm.phone.length !== 10) {
+  alert("Phone must be 10 digits");
+  return;
+}
+
+    if (!emailRegex.test(editForm.email)) {
+  alert("Enter a valid email");
+  return;
+}
 
     setIsUpdatingProfile(true);
     try {
@@ -2018,13 +2111,19 @@ function ProfileContent() {
                 <>
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">Years of Experience</label>
-                    <input
-                      type="number"
-                      placeholder="e.g., 5"
-                      value={newCrop.years_of_experience}
-                      onChange={(e) => setNewCrop({ ...newCrop, years_of_experience: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
+<input
+  type="number"
+  min="0"
+  max="80"
+  value={newCrop.years_of_experience}
+  onChange={(e) => {
+    const val = e.target.value;
+
+    if (val === "" || parseInt(val) >= 0) {
+      setNewCrop({ ...newCrop, years_of_experience: val });
+    }
+  }}
+/>
                   </div>
 
                   <div>
@@ -2074,13 +2173,19 @@ function ProfileContent() {
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
                     {userRole === 'farmer' ? 'Expected Quantity' : 'Quantity Needed'}
                   </label>
-                  <input
-                    type="number"
-                    placeholder="e.g., 1000"
-                    value={newCrop.expected_yield_quantity}
-                    onChange={(e) => setNewCrop({ ...newCrop, expected_yield_quantity: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
+<input
+  type="number"
+  min="1"
+  step="0.1"
+  value={newCrop.expected_yield_quantity}
+  onChange={(e) => {
+    const val = e.target.value;
+
+    if (val === "" || parseFloat(val) >= 0) {
+      setNewCrop({ ...newCrop, expected_yield_quantity: val });
+    }
+  }}
+/>
                 </div>
                 <div className="w-24">
                   <label className="block text-sm font-semibold text-gray-900 mb-2">Unit</label>
@@ -2311,7 +2416,14 @@ function ProfileContent() {
                 <input
                   type="text"
                   value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  onChange={(e) => {
+  const value = e.target.value;
+
+  // allow only alphabets + space
+  if (/^[A-Za-z\s]*$/.test(value)) {
+    setEditForm({ ...editForm, name: value });
+  }
+}}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
@@ -2320,18 +2432,28 @@ function ProfileContent() {
                 <input
                   type="email"
                   value={editForm.email}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  onChange={(e) => {
+  const value = e.target.value;
+  setEditForm({ ...editForm, email: value });
+}}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Phone</label>
                 <input
-                  type="tel"
-                  value={editForm.phone}
-                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
+  type="tel"
+  maxLength={10}
+  value={editForm.phone}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    // allow only numbers
+    if (/^\d*$/.test(value)) {
+      setEditForm({ ...editForm, phone: value });
+    }
+  }}
+/>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Location</label>
