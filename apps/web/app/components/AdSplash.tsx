@@ -13,8 +13,8 @@ export default function AdSplash({ onDone }: { onDone: () => void }) {
         return p + (100 / 30);
       });
     }, 100);
-    const fadeTimer = setTimeout(() => setFading(true), 2600);
-    const doneTimer = setTimeout(() => onDone(), 2000);
+const fadeTimer = setTimeout(() => setFading(true), 1500);
+const doneTimer = setTimeout(() => onDone(), 2000);
     return () => { clearInterval(interval); clearTimeout(fadeTimer); clearTimeout(doneTimer); };
   }, [onDone]);
 

@@ -8,22 +8,33 @@ import OfflineWrapper from '@/app/OfflineScreen/OfflineWrapper';
 import GoogleTranslate from "@/app/components/GoogleTranslate";
 import LocationPermissionPopup from "@/app/components/LocationPermissionPopup";
 import BottomNav from "@/app/components/BottomNav";
+import Script from "next/script";
 import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePathname } from "next/navigation";
+import AdSplash from "./components/AdSplash";
 
-const TOP_NAV_H = 64;  // must match TopNav h-[64px]
-const BOTTOM_NAV_H = 60; // must match BottomNav height
+const TOP_NAV_H = 64;
+const BOTTOM_NAV_H = 60;
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
 
-    const { user } = useAuth();
+  const { user } = useAuth();
   const pathname = usePathname();
 
-  // 🚨 disable for chat screen
+  const [showSplash, setShowSplash] = useState(false);
+
+  useEffect(() => {
+    const seen = sessionStorage.getItem("splash_seen");
+    if (!seen) {
+      sessionStorage.setItem("splash_seen", "1");
+      setShowSplash(true);
+    }
+  }, []);
+
   const hideBottomNav = pathname?.startsWith("/chat");
   const showBottomNav = !!user && !hideBottomNav;
 
@@ -43,24 +54,25 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-   <div className="flex flex-col min-h-[100dvh]">
+    <div className="flex flex-col min-h-[100dvh]">
+      {/* ✅ Phosphor loads only when online (inside OfflineWrapper → LayoutContent) */}
+      <Script
+        src="https://unpkg.com/@phosphor-icons/web"
+        strategy="lazyOnload"
+      />
+
+      {showSplash && <AdSplash onDone={() => setShowSplash(false)} />}
       <TopNav />
 
       <main
         className="flex-1 w-full"
         style={{
           paddingTop: `calc(${TOP_NAV_H}px + env(safe-area-inset-top))`,
-          // Global bottom padding — every page is safe without per-page changes
-paddingBottom: showBottomNav
-  ? `calc(${BOTTOM_NAV_H}px + env(safe-area-inset-bottom))`
-  : `env(safe-area-inset-bottom)`,
+          paddingBottom: showBottomNav
+            ? `calc(${BOTTOM_NAV_H}px + env(safe-area-inset-bottom))`
+            : `env(safe-area-inset-bottom)`,
         }}
       >
-        {/*
-          Override min-min-h-[100dvh] / min-h-[100dvh] globally when BottomNav is showing.
-          Pages that use these utilities would otherwise overflow the safe area
-          and hide their bottom content behind the nav.
-        */}
         {showBottomNav && (
           <style>{`
             .min-min-h-[100dvh] {
@@ -88,8 +100,6 @@ paddingBottom: showBottomNav
       </main>
 
       {showBottomNav && <BottomNav />}
-
-      {/* Footer only rendered for logged-out users */}
       {!showBottomNav && <Footer />}
 
       <LocationPermissionPopup />
@@ -111,7 +121,7 @@ export default function RootLayout({
         <link rel="shortcut icon" href="/assets/cofarmz-logo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/assets/cofarmz-logo.png" />
         <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,400&display=swap" />
-        <script src="https://unpkg.com/@phosphor-icons/web"></script>
+        {/* ✅ Phosphor script removed from here — now loaded conditionally via next/script inside LayoutContent */}
 
         <style>{`
           .goog-te-banner-frame { display: none !important; }
@@ -123,13 +133,11 @@ export default function RootLayout({
 
       <body className="antialiased bg-surface-muted" suppressHydrationWarning>
         <AppGenProvider>
-
-          {/* 🔥 WRAP HERE */}
           <OfflineWrapper>
+            {/* ✅ GoogleTranslate moved inside OfflineWrapper — won't mount when offline */}
             <GoogleTranslate />
             <LayoutContent>{children}</LayoutContent>
           </OfflineWrapper>
-
         </AppGenProvider>
       </body>
     </html>

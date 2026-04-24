@@ -167,6 +167,11 @@ function ProfileContent() {
     }
   };
 
+  const today = new Date();
+const localDate = new Date(
+  today.getTime() - today.getTimezoneOffset() * 60000
+).toISOString().split('T')[0];
+
   const handleRejectBooking = async (id: number) => {
     if (!confirm('Are you sure you want to decline this booking request?')) return;
 
@@ -2123,6 +2128,7 @@ if (alreadyExists) {
       setNewCrop({ ...newCrop, years_of_experience: val });
     }
   }}
+  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
 />
                   </div>
 
@@ -2160,12 +2166,14 @@ if (alreadyExists) {
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
                   {userRole === 'farmer' ? 'Expected Yield Date' : 'Want to Buy By'}
                 </label>
-                <input
-                  type="date"
-                  value={newCrop.expected_yield_date}
-                  onChange={(e) => setNewCrop({ ...newCrop, expected_yield_date: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
+<input
+  type="date"
+  min={localDate}
+  value={newCrop.expected_yield_date}
+  onChange={(e) =>
+    setNewCrop({ ...newCrop, expected_yield_date: e.target.value })
+  }
+/>
               </div>
 
               <div className="flex gap-3">
@@ -2185,6 +2193,7 @@ if (alreadyExists) {
       setNewCrop({ ...newCrop, expected_yield_quantity: val });
     }
   }}
+  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
 />
                 </div>
                 <div className="w-24">
@@ -2262,13 +2271,14 @@ if (alreadyExists) {
             <div className="p-6 space-y-4">
               <div className="relative">
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Crop Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Wheat, Rice, Corn..."
-                  value={editCropForm.crop_name}
-                  onChange={(e) => handleEditCropNameChange(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+<input
+  type="date"
+  min={localDate}
+  value={newCrop.expected_yield_date}
+  onChange={(e) =>
+    setNewCrop({ ...newCrop, expected_yield_date: e.target.value })
+  }
+/>
                 {showEditCropSuggestions && editCropSuggestions.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {editCropSuggestions.map((crop) => (
@@ -2333,9 +2343,11 @@ if (alreadyExists) {
                 </label>
                 <input
                   type="date"
-                  value={editCropForm.expected_yield_date}
-                  onChange={(e) => setEditCropForm({ ...editCropForm, expected_yield_date: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  min={localDate}
+                  value={newCrop.expected_yield_date}
+                  onChange={(e) =>
+                    setNewCrop({ ...newCrop, expected_yield_date: e.target.value })
+                  }
                 />
               </div>
 
@@ -2346,10 +2358,17 @@ if (alreadyExists) {
                   </label>
                   <input
                     type="number"
-                    placeholder="e.g., 1000"
-                    value={editCropForm.expected_yield_quantity}
-                    onChange={(e) => setEditCropForm({ ...editCropForm, expected_yield_quantity: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    min="1"
+                    step="0.1"
+                    value={newCrop.expected_yield_quantity}
+                    onChange={(e) => {
+                      const val = e.target.value;
+
+                      if (val === "" || parseFloat(val) >= 0) {
+                        setNewCrop({ ...newCrop, expected_yield_quantity: val });
+                      }
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div className="w-24">
@@ -2453,6 +2472,7 @@ if (alreadyExists) {
       setEditForm({ ...editForm, phone: value });
     }
   }}
+  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
 />
               </div>
               <div>
@@ -2571,12 +2591,31 @@ if (alreadyExists) {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Age</label>
-                <input
-                  type="number"
-                  value={editForm.age}
-                  onChange={(e) => setEditForm({ ...editForm, age: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
+<input
+  type="number"
+  value={editForm.age}
+  min={1}
+  max={120}
+  onChange={(e) => {
+    let value = e.target.value;
+
+    // Remove non-digits (extra safety)
+    value = value.replace(/[^0-9]/g, '');
+
+    // Convert to number
+    let num = Number(value);
+
+    // Clamp range
+    if (num > 120) num = 120;
+    if (num < 1 && value !== '') num = 1;
+
+    setEditForm({
+      ...editForm,
+      age: value === '' ? '' : num.toString(),
+    });
+  }}
+  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+/>
               </div>
 
               <div className="flex gap-3 pt-4">

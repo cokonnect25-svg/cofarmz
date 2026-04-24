@@ -199,7 +199,10 @@ export default function SignupPage() {
               <input
                 type="text"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                  setName(value);
+                }}
                 placeholder="Rajesh Kumar"
                 disabled={isLoading}
                 className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition text-sm"

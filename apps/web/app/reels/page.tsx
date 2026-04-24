@@ -57,6 +57,8 @@ function ReelsContent() {
   const lastTapRef = useRef<number>(0);
   const [videoReady, setVideoReady] = useState<Set<string>>(new Set());
   const [shareToast, setShareToast] = useState<string | null>(null);
+  // ✅ FIX 1: Move likingRef to component level (not inside handleLike)
+  const likingRef = useRef(new Set<string>());
 
   useEffect(() => {
     if (authLoading) return;
@@ -76,7 +78,6 @@ function ReelsContent() {
         const res = await fetch(apiUrl);
         if (res.ok) {
           const response = await res.json();
-          // Handle both old and new API response formats
           const data = response.data || response;
           setReels(data);
           const likedSet = new Set<string>();
@@ -87,7 +88,6 @@ function ReelsContent() {
           });
           setLikedReels(likedSet);
           setFollowingUsers(followingSet);
-          // Scroll to specific reel if reelId param provided
           const targetReelId = searchParams.get('reelId');
           if (targetReelId) {
             const idx = data.findIndex((r: Reel) => r.id === targetReelId);
@@ -114,60 +114,61 @@ function ReelsContent() {
     fetchReels();
   }, [user, authLoading, router]);
 
-  // Manage video playback, mute state, and track views
-useEffect(() => {
-  videosRef.current.forEach((video, idx) => {
-    if (!video) return;
-
-    // Sync muted state
-    video.muted = isMuted;
-
-    if (idx === currentReelIndex && videoReady.has(reels[idx]?.id)) {
-      video.play().catch(() => {});
-    } else {
-      video.pause();
-    }
-  });
-}, [currentReelIndex, videoReady, isMuted]);
-const handleLike = async (reelId: string) => {
-  if (!user) return;
-
-    const likingRef = useRef(new Set<string>());
-
-  const wasLiked = likedReels.has(reelId);
-    if (likingRef.current.has(reelId)) return;
-      likingRef.current.add(reelId);
-
-
-  // Optimistic update — simple +1 / -1, no reconciliation needed
-  setLikedReels((prev) => {
-    const next = new Set(prev);
-    wasLiked ? next.delete(reelId) : next.add(reelId);
-    return next;
-  });
-setReels((prev) =>
-  prev.map((r) =>
-    r.id === reelId
-      ? { 
-          ...r, 
-          likes: Math.max(0, Number(r.likes) + (wasLiked ? -1 : 1)) 
-        }
-      : r
-  )
-);
-
-  try {
-    const res = await fetch(getApiUrl(`/api/reels/${reelId}/like`), {
-      method: 'POST',
-      headers: { 'x-user-id': user.id },
+  useEffect(() => {
+    videosRef.current.forEach((video, idx) => {
+      if (!video) return;
+      video.muted = isMuted;
+      if (idx === currentReelIndex && videoReady.has(reels[idx]?.id)) {
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
     });
-    if (!res.ok) throw new Error('Failed');
-    // ✅ Trust the server's liked boolean, but DON'T touch the count again.
-    // The count was already adjusted optimistically and is correct.
-    const { liked } = await res.json();
-    // Only fix the heart icon if server disagrees with our optimistic toggle
-    if (liked === wasLiked) {
-      // Server says state didn't change — revert icon and count
+  }, [currentReelIndex, videoReady, isMuted]);
+
+  const handleLike = async (reelId: string) => {
+    if (!user) return;
+
+    // ✅ FIX 1: likingRef is now at component level — valid hook usage
+    const wasLiked = likedReels.has(reelId);
+    if (likingRef.current.has(reelId)) return;
+    likingRef.current.add(reelId);
+
+    setLikedReels((prev) => {
+      const next = new Set(prev);
+      wasLiked ? next.delete(reelId) : next.add(reelId);
+      return next;
+    });
+    setReels((prev) =>
+      prev.map((r) =>
+        r.id === reelId
+          ? { ...r, likes: Math.max(0, Number(r.likes) + (wasLiked ? -1 : 1)) }
+          : r
+      )
+    );
+
+    try {
+      const res = await fetch(getApiUrl(`/api/reels/${reelId}/like`), {
+        method: 'POST',
+        headers: { 'x-user-id': user.id },
+      });
+      if (!res.ok) throw new Error('Failed');
+      const { liked } = await res.json();
+      if (liked === wasLiked) {
+        setLikedReels((prev) => {
+          const next = new Set(prev);
+          wasLiked ? next.add(reelId) : next.delete(reelId);
+          return next;
+        });
+        setReels((prev) =>
+          prev.map((r) =>
+            r.id === reelId
+              ? { ...r, likes: Math.max(0, r.likes + (wasLiked ? 1 : -1)) }
+              : r
+          )
+        );
+      }
+    } catch {
       setLikedReels((prev) => {
         const next = new Set(prev);
         wasLiked ? next.add(reelId) : next.delete(reelId);
@@ -180,23 +181,11 @@ setReels((prev) =>
             : r
         )
       );
+    } finally {
+      // ✅ Always release the lock so the button works again
+      likingRef.current.delete(reelId);
     }
-  } catch {
-    // Revert everything on network error
-    setLikedReels((prev) => {
-      const next = new Set(prev);
-      wasLiked ? next.add(reelId) : next.delete(reelId);
-      return next;
-    });
-    setReels((prev) =>
-      prev.map((r) =>
-        r.id === reelId
-          ? { ...r, likes: Math.max(0, r.likes + (wasLiked ? 1 : -1)) }
-          : r
-      )
-    );
-  }
-};
+  };
 
   const handleFollow = async (e: React.MouseEvent, userId: string) => {
     e.stopPropagation();
@@ -231,7 +220,6 @@ setReels((prev) =>
           return newSet;
         });
 
-        // Update is_followed in reels
         setReels((prev) =>
           prev.map((reel) =>
             reel.user_id === userId
@@ -254,9 +242,7 @@ setReels((prev) =>
   const fetchComments = async (reelId: string) => {
     setCommentsLoading(true);
     try {
-      const res = await fetch(
-        getApiUrl(`/api/reels/${reelId}/comments`)
-      );
+      const res = await fetch(getApiUrl(`/api/reels/${reelId}/comments`));
       if (res.ok) {
         const data = await res.json();
         setCurrentReelComments(data);
@@ -293,15 +279,10 @@ setReels((prev) =>
       if (res.ok) {
         const newCommentData = await res.json();
         setCurrentReelComments([
-          {
-            ...newCommentData,
-            name: user.name,
-            image: user.image
-          },
+          { ...newCommentData, name: user.name, image: user.image },
           ...currentReelComments
         ]);
         setNewComment('');
-        // Update comment count
         setReels((prev) =>
           prev.map((reel) =>
             reel.id === reels[currentReelIndex].id
@@ -318,63 +299,60 @@ setReels((prev) =>
   };
 
   const handleShare = async (e: React.MouseEvent, reel: Reel) => {
-  e.stopPropagation();
+    e.stopPropagation();
 
-  const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`;
-  const title = reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel';
-  const text = reel.caption || 'Check out this reel on CoFarmz!';
+    const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`;
+    const title = reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel';
+    const text = reel.caption || 'Check out this reel on CoFarmz!';
 
-  // ✅ 1. Native (Capacitor) — MOST RELIABLE
-  if (Capacitor.isNativePlatform()) {
-    try {
-      await Share.share({
-        title,
-        text,
-        url: shareUrl,
-      });
-      return;
-    } catch (err: any) {
-      if (err?.message?.includes('cancel')) return;
+    // ✅ FIX 2: Native Capacitor share (iOS/Android app)
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Share.share({ title, text, url: shareUrl });
+        return;
+      } catch (err: any) {
+        if (err?.message?.includes('cancel')) return;
+        // fall through to web share if native fails unexpectedly
+      }
     }
-  }
 
-  // ✅ 2. Web Share API (mobile browsers)
-  if (typeof navigator !== 'undefined' && navigator.share) {
-    try {
-      await navigator.share({ title, text, url: shareUrl });
-      return;
-    } catch (err: any) {
-      if (err?.name === 'AbortError') return;
+    // ✅ FIX 2: Web Share API — only call if it can actually share URLs
+    // navigator.canShare guards against browsers that have share but reject URLs
+    if (
+      typeof navigator !== 'undefined' &&
+      typeof navigator.share === 'function' &&
+      (!navigator.canShare || navigator.canShare({ url: shareUrl }))
+    ) {
+      try {
+        await navigator.share({ title, text, url: shareUrl });
+        return;
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return; // user dismissed — don't fallback to copy
+        // any other error → fall through to clipboard
+      }
     }
-  }
 
-  // ✅ 3. Clipboard fallback (guaranteed)
-  try {
-    await navigator.clipboard.writeText(shareUrl);
-    setShareToast('🔗 Link copied!');
+    // ✅ Clipboard fallback for desktop / unsupported browsers
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareToast('🔗 Link copied!');
+    } catch {
+      // Last resort for very old browsers
+      try {
+        const input = document.createElement('input');
+        input.value = shareUrl;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        setShareToast('🔗 Link copied!');
+      } catch {
+        setShareToast('Sharing not supported');
+      }
+    }
+
     setTimeout(() => setShareToast(null), 2000);
-    return;
-  } catch {
-    // fallback if clipboard blocked
-  }
-
-  // ✅ 4. LAST fallback (old browsers)
-  try {
-    const input = document.createElement('input');
-    input.value = shareUrl;
-    document.body.appendChild(input);
-    input.select();
-    document.execCommand('copy');
-    document.body.removeChild(input);
-
-    setShareToast('🔗 Link copied!');
-  } catch {
-    setShareToast('Sharing not supported');
-  }
-
-  setTimeout(() => setShareToast(null), 2000);
-};
-
+  };
 
   const handleScroll = useCallback(() => {
     if (!scrollContainerRef.current) return;
@@ -383,7 +361,6 @@ setReels((prev) =>
     const scrollPosition = container.scrollTop;
     const windowHeight = container.clientHeight;
 
-    // Calculate which reel is in view
     const newIndex = Math.round(scrollPosition / windowHeight);
     if (newIndex !== currentReelIndex && newIndex < reels.length) {
       setCurrentReelIndex(newIndex);
@@ -407,8 +384,7 @@ setReels((prev) =>
   }
 
   return (
-    // Outermost div — make it truly fullscreen, breaking out of layout padding
-<div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 55 }}>
+    <div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 55 }}>
       {/* Header */}
       <div className="h-12 bg-black border-b border-gray-700 px-4 flex items-center gap-3 z-40">
         <button onClick={() => router.back()} className="text-white hover:text-gray-300">
@@ -447,74 +423,60 @@ setReels((prev) =>
               ) : (
                 <div className="relative w-full h-full max-w-sm md:max-w-md lg:max-w-lg mx-auto overflow-hidden shadow-2xl shadow-green-500/10">
                   <video
-  ref={(el) => {
-    videosRef.current[idx] = el;
-    if (el) el.muted = isMuted;
-  }}
-  src={reel.video_url}
-  className="w-full h-full object-cover"
-  preload="metadata"
-  playsInline
-  loop
-  onLoadedMetadata={(e) => {
-    const video = e.currentTarget;
-
-    // Seek to 0.05s → acts like thumbnail
-    if (video.duration > 0.1) {
-      video.currentTime = 0.05;
-    }
-  }}
-  onSeeked={(e) => {
-    const video = e.currentTarget;
-
-    // Pause → freeze frame (thumbnail effect)
-    video.pause();
-
-    setVideoReady((prev) => new Set(prev).add(reel.id));
-
-    // If it's current reel → play
-    if (idx === currentReelIndex) {
-      video.play().catch(() => {});
-    }
-  }}
-  onError={() => {
-    setVideoErrors((prev) => new Set(prev).add(reel.id));
-  }}
-  onClick={(e) => {
-    const now = Date.now();
-    const timeSinceLast = now - lastTapRef.current;
-
-    if (timeSinceLast < 300 && timeSinceLast > 0) {
-      handleLike(reel.id);
-      setShowHeart(true);
-      setTimeout(() => setShowHeart(false), 800);
-    } else {
-      setIsMuted((prev) => !prev);
-    }
-
-    lastTapRef.current = now;
-  }}
-/>
-                  {/* Subtle Gradient Overlay for Text Visibility */}
+                    ref={(el) => {
+                      videosRef.current[idx] = el;
+                      if (el) el.muted = isMuted;
+                    }}
+                    src={reel.video_url}
+                    className="w-full h-full object-cover"
+                    preload="metadata"
+                    playsInline
+                    loop
+                    onLoadedMetadata={(e) => {
+                      const video = e.currentTarget;
+                      if (video.duration > 0.1) {
+                        video.currentTime = 0.05;
+                      }
+                    }}
+                    onSeeked={(e) => {
+                      const video = e.currentTarget;
+                      video.pause();
+                      setVideoReady((prev) => new Set(prev).add(reel.id));
+                      if (idx === currentReelIndex) {
+                        video.play().catch(() => {});
+                      }
+                    }}
+                    onError={() => {
+                      setVideoErrors((prev) => new Set(prev).add(reel.id));
+                    }}
+                    onClick={(e) => {
+                      const now = Date.now();
+                      const timeSinceLast = now - lastTapRef.current;
+                      if (timeSinceLast < 300 && timeSinceLast > 0) {
+                        handleLike(reel.id);
+                        setShowHeart(true);
+                        setTimeout(() => setShowHeart(false), 800);
+                      } else {
+                        setIsMuted((prev) => !prev);
+                      }
+                      lastTapRef.current = now;
+                    }}
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 pointer-events-none"></div>
                 </div>
               )}
 
-              {/* Gradient Overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none"></div>
 
-              {/* Double-tap heart animation */}
               {showHeart && idx === currentReelIndex && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                   <Heart className="w-24 h-24 fill-white text-white drop-shadow-2xl animate-ping" />
                 </div>
               )}
 
-              {/* Bottom Info Section (above bottom nav + safe area) */}
-              <div className="absolute left-0 right-16  pr-20 md:px-0 md:pr-0 w-full max-w-sm md:max-w-md lg:max-w-lg mx-auto text-white pointer-events-none z-30" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 80px)' }}>
+              <div className="absolute left-0 right-16 pr-20 md:px-0 md:pr-0 w-full max-w-sm md:max-w-md lg:max-w-lg mx-auto text-white pointer-events-none z-30" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 80px)' }}>
                 <div className="pointer-events-auto flex flex-col gap-4">
-                  {/* Creator Info - High Contrast Pill */}
-                  <div 
+                  <div
                     className="flex items-center gap-3 w-fit bg-black/30 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 cursor-pointer active:scale-95 transition-all group"
                     onClick={() => router.push(`/farmer-profile?id=${reel.user_id}`)}
                   >
@@ -539,7 +501,6 @@ setReels((prev) =>
                     </div>
                   </div>
 
-                  {/* Caption with Intense Readability */}
                   {reel.caption && (
                     <div className="max-w-[85%]">
                       <p className="text-[15px] font-bold leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,1)] text-white/95">
@@ -550,7 +511,6 @@ setReels((prev) =>
                 </div>
               </div>
 
-              {/* Mute / Unmute button */}
               <button
                 onClick={(e) => { e.stopPropagation(); setIsMuted((prev) => !prev); }}
                 className="absolute top-4 right-4 z-40 w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center border border-white/20 active:scale-90 transition-transform"
@@ -561,8 +521,7 @@ setReels((prev) =>
                 }
               </button>
 
-              {/* Right Sidebar Actions (above bottom nav) */}
-              <div className="absolute right-4  md:right-[calc(50%-180px)] lg:right-[calc(50%-230px)] md:bottom-24 flex flex-col gap-5 text-white z-30"  style={{ bottom: 'calc(env(safe-area-inset-bottom) + 88px)' }}>
+              <div className="absolute right-4 md:right-[calc(50%-180px)] lg:right-[calc(50%-230px)] md:bottom-24 flex flex-col gap-5 text-white z-30" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 88px)' }}>
                 {/* Views */}
                 <div className="flex flex-col items-center gap-1 group">
                   <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl transition-all group-hover:scale-110">
@@ -575,11 +534,12 @@ setReels((prev) =>
 
                 {/* Like */}
                 <button
-                onClick={(e) => {
-                  e.stopPropagation(); // 💥 THIS FIXES IT
-                  handleLike(reel.id);
-                }}
-              >
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleLike(reel.id);
+                  }}
+                  className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
+                >
                   <div className={`w-12 h-12 rounded-full backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl transition-all group-hover:scale-110 active:scale-90 ${likedReels.has(reel.id) ? 'bg-red-500/20' : 'bg-black/40'}`}>
                     <Heart
                       className={`w-6 h-6 transition-colors duration-300 ${likedReels.has(reel.id) ? 'fill-red-500 text-red-500' : 'text-white'}`}
@@ -606,15 +566,14 @@ setReels((prev) =>
 
                 {/* Share */}
                 <button
-onClick={(e) => handleShare(e, reel)}
+                  onClick={(e) => handleShare(e, reel)}
                   className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
                 >
-                   <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl">
+                  <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl">
                     <Send className="w-6 h-6 text-white" strokeWidth={2.5} />
                   </div>
                   <span className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase">Share</span>
                 </button>
-
               </div>
             </div>
           ))}
@@ -622,124 +581,113 @@ onClick={(e) => handleShare(e, reel)}
       )}
 
       {shareToast && (
-  <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[998] bg-white/90 backdrop-blur text-gray-900 text-sm font-semibold px-5 py-2.5 rounded-full shadow-xl animate-fade-in">
-    {shareToast}
-  </div>
-)}
-
-      {/* Comments Modal */}
-{/* Comments Modal */}
-{showComments && (
-  <div
-    className="fixed inset-0 z-[999] flex flex-col"
-    style={{ paddingBottom: 'calc(60px + env(safe-area-inset-bottom))' }}
-  >
-    {/* Backdrop */}
-    <div
-      className="flex-1 bg-black/50"
-      onClick={() => setShowComments(false)}
-    />
-
-    {/* Sheet */}
-    <div
-      className="bg-white rounded-t-3xl flex flex-col overflow-hidden"
-      style={{ maxHeight: '70vh' }}
-    >
-      {/* Handle */}
-      <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 flex-shrink-0" />
-
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-        <h2 className="text-lg font-bold text-gray-900">
-          Comments ({currentReelComments.length})
-        </h2>
-        <button
-          onClick={() => setShowComments(false)}
-          className="p-1 hover:bg-gray-100 rounded-full transition"
-        >
-          <X className="w-5 h-5 text-gray-600" />
-        </button>
-      </div>
-
-      {/* Scrollable comments list */}
-      <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
-        {commentsLoading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
-          </div>
-        ) : currentReelComments.length === 0 ? (
-          <p className="text-center text-gray-400 py-8 text-sm">
-            No comments yet. Be the first!
-          </p>
-        ) : (
-          currentReelComments.map((comment) => (
-            <div key={comment.id} className="flex gap-3">
-              <button
-                onClick={() => router.push(`/farmer-profile?id=${comment.user_id}`)}
-                className="flex-shrink-0"
-              >
-                <img
-                  src={comment.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(comment.name || 'U')}&backgroundColor=166534&textColor=ffffff`}
-                  alt={comment.name}
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              </button>
-              <div className="flex-1 min-w-0">
-                <button
-                  onClick={() => router.push(`/farmer-profile?id=${comment.user_id}`)}
-                  className="font-bold text-sm text-gray-900 hover:text-green-700 transition-colors"
-                >
-                  {comment.name}
-                </button>
-                <p className="text-sm text-gray-700 break-words">{comment.comment}</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {new Date(comment.created_at).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Input bar */}
-      {user && (
-        <div className="flex-shrink-0 border-t border-gray-100 bg-white px-4 py-3 flex gap-2 items-center">
-          <img
-            src={user.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name || 'U')}&backgroundColor=166534&textColor=ffffff`}
-            alt={user.name}
-            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-          />
-          <input
-            type="text"
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Add a comment..."
-            onFocus={() => {
-              setTimeout(() => {
-                document.activeElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-              }, 300);
-            }}
-            className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !postingComment) handlePostComment();
-            }}
-          />
-          <button
-            onClick={handlePostComment}
-            disabled={!newComment.trim() || postingComment}
-            className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center disabled:opacity-40 active:scale-90 transition-transform flex-shrink-0"
-          >
-            {postingComment ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Send className="w-4 h-4 text-white" />
-            )}
-          </button>
+        <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[998] bg-white/90 backdrop-blur text-gray-900 text-sm font-semibold px-5 py-2.5 rounded-full shadow-xl animate-fade-in">
+          {shareToast}
         </div>
       )}
-    </div>
-  </div>
-)}
+
+      {/* Comments Modal */}
+      {showComments && (
+        <div
+          className="fixed inset-0 z-[999] flex flex-col"
+          style={{ paddingBottom: 'calc(60px + env(safe-area-inset-bottom))' }}
+        >
+          <div
+            className="flex-1 bg-black/50"
+            onClick={() => setShowComments(false)}
+          />
+          <div
+            className="bg-white rounded-t-3xl flex flex-col overflow-hidden"
+            style={{ maxHeight: '70vh' }}
+          >
+            <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 flex-shrink-0" />
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+              <h2 className="text-lg font-bold text-gray-900">
+                Comments ({currentReelComments.length})
+              </h2>
+              <button
+                onClick={() => setShowComments(false)}
+                className="p-1 hover:bg-gray-100 rounded-full transition"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
+              {commentsLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
+                </div>
+              ) : currentReelComments.length === 0 ? (
+                <p className="text-center text-gray-400 py-8 text-sm">
+                  No comments yet. Be the first!
+                </p>
+              ) : (
+                currentReelComments.map((comment) => (
+                  <div key={comment.id} className="flex gap-3">
+                    <button
+                      onClick={() => router.push(`/farmer-profile?id=${comment.user_id}`)}
+                      className="flex-shrink-0"
+                    >
+                      <img
+                        src={comment.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(comment.name || 'U')}&backgroundColor=166534&textColor=ffffff`}
+                        alt={comment.name}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <button
+                        onClick={() => router.push(`/farmer-profile?id=${comment.user_id}`)}
+                        className="font-bold text-sm text-gray-900 hover:text-green-700 transition-colors"
+                      >
+                        {comment.name}
+                      </button>
+                      <p className="text-sm text-gray-700 break-words">{comment.comment}</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date(comment.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {user && (
+              <div className="flex-shrink-0 border-t border-gray-100 bg-white px-4 py-3 flex gap-2 items-center">
+                <img
+                  src={user.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name || 'U')}&backgroundColor=166534&textColor=ffffff`}
+                  alt={user.name}
+                  className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                />
+                <input
+                  type="text"
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Add a comment..."
+                  onFocus={() => {
+                    setTimeout(() => {
+                      document.activeElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }, 300);
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !postingComment) handlePostComment();
+                  }}
+                />
+                <button
+                  onClick={handlePostComment}
+                  disabled={!newComment.trim() || postingComment}
+                  className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center disabled:opacity-40 active:scale-90 transition-transform flex-shrink-0"
+                >
+                  {postingComment ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4 text-white" />
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

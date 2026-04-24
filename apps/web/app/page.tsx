@@ -5,7 +5,6 @@ import { useEffect, useState, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Capacitor } from '@capacitor/core';
 import { getApiUrl } from '@/lib/api';
-import AdSplash from './components/AdSplash';
 
 interface Machinery {
   id: string;
@@ -127,16 +126,6 @@ function HomePageContent() {
       setRoleUpdating(false);
     }
   };
-
-  const [showAd, setShowAd] = useState(false);
-
-  useEffect(() => {
-  const seen = sessionStorage.getItem('ad_seen');
-  if (!seen) {
-    sessionStorage.setItem('ad_seen', '1');
-    setShowAd(true);
-  }
-}, []);
 
 
   useEffect(() => {
@@ -335,7 +324,6 @@ function HomePageContent() {
   return (
     <div className="min-min-h-[100dvh] bg-surface-muted">
 
-    {showAd && <AdSplash onDone={() => setShowAd(false)} />}
 
       {/* ── HERO SECTION ── */}
      <section className="bg-hero-green px-6 pt-6 pb-8 rounded-b-[40px] shadow-xl">
