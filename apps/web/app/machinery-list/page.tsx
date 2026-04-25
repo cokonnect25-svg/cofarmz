@@ -16,14 +16,16 @@ export default function MachineryListPage() {
   const [showFilter, setShowFilter] = useState(false);
   const [sortBy, setSortBy] = useState('distance');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState({
-    priceMin: 0,
-    priceMax: 500000,
-    distance: 100,
-    startDate: '',
-    endDate: '',
-    equipmentTypes: [] as string[]
-  });
+
+  const DEFAULT_FILTERS = {
+  priceMin: 0,
+  priceMax: 500000,
+  distance: 100,
+  startDate: '',
+  endDate: '',
+  equipmentTypes: [] as string[]
+};
+const [filters, setFilters] = useState(DEFAULT_FILTERS);
   
   const [machineryData, setMachineryData] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
@@ -33,6 +35,9 @@ export default function MachineryListPage() {
   const { user } = useAuth();
 
   const today = new Date().toISOString().split('T')[0];
+
+
+  
 
   // ✅ MOVE THIS UP
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -306,6 +311,11 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     }
   };
 
+  const handleResetFilters = () => {
+  setFilters(DEFAULT_FILTERS);
+  setSearchQuery('');
+};
+
   const handleFavorite = async (e: React.MouseEvent, machineryId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -403,7 +413,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
             <input
               type="range"
               min="0"
-              max="50000"
+              max="500000"
               step="500"
               value={filters.priceMax}
               onChange={(e) => setFilters({...filters, priceMax: parseInt(e.target.value)})}
@@ -486,7 +496,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     <section className="mb-6 relative z-10 pl-6">
         <div className="flex gap-3 overflow-x-auto hide-scrollbar pr-6 pb-2">
             <button 
-              onClick={() => setFilters(prev => ({...prev, equipmentTypes: []}))}
+              onClick={handleResetFilters}
               className={`px-5 py-2.5 rounded-[14px] text-sm font-bold whitespace-nowrap active:scale-95 transition-transform ${
                 filters.equipmentTypes.length === 0
                   ? 'bg-brand-800 text-white shadow-lg shadow-brand-800/20'
@@ -571,21 +581,37 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
             ))}
           </div>
         )}
-        {sortedMachinery.length === 0 && machineryData.length > 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-              <i className="ph-bold ph-tractor text-4xl text-gray-400"></i>
-            </div>
-            <h3 className="text-lg font-bold text-gray-700 mb-1">No equipment found</h3>
-            <p className="text-sm text-gray-400 mb-5">Try adjusting your filters or search term</p>
-            <button
-              onClick={() => { setFilters({ priceMin: 0, priceMax: 50000, distance: 100, startDate: '', endDate: '', equipmentTypes: [] }); setSearchQuery(''); fetchMachinery(); }}
-              className="px-5 py-2.5 bg-brand-700 text-white rounded-xl font-semibold text-sm"
-            >
-              Reset Filters
-            </button>
-          </div>
-        )}
+{sortedMachinery.length === 0 && machineryData.length > 0 && (
+  <div className="flex flex-col items-center justify-center py-20 text-center">
+    <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+      <i className="ph-bold ph-tractor text-4xl text-gray-400"></i>
+    </div>
+
+    <h3 className="text-lg font-bold text-gray-700 mb-1">
+      No equipment found
+    </h3>
+
+    <p className="text-sm text-gray-400 mb-5">
+      Try adjusting your filters or search term
+    </p>
+
+    {/* ✅ Only show reset if filters/search active */}
+    {(searchQuery ||
+      filters.equipmentTypes.length > 0 ||
+      filters.priceMin !== DEFAULT_FILTERS.priceMin ||
+      filters.priceMax !== DEFAULT_FILTERS.priceMax ||
+      filters.distance !== DEFAULT_FILTERS.distance ||
+      filters.startDate ||
+      filters.endDate) && (
+      <button
+        onClick={handleResetFilters}
+        className="px-5 py-2.5 bg-brand-700 text-white rounded-xl font-semibold text-sm active:scale-95"
+      >
+        Reset Filters
+      </button>
+    )}
+  </div>
+)}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-6 pb-20 mb-2">
         {sortedMachinery.map(machine => (
           <div
