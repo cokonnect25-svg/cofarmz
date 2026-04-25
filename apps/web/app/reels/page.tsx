@@ -306,15 +306,16 @@ function ReelsContent() {
   const text = reel.caption || 'Check out this reel on CoFarmz!';
 
   // Native Capacitor share (iOS/Android app) — always use native share sheet
-  if (Capacitor.isNativePlatform()) {
-    try {
-      await Share.share({ title, text, url: shareUrl });
-    } catch (err: any) {
-      // Only swallow user cancellation
-      if (err?.message?.includes('cancel') || err?.errorMessage?.includes('cancel')) return;
-    }
-    return; // ← critical: never fall through to clipboard on native
+if (Capacitor.isNativePlatform()) {
+  console.log('Native share triggered'); // ← add this
+  try {
+    await Share.share({ title, text, url: shareUrl });
+  } catch (err: any) {
+    console.log('Share error:', err); // ← and this
+    if (err?.message?.includes('cancel') || err?.errorMessage?.includes('cancel')) return;
   }
+  return;
+}
 
   // Mobile web browser — Web Share API opens the OS share sheet
   if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
