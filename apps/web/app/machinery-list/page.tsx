@@ -20,7 +20,7 @@ export default function MachineryListPage() {
   const DEFAULT_FILTERS = {
   priceMin: 0,
   priceMax: 500000,
-  distance: 100,
+  distance: 5000,
   startDate: '',
   endDate: '',
   equipmentTypes: [] as string[]
