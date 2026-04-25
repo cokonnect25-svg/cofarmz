@@ -1,23 +1,29 @@
 package com.cofarmz.com;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
 import android.os.Bundle;
-import com.getcapacitor.BridgeActivity;
+import android.widget.Button;
+import android.widget.Toast;
 
-public class MainActivity extends BridgeActivity {
+public class OfflineActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        if (!isConnected()) {
-            // Launch offline screen BEFORE super.onCreate — Capacitor never boots
-            super.onCreate(null);
-            startActivity(new Intent(this, OfflineActivity.class));
-            finish();
-            return;
-        }
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_offline);
+
+        Button retryBtn = findViewById(R.id.retryButton);
+        retryBtn.setOnClickListener(v -> {
+            if (isConnected()) {
+                startActivity(new Intent(this, MainActivity.class));
+                finish();
+            } else {
+                Toast.makeText(this, "Still offline. Check your connection.", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private boolean isConnected() {

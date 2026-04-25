@@ -305,50 +305,36 @@ function ReelsContent() {
   const title = reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel';
   const text = reel.caption || 'Check out this reel on CoFarmz!';
 
-  // Native Capacitor share (iOS/Android app) — always use native share sheet
-if (Capacitor.isNativePlatform()) {
-  console.log('Native share triggered'); // ← add this
-  try {
-    await Share.share({ title, text, url: shareUrl });
-  } catch (err: any) {
-    console.log('Share error:', err); // ← and this
-    if (err?.message?.includes('cancel') || err?.errorMessage?.includes('cancel')) return;
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await Share.share({ title, text, url: shareUrl });
+    } catch (err: any) {
+      // Show error visually since we can't see console
+      setShareToast(`Error: ${err?.message || 'Share failed'}`);
+      setTimeout(() => setShareToast(null), 4000);
+    }
+    return;
   }
-  return;
-}
 
-  // Mobile web browser — Web Share API opens the OS share sheet
+  // web fallback
   if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
     try {
       await navigator.share({ title, text, url: shareUrl });
       return;
     } catch (err: any) {
-      if (err?.name === 'AbortError') return; // user dismissed — do NOT copy
-      // Other errors → fall through to clipboard
+      if (err?.name === 'AbortError') return;
     }
   }
 
-  // Desktop / unsupported browser only — copy link
   try {
     await navigator.clipboard.writeText(shareUrl);
     setShareToast('🔗 Link copied!');
   } catch {
-    try {
-      const input = document.createElement('input');
-      input.value = shareUrl;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-      setShareToast('🔗 Link copied!');
-    } catch {
-      setShareToast('Sharing not supported');
-    }
+    setShareToast('Sharing not supported');
   }
 
   setTimeout(() => setShareToast(null), 2000);
 };
-
 
   const handleScroll = useCallback(() => {
     if (!scrollContainerRef.current) return;
