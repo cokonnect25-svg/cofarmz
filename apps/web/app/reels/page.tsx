@@ -299,60 +299,55 @@ function ReelsContent() {
   };
 
   const handleShare = async (e: React.MouseEvent, reel: Reel) => {
-    e.stopPropagation();
+  e.stopPropagation();
 
-    const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`;
-    const title = reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel';
-    const text = reel.caption || 'Check out this reel on CoFarmz!';
+  const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`;
+  const title = reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel';
+  const text = reel.caption || 'Check out this reel on CoFarmz!';
 
-    // ✅ FIX 2: Native Capacitor share (iOS/Android app)
-    if (Capacitor.isNativePlatform()) {
-      try {
-        await Share.share({ title, text, url: shareUrl });
-        return;
-      } catch (err: any) {
-        if (err?.message?.includes('cancel')) return;
-        // fall through to web share if native fails unexpectedly
-      }
-    }
-
-    // ✅ FIX 2: Web Share API — only call if it can actually share URLs
-    // navigator.canShare guards against browsers that have share but reject URLs
-    if (
-      typeof navigator !== 'undefined' &&
-      typeof navigator.share === 'function' &&
-      (!navigator.canShare || navigator.canShare({ url: shareUrl }))
-    ) {
-      try {
-        await navigator.share({ title, text, url: shareUrl });
-        return;
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return; // user dismissed — don't fallback to copy
-        // any other error → fall through to clipboard
-      }
-    }
-
-    // ✅ Clipboard fallback for desktop / unsupported browsers
+  // Native Capacitor share (iOS/Android app) — always use native share sheet
+  if (Capacitor.isNativePlatform()) {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await Share.share({ title, text, url: shareUrl });
+    } catch (err: any) {
+      // Only swallow user cancellation
+      if (err?.message?.includes('cancel') || err?.errorMessage?.includes('cancel')) return;
+    }
+    return; // ← critical: never fall through to clipboard on native
+  }
+
+  // Mobile web browser — Web Share API opens the OS share sheet
+  if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+    try {
+      await navigator.share({ title, text, url: shareUrl });
+      return;
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return; // user dismissed — do NOT copy
+      // Other errors → fall through to clipboard
+    }
+  }
+
+  // Desktop / unsupported browser only — copy link
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    setShareToast('🔗 Link copied!');
+  } catch {
+    try {
+      const input = document.createElement('input');
+      input.value = shareUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
       setShareToast('🔗 Link copied!');
     } catch {
-      // Last resort for very old browsers
-      try {
-        const input = document.createElement('input');
-        input.value = shareUrl;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
-        setShareToast('🔗 Link copied!');
-      } catch {
-        setShareToast('Sharing not supported');
-      }
+      setShareToast('Sharing not supported');
     }
+  }
 
-    setTimeout(() => setShareToast(null), 2000);
-  };
+  setTimeout(() => setShareToast(null), 2000);
+};
+
 
   const handleScroll = useCallback(() => {
     if (!scrollContainerRef.current) return;
