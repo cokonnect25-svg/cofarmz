@@ -2118,16 +2118,18 @@ if (alreadyExists) {
                     <label className="block text-sm font-semibold text-gray-900 mb-2">Years of Experience</label>
 <input
   type="number"
-  min="0"
-  max="80"
+  inputMode="numeric"
   value={newCrop.years_of_experience}
   onChange={(e) => {
-    const val = e.target.value;
-
-    if (val === "" || parseInt(val) >= 0) {
+    const val = e.target.value.replace(/[^0-9]/g, ''); // digits only
+    const num = parseInt(val);
+    if (val === '' || (num >= 0 && num <= 80)) {
       setNewCrop({ ...newCrop, years_of_experience: val });
     }
   }}
+  onKeyDown={(e) => {
+  if (['-', '+', 'e', 'E', '.'].includes(e.key)) e.preventDefault();
+}}
   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
 />
                   </div>
@@ -2167,12 +2169,18 @@ if (alreadyExists) {
                   {userRole === 'farmer' ? 'Expected Yield Date' : 'Want to Buy By'}
                 </label>
 <input
-  type="date"
-  min={localDate}
-  value={newCrop.expected_yield_date}
-  onChange={(e) =>
-    setNewCrop({ ...newCrop, expected_yield_date: e.target.value })
-  }
+  type="number"
+  inputMode="decimal"
+  value={newCrop.expected_yield_quantity}
+  onChange={(e) => {
+    const val = e.target.value.replace(/[^0-9.]/g, '');
+    const parts = val.split('.');
+    const clean = parts[0] + (parts.length > 1 ? '.' + parts[1] : '');
+    if (clean === '' || (parseFloat(clean) > 0 && parseFloat(clean) <= 1000000)) {
+      setNewCrop({ ...newCrop, expected_yield_quantity: clean });
+    }
+  }}
+  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
 />
               </div>
 
@@ -2193,6 +2201,10 @@ if (alreadyExists) {
       setNewCrop({ ...newCrop, expected_yield_quantity: val });
     }
   }}
+  onKeyDown={(e) => {
+  if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault();
+}}
+
   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
 />
                 </div>
@@ -2269,16 +2281,16 @@ if (alreadyExists) {
             </div>
 
             <div className="p-6 space-y-4">
+             // ✅ CORRECT
               <div className="relative">
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Crop Name *</label>
-<input
-  type="date"
-  min={localDate}
-  value={newCrop.expected_yield_date}
-  onChange={(e) =>
-    setNewCrop({ ...newCrop, expected_yield_date: e.target.value })
-  }
-/>
+                <input
+                  type="text"
+                  placeholder="e.g., Wheat, Rice, Corn..."
+                  value={editCropForm.crop_name}
+                  onChange={(e) => handleEditCropNameChange(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
                 {showEditCropSuggestions && editCropSuggestions.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {editCropSuggestions.map((crop) => (
@@ -2298,13 +2310,22 @@ if (alreadyExists) {
                 <>
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">Years of Experience</label>
-                    <input
-                      type="number"
-                      placeholder="e.g., 5"
-                      value={editCropForm.years_of_experience}
-                      onChange={(e) => setEditCropForm({ ...editCropForm, years_of_experience: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+<input
+  type="number"
+  inputMode="numeric"
+  value={editCropForm.years_of_experience}
+  onChange={(e) => {
+    const val = e.target.value.replace(/[^0-9]/g, '');
+    const num = parseInt(val);
+    if (val === '' || (num >= 0 && num <= 80)) {
+      setEditCropForm({ ...editCropForm, years_of_experience: val });
+    }
+  }}
+  onKeyDown={(e) => {
+  if (['-', '+', 'e', 'E', '.'].includes(e.key)) e.preventDefault();
+}}
+  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+/>
                   </div>
 
                   <div>
@@ -2341,14 +2362,15 @@ if (alreadyExists) {
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
                   {userRole === 'farmer' ? 'Expected Yield Date' : 'Want to Buy By'}
                 </label>
-                <input
-                  type="date"
-                  min={localDate}
-                  value={newCrop.expected_yield_date}
-                  onChange={(e) =>
-                    setNewCrop({ ...newCrop, expected_yield_date: e.target.value })
-                  }
-                />
+                  <input
+                    type="date"
+                    min={localDate}
+                    value={editCropForm.expected_yield_date}
+                    onChange={(e) =>
+                      setEditCropForm({ ...editCropForm, expected_yield_date: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
               </div>
 
               <div className="flex gap-3">
@@ -2356,20 +2378,23 @@ if (alreadyExists) {
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
                     {userRole === 'farmer' ? 'Expected Quantity' : 'Quantity Needed'}
                   </label>
-                  <input
-                    type="number"
-                    min="1"
-                    step="0.1"
-                    value={newCrop.expected_yield_quantity}
-                    onChange={(e) => {
-                      const val = e.target.value;
-
-                      if (val === "" || parseFloat(val) >= 0) {
-                        setNewCrop({ ...newCrop, expected_yield_quantity: val });
-                      }
-                    }}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
+<input
+  type="number"
+  inputMode="decimal"
+  value={editCropForm.expected_yield_quantity}
+  onChange={(e) => {
+    const val = e.target.value.replace(/[^0-9.]/g, ''); // no symbols, no negatives
+    const parts = val.split('.');
+    const clean = parts[0] + (parts.length > 1 ? '.' + parts[1] : '');
+    if (clean === '' || (parseFloat(clean) > 0 && parseFloat(clean) <= 1000000)) {
+      setEditCropForm({ ...editCropForm, expected_yield_quantity: clean });
+    }
+  }}
+  onKeyDown={(e) => {
+  if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault();
+}}
+  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+/>
                 </div>
                 <div className="w-24">
                   <label className="block text-sm font-semibold text-gray-900 mb-2">Unit</label>
@@ -2593,30 +2618,20 @@ if (alreadyExists) {
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Age</label>
 <input
   type="number"
+  inputMode="numeric"
   value={editForm.age}
-  min={1}
-  max={120}
   onChange={(e) => {
-    let value = e.target.value;
-
-    // Remove non-digits (extra safety)
-    value = value.replace(/[^0-9]/g, '');
-
-    // Convert to number
-    let num = Number(value);
-
-    // Clamp range
-    if (num > 120) num = 120;
-    if (num < 1 && value !== '') num = 1;
-
-    setEditForm({
-      ...editForm,
-      age: value === '' ? '' : num.toString(),
-    });
+    const val = e.target.value.replace(/[^0-9]/g, ''); // digits only, no symbols
+    const num = parseInt(val);
+    if (val === '' || (num >= 1 && num <= 120)) {
+      setEditForm({ ...editForm, age: val });
+    }
   }}
+  onKeyDown={(e) => {
+  if (['-', '+', 'e', 'E', '.'].includes(e.key)) e.preventDefault();
+}}
   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-/>
-              </div>
+/>           </div>
 
               <div className="flex gap-3 pt-4">
                 <button
