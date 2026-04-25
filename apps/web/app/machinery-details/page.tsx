@@ -153,29 +153,36 @@ function MachineryDetailsContent() {
     }
   };
 
-  const fetchMachineryDetails = async () => {
-    try {
-      setLoadingMachinery(true);
-      const response = await fetch(getApiUrl(`/api/machinery/${machineryId}`));
-      if (response.ok) {
-        const data = await response.json();
-        setMachinery(data);
-        
-        const userResponse = await fetch(getApiUrl(`/api/users/${data.owner_id}`));
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          setOwnerName(userData.name || 'Farm Owner');
-        }
-        
-        fetchOwnerProfile(data.owner_id);
-      }
-    } catch (error) {
-      console.error('Error fetching machinery details:', error);
-    } finally {
-      setLoadingMachinery(false);
-    }
-  };
+ const fetchMachineryDetails = async () => {
+  try {
+    setLoadingMachinery(true);
+    // Reset all state on fresh load
+    setStartDate('');
+    setEndDate('');
+    setAvailabilityError('');
+    setActiveImageIndex(0);
+    setExpandDescription(false);
+    setShowCalendar(false);
 
+    const response = await fetch(getApiUrl(`/api/machinery/${machineryId}`));
+    if (response.ok) {
+      const data = await response.json();
+      setMachinery(data);
+
+      const userResponse = await fetch(getApiUrl(`/api/users/${data.owner_id}`));
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        setOwnerName(userData.name || 'Farm Owner');
+      }
+
+      fetchOwnerProfile(data.owner_id);
+    }
+  } catch (error) {
+    console.error('Error fetching machinery details:', error);
+  } finally {
+    setLoadingMachinery(false);
+  }
+};
   const fetchOwnerProfile = async (ownerId: string) => {
     try {
       setLoadingOwnerProfile(true);
@@ -994,138 +1001,231 @@ function MachineryDetailsContent() {
         </section>
 
         <section className="px-6 relative z-10">
-          <div className="bg-white rounded-[24px] p-5 shadow-soft border border-gray-100">
-            <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <i className="ph-bold ph-calendar-check text-brand-600"></i> Availability
-            </h3>
-            
-            {/* Calendar Section with Toggle */}
-<div className="mb-6">
-  <button
-    onClick={() => setShowCalendar(!showCalendar)}
-    className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-brand-50 to-brand-100 rounded-[16px] hover:from-brand-100 hover:to-brand-200 transition-all duration-200 active:scale-[0.98]"
-  >
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-brand-600">
-        <i className={`ph-bold ph-calendar ${showCalendar ? 'ph-fill' : ''} text-lg`}></i>
-      </div>
-      <div className="text-left">
-        <span className="text-sm font-bold text-gray-900 block">
-          {showCalendar ? 'Hide Calendar' : 'View Availability Calendar'}
-        </span>
-        <span className="text-xs text-gray-500">
-          {showCalendar ? 'Tap to close' : 'Check available dates'}
-        </span>
-      </div>
-    </div>
-    <i className={`ph-bold ph-caret-${showCalendar ? 'up' : 'down'} text-gray-400 text-lg transition-transform duration-200`}></i>
-  </button>
+  <div className="bg-white rounded-[24px] p-5 shadow-soft border border-gray-100">
+    <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+      <i className="ph-bold ph-calendar-check text-brand-600"></i> Availability
+    </h3>
 
-  {/* Calendar - Only visible when showCalendar is true */}
-  {showCalendar && (
-    <div className="mt-4 p-4 bg-gray-50 rounded-[16px] animate-in slide-in-from-top-2 duration-200">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-gray-900 text-sm">Select Dates</h3>
-        <div className="flex gap-2">
-          <button
-            onClick={() => {
-              const next = getNextAvailableDates();
-              if (next.startDate) setStartDate(next.startDate.toISOString().split('T')[0]);
-              if (next.endDate) setEndDate(next.endDate.toISOString().split('T')[0]);
-            }}
-            className="text-xs text-brand-600 font-bold px-2 py-1 rounded-lg bg-brand-50"
-          >
-            Next Available
-          </button>
+    {/* 30-day Calendar — always visible */}
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-bold text-gray-700">Next 30 Days</h4>
+        <button
+          onClick={() => {
+            const next = getNextAvailableDates();
+            if (next.startDate) setStartDate(next.startDate.toISOString().split('T')[0]);
+            if (next.endDate) setEndDate(next.endDate.toISOString().split('T')[0]);
+          }}
+          className="text-xs text-brand-600 font-bold px-3 py-1.5 rounded-lg bg-brand-50 active:scale-95 transition-transform"
+        >
+          Next Available
+        </button>
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-3 hide-scrollbar">
+        {Array.from({ length: 30 }).map((_, i) => {
+          const date = new Date();
+          date.setHours(0, 0, 0, 0);
+          date.setDate(date.getDate() + i);
+          const dateStr = date.toISOString().split('T')[0];
+          const booked = isDateBooked(dateStr);
+          const isStart = dateStr === startDate;
+          const isEnd = dateStr === endDate;
+          const inRange = startDate && endDate &&
+            new Date(dateStr) > new Date(startDate) &&
+            new Date(dateStr) < new Date(endDate);
+          const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+          return (
+            <button
+              key={dateStr}
+              disabled={booked}
+              onClick={() => {
+                if (booked) return;
+                if (!startDate || (startDate && endDate)) {
+                  setStartDate(dateStr);
+                  setEndDate('');
+                  setAvailabilityError('');
+                } else {
+                  if (new Date(dateStr) < new Date(startDate)) {
+                    setStartDate(dateStr);
+                    setEndDate('');
+                  } else {
+                    // Check if any booked date falls in range
+                    const hasConflict = bookedDates.some(b => {
+                      const bs = new Date(b.start_date);
+                      const be = new Date(b.end_date);
+                      const rs = new Date(startDate);
+                      const re = new Date(dateStr);
+                      return !(re < bs || rs > be);
+                    });
+                    if (hasConflict) {
+                      setAvailabilityError('Selected range includes already booked dates. Please choose different dates.');
+                      setEndDate('');
+                    } else {
+                      setEndDate(dateStr);
+                      setAvailabilityError('');
+                    }
+                  }
+                }
+              }}
+              className={`flex-shrink-0 flex flex-col items-center gap-1 w-11 py-2.5 rounded-xl border-2 transition-all
+                ${isStart || isEnd
+                  ? 'bg-brand-600 border-brand-600 text-white shadow-md'
+                  : inRange
+                  ? 'bg-brand-100 border-brand-200 text-brand-700'
+                  : booked
+                  ? 'bg-red-50 border-red-200 text-red-400 cursor-not-allowed opacity-60'
+                  : 'bg-white border-gray-200 text-gray-700 hover:border-brand-300'
+                }`}
+            >
+              <span className="text-[9px] font-bold uppercase">
+                {dayNames[date.getDay()]}
+              </span>
+              <span className="text-sm font-black">{date.getDate()}</span>
+              {booked && (
+                <span className="text-[7px] font-bold text-red-400 uppercase">Booked</span>
+              )}
+              {(isStart) && (
+                <span className="text-[7px] font-bold text-white uppercase">Start</span>
+              )}
+              {(isEnd) && (
+                <span className="text-[7px] font-bold text-white uppercase">End</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Legend */}
+      <div className="flex gap-4 mt-2">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded bg-brand-600"></div>
+          <span className="text-[10px] text-gray-500 font-medium">Selected</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded bg-red-100 border border-red-200"></div>
+          <span className="text-[10px] text-gray-500 font-medium">Booked</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded bg-white border border-gray-200"></div>
+          <span className="text-[10px] text-gray-500 font-medium">Available</span>
         </div>
       </div>
-      {/* <div className="grid grid-cols-7 gap-2 max-h-[300px] overflow-y-auto">
-        {renderCalendar()}
-      </div> */}
     </div>
-  )}
-</div>
 
-{/* Date Inputs - Keep these but make them cleaner */}
-<div className="space-y-4 mb-6">
-  <div>
-    <label className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-2">
-      <i className="ph-bold ph-calendar-blank text-brand-600"></i>
-      From Date
-    </label>
-    <input
-  type="date"
-  value={startDate}
-  min={today} // ✅ blocks past dates
-  onChange={(e) => {
-    setStartDate(e.target.value);
-    // Reset end date if it's before the new start date
-    if (endDate && e.target.value > endDate) {
-      setEndDate('');
-    }
-  }}
-  className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all"
-/>
+    {/* Date Inputs */}
+    <div className="space-y-4 mb-4">
+      <div>
+        <label className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-2">
+          <i className="ph-bold ph-calendar-blank text-brand-600"></i>
+          From Date
+        </label>
+        <input
+          type="date"
+          value={startDate}
+          min={today}
+          onChange={(e) => {
+            setStartDate(e.target.value);
+            setAvailabilityError('');
+            if (endDate && e.target.value > endDate) setEndDate('');
+          }}
+          className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all"
+        />
+      </div>
+
+      <div>
+        <label className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-2">
+          <i className="ph-bold ph-calendar-check text-brand-600"></i>
+          To Date
+        </label>
+        <input
+          type="date"
+          value={endDate}
+          min={startDate || today}
+          onChange={(e) => {
+            const newEnd = e.target.value;
+            // Check conflict
+            if (startDate) {
+              const hasConflict = bookedDates.some(b => {
+                const bs = new Date(b.start_date);
+                const be = new Date(b.end_date);
+                const rs = new Date(startDate);
+                const re = new Date(newEnd);
+                return !(re < bs || rs > be);
+              });
+              if (hasConflict) {
+                setAvailabilityError('Selected range includes already booked dates. Please choose different dates.');
+                setEndDate('');
+                return;
+              }
+            }
+            setEndDate(newEnd);
+            setAvailabilityError('');
+          }}
+          className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all"
+        />
+      </div>
+    </div>
+
+    {/* Error message */}
+    {availabilityError && (
+      <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-[12px] flex items-start gap-2">
+        <i className="ph-bold ph-warning-circle text-red-500 text-lg flex-shrink-0 mt-0.5"></i>
+        <p className="text-xs font-semibold text-red-700">{availabilityError}</p>
+      </div>
+    )}
+
+    <div className="flex justify-between items-center mb-5 text-sm">
+      <span className="text-gray-500 font-medium">Estimated Total ({totalDays} days)</span>
+      <span className="font-black text-gray-900 text-lg">₹{totalPrice.toLocaleString()}</span>
+    </div>
+
+    {userPendingBooking ? (
+      <div className="w-full bg-amber-50 border-2 border-amber-200 rounded-[16px] py-4 px-4 text-center">
+        <p className="font-black text-amber-800 text-sm flex items-center justify-center gap-2">
+          <i className="ph-bold ph-clock text-amber-600 text-base"></i>
+          Booking Request Pending
+        </p>
+        <p className="text-xs text-amber-600 mt-1">
+          {userPendingBooking.start_date
+            ? `${new Date(userPendingBooking.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${new Date(userPendingBooking.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`
+            : 'Waiting for owner approval'}
+        </p>
+        <button
+          onClick={() => router.push('/user-profile')}
+          className="mt-3 text-xs font-bold text-amber-700 underline underline-offset-2"
+        >
+          View in My Bookings
+        </button>
+      </div>
+    ) : (
+      <button
+        onClick={() => {
+          if (!startDate || !endDate) return;
+          if (availabilityError) return;
+          setShowPhoneModal(true);
+        }}
+        disabled={isReserving || !startDate || !endDate || !!availabilityError}
+        className="w-full bg-brand-800 text-white rounded-[16px] py-4 font-bold shadow-lg shadow-brand-800/30 active:scale-[0.98] transition-transform flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isReserving ? (
+          <>
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            Sending Request...
+          </>
+        ) : !startDate || !endDate ? (
+          <>Select Dates to Book <i className="ph-bold ph-arrow-right"></i></>
+        ) : (
+          <>Request to Book <i className="ph-bold ph-arrow-right"></i></>
+        )}
+      </button>
+    )}
+    <p className="text-[10px] text-center text-gray-400 mt-3 font-medium">
+      A booking request will be sent to the equipment owner
+    </p>
   </div>
-
-  <div>
-    <label className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-2">
-      <i className="ph-bold ph-calendar-check text-brand-600"></i>
-      To Date
-    </label>
-<input
-  type="date"
-  value={endDate}
-  min={startDate || today} // ✅ end date can't be before start date
-  onChange={(e) => setEndDate(e.target.value)}
-  className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-all"
-/>
-  </div>
-</div>
-            <div className="flex justify-between items-center mb-5 text-sm">
-              <span className="text-gray-500 font-medium">Estimated Total ({totalDays} days)</span>
-              <span className="font-black text-gray-900 text-lg">₹{totalPrice.toLocaleString()}</span>
-            </div>
-
-            {userPendingBooking ? (
-              <div className="w-full bg-amber-50 border-2 border-amber-200 rounded-[16px] py-4 px-4 text-center">
-                <p className="font-black text-amber-800 text-sm flex items-center justify-center gap-2">
-                  <i className="ph-bold ph-clock text-amber-600 text-base"></i>
-                  Booking Request Pending
-                </p>
-                <p className="text-xs text-amber-600 mt-1">
-                  {userPendingBooking.start_date ? `${new Date(userPendingBooking.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${new Date(userPendingBooking.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : 'Waiting for owner approval'}
-                </p>
-                <button
-                  onClick={() => router.push('/user-profile')}
-                  className="mt-3 text-xs font-bold text-amber-700 underline underline-offset-2"
-                >
-                  View in My Bookings
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  if (!startDate || !endDate) return;
-                  setShowPhoneModal(true);
-                }}
-                disabled={isReserving || !startDate || !endDate}
-                className="w-full bg-brand-800 text-white rounded-[16px] py-4 font-bold shadow-lg shadow-brand-800/30 active:scale-[0.98] transition-transform flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                {isReserving ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Sending Request...
-                  </>
-                ) : !startDate || !endDate ? (
-                  <>Select Dates to Book <i className="ph-bold ph-arrow-right"></i></>
-                ) : (
-                  <>Request to Book <i className="ph-bold ph-arrow-right"></i></>
-                )}
-              </button>
-            )}
-            <p className="text-[10px] text-center text-gray-400 mt-3 font-medium">A booking request will be sent to the equipment owner</p>
-          </div>
-        </section>
+</section>
 
         {/* Phone Number Modal */}
         {showPhoneModal && (
@@ -1143,21 +1243,26 @@ function MachineryDetailsContent() {
                 <input
                   type="tel"
                   value={renterPhone}
-                  onChange={(e) => setRenterPhone(e.target.value)}
+                  maxLength={10}
+                  onChange={(e) => {
+  const value = e.target.value.replace(/\D/g, ''); // remove non-digits
+  setRenterPhone(value);
+}}
                   placeholder="+91 9876543210"
                   className="w-full bg-[#F4F5F0] rounded-[16px] pl-10 pr-4 py-3.5 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
                   autoFocus
                 />
               </div>
               <button
-                onClick={() => {
-                  if (!renterPhone.trim()) {
-                    alert('Mobile number is required');
-                    return;
-                  }
-                  setShowPhoneModal(false);
-                  handleReserve();
-                }}
+onClick={() => {
+  if (!/^[0-9]{10}$/.test(renterPhone)) {
+    alert('Enter valid 10 digit mobile number');
+    return;
+  }
+
+  setShowPhoneModal(false);
+  handleReserve();
+}}
                 disabled={isReserving}
                 className="w-full bg-brand-800 text-white rounded-[16px] py-4 font-bold shadow-lg active:scale-[0.98] transition-transform flex justify-center items-center gap-2 disabled:opacity-50"
               >

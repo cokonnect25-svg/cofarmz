@@ -103,10 +103,18 @@ function RentMachineryContent() {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  let { name, value } = e.target;
+
+  if (name === "contact_phone") {
+    value = value.replace(/\D/g, '').slice(0, 10); // only digits + max 10
+  }
+
+  setFormData((prev) => ({
+    ...prev,
+    [name]: value,
+  }));
+};
 
   const handleCategoryChange = (category: string) => {
     setFormData(prev => ({ ...prev, category }));
@@ -296,10 +304,17 @@ function RentMachineryContent() {
       setSubmitError('Please fill in equipment name and daily rate');
       return;
     }
+
+
     if (!formData.contact_phone.trim()) {
       setSubmitError('Mobile number is required. Renters need to contact you.');
       return;
     }
+
+    if (!/^[6-9][0-9]{9}$/.test(formData.contact_phone)) {
+  alert("Enter valid 10 digit mobile number");
+  return;
+}
 
     setIsSubmitting(true);
 
@@ -536,6 +551,7 @@ function RentMachineryContent() {
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
+                maxLength={10}
                 className="w-full bg-[#F4F5F0] rounded-[16px] px-4 py-3.5 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30 transition-shadow placeholder:text-gray-400 placeholder:font-medium"
                 placeholder="e.g. John Deere 8R 370"
               />
