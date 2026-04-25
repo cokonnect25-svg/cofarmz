@@ -2281,7 +2281,6 @@ if (alreadyExists) {
             </div>
 
             <div className="p-6 space-y-4">
-             // ✅ CORRECT
               <div className="relative">
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Crop Name *</label>
                 <input
