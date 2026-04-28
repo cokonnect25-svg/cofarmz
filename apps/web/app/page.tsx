@@ -108,7 +108,7 @@ function HomePageContent() {
     checkRole();
   }, [user?.id]);
 
-  const handleSelectRole = async (role: 'farmer' | 'buyer') => {
+  const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier') => {
     setRoleUpdating(true);
     try {
       const res = await fetch(getApiUrl('/api/users/profile'), {
@@ -795,6 +795,27 @@ function HomePageContent() {
                   </div>
                   {roleUpdating && <div className="absolute right-6 animate-spin w-5 h-5 border-2 border-brand-600 border-t-transparent rounded-full" />}
                 </button>
+
+                <button
+                onClick={() => agreedToTerms && handleSelectRole('supplier')}
+                disabled={roleUpdating || !agreedToTerms}
+                className={`group relative flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${
+                  agreedToTerms
+                    ? 'border-gray-100 hover:border-brand-600 hover:bg-brand-50 cursor-pointer'
+                    : 'border-gray-100 opacity-50 cursor-not-allowed'
+                }`}
+              >
+                <div className="p-3 bg-gray-50 rounded-xl group-hover:bg-white transition-colors">
+                  <i className="ph-fill ph-wrench text-2xl text-gray-600 group-hover:text-brand-600"></i>
+                </div>
+                <div>
+                  <span className="block font-bold text-gray-900">I am a Supplier</span>
+                  <span className="text-xs text-gray-400">I want to list and manage equipment</span>
+                </div>
+                {roleUpdating && (
+                  <div className="absolute right-6 animate-spin w-5 h-5 border-2 border-brand-600 border-t-transparent rounded-full" />
+                )}
+              </button>
               </div>
             </div>
           </div>

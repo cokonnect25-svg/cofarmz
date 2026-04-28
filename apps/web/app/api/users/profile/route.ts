@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
     if (!userProfile.role && userProfile.role_id) {
       if (userProfile.role_id === 1) userProfile.role = 'farmer';
       else if (userProfile.role_id === 2) userProfile.role = 'buyer';
+      else if (userProfile.role_id === 3) userProfile.role = 'supplier';
     }
 
     return NextResponse.json(userProfile);
@@ -58,9 +59,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { email, role, userId } = body;
 
-    if (!role || !['farmer', 'buyer'].includes(role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
-    }
+const allowedRoles = ['farmer', 'buyer', 'supplier'];
+
+if (!role || !allowedRoles.includes(role)) {
+  return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+}
     if (!email && !userId) {
       return NextResponse.json({ error: 'email or userId is required' }, { status: 400 });
     }
@@ -68,12 +71,27 @@ export async function POST(request: Request) {
     // Ensure roles table + columns exist
     try {
       await sql`CREATE TABLE IF NOT EXISTS roles (id SERIAL PRIMARY KEY, name VARCHAR(50) NOT NULL UNIQUE, display_name VARCHAR(100) NOT NULL)`;
-      await sql`INSERT INTO roles (id,name,display_name) VALUES (1,'farmer','Farmer'),(2,'buyer','Buyer') ON CONFLICT (id) DO NOTHING`;
+await sql`
+  INSERT INTO roles (id,name,display_name)
+  VALUES 
+    (1,'farmer','Farmer'),
+    (2,'buyer','Buyer'),
+    (3,'supplier','Supplier')
+  ON CONFLICT (id) DO NOTHING
+`;
       await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'buyer'`;
       await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role_id INTEGER`;
     } catch (e: any) { errors.push('setup: ' + e.message); }
 
-    const roleId = role === 'farmer' ? 1 : 2;
+    const roleRow = await sql`
+  SELECT id FROM roles WHERE name = ${role}
+`;
+
+if (roleRow.length === 0) {
+  return NextResponse.json({ error: 'Role not found in DB' }, { status: 400 });
+}
+
+const roleId = roleRow[0].id;
     let result: any[] = [];
 
     // Try by userId first (most reliable), then email

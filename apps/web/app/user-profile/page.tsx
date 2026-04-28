@@ -2357,20 +2357,24 @@ if (alreadyExists) {
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  {userRole === 'farmer' ? 'Expected Yield Date' : 'Want to Buy By'}
-                </label>
-                  <input
-                    type="date"
-                    min={localDate}
-                    value={editCropForm.expected_yield_date}
-                    onChange={(e) =>
-                      setEditCropForm({ ...editCropForm, expected_yield_date: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-              </div>
+<div>
+  <label className="block text-sm font-semibold text-gray-900 mb-2">
+    {userRole === 'farmer' ? 'Expected Yield Date' : 'Want to Buy By'}
+  </label>
+
+  <input
+    type="date"
+    value={newCrop.expected_yield_date}
+    min={localDate} // 🔥 prevents past dates
+    onChange={(e) =>
+      setNewCrop({
+        ...newCrop,
+        expected_yield_date: e.target.value,
+      })
+    }
+    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+  />
+</div>
 
               <div className="flex gap-3">
                 <div className="flex-1">

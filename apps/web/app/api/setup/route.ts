@@ -76,13 +76,21 @@ export async function POST() {
     `;
     results.push("roles table ensured");
 
-    await sql`
-      INSERT INTO roles (id, name, display_name, description)
-      VALUES
-        (1, 'farmer', 'Farmer', 'Can list machinery, crops, rent equipment'),
-        (2, 'buyer', 'Buyer', 'Can rent machinery and purchase crops')
-      ON CONFLICT (id) DO NOTHING
-    `;
+await sql`
+  INSERT INTO roles (id, name, display_name, description, permissions)
+  VALUES
+    (1, 'farmer', 'Farmer', 'Can list crops & machinery',
+      '{"can_list_crops": true, "can_list_machinery": true, "can_rent_machinery": true}'::jsonb),
+
+    (2, 'buyer', 'Buyer', 'Can buy crop waste',
+      '{"can_buy_crop_waste": true, "can_rent_machinery": true}'::jsonb),
+
+    (3, 'supplier', 'Supplier', 'Can manage machinery only',
+      '{"can_list_machinery": true, "can_edit_machinery": true, "can_list_crops": false}'::jsonb)
+
+  ON CONFLICT (id) DO UPDATE
+  SET permissions = EXCLUDED.permissions
+`;
     // Remove admin role if it exists
     await sql`DELETE FROM roles WHERE name = 'admin'`.catch(() => {});
     // Update any admin users to buyer
