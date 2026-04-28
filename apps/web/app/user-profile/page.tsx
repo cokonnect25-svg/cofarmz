@@ -2169,16 +2169,12 @@ if (alreadyExists) {
                   {userRole === 'farmer' ? 'Expected Yield Date' : 'Want to Buy By'}
                 </label>
 <input
-  type="number"
+  type="date"
   inputMode="decimal"
-  value={newCrop.expected_yield_quantity}
+  min={localDate}
+  value={newCrop.expected_yield_date}
   onChange={(e) => {
-    const val = e.target.value.replace(/[^0-9.]/g, '');
-    const parts = val.split('.');
-    const clean = parts[0] + (parts.length > 1 ? '.' + parts[1] : '');
-    if (clean === '' || (parseFloat(clean) > 0 && parseFloat(clean) <= 1000000)) {
-      setNewCrop({ ...newCrop, expected_yield_quantity: clean });
-    }
+    setNewCrop({ ...newCrop, expected_yield_date: e.target.value });
   }}
   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
 />
