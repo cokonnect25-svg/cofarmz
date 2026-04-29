@@ -31,7 +31,7 @@ function SelectRoleContent() {
       .catch(() => { });
   }, [mounted, loading, user, router]);
 
-  const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier') => {
+  const handleSelectRole = async (role: 'farmer' | 'buyer' | 'Supplier') => {
     if (!user?.email || selecting || !agreed) return;
     setSelecting(true);
     setError('');
@@ -172,7 +172,7 @@ function SelectRoleContent() {
               {agreed && <i className="ph-bold ph-arrow-right text-blue-500 text-lg ml-auto"></i>}
             </button>
             <button
-  onClick={() => handleSelectRole('supplier')}
+  onClick={() => handleSelectRole('Supplier')}
   disabled={selecting || !agreed}
   className={`w-full border-2 rounded-2xl p-4 flex items-center gap-4 transition-all text-left active:scale-[0.98] ${
     agreed

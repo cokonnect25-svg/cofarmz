@@ -85,7 +85,7 @@ await sql`
     (2, 'buyer', 'Buyer', 'Can buy crop waste',
       '{"can_buy_crop_waste": true, "can_rent_machinery": true}'::jsonb),
 
-    (3, 'supplier', 'Supplier', 'Can manage machinery only',
+    (3, 'Supplier', 'Supplier', 'Can manage machinery only',
       '{"can_list_machinery": true, "can_edit_machinery": true, "can_list_crops": false}'::jsonb)
 
   ON CONFLICT (id) DO UPDATE

@@ -262,7 +262,7 @@ const localDate = new Date(
   const [volume, setVolume] = useState(0);
   const videoRefsMap = useRef<{ [key: string]: HTMLVideoElement | null }>({});
   const [userReviews, setUserReviews] = useState<{ [key: number]: any }>({});
-  const [userRole, setUserRole] = useState<'farmer' | 'buyer' | 'supplier'>('buyer');
+  const [userRole, setUserRole] = useState<'farmer' | 'buyer' | 'Supplier'>('buyer');
   const [showCallModal, setShowCallModal] = useState(false);
   const [callRecipient, setCallRecipient] = useState<{ id: string; name: string; image: string } | null>(null);
   const [callType, setCallType] = useState<'audio' | 'video'>('audio');
@@ -294,7 +294,7 @@ const localDate = new Date(
 
 
   useEffect(() => {
-  if (userRole === 'supplier') {
+  if (userRole === 'Supplier') {
     setExpandedSection('equipment');
   }
 }, [userRole]);
@@ -686,7 +686,7 @@ const localDate = new Date(
       return;
     }
 
-    if (userRole === 'supplier') {
+    if (userRole === 'Supplier') {
   alert("Suppliers cannot add crops");
   return;
 }
@@ -1260,7 +1260,7 @@ if (alreadyExists) {
               <p className="font-bold text-lg text-gray-900">{followingCount}</p>
               <p className="text-xs text-gray-600">Following</p>
             </button>
-             {userRole !== 'supplier' && (
+             {userRole !== 'Supplier' && (
             <button
               onClick={() => {
                 if (expandedSection === 'crops') {
@@ -1529,7 +1529,7 @@ if (alreadyExists) {
                     ))}
                   </div>
                 )}
-                {userRole !== 'supplier' && (
+                {userRole !== 'Supplier' && (
                 <button
                   onClick={() => setShowAddCropForm(true)}
                   className="w-full mt-4 text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2"

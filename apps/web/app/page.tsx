@@ -73,7 +73,7 @@ function HomePageContent() {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [roleUpdating, setRoleUpdating] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [supplierResults, setSupplierResults] = useState<Farmer[]>([]);
+  const [SupplierResults, setSupplierResults] = useState<Farmer[]>([]);
 
   
  
@@ -109,7 +109,7 @@ function HomePageContent() {
     checkRole();
   }, [user?.id]);
 
-  const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier') => {
+  const handleSelectRole = async (role: 'farmer' | 'buyer' | 'Supplier') => {
     setRoleUpdating(true);
     try {
       const res = await fetch(getApiUrl('/api/users/profile'), {
@@ -143,32 +143,42 @@ function HomePageContent() {
             const userCrops = profile.crops?.map((c: any) => c.crop_name) || [];
 
             if (userCrops.length > 0) {
-              setLoadingMatches(true);
-              const uniqueCrops = [...new Set(userCrops)];
+setLoadingMatches(true);
 
-              // Get real user location, fallback to 0,0 (shows all users sorted by distance=9999)
-              const fetchMatches = (lat: number, lon: number) => {
-                Promise.all([
-                  fetch(getApiUrl(`/api/nearby-farmers?type=farmers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
-                  fetch(getApiUrl(`/api/nearby-farmers?type=buyers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
-                  fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
-                    fetch(getApiUrl(`/api/nearby-farmers?type=suppliers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
-                ]).then(([farmersData, buyersData, wasteBuyersData, suppliersData]) => {
-                  const normalize = (arr: any[]) => arr.map((f: any) => ({
-                    ...f,
-                    crops: Array.isArray(f.crops)
-                      ? f.crops.map((c: any) => ({ crop_name: c.crop_name || c, is_crop_waste: !!c.is_crop_waste }))
-                      : [],
-                    distance: parseFloat(f.distance) || 9999,
-                  }));
-                  setMatchingResults([
-                    ...normalize(Array.isArray(farmersData) ? farmersData : []),
-                    ...normalize(Array.isArray(buyersData) ? buyersData : []),
-                  ]);
-                  setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
-                  setSupplierResults(normalize(Array.isArray(suppliersData) ? suppliersData : []));
-                }).catch(() => {}).finally(() => setLoadingMatches(false));
-              };
+const fetchMatches = (lat: number, lon: number) => {
+  Promise.all([
+    fetch(getApiUrl(`/api/nearby-farmers?type=farmers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+
+    fetch(getApiUrl(`/api/nearby-farmers?type=buyers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+
+    fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+
+    fetch(getApiUrl(`/api/nearby-farmers?type=Suppliers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+  ])
+    .then(([farmersData, buyersData, wasteBuyersData, SuppliersData]) => {
+      const normalize = (arr: any[]) => arr.map((f: any) => ({
+        ...f,
+        crops: Array.isArray(f.crops)
+          ? f.crops.map((c: any) => ({
+              crop_name: c.crop_name || c,
+              is_crop_waste: !!c.is_crop_waste
+            }))
+          : [],
+        distance: parseFloat(f.distance) || 9999,
+      }));
+
+      setMatchingResults([
+        ...normalize(Array.isArray(farmersData) ? farmersData : []),
+        ...normalize(Array.isArray(buyersData) ? buyersData : []),
+      ]);
+
+      setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
+      setSupplierResults(normalize(Array.isArray(SuppliersData) ? SuppliersData : []));
+    })
+    .catch(console.error)
+    .finally(() => setLoadingMatches(false));
+};
+
 
               // Try to get user's GPS location (native + web)
           const getLocation = async () => {
@@ -251,8 +261,8 @@ function HomePageContent() {
         fetch(getApiUrl(`/api/nearby-farmers?type=farmers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
         fetch(getApiUrl(`/api/nearby-farmers?type=buyers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
         fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
-          fetch(getApiUrl(`/api/nearby-farmers?type=suppliers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
-      ]).then(([farmersData, buyersData, wasteBuyersData, suppliersData]) => {
+          fetch(getApiUrl(`/api/nearby-farmers?type=Suppliers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+      ]).then(([farmersData, buyersData, wasteBuyersData, SuppliersData]) => {
         const normalize = (arr: any[]) => arr.map((f: any) => ({
           ...f,
           crops: Array.isArray(f.crops)
@@ -265,8 +275,10 @@ function HomePageContent() {
           ...normalize(Array.isArray(buyersData) ? buyersData : []),
         ]);
         setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
-        setSupplierResults(normalize(Array.isArray(suppliersData) ? suppliersData : []));
-      }).catch(() => {}).finally(() => setLoadingMatches(false));
+        setSupplierResults(normalize(Array.isArray(SuppliersData) ? SuppliersData : []));
+      }).catch((err) => {
+  console.error("MATCH ERROR:", err);
+}).finally(() => setLoadingMatches(false));
     };
     window.addEventListener('userLocationUpdated', handler);
     return () => window.removeEventListener('userLocationUpdated', handler);
@@ -538,7 +550,7 @@ function HomePageContent() {
     </div>
 
     <button
-      onClick={() => router.push('/nearby-farmers?type=suppliers')}
+      onClick={() => router.push('/nearby-farmers?type=Suppliers')}
       className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 hover:bg-purple-600 hover:text-white transition-all shadow-sm"
     >
       <i className="ph-bold ph-arrow-right"></i>
@@ -546,11 +558,11 @@ function HomePageContent() {
   </div>
 
   <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
-    {supplierResults.length > 0
-      ? supplierResults.slice(0, 10).map((p: any) =>
+    {SupplierResults.length > 0
+      ? SupplierResults.slice(0, 10).map((p: any) =>
           renderCard(p, 'bg-purple-50 text-purple-700')
         )
-      : renderEmpty('No suppliers available nearby')}
+      : renderEmpty('No Suppliers available nearby')}
   </div>
 </div>
                   </div>
@@ -829,7 +841,7 @@ function HomePageContent() {
                 </button>
 
                 <button
-                onClick={() => agreedToTerms && handleSelectRole('supplier')}
+                onClick={() => agreedToTerms && handleSelectRole('Supplier')}
                 disabled={roleUpdating || !agreedToTerms}
                 className={`group relative flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${
                   agreedToTerms

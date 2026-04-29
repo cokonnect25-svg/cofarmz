@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     if (!userProfile.role && userProfile.role_id) {
       if (userProfile.role_id === 1) userProfile.role = 'farmer';
       else if (userProfile.role_id === 2) userProfile.role = 'buyer';
-      else if (userProfile.role_id === 3) userProfile.role = 'supplier';
+      else if (userProfile.role_id === 3) userProfile.role = 'Supplier';
     }
 
     return NextResponse.json(userProfile);
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { email, role, userId } = body;
 
-const allowedRoles = ['farmer', 'buyer', 'supplier'];
+const allowedRoles = ['farmer', 'buyer', 'Supplier'];
 
 if (!role || !allowedRoles.includes(role)) {
   return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
@@ -76,7 +76,7 @@ await sql`
   VALUES 
     (1,'farmer','Farmer'),
     (2,'buyer','Buyer'),
-    (3,'supplier','Supplier')
+    (3,'Supplier','Supplier')
   ON CONFLICT (id) DO NOTHING
 `;
       await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'buyer'`;

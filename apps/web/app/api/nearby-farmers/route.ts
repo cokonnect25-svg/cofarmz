@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const equipment = searchParams.get("equipment")?.split(",").filter(Boolean) || [];
     const yieldDateFrom = searchParams.get("yieldDateFrom") || null;
     const yieldDateTo = searchParams.get("yieldDateTo") || null;
-    const searchType = searchParams.get("type") || "farmers"; // "farmers", "buyers", "wastage", "suppliers"
+    const searchType = searchParams.get("type") || "farmers"; // "farmers", "buyers", "wastage", "Suppliers"
     const showWasteBuyers = searchParams.get("wasteOnly") === "true";
     const currentUserId = searchParams.get("currentUserId");
 
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     // Map searchType to DB role value
     const targetRole =
       searchType === "farmers" ? 'farmer' :
-      searchType === "suppliers" ? 'supplier' :
+      searchType === "Suppliers" ? 'Supplier' :
       'buyer'; // covers "buyers" and "wastage"
 
     // Fetch users matching role — also include users where role_id matches as fallback
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
         u.role = ${targetRole}
         OR (u.role IS NULL AND u.role_id = ${
           targetRole === 'farmer' ? 1 :
-          targetRole === 'supplier' ? 3 :
+          targetRole === 'Supplier' ? 3 :
           2
         })
       )
