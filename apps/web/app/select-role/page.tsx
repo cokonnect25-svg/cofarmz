@@ -31,7 +31,7 @@ function SelectRoleContent() {
       .catch(() => { });
   }, [mounted, loading, user, router]);
 
-  const handleSelectRole = async (role: 'farmer' | 'buyer') => {
+  const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier') => {
     if (!user?.email || selecting || !agreed) return;
     setSelecting(true);
     setError('');
@@ -171,6 +171,32 @@ function SelectRoleContent() {
               </div>
               {agreed && <i className="ph-bold ph-arrow-right text-blue-500 text-lg ml-auto"></i>}
             </button>
+            <button
+  onClick={() => handleSelectRole('supplier')}
+  disabled={selecting || !agreed}
+  className={`w-full border-2 rounded-2xl p-4 flex items-center gap-4 transition-all text-left active:scale-[0.98] ${
+    agreed
+      ? 'bg-purple-50 hover:bg-purple-100 border-purple-200 hover:border-purple-500'
+      : 'bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed'
+  }`}
+>
+  <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${
+    agreed ? 'bg-purple-600' : 'bg-gray-300'
+  }`}>
+    <span className="text-2xl">🏭</span>
+  </div>
+
+  <div>
+    <p className="font-black text-gray-900">Supplier</p>
+    <p className="text-gray-500 text-xs mt-0.5">
+      List and manage machinery only
+    </p>
+  </div>
+
+  {agreed && (
+    <i className="ph-bold ph-arrow-right text-purple-500 text-lg ml-auto"></i>
+  )}
+</button>
           </div>
 
           {selecting && (
