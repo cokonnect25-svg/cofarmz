@@ -67,8 +67,15 @@ function NearbyFarmersContent() {
   const [locationError, setLocationError] = useState<string | null>(null);
 
   const rawType = searchParams.get('type');
-  const initialType = rawType === 'buyers' ? 'buyers' : rawType === 'wastage' ? 'wastage' : 'farmers';
-  const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage'>(initialType);
+  const initialType =
+    rawType === 'buyers' ? 'buyers' :
+    rawType === 'wastage' ? 'wastage' :
+    rawType === 'suppliers' ? 'suppliers' :
+    'farmers';
+
+  const [searchType, setSearchType] = useState<
+    'farmers' | 'buyers' | 'wastage' | 'suppliers'
+  >(initialType);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('nearby');
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -88,8 +95,8 @@ function NearbyFarmersContent() {
 
 
   useEffect(() => {
-  setVisibleCount(50);
-}, [searchType, filters, searchQuery]);
+    setVisibleCount(50);
+  }, [searchType, filters, searchQuery]);
 
   // No in-app call - using native tel: dial
 
@@ -206,14 +213,13 @@ function NearbyFarmersContent() {
     fetchNearbyFarmers(0, 0, searchType);
   };
 
-  const fetchNearbyFarmers = async (latitude: number, longitude: number, type: 'farmers' | 'buyers' | 'wastage' = 'farmers') => {
+  const fetchNearbyFarmers = async (latitude: number, longitude: number, type: 'farmers' | 'buyers' | 'wastage' | 'suppliers' = 'farmers') => {
     setLoadingFarmers(true);
     try {
       const params = new URLSearchParams();
       params.append('latitude', latitude.toString());
       params.append('longitude', longitude.toString());
-      // 'wastage' is buyers filtered by wasteOnly
-      params.append('type', type === 'wastage' ? 'buyers' : type);
+      params.append('type', type);
       if (user?.id) params.append('currentUserId', user.id);
       if (filters.enableDistance) params.append('distance', filters.distance.toString());
       params.append('minRating', filters.minRating.toString());
@@ -296,7 +302,15 @@ function NearbyFarmersContent() {
                 <i className="ph-bold ph-arrow-left text-lg"></i>
               </button>
               <h1 className="text-2xl font-bold text-gray-900">
-                {searchType === 'farmers' ? 'Nearby Farmers' : searchType === 'wastage' ? 'Crop Waste Buyers' : 'Nearby Buyers'}
+                {searchType === 'farmers'
+                  ? 'Nearby Farmers'
+                  : searchType === 'buyers'
+                  ? 'Nearby Buyers'
+                  : searchType === 'wastage'
+                  ? 'Crop Waste Buyers'
+                  : searchType === 'suppliers'
+                  ? 'Nearby Suppliers'
+                  : 'Nearby'}
               </h1>
             </div>
             <button
@@ -307,7 +321,7 @@ function NearbyFarmersContent() {
             </button>
           </div>
 
-          {/* Toggle Farmers/Buyers/Wastage */}
+          {/* Toggle Farmers/Buyers/Wastage/Suppliers */}
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => { setSearchType('farmers'); setSortBy('nearby'); }}
@@ -336,6 +350,16 @@ function NearbyFarmersContent() {
             >
               <i className="ph-bold ph-recycle mr-1"></i>Wastage
             </button>
+
+            <button
+              onClick={() => { setSearchType('suppliers'); setSortBy('nearby'); }}
+              className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === 'suppliers'
+                ? 'bg-purple-600 text-white'
+                : 'bg-gray-100 text-gray-700'
+                }`}
+            >
+              🏭 Suppliers
+            </button>
           </div>
 
           {/* Search Input */}
@@ -359,10 +383,10 @@ function NearbyFarmersContent() {
 
         {/* Filter Modal */}
         {showFilter && (
-<div
-  className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
-  onClick={() => setShowFilter(false)}
->
+          <div
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
+            onClick={() => setShowFilter(false)}
+          >
             <div
               className="w-full mx-4 bg-white rounded-2xl p-6 max-w-sm shadow-2xl max-h-[80vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
@@ -426,23 +450,23 @@ function NearbyFarmersContent() {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs text-gray-600 mb-1">From Date</label>
-<input
-  type="date"
-  min={today}
-  value={filters.yieldDateFrom}
-  onChange={(e) => setFilters({ ...filters, yieldDateFrom: e.target.value })}
-  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-brand-600"
-/>
+                    <input
+                      type="date"
+                      min={today}
+                      value={filters.yieldDateFrom}
+                      onChange={(e) => setFilters({ ...filters, yieldDateFrom: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-brand-600"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-600 mb-1">To Date</label>
-<input
-  type="date"
-  min={filters.yieldDateFrom || today}
-  value={filters.yieldDateTo}
-  onChange={(e) => setFilters({ ...filters, yieldDateTo: e.target.value })}
-  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-brand-600"
-/>
+                    <input
+                      type="date"
+                      min={filters.yieldDateFrom || today}
+                      value={filters.yieldDateTo}
+                      onChange={(e) => setFilters({ ...filters, yieldDateTo: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-brand-600"
+                    />
                   </div>
                 </div>
               </div>
@@ -579,7 +603,12 @@ function NearbyFarmersContent() {
         {/* Results Header */}
         <section className="px-6 mb-4 relative z-10 flex items-center justify-between">
           <p className="text-sm font-medium text-gray-500">
-            {loadingFarmers ? 'Searching...' : `Found ${farmers.length} ${searchType === 'farmers' ? 'farmer' : searchType === 'wastage' ? 'wastage buyer' : 'buyer'}${farmers.length !== 1 ? 's' : ''}`}
+            {loadingFarmers ? 'Searching...' : `Found ${farmers.length} ${
+              searchType === 'farmers' ? 'farmer' :
+              searchType === 'wastage' ? 'wastage buyer' :
+              searchType === 'suppliers' ? 'supplier' :
+              'buyer'
+            }${farmers.length !== 1 ? 's' : ''}`}
           </p>
           <button
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-900 shadow-soft font-medium text-sm"
@@ -593,121 +622,135 @@ function NearbyFarmersContent() {
 
         {/* Farmers List */}
         <section className="px-6 relative z-10 flex flex-col gap-5">
-  {loadingFarmers ? (
-    <div className="flex items-center justify-center py-10">
-      <div className="w-10 h-10 rounded-full border-4 border-brand-200 border-t-brand-600 animate-spin"></div>
-    </div>
-  ) : (() => {
-    const filteredFarmers = farmers
-      .filter((farmer) => {
-        const query = searchQuery.toLowerCase();
+          {loadingFarmers ? (
+            <div className="flex items-center justify-center py-10">
+              <div className="w-10 h-10 rounded-full border-4 border-brand-200 border-t-brand-600 animate-spin"></div>
+            </div>
+          ) : (() => {
+            const filteredFarmers = farmers
+              .filter((farmer) => {
+                const query = searchQuery.toLowerCase();
 
-        return query === '' ||
-          farmer.name?.toLowerCase().includes(query) ||
-          farmer.location?.toLowerCase().includes(query) ||
-          farmer.crops?.some(crop =>
-            crop.crop_name?.toLowerCase().includes(query)
-          );
-      })
-      .sort((a, b) => {
-        if (sortBy === 'nearby') {
-          const aDist = (!a.distance || a.distance >= 9999) ? 999999 : a.distance;
-          const bDist = (!b.distance || b.distance >= 9999) ? 999999 : b.distance;
-          return aDist - bDist;
-        }
-        if (sortBy === 'experience') {
-          const aExp = a.crops?.reduce((sum: number, c: any) => sum + (c.years_of_experience || 0), 0) || 0;
-          const bExp = b.crops?.reduce((sum: number, c: any) => sum + (c.years_of_experience || 0), 0) || 0;
-          return bExp - aExp;
-        }
-        if (sortBy === 'active') return (b.equipment_count || 0) - (a.equipment_count || 0);
-        return 0;
-      });
+                return query === '' ||
+                  farmer.name?.toLowerCase().includes(query) ||
+                  farmer.location?.toLowerCase().includes(query) ||
+                  farmer.crops?.some(crop =>
+                    crop.crop_name?.toLowerCase().includes(query)
+                  );
+              })
+              .sort((a, b) => {
+                if (sortBy === 'nearby') {
+                  const aDist = (!a.distance || a.distance >= 9999) ? 999999 : a.distance;
+                  const bDist = (!b.distance || b.distance >= 9999) ? 999999 : b.distance;
+                  return aDist - bDist;
+                }
+                if (sortBy === 'experience') {
+                  const aExp = a.crops?.reduce((sum: number, c: any) => sum + (c.years_of_experience || 0), 0) || 0;
+                  const bExp = b.crops?.reduce((sum: number, c: any) => sum + (c.years_of_experience || 0), 0) || 0;
+                  return bExp - aExp;
+                }
+                if (sortBy === 'active') return (b.equipment_count || 0) - (a.equipment_count || 0);
+                return 0;
+              });
 
-    return filteredFarmers.length === 0 ? (
-      <div className="text-center py-10">
-        <i className="ph-bold ph-magnifying-glass text-4xl text-gray-300 mb-3 block"></i>
-        <p className="text-gray-500 font-medium">
-          {searchQuery
-            ? `No ${searchType === 'farmers' ? 'farmers' : searchType === 'wastage' ? 'wastage crop buyers' : 'buyers'} found matching "${searchQuery}"`
-            : `No ${searchType === 'farmers' ? 'farmers' : searchType === 'wastage' ? 'wastage crop buyers' : 'buyers'} found with selected filters`}
-        </p>
-      </div>
-    ) : (
-      <>
-        {/* 🔹 LIST */}
-        {filteredFarmers.slice(0, visibleCount).map((farmer) => (
-          <div
-            key={farmer.id}
-            className="bg-white rounded-[24px] p-5 shadow-soft hover:shadow-lg transition-shadow cursor-pointer active:scale-[0.98]"
-            onClick={() => router.push(`/farmer-profile?id=${farmer.id}`)}
-          >
-                  {/* Farmer Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3 flex-1">
-                      <img
-                        src={farmer.image || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + farmer.id}
-                        alt={farmer.name}
-                        className="w-12 h-12 rounded-full object-cover bg-gray-100"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-gray-900 truncate">{farmer.name}</h3>
-                        <p className="text-xs text-gray-500 flex items-center gap-1">
-                          <i className="ph-fill ph-map-pin text-brand-600"></i>
-                          {farmer.distance >= 9999
-                            ? (farmer.location || 'Location not set')
-                            : farmer.location
-                              ? `${farmer.location} · ${Math.round(farmer.distance)} km away`
-                              : `${Math.round(farmer.distance)} km away`}
-                        </p>
+            return filteredFarmers.length === 0 ? (
+              <div className="text-center py-10">
+                <i className="ph-bold ph-magnifying-glass text-4xl text-gray-300 mb-3 block"></i>
+                <p className="text-gray-500 font-medium">
+                  {searchQuery
+                    ? `No ${
+                        searchType === 'farmers' ? 'farmers' :
+                        searchType === 'wastage' ? 'wastage crop buyers' :
+                        searchType === 'suppliers' ? 'suppliers' :
+                        'buyers'
+                      } found matching "${searchQuery}"`
+                    : `No ${
+                        searchType === 'farmers' ? 'farmers' :
+                        searchType === 'wastage' ? 'wastage crop buyers' :
+                        searchType === 'suppliers' ? 'suppliers' :
+                        'buyers'
+                      } found with selected filters`}
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* 🔹 LIST */}
+                {filteredFarmers.slice(0, visibleCount).map((farmer) => (
+                  <div
+                    key={farmer.id}
+                    className="bg-white rounded-[24px] p-5 shadow-soft hover:shadow-lg transition-shadow cursor-pointer active:scale-[0.98]"
+                    onClick={() => router.push(`/farmer-profile?id=${farmer.id}`)}
+                  >
+                    {/* Farmer Header */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3 flex-1">
+                        <img
+                          src={farmer.image || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + farmer.id}
+                          alt={farmer.name}
+                          className="w-12 h-12 rounded-full object-cover bg-gray-100"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-gray-900 truncate">{farmer.name}</h3>
+                          <p className="text-xs text-gray-500 flex items-center gap-1">
+                            <i className="ph-fill ph-map-pin text-brand-600"></i>
+                            {farmer.distance >= 9999
+                              ? (farmer.location || 'Location not set')
+                              : farmer.location
+                                ? `${farmer.location} · ${Math.round(farmer.distance)} km away`
+                                : `${Math.round(farmer.distance)} km away`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                          searchType === 'farmers'
+                            ? 'bg-green-100 text-green-700'
+                            : searchType === 'wastage'
+                            ? 'bg-amber-100 text-amber-700'
+                            : searchType === 'suppliers'
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-blue-100 text-blue-700'
+                          }`}>
+                          {searchType === 'farmers' ? '🌾 Farmer' :
+                           searchType === 'wastage' ? '♻️ Wastage Buyer' :
+                           searchType === 'suppliers' ? '🏭 Supplier' :
+                           '🛒 Buyer'}
+                        </span>
+                        {farmer.rating && (
+                          <div className="flex items-center gap-1 bg-amber-50 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
+                            <i className="ph-fill ph-star text-amber-500 text-sm"></i>
+                            <span className="text-sm font-bold text-gray-900">{farmer.rating}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${searchType === 'farmers'
-                        ? 'bg-green-100 text-green-700'
-                        : searchType === 'wastage'
-                        ? 'bg-amber-100 text-amber-700'
-                        : 'bg-blue-100 text-blue-700'
-                        }`}>
-                        {searchType === 'farmers' ? '🌾 Farmer' : searchType === 'wastage' ? '♻️ Wastage Buyer' : '🛒 Buyer'}
-                      </span>
-                      {farmer.rating && (
-                        <div className="flex items-center gap-1 bg-amber-50 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
-                          <i className="ph-fill ph-star text-amber-500 text-sm"></i>
-                          <span className="text-sm font-bold text-gray-900">{farmer.rating}</span>
-                        </div>
-                      )}
+
+                    {/* Followers/Following */}
+                    <div className="flex gap-3 mb-4">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95"
+                      >
+                        <i className="ph-bold ph-user-circle text-brand-600 text-sm"></i>
+                        <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/farmer-profile?id=${farmer.id}&tab=following`);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95"
+                      >
+                        <i className="ph-bold ph-user-check text-blue-600 text-sm"></i>
+                        <span className="text-xs font-bold text-gray-900">{farmer.following_count || 0} Following</span>
+                      </button>
                     </div>
-                  </div>
 
-                  {/* Followers/Following */}
-                  <div className="flex gap-3 mb-4">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95"
-                    >
-                      <i className="ph-bold ph-user-circle text-brand-600 text-sm"></i>
-                      <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/farmer-profile?id=${farmer.id}&tab=following`);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95"
-                    >
-                      <i className="ph-bold ph-user-check text-blue-600 text-sm"></i>
-                      <span className="text-xs font-bold text-gray-900">{farmer.following_count || 0} Following</span>
-                    </button>
-                  </div>
-
-                  {/* Crop Tags */}
-{/* Crop Tags */}
+                    {/* Crop Tags */}
                     {farmer.crops && farmer.crops.length > 0 && (() => {
-                      // For wastage view, only show crops where is_crop_waste is true
                       const displayCrops = searchType === 'wastage'
                         ? farmer.crops.filter((crop: any) => crop.is_crop_waste)
                         : farmer.crops;
@@ -722,10 +765,15 @@ function NearbyFarmersContent() {
                                   ? 'bg-green-100 text-green-800'
                                   : searchType === 'wastage'
                                   ? 'bg-amber-100 text-amber-800'
+                                  : searchType === 'suppliers'
+                                  ? 'bg-purple-100 text-purple-800'
                                   : 'bg-orange-100 text-orange-800'
                               }`}
                             >
-                              {searchType === 'farmers' ? '🌾' : searchType === 'wastage' ? '♻️' : '🛒'} {crop.crop_name}
+                              {searchType === 'farmers' ? '🌾' :
+                               searchType === 'wastage' ? '♻️' :
+                               searchType === 'suppliers' ? '🏭' :
+                               '🛒'} {crop.crop_name}
                             </span>
                           ))}
                           {displayCrops.length > 5 && (
@@ -737,122 +785,138 @@ function NearbyFarmersContent() {
                       ) : null;
                     })()}
 
-                  {/* Stats Row — different for farmers vs buyers */}
-                  <div className="flex gap-3 mb-4">
-                    {searchType === 'farmers' ? (
-                      <>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=crops`); }}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors active:scale-95"
-                        >
-                          <i className="ph-bold ph-plant text-green-600 text-sm"></i>
-                          <span className="text-xs font-bold text-gray-900">{farmer.crops_count || 0} Crops</span>
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`); }}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors active:scale-95"
-                        >
-                          <i className="ph-bold ph-wrench text-blue-600 text-sm"></i>
-                          <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Equipment</span>
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=crops`); }}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors active:scale-95"
-                        >
-                          <i className="ph-bold ph-shopping-bag text-orange-600 text-sm"></i>
-                          <span className="text-xs font-bold text-gray-900">{farmer.crops_count || 0} Buying Interests</span>
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=followers`); }}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95"
-                        >
-                          <i className="ph-bold ph-users text-purple-600 text-sm"></i>
-                          <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
-                        </button>
-                      </>
-                    )}
+                    {/* Stats Row — different for farmers vs buyers vs suppliers */}
+                    <div className="flex gap-3 mb-4">
+                      {searchType === 'farmers' ? (
+                        <>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=crops`); }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors active:scale-95"
+                          >
+                            <i className="ph-bold ph-plant text-green-600 text-sm"></i>
+                            <span className="text-xs font-bold text-gray-900">{farmer.crops_count || 0} Crops</span>
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`); }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors active:scale-95"
+                          >
+                            <i className="ph-bold ph-wrench text-blue-600 text-sm"></i>
+                            <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Equipment</span>
+                          </button>
+                        </>
+                      ) : searchType === 'suppliers' ? (
+                        <>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`); }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95"
+                          >
+                            <i className="ph-bold ph-package text-purple-600 text-sm"></i>
+                            <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Products</span>
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=followers`); }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95"
+                          >
+                            <i className="ph-bold ph-users text-gray-600 text-sm"></i>
+                            <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=crops`); }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors active:scale-95"
+                          >
+                            <i className="ph-bold ph-shopping-bag text-orange-600 text-sm"></i>
+                            <span className="text-xs font-bold text-gray-900">{farmer.crops_count || 0} Buying Interests</span>
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=followers`); }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95"
+                          >
+                            <i className="ph-bold ph-users text-purple-600 text-sm"></i>
+                            <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
+                      {/* Call Button */}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const phone = (farmer as any).phone;
+                          if (phone) {
+                            window.location.href = `tel:${phone}`;
+                          } else {
+                            alert('Phone number not available for this user.');
+                          }
+                        }}
+                        className="flex-1 py-3 bg-green-50 text-green-700 rounded-xl font-bold text-sm active:scale-[0.98] transition-transform hover:bg-green-100 flex items-center justify-center gap-2"
+                      >
+                        <i className="ph-bold ph-phone"></i>
+                        Call
+                      </button>
+
+                      {/* Chat Button */}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/messages?ownerId=${farmer.id}&ownerName=${encodeURIComponent(farmer.name)}`);
+                        }}
+                        className="flex-1 py-3 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm active:scale-[0.98] transition-transform hover:bg-blue-100 flex items-center justify-center gap-2"
+                      >
+                        <i className="ph-bold ph-chat-circle"></i>
+                        Chat
+                      </button>
+
+                      {/* Directions Button */}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const destination = farmer.latitude && farmer.longitude
+                            ? `${farmer.latitude},${farmer.longitude}`
+                            : farmer.location
+                              ? encodeURIComponent(farmer.location)
+                              : null;
+                          if (!destination) { alert('This user has not set a location yet.'); return; }
+                          const origin = userLocation
+                            ? `${userLocation.latitude},${userLocation.longitude}`
+                            : '';
+                          const url = origin
+                            ? `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`
+                            : `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+                          window.open(url, '_blank');
+                        }}
+                        className="flex-1 py-3 bg-purple-50 text-purple-700 rounded-xl font-bold text-sm active:scale-[0.98] transition-transform hover:bg-purple-100 flex items-center justify-center gap-2"
+                      >
+                        <i className="ph-bold ph-directions"></i>
+                        Maps
+                      </button>
+                    </div>
                   </div>
+                ))}
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
-                    {/* Call Button */}
+                {/* 🔹 LOAD MORE BUTTON */}
+                {filteredFarmers.length > visibleCount && (
+                  <div className="flex justify-center mt-6">
                     <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        // Use native dial pad
-                        const phone = (farmer as any).phone;
-                        if (phone) {
-                          window.location.href = `tel:${phone}`;
-                        } else {
-                          alert('Phone number not available for this user.');
-                        }
-                      }}
-                      className="flex-1 py-3 bg-green-50 text-green-700 rounded-xl font-bold text-sm active:scale-[0.98] transition-transform hover:bg-green-100 flex items-center justify-center gap-2"
+                      onClick={() => setVisibleCount(prev => prev + 50)}
+                      className="px-6 py-3 bg-brand-700 text-white rounded-xl font-bold text-sm hover:bg-brand-800 active:scale-95 transition"
                     >
-                      <i className="ph-bold ph-phone"></i>
-                      Call
-                    </button>
-
-                    {/* Chat Button */}
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        router.push(`/messages?ownerId=${farmer.id}&ownerName=${encodeURIComponent(farmer.name)}`);
-                      }}
-                      className="flex-1 py-3 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm active:scale-[0.98] transition-transform hover:bg-blue-100 flex items-center justify-center gap-2"
-                    >
-                      <i className="ph-bold ph-chat-circle"></i>
-                      Chat
-                    </button>
-
-                    {/* Directions Button */}
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const destination = farmer.latitude && farmer.longitude
-                          ? `${farmer.latitude},${farmer.longitude}`
-                          : farmer.location
-                            ? encodeURIComponent(farmer.location)
-                            : null;
-                        if (!destination) { alert('This user has not set a location yet.'); return; }
-                        const origin = userLocation
-                          ? `${userLocation.latitude},${userLocation.longitude}`
-                          : '';
-                        const url = origin
-                          ? `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`
-                          : `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
-                        window.open(url, '_blank');
-                      }}
-                      className="flex-1 py-3 bg-purple-50 text-purple-700 rounded-xl font-bold text-sm active:scale-[0.98] transition-transform hover:bg-purple-100 flex items-center justify-center gap-2"
-                    >
-                      <i className="ph-bold ph-directions"></i>
-                      Maps
+                      Load More
                     </button>
                   </div>
-                </div>
-        ))}
-
-        {/* 🔹 LOAD MORE BUTTON */}
-        {filteredFarmers.length > visibleCount && (
-          <div className="flex justify-center mt-6">
-            <button
-              onClick={() => setVisibleCount(prev => prev + 50)}
-              className="px-6 py-3 bg-brand-700 text-white rounded-xl font-bold text-sm hover:bg-brand-800 active:scale-95 transition"
-            >
-              Load More
-            </button>
-          </div>
-        )}
-      </>
-    );
-  })()}
-</section>
+                )}
+              </>
+            );
+          })()}
+        </section>
       </div>
 
     </>

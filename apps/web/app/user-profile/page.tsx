@@ -258,7 +258,7 @@ const localDate = new Date(
   const [volume, setVolume] = useState(0);
   const videoRefsMap = useRef<{ [key: string]: HTMLVideoElement | null }>({});
   const [userReviews, setUserReviews] = useState<{ [key: number]: any }>({});
-  const [userRole, setUserRole] = useState<'farmer' | 'buyer'>('buyer');
+  const [userRole, setUserRole] = useState<'farmer' | 'buyer' | 'supplier'>('buyer');
   const [showCallModal, setShowCallModal] = useState(false);
   const [callRecipient, setCallRecipient] = useState<{ id: string; name: string; image: string } | null>(null);
   const [callType, setCallType] = useState<'audio' | 'video'>('audio');
@@ -287,6 +287,13 @@ const localDate = new Date(
       fetchInitialData();
     }
   }, [mounted, user?.id]);
+
+
+  useEffect(() => {
+  if (userRole === 'supplier') {
+    setExpandedSection('equipment');
+  }
+}, [userRole]);
 
   const fetchMatches = async (crops: FarmerCrop[]) => {
     if (!user?.id) return;
@@ -657,11 +664,18 @@ const localDate = new Date(
     setShowSuggestions(false);
   };
 
+
+
   const handleAddCrop = async () => {
     if (!user?.id || !newCrop.crop_name.trim()) {
       alert('Please enter a crop name');
       return;
     }
+
+    if (userRole === 'supplier') {
+  alert("Suppliers cannot add crops");
+  return;
+}
 
     // 🔒 Trim values
 const name = newCrop.crop_name.trim();
@@ -1176,7 +1190,13 @@ if (alreadyExists) {
             <h2 className="text-xl font-bold text-gray-900">{user?.name || 'User'}</h2>
             <div className={`px-3 py-1 rounded-full ${userRole === 'farmer' ? 'bg-green-100' : 'bg-blue-100'}`}>
               <span className={`text-xs font-semibold ${userRole === 'farmer' ? 'text-green-700' : 'text-blue-700'}`}>
-                {userRole === 'farmer' ? '🌾 Farmer' : '🛒 Buyer'}
+                {
+  userRole === 'farmer'
+    ? '🌾 Farmer'
+    : userRole === 'buyer'
+    ? '🛒 Buyer'
+    : '🏭 Supplier'
+}
               </span>
             </div>
           </div>
@@ -1487,7 +1507,7 @@ if (alreadyExists) {
                     ))}
                   </div>
                 )}
-
+                {userRole !== 'supplier' && (
                 <button
                   onClick={() => setShowAddCropForm(true)}
                   className="w-full mt-4 text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2"
@@ -1495,6 +1515,7 @@ if (alreadyExists) {
                   <i className="ph-bold ph-plus text-sm"></i>
                   Add Crop
                 </button>
+                )}
               </>
             )}
 

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const equipment = searchParams.get("equipment")?.split(",").filter(Boolean) || [];
     const yieldDateFrom = searchParams.get("yieldDateFrom") || null;
     const yieldDateTo = searchParams.get("yieldDateTo") || null;
-    const searchType = searchParams.get("type") || "farmers"; // "farmers" or "buyers"
+    const searchType = searchParams.get("type") || "farmers"; // "farmers", "buyers", "wastage", "suppliers"
     const showWasteBuyers = searchParams.get("wasteOnly") === "true";
     const currentUserId = searchParams.get("currentUserId");
 
@@ -24,7 +24,11 @@ export async function GET(request: NextRequest) {
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone TEXT`.catch(() => { });
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS location TEXT`.catch(() => { });
 
-    const targetRole = searchType === "farmers" ? 'farmer' : 'buyer';
+    // Map searchType to DB role value
+    const targetRole =
+      searchType === "farmers" ? 'farmer' :
+      searchType === "suppliers" ? 'supplier' :
+      'buyer'; // covers "buyers" and "wastage"
 
     // Fetch users matching role — also include users where role_id matches as fallback
     const farmers = await sql`
@@ -40,7 +44,11 @@ export async function GET(request: NextRequest) {
       LEFT JOIN machinery m ON u.id = m.owner_id
       WHERE (
         u.role = ${targetRole}
-        OR (u.role IS NULL AND u.role_id = ${targetRole === 'farmer' ? 1 : 2})
+        OR (u.role IS NULL AND u.role_id = ${
+          targetRole === 'farmer' ? 1 :
+          targetRole === 'supplier' ? 3 :
+          2
+        })
       )
       ${currentUserId ? sql`AND u.id != ${currentUserId}` : sql``}
       GROUP BY u.id, u.name, u.email, u.image, u.latitude, u.longitude, u.location, u.phone, u.role
@@ -81,7 +89,6 @@ export async function GET(request: NextRequest) {
     const filteredByRating = filteredByDistance;
 
     // Get farmer/buyer IDs that match crop filter
-    // Note: crop_type is no longer used for filtering — role (farmer/buyer) already distinguishes intent
     let farmerWithCropsIds: string[] = [];
     if (crops.length > 0 || showWasteBuyers) {
       if (showWasteBuyers && searchType === "buyers") {
@@ -214,27 +221,26 @@ export async function GET(request: NextRequest) {
     });
 
     // Build farmers with details
-// Build farmers with details
-const farmersWithDetails = result.map((farmer: any) => {
-  const allFarmerCrops = cropsMap.get(farmer.id) || [];
-  const equipment = (equipmentMap.get(farmer.id) || []).slice(0, 5);
+    const farmersWithDetails = result.map((farmer: any) => {
+      const allFarmerCrops = cropsMap.get(farmer.id) || [];
+      const equipment = (equipmentMap.get(farmer.id) || []).slice(0, 5);
 
-  // For wastage search, only surface waste crops in the crops array
-  const crops = (showWasteBuyers)
-    ? allFarmerCrops.filter((c: any) => c.is_crop_waste)
-    : allFarmerCrops;
+      // For wastage search, only surface waste crops in the crops array
+      const crops = (showWasteBuyers)
+        ? allFarmerCrops.filter((c: any) => c.is_crop_waste)
+        : allFarmerCrops;
 
-  return {
-    ...farmer,
-    crops,
-    crops_count: crops.length,          // reflects filtered count
-    equipment,
-    equipment_count: parseInt(farmer.equipment_count) || 0,
-    rating: null,
-    followers_count: followersMap.get(farmer.id) || 0,
-    following_count: followingMap.get(farmer.id) || 0,
-  };
-});
+      return {
+        ...farmer,
+        crops,
+        crops_count: crops.length,          // reflects filtered count
+        equipment,
+        equipment_count: parseInt(farmer.equipment_count) || 0,
+        rating: null,
+        followers_count: followersMap.get(farmer.id) || 0,
+        following_count: followingMap.get(farmer.id) || 0,
+      };
+    });
 
     // Sort by distance
     farmersWithDetails.sort((a: any, b: any) => a.distance - b.distance);
@@ -249,4 +255,3 @@ const farmersWithDetails = result.map((farmer: any) => {
     );
   }
 }
-
