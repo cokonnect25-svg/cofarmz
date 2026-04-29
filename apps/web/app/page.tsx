@@ -73,6 +73,7 @@ function HomePageContent() {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [roleUpdating, setRoleUpdating] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [supplierResults, setSupplierResults] = useState<Farmer[]>([]);
 
   
  
@@ -151,7 +152,8 @@ function HomePageContent() {
                   fetch(getApiUrl(`/api/nearby-farmers?type=farmers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
                   fetch(getApiUrl(`/api/nearby-farmers?type=buyers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
                   fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
-                ]).then(([farmersData, buyersData, wasteBuyersData]) => {
+                    fetch(getApiUrl(`/api/nearby-farmers?type=suppliers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+                ]).then(([farmersData, buyersData, wasteBuyersData, suppliersData]) => {
                   const normalize = (arr: any[]) => arr.map((f: any) => ({
                     ...f,
                     crops: Array.isArray(f.crops)
@@ -164,6 +166,7 @@ function HomePageContent() {
                     ...normalize(Array.isArray(buyersData) ? buyersData : []),
                   ]);
                   setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
+                  setSupplierResults(normalize(Array.isArray(suppliersData) ? suppliersData : []));
                 }).catch(() => {}).finally(() => setLoadingMatches(false));
               };
 
@@ -248,7 +251,8 @@ function HomePageContent() {
         fetch(getApiUrl(`/api/nearby-farmers?type=farmers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
         fetch(getApiUrl(`/api/nearby-farmers?type=buyers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
         fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
-      ]).then(([farmersData, buyersData, wasteBuyersData]) => {
+          fetch(getApiUrl(`/api/nearby-farmers?type=suppliers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+      ]).then(([farmersData, buyersData, wasteBuyersData, suppliersData]) => {
         const normalize = (arr: any[]) => arr.map((f: any) => ({
           ...f,
           crops: Array.isArray(f.crops)
@@ -261,6 +265,7 @@ function HomePageContent() {
           ...normalize(Array.isArray(buyersData) ? buyersData : []),
         ]);
         setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
+        setSupplierResults(normalize(Array.isArray(suppliersData) ? suppliersData : []));
       }).catch(() => {}).finally(() => setLoadingMatches(false));
     };
     window.addEventListener('userLocationUpdated', handler);
@@ -521,6 +526,33 @@ function HomePageContent() {
                           : renderEmpty('No farmers registered yet in your area')}
                       </div>
                     </div>
+                    <div className="mb-4">
+  <div className="flex items-center justify-between mb-5">
+    <div>
+      <h2 className="text-2xl font-black text-gray-900 tracking-tight">
+        Nearby Equipment Suppliers
+      </h2>
+      <p className="text-purple-600 text-xs font-bold uppercase tracking-wider">
+        Machinery providers near you
+      </p>
+    </div>
+
+    <button
+      onClick={() => router.push('/nearby-farmers?type=suppliers')}
+      className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 hover:bg-purple-600 hover:text-white transition-all shadow-sm"
+    >
+      <i className="ph-bold ph-arrow-right"></i>
+    </button>
+  </div>
+
+  <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
+    {supplierResults.length > 0
+      ? supplierResults.slice(0, 10).map((p: any) =>
+          renderCard(p, 'bg-purple-50 text-purple-700')
+        )
+      : renderEmpty('No suppliers available nearby')}
+  </div>
+</div>
                   </div>
                 );
               })()}

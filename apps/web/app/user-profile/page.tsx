@@ -23,6 +23,8 @@ interface FarmerCrop {
   expected_yield_quantity_uom: string;
   is_crop_waste: boolean;
   crop_type: string;
+  certificate_url: string | null;   // ← NEW
+  grade: string | null;             // ← NEW
   created_at: string;
 }
 
@@ -105,6 +107,8 @@ interface Reservation {
   machinery_location?: string;
 }
 
+
+
 function ProfileContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -118,7 +122,7 @@ function ProfileContent() {
   const [favoriteEquipment, setFavoriteEquipment] = useState<FavoriteEquipment[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
   const [farmerCrops, setFarmerCrops] = useState<FarmerCrop[]>([]);
-  const [newCrop, setNewCrop] = useState({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false });
+  const [newCrop, setNewCrop] = useState({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false , certificate_url: '', grade: ''});
   const [addingCrop, setAddingCrop] = useState(false);
   const [showAddCropForm, setShowAddCropForm] = useState(() => false);
   const [cropSuggestions, setCropSuggestions] = useState<string[]>([]);
@@ -246,7 +250,7 @@ const localDate = new Date(
   const [profileDetectingLocation, setProfileDetectingLocation] = useState(false);
   const profileLocationTimeout = useRef<any>(null);
   const [editingCrop, setEditingCrop] = useState<FarmerCrop | null>(null);
-  const [editCropForm, setEditCropForm] = useState({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false });
+  const [editCropForm, setEditCropForm] = useState({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '' });
   const [editCropSuggestions, setEditCropSuggestions] = useState<string[]>([]);
   const [showEditCropSuggestions, setShowEditCropSuggestions] = useState(false);
   const [savingCrop, setSavingCrop] = useState(false);
@@ -401,6 +405,16 @@ const localDate = new Date(
       return [];
     }
   };
+
+  async function uploadCertificate(file: File, getApiUrl: (p: string) => string): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(getApiUrl('/api/upload'), { method: 'POST', body: formData });
+  if (!res.ok) throw new Error('Certificate upload failed');
+  const data = await res.json();
+  if (!data.url) throw new Error('No URL returned from upload');
+  return data.url as string;
+}
 
   const fetchUserEquipment = async () => {
     if (!user?.id) return;
@@ -768,12 +782,14 @@ if (alreadyExists) {
           expected_yield_quantity_uom: newCrop.expected_yield_quantity_uom || 'kg',
           crop_type: 'grow',
           is_crop_waste: userRole === 'buyer' ? newCrop.is_crop_waste : false,
+          certificate_url: newCrop.certificate_url || null,   // ← NEW
+    grade: newCrop.grade || null,                       // ← NEW
         }),
       });
 
       const data = await response.json();
       if (response.ok && !data.error) {
-        setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false });
+        setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false,  certificate_url: '',grade: '', });
         setShowAddCropForm(false);
         setCropSuggestions([]);
         setShowSuggestions(false);
@@ -833,6 +849,8 @@ if (alreadyExists) {
       expected_yield_quantity: crop.expected_yield_quantity ? String(crop.expected_yield_quantity) : '',
       expected_yield_quantity_uom: crop.expected_yield_quantity_uom || 'kg',
       is_crop_waste: crop.is_crop_waste || false,
+      certificate_url: crop.certificate_url || '',   // ← NEW
+      grade: crop.grade || '', 
     });
     setEditCropSuggestions([]);
     setShowEditCropSuggestions(false);
@@ -880,6 +898,8 @@ if (alreadyExists) {
           expected_yield_quantity_uom: editCropForm.expected_yield_quantity_uom || 'kg',
           crop_type: 'grow',
           is_crop_waste: userRole === 'buyer' ? editCropForm.is_crop_waste : false,
+          certificate_url: editCropForm.certificate_url || null,   // ← NEW
+    grade: editCropForm.grade || null,   
         }),
       });
 
@@ -1240,6 +1260,7 @@ if (alreadyExists) {
               <p className="font-bold text-lg text-gray-900">{followingCount}</p>
               <p className="text-xs text-gray-600">Following</p>
             </button>
+             {userRole !== 'supplier' && (
             <button
               onClick={() => {
                 if (expandedSection === 'crops') {
@@ -1254,6 +1275,7 @@ if (alreadyExists) {
               <p className="font-bold text-lg text-gray-900">{farmerCrops.length}</p>
               <p className="text-xs text-gray-600">Crops</p>
             </button>
+             )}
             <button
               onClick={() => {
                 if (expandedSection === 'equipment') {
@@ -2098,7 +2120,7 @@ if (alreadyExists) {
               <button
                 onClick={() => {
                   setShowAddCropForm(false);
-                  setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false });
+                  setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false,  certificate_url: '',grade: '',   });
                   setCropSuggestions([]);
                   setShowSuggestions(false);
                 }}
@@ -2244,7 +2266,7 @@ if (alreadyExists) {
                 <button
                   onClick={() => {
                     setShowAddCropForm(false);
-                    setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false });
+                    setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false,  certificate_url: '',grade: '', });
                     setCropSuggestions([]);
                     setShowSuggestions(false);
                   }}
@@ -2287,7 +2309,7 @@ if (alreadyExists) {
               <button
                 onClick={() => {
                   setEditingCrop(null);
-                  setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false });
+                  setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false,  certificate_url: '',grade: '', });
                   setEditCropSuggestions([]);
                   setShowEditCropSuggestions(false);
                 }}
@@ -2435,7 +2457,7 @@ if (alreadyExists) {
                 <button
                   onClick={() => {
                     setEditingCrop(null);
-                    setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false });
+                    setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false,  certificate_url: '',grade: '', });
                     setEditCropSuggestions([]);
                     setShowEditCropSuggestions(false);
                   }}
