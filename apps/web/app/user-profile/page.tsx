@@ -1405,7 +1405,7 @@ function ProfileContent() {
               </div>
               {/* ── NEW: Grade ── */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">Grade <span className="text-gray-400 font-normal text-xs">(optional)</span></label>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Grade</label>
                 <select value={newCrop.grade} onChange={e => setNewCrop(p => ({ ...p, grade: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
                   <option value="">Select grade…</option>
                   {GRADE_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}

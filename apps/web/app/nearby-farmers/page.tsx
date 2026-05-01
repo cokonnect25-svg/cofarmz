@@ -70,11 +70,12 @@ function NearbyFarmersContent() {
   const initialType =
     rawType === 'buyers' ? 'buyers' :
     rawType === 'wastage' ? 'wastage' :
-    rawType === 'suppliers' ? 'suppliers' :
+    rawType === 'supplier' ?
+    'supplier' :
     'farmers';
 
   const [searchType, setSearchType] = useState<
-    'farmers' | 'buyers' | 'wastage' | 'suppliers'
+    'farmers' | 'buyers' | 'wastage' | 'supplier'
   >(initialType);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('nearby');
@@ -213,7 +214,7 @@ function NearbyFarmersContent() {
     fetchNearbyFarmers(0, 0, searchType);
   };
 
-  const fetchNearbyFarmers = async (latitude: number, longitude: number, type: 'farmers' | 'buyers' | 'wastage' | 'suppliers' = 'farmers') => {
+  const fetchNearbyFarmers = async (latitude: number, longitude: number, type: 'farmers' | 'buyers' | 'wastage' | 'supplier' = 'farmers') => {
     setLoadingFarmers(true);
     try {
       const params = new URLSearchParams();
@@ -308,8 +309,8 @@ function NearbyFarmersContent() {
                   ? 'Nearby Buyers'
                   : searchType === 'wastage'
                   ? 'Crop Waste Buyers'
-                  : searchType === 'suppliers'
-                  ? 'Nearby suppliers'
+                  : searchType === 'supplier'
+                  ? 'Nearby supplier'
                   : 'Nearby'}
               </h1>
             </div>
@@ -352,8 +353,8 @@ function NearbyFarmersContent() {
             </button>
 
             <button
-              onClick={() => { setSearchType('suppliers'); setSortBy('nearby'); }}
-              className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === 'suppliers'
+              onClick={() => { setSearchType('supplier'); setSortBy('nearby'); }}
+              className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === 'supplier'
                 ? 'bg-purple-600 text-white'
                 : 'bg-gray-100 text-gray-700'
                 }`}
@@ -606,7 +607,7 @@ function NearbyFarmersContent() {
             {loadingFarmers ? 'Searching...' : `Found ${farmers.length} ${
               searchType === 'farmers' ? 'farmer' :
               searchType === 'wastage' ? 'wastage buyer' :
-              searchType === 'suppliers' ? 'supplier' :
+              searchType === 'supplier' ? 'supplier' :
               'buyer'
             }${farmers.length !== 1 ? 's' : ''}`}
           </p>
@@ -661,13 +662,13 @@ function NearbyFarmersContent() {
                     ? `No ${
                         searchType === 'farmers' ? 'farmers' :
                         searchType === 'wastage' ? 'wastage crop buyers' :
-                        searchType === 'suppliers' ? 'suppliers' :
+                        searchType === 'supplier' ? 'supplier' :
                         'buyers'
                       } found matching "${searchQuery}"`
                     : `No ${
                         searchType === 'farmers' ? 'farmers' :
                         searchType === 'wastage' ? 'wastage crop buyers' :
-                        searchType === 'suppliers' ? 'suppliers' :
+                        searchType === 'supplier' ? 'suppliers' :
                         'buyers'
                       } found with selected filters`}
                 </p>
@@ -707,13 +708,13 @@ function NearbyFarmersContent() {
                             ? 'bg-green-100 text-green-700'
                             : searchType === 'wastage'
                             ? 'bg-amber-100 text-amber-700'
-                            : searchType === 'suppliers'
+                            : searchType === 'supplier'
                             ? 'bg-purple-100 text-purple-700'
                             : 'bg-blue-100 text-blue-700'
                           }`}>
                           {searchType === 'farmers' ? '🌾 Farmer' :
                            searchType === 'wastage' ? '♻️ Wastage Buyer' :
-                           searchType === 'suppliers' ? '🏭 supplier' :
+                           searchType === 'supplier' ? '🏭 supplier' :
                            '🛒 Buyer'}
                         </span>
                         {farmer.rating && (
@@ -765,14 +766,14 @@ function NearbyFarmersContent() {
                                   ? 'bg-green-100 text-green-800'
                                   : searchType === 'wastage'
                                   ? 'bg-amber-100 text-amber-800'
-                                  : searchType === 'suppliers'
+                                  : searchType === 'supplier'
                                   ? 'bg-purple-100 text-purple-800'
                                   : 'bg-orange-100 text-orange-800'
                               }`}
                             >
                               {searchType === 'farmers' ? '🌾' :
                                searchType === 'wastage' ? '♻️' :
-                               searchType === 'suppliers' ? '🏭' :
+                               searchType === 'supplier' ? '🏭' :
                                '🛒'} {crop.crop_name}
                             </span>
                           ))}
@@ -785,7 +786,7 @@ function NearbyFarmersContent() {
                       ) : null;
                     })()}
 
-                    {/* Stats Row — different for farmers vs buyers vs suppliers */}
+                    {/* Stats Row — different for farmers vs buyers vs supplier */}
                     <div className="flex gap-3 mb-4">
                       {searchType === 'farmers' ? (
                         <>
@@ -804,7 +805,7 @@ function NearbyFarmersContent() {
                             <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Equipment</span>
                           </button>
                         </>
-                      ) : searchType === 'suppliers' ? (
+                      ) : searchType === 'supplier' ? (
                         <>
                           <button
                             onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`); }}

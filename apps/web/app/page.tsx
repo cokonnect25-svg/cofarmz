@@ -173,12 +173,8 @@ const fetchMatches = (lat: number, lon: number) => {
       ]);
 
       setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
-      setsupplierResults(
-  normalize(Array.isArray(suppliersData) ? suppliersData : []).map(s => ({
-    ...s,
-    matchingCrops: ['Equipment'], // 🔥 label instead of crops
-    isExactMatch: true
-  }))
+setsupplierResults(
+  normalize(suppliersData).filter(s => s.role === 'supplier')
 );
     })
     .catch(console.error)
@@ -281,12 +277,9 @@ const fetchMatches = (lat: number, lon: number) => {
           ...normalize(Array.isArray(buyersData) ? buyersData : []),
         ]);
         setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
-        setsupplierResults(
-  normalize(Array.isArray(suppliersData) ? suppliersData : []).map(s => ({
-    ...s,
-    matchingCrops: ['Equipment'], // 🔥 label instead of crops
-    isExactMatch: true
-  }))
+        console.log("SUPPLIERS DATA:", suppliersData);
+setsupplierResults(
+  normalize(suppliersData).filter(s => s.role === 'supplier')
 );
       }).catch((err) => {
   console.error("MATCH ERROR:", err);
@@ -473,7 +466,7 @@ const fetchMatches = (lat: number, lon: number) => {
                 return (
                   <div>
                     {/* Complete profile prompt when no crops */}
-                    {userCropNames.length === 0 && (
+                    {userProfile?.role !== 'supplier' && userCropNames.length === 0 && (
                       <div className="bg-gradient-to-br from-brand-50 to-emerald-50 rounded-3xl p-8 text-center border border-brand-100 mb-6 shadow-premium relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform"></div>
                         <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
