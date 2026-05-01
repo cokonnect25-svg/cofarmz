@@ -164,7 +164,7 @@ const fetchMatches = (lat: number, lon: number) => {
               is_crop_waste: !!c.is_crop_waste
             }))
           : [],
-        distance: parseFloat(f.distance) || 9999,
+        distance: f.distance ? parseFloat(f.distance) : null,
       }));
 
       setMatchingResults([
@@ -270,7 +270,7 @@ setsupplierResults(
           crops: Array.isArray(f.crops)
             ? f.crops.map((c: any) => ({ crop_name: c.crop_name || c, is_crop_waste: !!c.is_crop_waste }))
             : [],
-          distance: parseFloat(f.distance) || 9999,
+          distance: f.distance ? parseFloat(f.distance) : null,
         }));
         setMatchingResults([
           ...normalize(Array.isArray(farmersData) ? farmersData : []),
