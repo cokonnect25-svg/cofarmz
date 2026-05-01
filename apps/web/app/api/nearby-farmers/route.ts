@@ -76,13 +76,14 @@ export async function GET(request: NextRequest) {
     const farmersWithDistance = (farmers as any[]).map((farmer: any) => ({
       ...farmer,
       distance: (userHasLocation && farmer.latitude != null && farmer.longitude != null)
-        ? calculateDistance(latitude, longitude, parseFloat(farmer.latitude), parseFloat(farmer.longitude))
-        : 9999
+  ? calculateDistance(latitude, longitude, parseFloat(farmer.latitude), parseFloat(farmer.longitude))
+  : null
+  
     }));
 
     // Filter by distance if enabled (only applies to users with actual location)
     const filteredByDistance = distance !== null
-      ? farmersWithDistance.filter((farmer: any) => farmer.distance <= distance || farmer.distance === 9999)
+      ? farmersWithDistance.filter((farmer: any) => farmer.distance == null || farmer.distance <= distance)
       : farmersWithDistance;
 
     // Filter by minimum rating (skip for now since rating column doesn't exist in reservations)
@@ -243,7 +244,11 @@ export async function GET(request: NextRequest) {
     });
 
     // Sort by distance
-    farmersWithDetails.sort((a: any, b: any) => a.distance - b.distance);
+    farmersWithDetails.sort((a, b) => {
+  if (a.distance == null) return 1;
+  if (b.distance == null) return -1;
+  return a.distance - b.distance;
+});
 
     return NextResponse.json(farmersWithDetails);
   } catch (error: any) {
