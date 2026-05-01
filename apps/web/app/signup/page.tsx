@@ -16,7 +16,7 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [userType, setUserType] = useState<'farmer' | 'buyer' | 'Supplier'>('farmer');
+  const [userType, setUserType] = useState<'farmer' | 'buyer' | 'supplier'>('farmer');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -192,15 +192,15 @@ export default function SignupPage() {
                 </button>
                 <button
   type="button"
-  onClick={() => setUserType('Supplier')}
+  onClick={() => setUserType('supplier')}
   className={`py-3 px-4 rounded-xl border-2 font-semibold text-sm transition flex items-center justify-center gap-2 ${
-    userType === 'Supplier'
+    userType === 'supplier'
       ? 'border-green-600 bg-green-50 text-green-800'
       : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
   }`}
 >
   <span className="text-lg">🏭</span>
-  Supplier
+  supplier
 </button>
               </div>
             </div>

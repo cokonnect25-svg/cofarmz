@@ -73,7 +73,7 @@ function HomePageContent() {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [roleUpdating, setRoleUpdating] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [SupplierResults, setSupplierResults] = useState<Farmer[]>([]);
+  const [supplierResults, setsupplierResults] = useState<Farmer[]>([]);
 
   
  
@@ -109,7 +109,7 @@ function HomePageContent() {
     checkRole();
   }, [user?.id]);
 
-  const handleSelectRole = async (role: 'farmer' | 'buyer' | 'Supplier') => {
+  const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier') => {
     setRoleUpdating(true);
     try {
       const res = await fetch(getApiUrl('/api/users/profile'), {
@@ -153,9 +153,9 @@ const fetchMatches = (lat: number, lon: number) => {
 
     fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
 
-    fetch(getApiUrl(`/api/nearby-farmers?type=Suppliers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+    fetch(getApiUrl(`/api/nearby-farmers?type=suppliers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
   ])
-    .then(([farmersData, buyersData, wasteBuyersData, SuppliersData]) => {
+    .then(([farmersData, buyersData, wasteBuyersData, suppliersData]) => {
       const normalize = (arr: any[]) => arr.map((f: any) => ({
         ...f,
         crops: Array.isArray(f.crops)
@@ -173,7 +173,7 @@ const fetchMatches = (lat: number, lon: number) => {
       ]);
 
       setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
-      setSupplierResults(normalize(Array.isArray(SuppliersData) ? SuppliersData : []));
+      setsupplierResults(normalize(Array.isArray(suppliersData) ? suppliersData : []));
     })
     .catch(console.error)
     .finally(() => setLoadingMatches(false));
@@ -261,8 +261,8 @@ const fetchMatches = (lat: number, lon: number) => {
         fetch(getApiUrl(`/api/nearby-farmers?type=farmers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
         fetch(getApiUrl(`/api/nearby-farmers?type=buyers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
         fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
-          fetch(getApiUrl(`/api/nearby-farmers?type=Suppliers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
-      ]).then(([farmersData, buyersData, wasteBuyersData, SuppliersData]) => {
+          fetch(getApiUrl(`/api/nearby-farmers?type=suppliers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+      ]).then(([farmersData, buyersData, wasteBuyersData, suppliersData]) => {
         const normalize = (arr: any[]) => arr.map((f: any) => ({
           ...f,
           crops: Array.isArray(f.crops)
@@ -275,7 +275,7 @@ const fetchMatches = (lat: number, lon: number) => {
           ...normalize(Array.isArray(buyersData) ? buyersData : []),
         ]);
         setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
-        setSupplierResults(normalize(Array.isArray(SuppliersData) ? SuppliersData : []));
+        setsupplierResults(normalize(Array.isArray(suppliersData) ? suppliersData : []));
       }).catch((err) => {
   console.error("MATCH ERROR:", err);
 }).finally(() => setLoadingMatches(false));
@@ -542,7 +542,7 @@ const fetchMatches = (lat: number, lon: number) => {
   <div className="flex items-center justify-between mb-5">
     <div>
       <h2 className="text-2xl font-black text-gray-900 tracking-tight">
-        Nearby Equipment Suppliers
+        Nearby Equipment suppliers
       </h2>
       <p className="text-purple-600 text-xs font-bold uppercase tracking-wider">
         Machinery providers near you
@@ -550,7 +550,7 @@ const fetchMatches = (lat: number, lon: number) => {
     </div>
 
     <button
-      onClick={() => router.push('/nearby-farmers?type=Suppliers')}
+      onClick={() => router.push('/nearby-farmers?type=suppliers')}
       className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 hover:bg-purple-600 hover:text-white transition-all shadow-sm"
     >
       <i className="ph-bold ph-arrow-right"></i>
@@ -558,11 +558,11 @@ const fetchMatches = (lat: number, lon: number) => {
   </div>
 
   <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
-    {SupplierResults.length > 0
-      ? SupplierResults.slice(0, 10).map((p: any) =>
+    {supplierResults.length > 0
+      ? supplierResults.slice(0, 10).map((p: any) =>
           renderCard(p, 'bg-purple-50 text-purple-700')
         )
-      : renderEmpty('No Suppliers available nearby')}
+      : renderEmpty('No suppliers available nearby')}
   </div>
 </div>
                   </div>
@@ -841,7 +841,7 @@ const fetchMatches = (lat: number, lon: number) => {
                 </button>
 
                 <button
-                onClick={() => agreedToTerms && handleSelectRole('Supplier')}
+                onClick={() => agreedToTerms && handleSelectRole('supplier')}
                 disabled={roleUpdating || !agreedToTerms}
                 className={`group relative flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${
                   agreedToTerms
@@ -853,7 +853,7 @@ const fetchMatches = (lat: number, lon: number) => {
                   <i className="ph-fill ph-wrench text-2xl text-gray-600 group-hover:text-brand-600"></i>
                 </div>
                 <div>
-                  <span className="block font-bold text-gray-900">I am a Supplier</span>
+                  <span className="block font-bold text-gray-900">I am a supplier</span>
                   <span className="text-xs text-gray-400">I want to list and manage equipment</span>
                 </div>
                 {roleUpdating && (
