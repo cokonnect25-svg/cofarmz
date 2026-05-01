@@ -142,7 +142,7 @@ function HomePageContent() {
             // 2. Fetch Relevant Crops
             const userCrops = profile.crops?.map((c: any) => c.crop_name) || [];
 
-            if (userCrops.length > 0) {
+            if (userCrops.length > 0 || profile.role === 'supplier') {
 setLoadingMatches(true);
 
 const fetchMatches = (lat: number, lon: number) => {
@@ -153,7 +153,7 @@ const fetchMatches = (lat: number, lon: number) => {
 
     fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
 
-    fetch(getApiUrl(`/api/nearby-farmers?type=suppliers&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+    fetch(getApiUrl(`/api/nearby-farmers?type=supplier&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
   ])
     .then(([farmersData, buyersData, wasteBuyersData, suppliersData]) => {
       const normalize = (arr: any[]) => arr.map((f: any) => ({
@@ -173,7 +173,13 @@ const fetchMatches = (lat: number, lon: number) => {
       ]);
 
       setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
-      setsupplierResults(normalize(Array.isArray(suppliersData) ? suppliersData : []));
+      setsupplierResults(
+  normalize(Array.isArray(suppliersData) ? suppliersData : []).map(s => ({
+    ...s,
+    matchingCrops: ['Equipment'], // 🔥 label instead of crops
+    isExactMatch: true
+  }))
+);
     })
     .catch(console.error)
     .finally(() => setLoadingMatches(false));
@@ -254,14 +260,14 @@ const fetchMatches = (lat: number, lon: number) => {
       const uid = user?.id;
       if (!uid || !userProfile) return;
       const userCrops = userProfile.crops?.map((c: any) => c.crop_name) || [];
-      if (userCrops.length === 0) return;
+      if (userProfile?.role !== 'supplier' && userCrops.length === 0) return;
       const uniqueCrops = [...new Set(userCrops)];
       setLoadingMatches(true);
       Promise.all([
         fetch(getApiUrl(`/api/nearby-farmers?type=farmers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
         fetch(getApiUrl(`/api/nearby-farmers?type=buyers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
         fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
-          fetch(getApiUrl(`/api/nearby-farmers?type=suppliers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+          fetch(getApiUrl(`/api/nearby-farmers?type=supplier&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
       ]).then(([farmersData, buyersData, wasteBuyersData, suppliersData]) => {
         const normalize = (arr: any[]) => arr.map((f: any) => ({
           ...f,
@@ -275,7 +281,13 @@ const fetchMatches = (lat: number, lon: number) => {
           ...normalize(Array.isArray(buyersData) ? buyersData : []),
         ]);
         setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
-        setsupplierResults(normalize(Array.isArray(suppliersData) ? suppliersData : []));
+        setsupplierResults(
+  normalize(Array.isArray(suppliersData) ? suppliersData : []).map(s => ({
+    ...s,
+    matchingCrops: ['Equipment'], // 🔥 label instead of crops
+    isExactMatch: true
+  }))
+);
       }).catch((err) => {
   console.error("MATCH ERROR:", err);
 }).finally(() => setLoadingMatches(false));
@@ -550,7 +562,7 @@ const fetchMatches = (lat: number, lon: number) => {
     </div>
 
     <button
-      onClick={() => router.push('/nearby-farmers?type=suppliers')}
+      onClick={() => router.push('/nearby-farmers?type=supplier')}
       className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 hover:bg-purple-600 hover:text-white transition-all shadow-sm"
     >
       <i className="ph-bold ph-arrow-right"></i>

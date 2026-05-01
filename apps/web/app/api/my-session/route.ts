@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
         name: u.name,
         email: u.email,
         image: u.image,
-        role: u.role,
+        role: u.role?.toLowerCase(),
         role_id: u.role_id,
         role_confirmed: u.role_confirmed,
       },
