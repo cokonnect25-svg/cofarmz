@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
     const searchType = searchParams.get("type") || "farmers"; // "farmers", "buyers", "supplier"
     const showWasteBuyers = searchParams.get("wasteOnly") === "true";
     const currentUserId = searchParams.get("currentUserId");
+    const grades = searchParams.get("grades")?.split(",").filter(Boolean) || [];
+const certTypes = searchParams.get("certTypes")?.split(",").filter(Boolean) || [];
 
     // Ensure required columns exist
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION`.catch(() => { });
@@ -111,6 +113,8 @@ export async function GET(request: NextRequest) {
           ${yieldDateFrom && yieldDateTo ? sql`AND expected_yield_date BETWEEN ${yieldDateFrom}::date AND ${yieldDateTo}::date` :
             yieldDateFrom ? sql`AND expected_yield_date >= ${yieldDateFrom}::date` :
               yieldDateTo ? sql`AND expected_yield_date <= ${yieldDateTo}::date` : sql``}
+              ${grades.length > 0 ? sql`AND LOWER(COALESCE(grade, '')) IN (${sql.join(grades.map(g => g.toLowerCase()), sql`, `)})` : sql``}
+${certTypes.length > 0 ? sql`AND LOWER(COALESCE(certification_type, '')) IN (${sql.join(certTypes.map(c => c.toLowerCase()), sql`, `)})` : sql``}
         `;
         farmerWithCropsIds = (farmersWithCrops as any[]).map((row: any) => row.user_id);
       }
@@ -149,6 +153,18 @@ export async function GET(request: NextRequest) {
       result = result.filter((farmer: any) => farmerWithEquipmentIds.includes(farmer.id));
     }
 
+    // Grade / CertType filter — runs even if no crop name filter is active
+if (grades.length > 0 || certTypes.length > 0) {
+  const gradeCertRows = await sql`
+    SELECT DISTINCT user_id FROM crops
+    WHERE 1=1
+    ${grades.length > 0 ? sql`AND LOWER(COALESCE(grade, '')) IN (${sql.join(grades.map(g => g.toLowerCase()), sql`, `)})` : sql``}
+    ${certTypes.length > 0 ? sql`AND LOWER(COALESCE(certification_type, '')) IN (${sql.join(certTypes.map(c => c.toLowerCase()), sql`, `)})` : sql``}
+  `;
+  const gradeCertIds = (gradeCertRows as any[]).map((r: any) => r.user_id);
+  result = result.filter((farmer: any) => gradeCertIds.includes(farmer.id));
+}
+
     // Fetch all necessary data in 4 batch queries (no loops)
     const farmerIds = result.map((f: any) => f.id);
 
@@ -160,7 +176,7 @@ export async function GET(request: NextRequest) {
     if (farmerIds.length > 0) {
       [allCrops, allEquipment, allFollowers, allFollowing] = await Promise.all([
         sql`
-          SELECT user_id, crop_name, years_of_experience, expertise_level, is_crop_waste
+          SELECT user_id, crop_name, years_of_experience, expertise_level, is_crop_waste,grade, certification_type
           FROM crops
           WHERE user_id = ANY(${farmerIds}::text[])
           ORDER BY created_at DESC
@@ -185,6 +201,8 @@ export async function GET(request: NextRequest) {
         `,
       ]);
     }
+
+    
 
     // Create lookup maps
     const cropsMap = new Map();

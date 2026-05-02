@@ -55,6 +55,21 @@ const EQUIPMENT_OPTIONS = [
   'Cultivator', 'Planter', 'Combine', 'Irrigation Equipment'
 ];
 
+const GRADE_OPTIONS = ['A+', 'A', 'B+', 'B', 'C', 'D', 'Organic', 'Premium', 'Ungraded'];
+
+
+const CERTIFICATION_TYPES = [
+  { value: 'organic', label: 'Organic Certified', icon: '🌿', color: 'green' },
+  { value: 'ipm', label: 'IPM (Low Pesticide)', icon: '🛡️', color: 'blue' },
+  { value: 'gap', label: 'Good Agricultural Practices (GAP)', icon: '✅', color: 'teal' },
+  { value: 'natural', label: 'Natural Farming', icon: '🍃', color: 'green' },
+  { value: 'residue_free', label: 'Residue-Free', icon: '🧪', color: 'purple' },
+  { value: 'premium', label: 'Premium Quality', icon: '⭐', color: 'yellow' },
+  { value: 'export_quality', label: 'Export Quality', icon: '🌍', color: 'indigo' },
+  { value: 'other', label: 'Other', icon: '📜', color: 'gray' },
+];
+
+
 function NearbyFarmersContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -88,7 +103,9 @@ function NearbyFarmersContent() {
     enableDistance: false,
     yieldDateFrom: '',
     yieldDateTo: '',
-    wasteOnly: false
+    wasteOnly: false,
+    grades: [] as string[],
+certTypes: [] as string[],
   });
   const [visibleCount, setVisibleCount] = useState(50);
 
@@ -134,6 +151,24 @@ function NearbyFarmersContent() {
     window.addEventListener('userLocationUpdated', handler);
     return () => window.removeEventListener('userLocationUpdated', handler);
   }, [searchType]);
+
+  const toggleGradeFilter = (grade: string) => {
+  setFilters(prev => ({
+    ...prev,
+    grades: prev.grades.includes(grade)
+      ? prev.grades.filter(g => g !== grade)
+      : [...prev.grades, grade]
+  }));
+};
+
+const toggleCertFilter = (cert: string) => {
+  setFilters(prev => ({
+    ...prev,
+    certTypes: prev.certTypes.includes(cert)
+      ? prev.certTypes.filter(c => c !== cert)
+      : [...prev.certTypes, cert]
+  }));
+};
 
   const getUserLocation = async () => {
     try {
@@ -228,6 +263,8 @@ function NearbyFarmersContent() {
       if (filters.equipment.length > 0) params.append('equipment', filters.equipment.join(','));
       if (filters.yieldDateFrom) params.append('yieldDateFrom', filters.yieldDateFrom);
       if (filters.yieldDateTo) params.append('yieldDateTo', filters.yieldDateTo);
+      if (filters.grades.length > 0) params.append('grades', filters.grades.join(','));
+if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.join(','));
       if (type === 'wastage' || (type === 'buyers' && filters.wasteOnly)) {
   params.append('wasteOnly', 'true');
 }
@@ -511,6 +548,54 @@ function NearbyFarmersContent() {
                 </div>
               </div>
 
+              {/* Grade Filter — farmers only */}
+{(searchType === 'farmers' || searchType === 'buyers') && (
+  <div className="mb-8">
+    <label className="block text-sm font-bold text-gray-900 mb-3">
+      Crop Grade <span className="text-xs text-gray-400 font-normal">(select any)</span>
+    </label>
+    <div className="flex flex-wrap gap-2">
+      {GRADE_OPTIONS.map((grade) => (
+        <button
+          key={grade}
+          onClick={() => toggleGradeFilter(grade)}
+          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+            filters.grades.includes(grade)
+              ? 'bg-indigo-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          {grade}
+        </button>
+      ))}
+    </div>
+  </div>
+)}
+
+{/* Certification Type Filter — farmers only */}
+{searchType === 'farmers' && (
+  <div className="mb-8">
+    <label className="block text-sm font-bold text-gray-900 mb-3">
+      Certification Type <span className="text-xs text-gray-400 font-normal">(select any)</span>
+    </label>
+    <div className="flex flex-wrap gap-2">
+      {CERTIFICATION_TYPES.map((cert) => (
+        <button
+          key={cert.value}
+          onClick={() => toggleCertFilter(cert.value)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+            filters.certTypes.includes(cert.value)
+              ? 'bg-green-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <span>{cert.icon}</span>{cert.label}
+        </button>
+      ))}
+    </div>
+  </div>
+)}
+
               {/* Equipment Filter */}
               <div className="mb-8">
                 <label className="block text-sm font-bold text-gray-900 mb-3">Equipment (select any)</label>
@@ -543,7 +628,7 @@ function NearbyFarmersContent() {
         )}
 
         {/* Active Filters Display */}
-        {(filters.crops.length > 0 || filters.equipment.length > 0) && (
+        {(filters.crops.length > 0 || filters.equipment.length > 0 || filters.grades.length > 0 || filters.certTypes.length > 0) && (
           <section className="px-6 mb-4 relative z-10">
             <div className="flex flex-wrap gap-2">
               {filters.crops.map((crop) => (
@@ -556,6 +641,29 @@ function NearbyFarmersContent() {
                   <i className="ph-bold ph-x text-sm"></i>
                 </button>
               ))}
+              {filters.grades.map((grade) => (
+  <button
+    key={`grade-${grade}`}
+    onClick={() => toggleGradeFilter(grade)}
+    className="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium flex items-center gap-2 active:scale-95 transition-transform"
+  >
+    {grade} Grade
+    <i className="ph-bold ph-x text-sm"></i>
+  </button>
+))}
+{filters.certTypes.map((cert) => {
+  const found = CERTIFICATION_TYPES.find(c => c.value === cert);
+  return found ? (
+    <button
+      key={`cert-${cert}`}
+      onClick={() => toggleCertFilter(cert)}
+      className="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-2 active:scale-95 transition-transform"
+    >
+      {found.icon} {found.label}
+      <i className="ph-bold ph-x text-sm"></i>
+    </button>
+  ) : null;
+})}
               {filters.equipment.map((equip) => (
                 <button
                   key={`equip-${equip}`}
@@ -777,6 +885,15 @@ function NearbyFarmersContent() {
                                searchType === 'wastage' ? '♻️' :
                                searchType === 'supplier' ? '🏭' :
                                '🛒'} {crop.crop_name}
+                               {(crop as any).certification_type && (() => {
+  const cert = CERTIFICATION_TYPES.find(c => c.value === (crop as any).certification_type);
+  return cert ? (
+    <span className="ml-1 text-[9px] font-black opacity-80">{cert.icon}</span>
+  ) : null;
+})()}
+{(crop as any).grade && (
+  <span className="ml-1 text-[9px] font-black opacity-70">·{(crop as any).grade}</span>
+)}
                             </span>
                           ))}
                           {displayCrops.length > 5 && (

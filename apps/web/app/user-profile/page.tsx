@@ -1475,12 +1475,27 @@ function ProfileContent() {
               {/* ── NEW: Certificate ── */}
               <CertificateUploader value={newCrop.certificate_url} onChange={url => setNewCrop(p => ({ ...p, certificate_url: url }))} accentColor="green" />
               {/* Actions */}
-              <div className="flex gap-3 pt-4">
-                <button onClick={() => { setShowAddCropForm(false); setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '', certification_type: null }); setCropSuggestions([]); setShowSuggestions(false); }} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition">Cancel</button>
-                <button onClick={handleAddCrop} disabled={addingCrop} className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                  {addingCrop ? (<><div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div><span>Adding...</span></>) : (<><i className="ph-bold ph-plus text-sm"></i><span>Add Crop</span></>)}
-                </button>
-              </div>
+            <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowAddCropForm(false);
+                  setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '', certification_type: null });
+                  setCropSuggestions([]); setShowSuggestions(false);
+                }}
+                className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddCrop}
+                disabled={addingCrop}
+                className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-95"
+              >
+                {addingCrop
+                  ? (<><div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div><span>Adding...</span></>)
+                  : (<><i className="ph-bold ph-plus text-sm"></i><span>Add Crop</span></>)}
+              </button>
+            </div>
             </div>
           </div>
         </div>
@@ -1556,6 +1571,41 @@ function ProfileContent() {
                   {GRADE_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
                 </select>
               </div>
+              {/* ── Certification Type — farmer only ── */}
+{userRole === 'farmer' && (
+  <div>
+    <label className="block text-sm font-semibold text-gray-900 mb-2">
+      Certification Type <span className="text-gray-400 font-normal text-xs">(optional)</span>
+    </label>
+    <div className="flex flex-wrap gap-2">
+      {CERTIFICATION_TYPES.map(cert => (
+        <button
+          key={cert.value}
+          type="button"
+          onClick={() => setEditCropForm(p => ({
+            ...p,
+            certification_type: p.certification_type === cert.value ? null : cert.value
+          }))}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition active:scale-95
+            ${editCropForm.certification_type === cert.value
+              ? 'bg-blue-600 border-blue-600 text-white shadow-md'
+              : 'bg-white border-gray-200 text-gray-700 hover:border-blue-400'}`}
+        >
+          <span>{cert.icon}</span>{cert.label}
+        </button>
+      ))}
+    </div>
+    {editCropForm.certification_type && (
+      <button
+        type="button"
+        onClick={() => setEditCropForm(p => ({ ...p, certification_type: null }))}
+        className="mt-2 text-xs text-red-500 font-semibold hover:underline flex items-center gap-1"
+      >
+        <i className="ph-bold ph-x-circle text-sm"></i> Clear certification
+      </button>
+    )}
+  </div>
+)}
               {/* ── NEW: Certificate ── */}
               <CertificateUploader value={editCropForm.certificate_url} onChange={url => setEditCropForm(p => ({ ...p, certificate_url: url }))} accentColor="blue" />
               {/* Actions */}
