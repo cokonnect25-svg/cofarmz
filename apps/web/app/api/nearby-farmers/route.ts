@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     // Get farmer/buyer IDs that match crop filter
     let farmerWithCropsIds: string[] = [];
     if (crops.length > 0 || showWasteBuyers) {
-      if (showWasteBuyers && searchType === "buyers") {
+      if (showWasteBuyers || searchType === "wastage") {
         // Get buyers who buy crop waste
         const wasteBuyers = await sql`
           SELECT DISTINCT c.user_id

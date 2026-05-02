@@ -228,7 +228,9 @@ function NearbyFarmersContent() {
       if (filters.equipment.length > 0) params.append('equipment', filters.equipment.join(','));
       if (filters.yieldDateFrom) params.append('yieldDateFrom', filters.yieldDateFrom);
       if (filters.yieldDateTo) params.append('yieldDateTo', filters.yieldDateTo);
-      if (type === 'wastage' || (type === 'buyers' && filters.wasteOnly)) params.append('wasteOnly', 'true');
+      if (type === 'wastage' || (type === 'buyers' && filters.wasteOnly)) {
+  params.append('wasteOnly', 'true');
+}
 
       const url = getApiUrl(`/api/nearby-farmers?${params.toString()}`);
       console.log('Fetching', type, 'from:', url);
