@@ -26,6 +26,7 @@ interface FarmerCrop {
   certificate_url: string | null;
   grade: string | null;
   created_at: string;
+  certification_type: string | null;
 }
 
 const COMMON_CROPS = [
@@ -46,6 +47,18 @@ const COMMON_CROPS = [
 ];
 
 const GRADE_OPTIONS = ['A+', 'A', 'B+', 'B', 'C', 'D', 'Organic', 'Premium', 'Ungraded'];
+
+
+const CERTIFICATION_TYPES = [
+  { value: 'organic', label: 'Organic Certified', icon: '🌿', color: 'green' },
+  { value: 'ipm', label: 'IPM (Low Pesticide)', icon: '🛡️', color: 'blue' },
+  { value: 'gap', label: 'Good Agricultural Practices (GAP)', icon: '✅', color: 'teal' },
+  { value: 'natural', label: 'Natural Farming', icon: '🍃', color: 'green' },
+  { value: 'residue_free', label: 'Residue-Free', icon: '🧪', color: 'purple' },
+  { value: 'premium', label: 'Premium Quality', icon: '⭐', color: 'yellow' },
+  { value: 'export_quality', label: 'Export Quality', icon: '🌍', color: 'indigo' },
+  { value: 'other', label: 'Other', icon: '📜', color: 'gray' },
+];
 
 interface Follower {
   id: string;
@@ -236,7 +249,7 @@ function ProfileContent() {
   const [newCrop, setNewCrop] = useState({
     crop_name: '', years_of_experience: '', expertise_level: 'Beginner',
     expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg',
-    is_crop_waste: false, certificate_url: '', grade: '',
+    is_crop_waste: false, certificate_url: '', grade: '',certification_type: null as string | null,
   });
   const [addingCrop, setAddingCrop] = useState(false);
   const [showAddCropForm, setShowAddCropForm] = useState(false);
@@ -360,7 +373,7 @@ function ProfileContent() {
   const [editCropForm, setEditCropForm] = useState({
     crop_name: '', years_of_experience: '', expertise_level: 'Beginner',
     expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg',
-    is_crop_waste: false, certificate_url: '', grade: '',
+    is_crop_waste: false, certificate_url: '', grade: '',certification_type: null as string | null,
   });
   const [editCropSuggestions, setEditCropSuggestions] = useState<string[]>([]);
   const [showEditCropSuggestions, setShowEditCropSuggestions] = useState(false);
@@ -700,12 +713,13 @@ function ProfileContent() {
           crop_type: 'grow',
           is_crop_waste: userRole === 'buyer' ? newCrop.is_crop_waste : false,
           certificate_url: newCrop.certificate_url || null,
+          certification_type: userRole === 'farmer' ? (newCrop.certification_type || null) : null,
           grade: newCrop.grade || null,
         }),
       });
       const data = await response.json();
       if (response.ok && !data.error) {
-        setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '' });
+        setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '', certification_type: null });
         setShowAddCropForm(false);
         setCropSuggestions([]); setShowSuggestions(false);
         await fetchUserCrops();
@@ -748,6 +762,7 @@ function ProfileContent() {
       expected_yield_quantity_uom: crop.expected_yield_quantity_uom || 'kg',
       is_crop_waste: crop.is_crop_waste || false,
       certificate_url: crop.certificate_url || '',
+      certification_type: crop.certification_type || null,
       grade: crop.grade || '',
     });
     setEditCropSuggestions([]); setShowEditCropSuggestions(false);
@@ -787,6 +802,7 @@ function ProfileContent() {
           crop_type: 'grow',
           is_crop_waste: userRole === 'buyer' ? editCropForm.is_crop_waste : false,
           certificate_url: editCropForm.certificate_url || null,
+          certification_type: userRole === 'farmer' ? (editCropForm.certification_type || null) : null,
           grade: editCropForm.grade || null,
         }),
       });
@@ -1063,6 +1079,14 @@ function ProfileContent() {
                             <i className="ph-bold ph-file-text text-sm"></i> View Certificate ↗
                           </a>
                         )}
+                        {crop.certification_type && (() => {
+                          const cert = CERTIFICATION_TYPES.find(c => c.value === crop.certification_type);
+                          return cert ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-[10px] font-black border border-green-200">
+                              {cert.icon} {cert.label}
+                            </span>
+                          ) : null;
+                        })()}
                       </div>
                     </div>
                   ))}</div>
@@ -1335,6 +1359,20 @@ function ProfileContent() {
                   <a href={selectedCrop.certificate_url} target="_blank" rel="noopener noreferrer" className="text-xs font-black text-indigo-600 bg-white px-3 py-1 rounded-lg border border-indigo-100 shadow-sm hover:bg-indigo-50 transition">View ↗</a>
                 </div>
               )}
+              {selectedCrop.certification_type && (() => {
+  const cert = CERTIFICATION_TYPES.find(c => c.value === selectedCrop.certification_type);
+  return cert ? (
+    <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100/50">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center text-sm">{cert.icon}</div>
+        <span className="text-sm font-bold text-gray-500">Certification</span>
+      </div>
+      <span className="text-sm font-black text-green-700 bg-white px-3 py-1 rounded-lg border border-green-100 shadow-sm">
+        {cert.icon} {cert.label}
+      </span>
+    </div>
+  ) : null;
+})()}
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={() => { setSelectedCrop(null); handleEditCropClick(selectedCrop); }} className="flex-1 py-3 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm hover:bg-blue-100 transition">✏️ Edit</button>
@@ -1350,7 +1388,7 @@ function ProfileContent() {
           <div className="bg-white rounded-2xl overflow-hidden shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 flex items-center justify-between z-10">
               <h3 className="text-lg font-bold text-white">Add New Crop</h3>
-              <button onClick={() => { setShowAddCropForm(false); setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '' }); setCropSuggestions([]); setShowSuggestions(false); }} className="p-1 hover:bg-white/20 rounded-lg transition">
+              <button onClick={() => { setShowAddCropForm(false); setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '', certification_type: null }); setCropSuggestions([]); setShowSuggestions(false); }} className="p-1 hover:bg-white/20 rounded-lg transition">
                 <X className="w-5 h-5 text-white" />
               </button>
             </div>
@@ -1411,11 +1449,34 @@ function ProfileContent() {
                   {GRADE_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
                 </select>
               </div>
+              <div>
+    <label className="block text-sm font-semibold text-gray-900 mb-2">
+      Certification Type <span className="text-gray-400 font-normal text-xs">(optional)</span>
+    </label>
+    <div className="flex flex-wrap gap-2">
+      {CERTIFICATION_TYPES.map(cert => (
+        <button
+          key={cert.value}
+          type="button"
+          onClick={() => setNewCrop(p => ({
+            ...p,
+            certification_type: p.certification_type === cert.value ? '' : cert.value
+          }))}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border-2 transition active:scale-95
+            ${newCrop.certification_type === cert.value
+              ? 'bg-green-600 border-green-600 text-white shadow-md'
+              : 'bg-white border-gray-200 text-gray-700 hover:border-green-400'}`}
+        >
+          <span>{cert.icon}</span>{cert.label}
+        </button>
+      ))}
+    </div>
+  </div>
               {/* ── NEW: Certificate ── */}
               <CertificateUploader value={newCrop.certificate_url} onChange={url => setNewCrop(p => ({ ...p, certificate_url: url }))} accentColor="green" />
               {/* Actions */}
               <div className="flex gap-3 pt-4">
-                <button onClick={() => { setShowAddCropForm(false); setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '' }); setCropSuggestions([]); setShowSuggestions(false); }} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition">Cancel</button>
+                <button onClick={() => { setShowAddCropForm(false); setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '', certification_type: null }); setCropSuggestions([]); setShowSuggestions(false); }} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition">Cancel</button>
                 <button onClick={handleAddCrop} disabled={addingCrop} className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   {addingCrop ? (<><div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div><span>Adding...</span></>) : (<><i className="ph-bold ph-plus text-sm"></i><span>Add Crop</span></>)}
                 </button>
@@ -1434,7 +1495,7 @@ function ProfileContent() {
                 <h3 className="text-xl font-black text-gray-900 leading-none mb-1">Edit Crop Details</h3>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Update your agricultural profile</p>
               </div>
-              <button onClick={() => { setEditingCrop(null); setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '' }); setEditCropSuggestions([]); setShowEditCropSuggestions(false); }} className="p-2 hover:bg-gray-100 rounded-xl transition">
+              <button onClick={() => { setEditingCrop(null); setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '', certification_type: null }); setEditCropSuggestions([]); setShowEditCropSuggestions(false); }} className="p-2 hover:bg-gray-100 rounded-xl transition">
                 <X className="w-5 h-5 text-gray-600" />
               </button>
             </div>
@@ -1499,7 +1560,7 @@ function ProfileContent() {
               <CertificateUploader value={editCropForm.certificate_url} onChange={url => setEditCropForm(p => ({ ...p, certificate_url: url }))} accentColor="blue" />
               {/* Actions */}
               <div className="flex gap-3 pt-4">
-                <button onClick={() => { setEditingCrop(null); setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '' }); setEditCropSuggestions([]); setShowEditCropSuggestions(false); }} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition">Cancel</button>
+                <button onClick={() => { setEditingCrop(null); setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '',certification_type: null }); setEditCropSuggestions([]); setShowEditCropSuggestions(false); }} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition">Cancel</button>
                 <button onClick={handleSaveEditCrop} disabled={savingCrop} className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   {savingCrop ? (<><div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div><span>Saving...</span></>) : (<><i className="ph-bold ph-check text-sm"></i><span>Save Changes</span></>)}
                 </button>

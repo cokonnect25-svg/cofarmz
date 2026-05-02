@@ -33,13 +33,15 @@ export async function GET(request: Request) {
     await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS is_crop_waste BOOLEAN DEFAULT false`.catch(() => {});
     await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS certificate_url TEXT`.catch(() => {});
     await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS grade VARCHAR(10)`.catch(() => {});
+    await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS certification_type VARCHAR(50) DEFAULT NULL`.catch(() => {});
     await sql`ALTER TABLE crops DROP CONSTRAINT IF EXISTS crops_crop_type_check`.catch(() => {});
+    
 
     const crops = await sql`
       SELECT
         id, crop_name, years_of_experience, expertise_level,
         expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom,
-        is_crop_waste, crop_type, certificate_url, grade, created_at
+        is_crop_waste, crop_type,certification_type, certificate_url, grade, created_at
       FROM crops
       WHERE user_id = ${userId}
       ORDER BY created_at DESC
@@ -56,7 +58,7 @@ export async function POST(request: Request) {
     const {
       user_id, crop_name, years_of_experience, expertise_level,
       expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom,
-      crop_type, is_crop_waste, certificate_url, grade
+      crop_type, is_crop_waste, certificate_url, grade, certification_type
     } = await request.json();
 
     if (!user_id || !crop_name) {
@@ -81,6 +83,7 @@ export async function POST(request: Request) {
     await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS is_crop_waste BOOLEAN DEFAULT false`.catch(() => {});
     await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS certificate_url TEXT`.catch(() => {});
     await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS grade VARCHAR(10)`.catch(() => {});
+    await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS certification_type VARCHAR(50) DEFAULT NULL`.catch(() => {});
     await sql`ALTER TABLE crops DROP CONSTRAINT IF EXISTS crops_crop_type_check`.catch(() => {});
 
     const existing = await sql`
@@ -97,14 +100,14 @@ export async function POST(request: Request) {
       INSERT INTO crops (
         user_id, crop_name, years_of_experience, expertise_level,
         expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom,
-        crop_type, is_crop_waste, certificate_url, grade
+        crop_type, is_crop_waste, certificate_url, grade, certification_type
       )
       VALUES (
         ${user_id}, ${trimmedCropName}, ${years_of_experience || null},
         ${expertise_level || 'Beginner'}, ${expected_yield_date || null},
         ${expected_yield_quantity || null}, ${expected_yield_quantity_uom || 'kg'},
         ${crop_type || 'grow'}, ${is_crop_waste || false},
-        ${certificate_url || null}, ${grade || null}
+        ${certificate_url || null}, ${grade || null}, ${certification_type || null}
       )
       RETURNING *
     `;
@@ -121,7 +124,7 @@ export async function PUT(request: Request) {
     const {
       id, crop_name, years_of_experience, expertise_level,
       expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom,
-      crop_type, is_crop_waste, certificate_url, grade
+      crop_type, is_crop_waste, certificate_url, grade, certification_type
     } = await request.json();
 
     if (!id || !crop_name) {
@@ -161,7 +164,8 @@ export async function PUT(request: Request) {
         crop_type = ${crop_type || 'grow'},
         is_crop_waste = ${is_crop_waste || false},
         certificate_url = ${certificate_url || null},
-        grade = ${grade || null}
+        grade = ${grade || null},
+        certification_type = ${certification_type || null}
       WHERE id = ${parseInt(id)}
       RETURNING *
     `;
