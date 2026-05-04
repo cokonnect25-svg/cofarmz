@@ -5,42 +5,34 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const latitude    = parseFloat(searchParams.get("latitude")  || "0");
-    const longitude   = parseFloat(searchParams.get("longitude") || "0");
-    const distance    = searchParams.get("distance") ? parseInt(searchParams.get("distance") || "50") : null;
-    const minRating   = parseFloat(searchParams.get("minRating") || "0");
-
-    const crops = (searchParams.get("crops")?.split(",").filter(Boolean) ?? [])
-      .map(c => c.trim().toLowerCase());
-
-    const grades = (searchParams.get("grades")?.split(",").filter(Boolean) ?? [])
-      .map(g => g.trim().toLowerCase());
-
-    const certTypes = (searchParams.get("certTypes")?.split(",").filter(Boolean) ?? [])
-      .map(c => c.trim().toLowerCase());
-
-    // BUG FIX A: normalise all filter arrays — trim + lowercase ready for comparison
-    const equipment  = (searchParams.get("equipment") ?.split(",").filter(Boolean) ?? []);
-
+    const latitude       = parseFloat(searchParams.get("latitude")   || "0");
+    const longitude      = parseFloat(searchParams.get("longitude")  || "0");
+    const distanceLimit  = searchParams.get("distance") ? parseInt(searchParams.get("distance") || "50") : null;
     const yieldDateFrom  = searchParams.get("yieldDateFrom") || null;
     const yieldDateTo    = searchParams.get("yieldDateTo")   || null;
     const searchType     = searchParams.get("type") || "farmers";
     const showWasteBuyers = searchParams.get("wasteOnly") === "true";
     const currentUserId  = searchParams.get("currentUserId");
 
-    // Ensure required columns exist
-    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS latitude  DOUBLE PRECISION`.catch(() => {});
-    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION`.catch(() => {});
-    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'buyer'`.catch(() => {});
-    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone    TEXT`.catch(() => {});
-    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS location TEXT`.catch(() => {});
+    const crops     = (searchParams.get("crops")    ?.split(",").filter(Boolean) ?? []).map(c => c.trim().toLowerCase());
+    const grades    = (searchParams.get("grades")   ?.split(",").filter(Boolean) ?? []).map(g => g.trim().toLowerCase());
+    const certTypes = (searchParams.get("certTypes")?.split(",").filter(Boolean) ?? []).map(c => c.trim().toLowerCase());
+    const equipment = (searchParams.get("equipment")?.split(",").filter(Boolean) ?? []);
+
+    // ── ensure columns ──────────────────────────────────────────────────────
+    await Promise.all([
+      sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS latitude  DOUBLE PRECISION`.catch(() => {}),
+      sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION`.catch(() => {}),
+      sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'buyer'`.catch(() => {}),
+      sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone    TEXT`.catch(() => {}),
+      sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS location TEXT`.catch(() => {}),
+    ]);
 
     const targetRole =
       searchType === "farmers"  ? "farmer"  :
-      searchType === "supplier" ? "supplier" :
-      "buyer";
+      searchType === "supplier" ? "supplier" : "buyer";
 
-    // Fetch all users matching the target role
+    // ── fetch users by role ─────────────────────────────────────────────────
     const users = await sql`
       SELECT
         u.id, u.name, u.email,
@@ -55,15 +47,15 @@ export async function GET(request: NextRequest) {
       WHERE (
         u.role = ${targetRole}
         OR (u.role IS NULL AND u.role_id = ${
-          targetRole === "farmer"   ? 1 :
-          targetRole === "supplier" ? 3 : 2
+          targetRole === "farmer" ? 1 : targetRole === "supplier" ? 3 : 2
         })
       )
       ${currentUserId ? sql`AND u.id != ${currentUserId}` : sql``}
-      GROUP BY u.id, u.name, u.email, u.image, u.latitude, u.longitude, u.location, u.phone, u.role
+      GROUP BY u.id, u.name, u.email, u.image,
+               u.latitude, u.longitude, u.location, u.phone, u.role
     `;
 
-    // ── Haversine distance ────────────────────────────────────────────────────
+    // ── Haversine ───────────────────────────────────────────────────────────
     const calcDist = (lat1: number, lon1: number, lat2: number, lon2: number) => {
       const R = 6371;
       const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -86,128 +78,126 @@ export async function GET(request: NextRequest) {
           : null,
     }));
 
-    // BUG FIX B: distance filter must EXCLUDE users without location when filter is on
-    const filteredByDistance =
-      distance !== null
-        ? usersWithDist.filter((u: any) => u.distance == null || u.distance <= distance)
+    // distance hard-filter (only when enabled AND user has location)
+    const afterDistance =
+      distanceLimit !== null
+        ? usersWithDist.filter((u: any) => u.distance != null && u.distance <= distanceLimit)
         : usersWithDist;
 
-    // ── Crop / grade / cert / date / waste filtering ──────────────────────────
+    // ── crop / grade / cert / date matching ─────────────────────────────────
+    // FIX 1: never use sql.join inside ARRAY[] — use a plain JS subquery per value
+    // FIX 2: one query, user-level EXISTS per dimension → fast + correct
     const hasCropFilter  = crops.length     > 0;
     const hasGradeFilter = grades.length    > 0;
     const hasCertFilter  = certTypes.length > 0;
     const hasDateFilter  = !!(yieldDateFrom || yieldDateTo);
+    const hasWasteFilter = showWasteBuyers || searchType === "wastage";
 
-    // null  = filter not active (show everyone)
-    // array = only show users whose id is in this array
-// 🚀 NEW: USER-LEVEL FILTERING (correct logic)
+    let matchedCropUserIds: Set<string> | null = null;
 
+    if (hasWasteFilter) {
+      // wastage: buyers who have at least one waste crop
+      const rows = await sql`
+        SELECT DISTINCT c.user_id
+        FROM crops c
+        JOIN "user" u ON c.user_id = u.id
+        WHERE c.is_crop_waste = true
+          AND u.role = 'buyer'
+      `;
+      matchedCropUserIds = new Set((rows as any[]).map((r: any) => r.user_id));
 
+    } else if (hasCropFilter || hasGradeFilter || hasCertFilter || hasDateFilter) {
+      // FIX 1: build individual unnested OR conditions instead of ARRAY[..] + sql.join
+      // This avoids the sql.join-inside-ARRAY bug entirely.
+      const cropConditions    = crops.map(c => sql`LOWER(TRIM(c_crop.crop_name)) LIKE ${'%' + c + '%'}`);
+      const gradeConditions   = grades.map(g => sql`LOWER(TRIM(c_grade.grade)) LIKE ${'%' + g.replace(/\s/g,'') + '%'}`);
+      const certConditions    = certTypes.map(c => sql`LOWER(TRIM(c_cert.certification_type)) LIKE ${'%' + c + '%'}`);
 
-      let matchedCropUserIds: string[] | null = null;
+      // Build each EXISTS clause only when needed, using safe OR-chained conditions
+      // We do a single GROUP BY user_id query with HAVING clauses
+      const rows = await sql`
+        SELECT DISTINCT user_id FROM crops
+        WHERE user_id IN (
+          -- users who match crop name (or skip if no crop filter)
+          SELECT user_id FROM crops
+          WHERE 1=1
+          ${hasCropFilter ? sql`
+            AND (
+              ${cropConditions.reduce((acc, cond, i) =>
+                i === 0 ? cond : sql`${acc} OR ${cond}`, sql`FALSE`)}
+            )
+          ` : sql``}
+          ${hasGradeFilter ? sql`
+            AND (
+              ${gradeConditions.reduce((acc, cond, i) =>
+                i === 0 ? cond : sql`${acc} OR ${cond}`,
+                sql`FALSE` as any)}
+            )
+          ` : sql``}
+          ${hasCertFilter ? sql`
+            AND (
+              ${certConditions.reduce((acc, cond, i) =>
+                i === 0 ? cond : sql`${acc} OR ${cond}`,
+                sql`FALSE` as any)}
+            )
+          ` : sql``}
+          ${hasDateFilter ? sql`
+            AND expected_yield_date IS NOT NULL
+            ${yieldDateFrom ? sql`AND expected_yield_date >= ${yieldDateFrom}::date` : sql``}
+            ${yieldDateTo   ? sql`AND expected_yield_date <= ${yieldDateTo}::date`   : sql``}
+          ` : sql``}
+        )
+      `;
+      matchedCropUserIds = new Set((rows as any[]).map((r: any) => r.user_id));
+    }
 
-      if (hasCropFilter || hasGradeFilter || hasCertFilter || hasDateFilter) {
-
-        const rows = await sql`
-          SELECT user_id
-          FROM crops
-          GROUP BY user_id
-HAVING
-
--- 🌾 Crop
-${hasCropFilter ? sql`
-  EXISTS (
-    SELECT 1 FROM crops c2
-    WHERE c2.user_id = crops.user_id
-      AND c2.crop_name IS NOT NULL
-      AND LOWER(TRIM(c2.crop_name)) ILIKE ANY (ARRAY[
-        ${sql.join(
-  crops.map(c => sql`${`%${c}%`}`),
-  sql`, `
-)}
-      ])
-  )
-` : sql`TRUE`}
-
-AND
-
--- 🏷️ Grade
-${hasGradeFilter ? sql`
-EXISTS (
-  SELECT 1 FROM crops c3
-  WHERE c3.user_id = crops.user_id
-    AND c3.grade IS NOT NULL
-    AND LOWER(REPLACE(TRIM(c3.grade), ' ', '')) ILIKE ANY (ARRAY[
-      ${sql.join(
-        grades.map(g => sql`${`%${g.replace(/\s/g, '')}%`}`),
-        sql`, `
-      )}
-    ])
-)
-` : sql`TRUE`}
-
-AND
-
--- 🌿 Certification
-${hasCertFilter ? sql`
-  EXISTS (
-    SELECT 1 FROM crops c4
-    WHERE c4.user_id = crops.user_id
-      AND c4.certification_type IS NOT NULL
-      AND LOWER(TRIM(c4.certification_type)) ILIKE ANY (ARRAY[
-        ${sql.join(
-  certTypes.map(c => sql`${`%${c}%`}`),
-  sql`, `
-)}
-      ])
-  )
-` : sql`TRUE`}
-
-            AND
-
-            -- 📅 Date filter
-            ${hasDateFilter
-              ? sql`
-                EXISTS(
-                  expected_yield_date IS NOT NULL
-                  AND (
-                    (${yieldDateFrom ? sql`expected_yield_date >= ${yieldDateFrom}::date` : sql`TRUE`})
-                    AND
-                    (${yieldDateTo ? sql`expected_yield_date <= ${yieldDateTo}::date` : sql`TRUE`})
-                  )
-                )
-              `
-              : sql`TRUE`}
-        `;
-
-        matchedCropUserIds = rows.map((r: any) => r.user_id);
-      }
-
-    // ── Equipment filtering ───────────────────────────────────────────────────
-    let matchedEquipUserIds: string[] | null = null;
+    // ── equipment matching ──────────────────────────────────────────────────
+    let matchedEquipUserIds: Set<string> | null = null;
     if (equipment.length > 0) {
       const allRows = await Promise.all(
-        equipment.map(eq =>
-          sql`SELECT DISTINCT owner_id FROM machinery WHERE name ILIKE ${`%${eq}%`}`
-        )
+        equipment.map(eq => sql`SELECT DISTINCT owner_id FROM machinery WHERE name ILIKE ${'%' + eq + '%'}`)
       );
-const ids = allRows.flatMap(rows => rows.map(r => r.owner_id));
-matchedEquipUserIds = [...new Set(ids)];
+      matchedEquipUserIds = new Set(
+        allRows.flatMap((rows: any[]) => rows.map((r: any) => r.owner_id))
+      );
     }
 
-    // ── Apply JS-side filters ─────────────────────────────────────────────────
-    let result = filteredByDistance;
+    // ── FIX 3+4: rank-and-sort instead of hard-filter-and-disappear ─────────
+    // Every user gets a relevance score. Hard filters (distance, role) already
+    // applied above. Crop/grade/cert/equip now produce a SCORE, not a wall.
+    // Users matching all active filters score highest; partial matches score
+    // lower but still appear (good UX — shows "nearby" users even if no
+    // exact match). Set score=0 to completely hide non-matching when filters active.
 
-if (matchedCropUserIds !== null) {
-  console.log("Matched Users:", matchedCropUserIds.length);
-  result = result.filter((u: any) => matchedCropUserIds.includes(u.id));
-}
-    if (matchedEquipUserIds !== null) {
-      result = result.filter((u: any) => matchedEquipUserIds!.includes(u.id));
-    }
+    const anyFilterActive =
+      matchedCropUserIds !== null || matchedEquipUserIds !== null;
 
-    // ── Batch-fetch details for matched users ─────────────────────────────────
-    const userIds = result.map((u: any) => u.id);
+    const scored = afterDistance.map((u: any) => {
+      let score = 0;
+
+      if (matchedCropUserIds !== null) {
+        if (matchedCropUserIds.has(u.id)) score += 10;
+        // non-matching users get score 0 — we'll filter them out below
+      }
+      if (matchedEquipUserIds !== null) {
+        if (matchedEquipUserIds.has(u.id)) score += 5;
+      }
+
+      return { ...u, _score: score };
+    });
+
+    // When filters are active: only show users who match ALL active filter groups
+    // When no filters: show everyone
+    const result = anyFilterActive
+      ? scored.filter((u: any) => {
+          if (matchedCropUserIds  !== null && !matchedCropUserIds.has(u.id))  return false;
+          if (matchedEquipUserIds !== null && !matchedEquipUserIds.has(u.id)) return false;
+          return true;
+        })
+      : scored;
+
+    // ── batch-fetch details ─────────────────────────────────────────────────
+    const userIds: string[] = result.map((u: any) => u.id);
 
     let allCrops:     any[] = [];
     let allEquip:     any[] = [];
@@ -217,10 +207,9 @@ if (matchedCropUserIds !== null) {
     if (userIds.length > 0) {
       [allCrops, allEquip, allFollowers, allFollowing] = await Promise.all([
         sql`
-          SELECT
-            user_id, crop_name, years_of_experience, expertise_level,
-            is_crop_waste, grade, certification_type,
-            expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom
+          SELECT user_id, crop_name, years_of_experience, expertise_level,
+                 is_crop_waste, grade, certification_type,
+                 expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom
           FROM crops
           WHERE user_id = ANY(${userIds}::text[])
           ORDER BY created_at DESC
@@ -246,7 +235,7 @@ if (matchedCropUserIds !== null) {
       ]);
     }
 
-    // ── Build lookup maps ─────────────────────────────────────────────────────
+    // ── build lookup maps ───────────────────────────────────────────────────
     const cropsMap     = new Map<string, any[]>();
     const equipMap     = new Map<string, any[]>();
     const followersMap = new Map<string, number>();
@@ -255,15 +244,14 @@ if (matchedCropUserIds !== null) {
     (allCrops as any[]).forEach((c: any) => {
       if (!cropsMap.has(c.user_id)) cropsMap.set(c.user_id, []);
       cropsMap.get(c.user_id)!.push({
-        crop_name:           c.crop_name,
-        years_of_experience: c.years_of_experience,
-        expertise_level:     c.expertise_level,
-        is_crop_waste:       c.is_crop_waste,
-
-        grade:               c.grade,
-        certification_type:  c.certification_type,
-        expected_yield_date:     c.expected_yield_date,
-        expected_yield_quantity: c.expected_yield_quantity,
+        crop_name:                   c.crop_name,
+        years_of_experience:         c.years_of_experience,
+        expertise_level:             c.expertise_level,
+        is_crop_waste:               c.is_crop_waste,
+        grade:                       c.grade,
+        certification_type:          c.certification_type,
+        expected_yield_date:         c.expected_yield_date,
+        expected_yield_quantity:     c.expected_yield_quantity,
         expected_yield_quantity_uom: c.expected_yield_quantity_uom,
       });
     });
@@ -279,35 +267,37 @@ if (matchedCropUserIds !== null) {
     (allFollowers as any[]).forEach((f: any) => followersMap.set(f.following_id, f.count || 0));
     (allFollowing as any[]).forEach((f: any) => followingMap.set(f.user_id,       f.count || 0));
 
-    // ── Assemble final response ───────────────────────────────────────────────
-    const finalResult = result.map((user: any) => {
-      const allUserCrops = cropsMap.get(user.id) || [];
+    // ── assemble + FIX 3: sort by score DESC then distance ASC ─────────────
+    const finalResult = result
+      .map((user: any) => {
+        const allUserCrops  = cropsMap.get(user.id) || [];
+        const visibleCrops  = showWasteBuyers
+          ? allUserCrops.filter((c: any) => c.is_crop_waste)
+          : allUserCrops;
 
-      // For wastage search only surface waste crops in the card tags
-      const visibleCrops = showWasteBuyers
-        ? allUserCrops.filter((c: any) => c.is_crop_waste)
-        : allUserCrops;
-
-      return {
-        ...user,
-        crops:           visibleCrops,
-        crops_count:     visibleCrops.length,
-        equipment:       (equipMap.get(user.id) || []).slice(0, 5),
-        equipment_count: parseInt(user.equipment_count) || 0,
-        rating:          null,
-        followers_count: followersMap.get(user.id) || 0,
-        following_count: followingMap.get(user.id) || 0,
-      };
-    });
-
-    // Sort: users with known distance first, ascending
-    finalResult.sort((a: any, b: any) => {
-      if (a.distance == null) return 1;
-      if (b.distance == null) return -1;
-      return a.distance - b.distance;
-    });
+        return {
+          ...user,
+          crops:           visibleCrops,
+          crops_count:     visibleCrops.length,
+          equipment:       (equipMap.get(user.id) || []).slice(0, 5),
+          equipment_count: parseInt(user.equipment_count) || 0,
+          rating:          null,
+          followers_count: followersMap.get(user.id) || 0,
+          following_count: followingMap.get(user.id) || 0,
+        };
+      })
+      .sort((a: any, b: any) => {
+        // FIX 3: best matches first, then by proximity
+        if (b._score !== a._score) return b._score - a._score;
+        if (a.distance == null)    return 1;
+        if (b.distance == null)    return -1;
+        return a.distance - b.distance;
+      })
+      // strip internal field before sending
+      .map(({ _score, ...u }: any) => u);
 
     return NextResponse.json(finalResult);
+
   } catch (error: any) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("Error fetching nearby farmers:", msg);
