@@ -10,11 +10,17 @@ export async function GET(request: NextRequest) {
     const distance    = searchParams.get("distance") ? parseInt(searchParams.get("distance") || "50") : null;
     const minRating   = parseFloat(searchParams.get("minRating") || "0");
 
+    const crops = (searchParams.get("crops")?.split(",").filter(Boolean) ?? [])
+      .map(c => c.trim().toLowerCase());
+
+    const grades = (searchParams.get("grades")?.split(",").filter(Boolean) ?? [])
+      .map(g => g.trim().toLowerCase());
+
+    const certTypes = (searchParams.get("certTypes")?.split(",").filter(Boolean) ?? [])
+      .map(c => c.trim().toLowerCase());
+
     // BUG FIX A: normalise all filter arrays — trim + lowercase ready for comparison
-    const crops      = (searchParams.get("crops")     ?.split(",").filter(Boolean) ?? []).map(c => c.trim());
     const equipment  = (searchParams.get("equipment") ?.split(",").filter(Boolean) ?? []);
-    const grades     = (searchParams.get("grades")    ?.split(",").filter(Boolean) ?? []).map(g => g.trim());
-    const certTypes  = (searchParams.get("certTypes") ?.split(",").filter(Boolean) ?? []).map(c => c.trim());
 
     const yieldDateFrom  = searchParams.get("yieldDateFrom") || null;
     const yieldDateTo    = searchParams.get("yieldDateTo")   || null;
@@ -96,61 +102,77 @@ export async function GET(request: NextRequest) {
     // array = only show users whose id is in this array
 // 🚀 NEW: USER-LEVEL FILTERING (correct logic)
 
-let matchedCropUserIds: string[] | null = null;
 
-if (showWasteBuyers || searchType === "wastage") {
-  const rows = await sql`
-    SELECT DISTINCT c.user_id
-    FROM crops c
-    JOIN "user" u ON c.user_id = u.id
-    WHERE c.is_crop_waste = true
-      AND u.role = 'buyer'
-  `;
-  matchedCropUserIds = rows.map((r: any) => r.user_id);
 
-} else if (hasCropFilter || hasGradeFilter || hasCertFilter || hasDateFilter) {
+      let matchedCropUserIds: string[] | null = null;
 
-  const rows = await sql`
-    SELECT user_id
-    FROM crops
-    GROUP BY user_id
-    HAVING
-      -- 🌾 Crop filter
-      ${hasCropFilter
-        ? sql`BOOL_OR(LOWER(TRIM(crop_name)) ILIKE ANY (ARRAY[${sql.join(crops.map(c => `%${c.toLowerCase()}%`), sql`, `)}]))`
-        : sql`TRUE`}
+      if (hasCropFilter || hasGradeFilter || hasCertFilter || hasDateFilter) {
 
-      AND
+        const rows = await sql`
+          SELECT user_id
+          FROM crops
+          GROUP BY user_id
+          HAVING
 
-      -- 🏷️ Grade filter
-      ${hasGradeFilter
-        ? sql`BOOL_OR(LOWER(TRIM(COALESCE(grade, ''))) IN (${sql.join(grades.map(g => g.toLowerCase()), sql`, `)}))`
-        : sql`TRUE`}
+            -- 🌾 Crop filter
+            ${hasCropFilter
+              ? sql`
+                BOOL_OR(
+                  crop_name IS NOT NULL AND
+                  LOWER(TRIM(crop_name)) ILIKE ANY (ARRAY[
+                    ${sql.join(crops.map(c => `%${c}%`), sql`, `)}
+                  ])
+                )
+              `
+              : sql`TRUE`}
 
-      AND
+            AND
 
-      -- 🌿 Certification filter
-      ${hasCertFilter
-        ? sql`BOOL_OR(LOWER(TRIM(COALESCE(certification_type, ''))) ILIKE ANY (ARRAY[${sql.join(certTypes.map(c => `%${c.toLowerCase()}%`), sql`, `)}]))`
-        : sql`TRUE`}
+            -- 🏷️ Grade filter (FIXED)
+            ${hasGradeFilter
+              ? sql`
+                BOOL_OR(
+                  grade IS NOT NULL AND
+                  LOWER(TRIM(grade)) ILIKE ANY (ARRAY[
+                    ${sql.join(grades.map(g => `%${g}%`), sql`, `)}
+                  ])
+                )
+              `
+              : sql`TRUE`}
 
-      AND
+            AND
 
-      -- 📅 Date filter
-      ${hasDateFilter
-        ? sql`BOOL_OR(
-            expected_yield_date IS NOT NULL
-            AND (
-              (${yieldDateFrom ? sql`expected_yield_date >= ${yieldDateFrom}::date` : sql`TRUE`})
-              AND
-              (${yieldDateTo ? sql`expected_yield_date <= ${yieldDateTo}::date` : sql`TRUE`})
-            )
-          )`
-        : sql`TRUE`}
-  `;
+            -- 🌿 Certification filter (FIXED)
+            ${hasCertFilter
+              ? sql`
+                BOOL_OR(
+                  certification_type IS NOT NULL AND
+                  LOWER(TRIM(certification_type)) ILIKE ANY (ARRAY[
+                    ${sql.join(certTypes.map(c => `%${c}%`), sql`, `)}
+                  ])
+                )
+              `
+              : sql`TRUE`}
 
-  matchedCropUserIds = rows.map((r: any) => r.user_id);
-}
+            AND
+
+            -- 📅 Date filter
+            ${hasDateFilter
+              ? sql`
+                BOOL_OR(
+                  expected_yield_date IS NOT NULL
+                  AND (
+                    (${yieldDateFrom ? sql`expected_yield_date >= ${yieldDateFrom}::date` : sql`TRUE`})
+                    AND
+                    (${yieldDateTo ? sql`expected_yield_date <= ${yieldDateTo}::date` : sql`TRUE`})
+                  )
+                )
+              `
+              : sql`TRUE`}
+        `;
+
+        matchedCropUserIds = rows.map((r: any) => r.user_id);
+      }
 
     // ── Equipment filtering ───────────────────────────────────────────────────
     let matchedEquipUserIds: string[] | null = null;
@@ -167,7 +189,8 @@ matchedEquipUserIds = [...new Set(ids)];
     // ── Apply JS-side filters ─────────────────────────────────────────────────
     let result = filteredByDistance;
 
-if (matchedCropUserIds !== null && matchedCropUserIds.length > 0) {
+if (matchedCropUserIds !== null) {
+  console.log("Matched Users:", matchedCropUserIds.length);
   result = result.filter((u: any) => matchedCropUserIds.includes(u.id));
 }
     if (matchedEquipUserIds !== null) {
@@ -227,7 +250,7 @@ if (matchedCropUserIds !== null && matchedCropUserIds.length > 0) {
         years_of_experience: c.years_of_experience,
         expertise_level:     c.expertise_level,
         is_crop_waste:       c.is_crop_waste,
-        // BUG FIX D: grade and certification_type were fetched but not stored in map
+
         grade:               c.grade,
         certification_type:  c.certification_type,
         expected_yield_date:     c.expected_yield_date,
