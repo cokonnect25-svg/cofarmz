@@ -1473,7 +1473,9 @@ function ProfileContent() {
     </div>
   </div>
               {/* ── NEW: Certificate ── */}
+              {userRole === 'farmer' && (
               <CertificateUploader value={newCrop.certificate_url} onChange={url => setNewCrop(p => ({ ...p, certificate_url: url }))} accentColor="green" />
+              )}
               {/* Actions */}
             <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex gap-3">
               <button
@@ -1607,7 +1609,9 @@ function ProfileContent() {
   </div>
 )}
               {/* ── NEW: Certificate ── */}
+              {userRole === 'farmer' && (
               <CertificateUploader value={editCropForm.certificate_url} onChange={url => setEditCropForm(p => ({ ...p, certificate_url: url }))} accentColor="blue" />
+              )}
               {/* Actions */}
               <div className="flex gap-3 pt-4">
                 <button onClick={() => { setEditingCrop(null); setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '',certification_type: null }); setEditCropSuggestions([]); setShowEditCropSuggestions(false); }} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition">Cancel</button>
