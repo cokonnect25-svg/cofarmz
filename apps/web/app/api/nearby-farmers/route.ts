@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     // BUG FIX B: distance filter must EXCLUDE users without location when filter is on
     const filteredByDistance =
       distance !== null
-        ? usersWithDist.filter((u: any) => u.distance != null && u.distance <= distance)
+        ? usersWithDist.filter((u: any) => u.distance == null || u.distance <= distance)
         : usersWithDist;
 
     // ── Crop / grade / cert / date / waste filtering ──────────────────────────
@@ -94,48 +94,63 @@ export async function GET(request: NextRequest) {
 
     // null  = filter not active (show everyone)
     // array = only show users whose id is in this array
-    let matchedCropUserIds: string[] | null = null;
+// 🚀 NEW: USER-LEVEL FILTERING (correct logic)
 
-    if (showWasteBuyers || searchType === "wastage") {
-      // ── wastage: buyers who buy crop waste ──────────────────────────────────
-      const rows = await sql`
-        SELECT DISTINCT c.user_id
-        FROM crops c
-        JOIN "user" u ON c.user_id = u.id
-        WHERE c.is_crop_waste = true
-          AND u.role = 'buyer'
-      `;
-      matchedCropUserIds = (rows as any[]).map((r: any) => r.user_id);
+let matchedCropUserIds: string[] | null = null;
 
-    } else if (hasCropFilter || hasGradeFilter || hasCertFilter || hasDateFilter) {
-      // BUG FIX C: ALL crop-related filters (name, grade, cert, date) run in ONE
-      // unified SQL query so they AND correctly on the SAME crop row.
-      // Previously grade/cert were run as a separate JS pass which caused
-      // mismatches when combined with crop name filtering.
-      const rows = await sql`
-        SELECT DISTINCT user_id
-        FROM crops
-        WHERE 1 = 1
-        ${hasCropFilter
-          ? sql`AND LOWER(TRIM(crop_name)) IN (${sql.join(crops.map(c => c.toLowerCase()), sql`, `)})`
-          : sql``}
-        ${hasGradeFilter
-          ? sql`AND LOWER(COALESCE(TRIM(grade), '')) IN (${sql.join(grades.map(g => g.toLowerCase()), sql`, `)})`
-          : sql``}
-        ${hasCertFilter
-          ? sql`AND LOWER(COALESCE(TRIM(certification_type), '')) IN (${sql.join(certTypes.map(c => c.toLowerCase()), sql`, `)})`
-          : sql``}
-        ${hasDateFilter ? sql`AND expected_yield_date IS NOT NULL` : sql``}
-        ${yieldDateFrom && yieldDateTo
-          ? sql`AND expected_yield_date BETWEEN ${yieldDateFrom}::date AND ${yieldDateTo}::date`
-          : yieldDateFrom
-          ? sql`AND expected_yield_date >= ${yieldDateFrom}::date`
-          : yieldDateTo
-          ? sql`AND expected_yield_date <= ${yieldDateTo}::date`
-          : sql``}
-      `;
-      matchedCropUserIds = (rows as any[]).map((r: any) => r.user_id);
-    }
+if (showWasteBuyers || searchType === "wastage") {
+  const rows = await sql`
+    SELECT DISTINCT c.user_id
+    FROM crops c
+    JOIN "user" u ON c.user_id = u.id
+    WHERE c.is_crop_waste = true
+      AND u.role = 'buyer'
+  `;
+  matchedCropUserIds = rows.map((r: any) => r.user_id);
+
+} else if (hasCropFilter || hasGradeFilter || hasCertFilter || hasDateFilter) {
+
+  const rows = await sql`
+    SELECT user_id
+    FROM crops
+    GROUP BY user_id
+    HAVING
+      -- 🌾 Crop filter
+      ${hasCropFilter
+        ? sql`BOOL_OR(LOWER(TRIM(crop_name)) ILIKE ANY (ARRAY[${sql.join(crops.map(c => `%${c.toLowerCase()}%`), sql`, `)}]))`
+        : sql`TRUE`}
+
+      AND
+
+      -- 🏷️ Grade filter
+      ${hasGradeFilter
+        ? sql`BOOL_OR(LOWER(TRIM(COALESCE(grade, ''))) IN (${sql.join(grades.map(g => g.toLowerCase()), sql`, `)}))`
+        : sql`TRUE`}
+
+      AND
+
+      -- 🌿 Certification filter
+      ${hasCertFilter
+        ? sql`BOOL_OR(LOWER(TRIM(COALESCE(certification_type, ''))) ILIKE ANY (ARRAY[${sql.join(certTypes.map(c => `%${c.toLowerCase()}%`), sql`, `)}]))`
+        : sql`TRUE`}
+
+      AND
+
+      -- 📅 Date filter
+      ${hasDateFilter
+        ? sql`BOOL_OR(
+            expected_yield_date IS NOT NULL
+            AND (
+              (${yieldDateFrom ? sql`expected_yield_date >= ${yieldDateFrom}::date` : sql`TRUE`})
+              AND
+              (${yieldDateTo ? sql`expected_yield_date <= ${yieldDateTo}::date` : sql`TRUE`})
+            )
+          )`
+        : sql`TRUE`}
+  `;
+
+  matchedCropUserIds = rows.map((r: any) => r.user_id);
+}
 
     // ── Equipment filtering ───────────────────────────────────────────────────
     let matchedEquipUserIds: string[] | null = null;
@@ -145,16 +160,16 @@ export async function GET(request: NextRequest) {
           sql`SELECT DISTINCT owner_id FROM machinery WHERE name ILIKE ${`%${eq}%`}`
         )
       );
-      const ids = allRows.flatMap((rows: any[]) => rows.map((r: any) => r.owner_id));
-      matchedEquipUserIds = [...new Set(ids)];
+const ids = allRows.flatMap(rows => rows.map(r => r.owner_id));
+matchedEquipUserIds = [...new Set(ids)];
     }
 
     // ── Apply JS-side filters ─────────────────────────────────────────────────
     let result = filteredByDistance;
 
-    if (matchedCropUserIds !== null) {
-      result = result.filter((u: any) => matchedCropUserIds!.includes(u.id));
-    }
+if (matchedCropUserIds !== null && matchedCropUserIds.length > 0) {
+  result = result.filter((u: any) => matchedCropUserIds.includes(u.id));
+}
     if (matchedEquipUserIds !== null) {
       result = result.filter((u: any) => matchedEquipUserIds!.includes(u.id));
     }
