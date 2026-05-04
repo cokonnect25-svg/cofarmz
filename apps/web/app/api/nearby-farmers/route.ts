@@ -109,9 +109,9 @@ export async function GET(request: NextRequest) {
     } else if (hasCropFilter || hasGradeFilter || hasCertFilter || hasDateFilter) {
       // FIX 1: build individual unnested OR conditions instead of ARRAY[..] + sql.join
       // This avoids the sql.join-inside-ARRAY bug entirely.
-      const cropConditions    = crops.map(c => sql`LOWER(TRIM(c_crop.crop_name)) LIKE ${'%' + c + '%'}`);
-      const gradeConditions   = grades.map(g => sql`LOWER(TRIM(c_grade.grade)) LIKE ${'%' + g.replace(/\s/g,'') + '%'}`);
-      const certConditions    = certTypes.map(c => sql`LOWER(TRIM(c_cert.certification_type)) LIKE ${'%' + c + '%'}`);
+      const cropConditions    = crops.map(c => sql`LOWER(TRIM(crop_name)) LIKE ${'%' + c + '%'}`);
+      const gradeConditions   = grades.map(g => sql`LOWER(TRIM(grade)) LIKE ${'%' + g.replace(/\s/g,'') + '%'}`);
+      const certConditions    = certTypes.map(c => sql`LOWER(TRIM(certification_type)) LIKE ${'%' + c + '%'}`);
 
       // Build each EXISTS clause only when needed, using safe OR-chained conditions
       // We do a single GROUP BY user_id query with HAVING clauses
