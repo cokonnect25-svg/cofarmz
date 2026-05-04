@@ -1,10 +1,9 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
-
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 
@@ -13,6 +12,8 @@ interface FarmerCrop {
   crop_name: string;
   years_of_experience: number | null;
   expertise_level: string;
+  grade?: string;
+  certification_type?: string;
 }
 
 interface Equipment {
@@ -57,7 +58,6 @@ const EQUIPMENT_OPTIONS = [
 
 const GRADE_OPTIONS = ['A+', 'A', 'B+', 'B', 'C', 'D', 'Organic', 'Premium', 'Ungraded'];
 
-
 const CERTIFICATION_TYPES = [
   { value: 'organic', label: 'Organic Certified', icon: '🌿', color: 'green' },
   { value: 'ipm', label: 'IPM (Low Pesticide)', icon: '🛡️', color: 'blue' },
@@ -85,13 +85,10 @@ function NearbyFarmersContent() {
   const initialType =
     rawType === 'buyers' ? 'buyers' :
     rawType === 'wastage' ? 'wastage' :
-    rawType === 'supplier' ?
-    'supplier' :
+    rawType === 'supplier' ? 'supplier' :
     'farmers';
 
-  const [searchType, setSearchType] = useState<
-    'farmers' | 'buyers' | 'wastage' | 'supplier'
-  >(initialType);
+  const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 'supplier'>(initialType);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('nearby');
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -105,18 +102,21 @@ function NearbyFarmersContent() {
     yieldDateTo: '',
     wasteOnly: false,
     grades: [] as string[],
-certTypes: [] as string[],
+    certTypes: [] as string[],
   });
   const [visibleCount, setVisibleCount] = useState(50);
 
-  const today = new Date().toISOString().split('T')[0];
+  // BUG FIX 5: Keep a ref of the latest filters so fetchNearbyFarmers always reads current values
+  const filtersRef = useRef(filters);
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
 
+  const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
     setVisibleCount(50);
   }, [searchType, filters, searchQuery]);
-
-  // No in-app call - using native tel: dial
 
   useEffect(() => {
     setMounted(true);
@@ -141,7 +141,6 @@ certTypes: [] as string[],
     fetchNearbyFarmers(lat, lon, searchType);
   }, [searchType, userLocation, mounted, isAuthenticated]);
 
-  // Listen for location update from popup
   useEffect(() => {
     const handler = (e: any) => {
       const { latitude, longitude } = e.detail;
@@ -153,22 +152,22 @@ certTypes: [] as string[],
   }, [searchType]);
 
   const toggleGradeFilter = (grade: string) => {
-  setFilters(prev => ({
-    ...prev,
-    grades: prev.grades.includes(grade)
-      ? prev.grades.filter(g => g !== grade)
-      : [...prev.grades, grade]
-  }));
-};
+    setFilters(prev => ({
+      ...prev,
+      grades: prev.grades.includes(grade)
+        ? prev.grades.filter(g => g !== grade)
+        : [...prev.grades, grade]
+    }));
+  };
 
-const toggleCertFilter = (cert: string) => {
-  setFilters(prev => ({
-    ...prev,
-    certTypes: prev.certTypes.includes(cert)
-      ? prev.certTypes.filter(c => c !== cert)
-      : [...prev.certTypes, cert]
-  }));
-};
+  const toggleCertFilter = (cert: string) => {
+    setFilters(prev => ({
+      ...prev,
+      certTypes: prev.certTypes.includes(cert)
+        ? prev.certTypes.filter(c => c !== cert)
+        : [...prev.certTypes, cert]
+    }));
+  };
 
   const getUserLocation = async () => {
     try {
@@ -185,7 +184,6 @@ const toggleCertFilter = (cert: string) => {
           console.warn('Native geolocation failed:', msg);
         }
       } else {
-        // Web fallback with timeout
         try {
           position = await Promise.race([
             new Promise((resolve, reject) => {
@@ -216,7 +214,6 @@ const toggleCertFilter = (cert: string) => {
         setUserLocation({ latitude: lat, longitude: lon });
         fetchNearbyFarmers(lat, lon, searchType);
       } else {
-        // GPS failed — try stored location from DB
         await useStoredLocation();
       }
     } catch (error: any) {
@@ -244,12 +241,18 @@ const toggleCertFilter = (cert: string) => {
         }
       }
     } catch { }
-    // No valid location found — fetch list without distance (all 9999, sorted by name)
     setUserLocation(null);
     fetchNearbyFarmers(0, 0, searchType);
   };
 
-  const fetchNearbyFarmers = async (latitude: number, longitude: number, type: 'farmers' | 'buyers' | 'wastage' | 'supplier' = 'farmers') => {
+  // BUG FIX 5+6: Always read from filtersRef so we never get stale closure values
+  const fetchNearbyFarmers = async (
+    latitude: number,
+    longitude: number,
+    type: 'farmers' | 'buyers' | 'wastage' | 'supplier' = 'farmers',
+    overrideFilters?: typeof filters
+  ) => {
+    const activeFilters = overrideFilters ?? filtersRef.current;
     setLoadingFarmers(true);
     try {
       const params = new URLSearchParams();
@@ -257,17 +260,18 @@ const toggleCertFilter = (cert: string) => {
       params.append('longitude', longitude.toString());
       params.append('type', type);
       if (user?.id) params.append('currentUserId', user.id);
-      if (filters.enableDistance) params.append('distance', filters.distance.toString());
-      params.append('minRating', filters.minRating.toString());
-      if (filters.crops.length > 0) params.append('crops', filters.crops.join(','));
-      if (filters.equipment.length > 0) params.append('equipment', filters.equipment.join(','));
-      if (filters.yieldDateFrom) params.append('yieldDateFrom', filters.yieldDateFrom);
-      if (filters.yieldDateTo) params.append('yieldDateTo', filters.yieldDateTo);
-      if (filters.grades.length > 0) params.append('grades', filters.grades.join(','));
-if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.join(','));
-      if (type === 'wastage' || (type === 'buyers' && filters.wasteOnly)) {
-  params.append('wasteOnly', 'true');
-}
+      if (activeFilters.enableDistance) params.append('distance', activeFilters.distance.toString());
+      params.append('minRating', activeFilters.minRating.toString());
+      if (activeFilters.crops.length > 0) params.append('crops', activeFilters.crops.join(','));
+      if (activeFilters.equipment.length > 0) params.append('equipment', activeFilters.equipment.join(','));
+      // BUG FIX 6: Date filters always sent (not just during Apply)
+      if (activeFilters.yieldDateFrom) params.append('yieldDateFrom', activeFilters.yieldDateFrom);
+      if (activeFilters.yieldDateTo) params.append('yieldDateTo', activeFilters.yieldDateTo);
+      if (activeFilters.grades.length > 0) params.append('grades', activeFilters.grades.join(','));
+      if (activeFilters.certTypes.length > 0) params.append('certTypes', activeFilters.certTypes.join(','));
+      if (type === 'wastage' || (type === 'buyers' && activeFilters.wasteOnly)) {
+        params.append('wasteOnly', 'true');
+      }
 
       const url = getApiUrl(`/api/nearby-farmers?${params.toString()}`);
       console.log('Fetching', type, 'from:', url);
@@ -290,10 +294,11 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
     }
   };
 
+  // BUG FIX 5: Pass current filters explicitly so Apply always uses latest state
   const handleApplyFilters = () => {
     const lat = userLocation?.latitude ?? 0;
     const lon = userLocation?.longitude ?? 0;
-    fetchNearbyFarmers(lat, lon, searchType);
+    fetchNearbyFarmers(lat, lon, searchType, filters);
     setShowFilter(false);
   };
 
@@ -365,38 +370,25 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => { setSearchType('farmers'); setSortBy('nearby'); }}
-              className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === 'farmers'
-                ? 'bg-brand-700 text-white'
-                : 'bg-gray-100 text-gray-700'
-                }`}
+              className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === 'farmers' ? 'bg-brand-700 text-white' : 'bg-gray-100 text-gray-700'}`}
             >
               <i className="ph-bold ph-leaf mr-1"></i>Farmers
             </button>
             <button
               onClick={() => { setSearchType('buyers'); setSortBy('nearby'); }}
-              className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === 'buyers'
-                ? 'bg-brand-700 text-white'
-                : 'bg-gray-100 text-gray-700'
-                }`}
+              className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === 'buyers' ? 'bg-brand-700 text-white' : 'bg-gray-100 text-gray-700'}`}
             >
               <i className="ph-bold ph-shopping-cart mr-1"></i>Buyers
             </button>
             <button
               onClick={() => { setSearchType('wastage'); setSortBy('nearby'); }}
-              className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === 'wastage'
-                ? 'bg-amber-600 text-white'
-                : 'bg-gray-100 text-gray-700'
-                }`}
+              className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === 'wastage' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-700'}`}
             >
               <i className="ph-bold ph-recycle mr-1"></i>Wastage
             </button>
-
             <button
               onClick={() => { setSearchType('supplier'); setSortBy('nearby'); }}
-              className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === 'supplier'
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-100 text-gray-700'
-                }`}
+              className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === 'supplier' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700'}`}
             >
               🏭 suppliers
             </button>
@@ -482,7 +474,7 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
                 />
               </div>
 
-              {/* Yield Date Filter (for both farmers and buyers) */}
+              {/* Yield Date Filter */}
               <div className="mb-8">
                 <label className="block text-sm font-bold text-gray-900 mb-3">
                   {searchType === 'farmers' ? 'Harvest' : 'Purchase'} Date Range
@@ -537,10 +529,7 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
                     <button
                       key={crop}
                       onClick={() => toggleCropFilter(crop)}
-                      className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${filters.crops.includes(crop)
-                        ? 'bg-brand-700 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                      className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${filters.crops.includes(crop) ? 'bg-brand-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                     >
                       {crop}
                     </button>
@@ -548,53 +537,45 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
                 </div>
               </div>
 
-              {/* Grade Filter — farmers only */}
-{(searchType === 'farmers' || searchType === 'buyers') && (
-  <div className="mb-8">
-    <label className="block text-sm font-bold text-gray-900 mb-3">
-      Crop Grade <span className="text-xs text-gray-400 font-normal">(select any)</span>
-    </label>
-    <div className="flex flex-wrap gap-2">
-      {GRADE_OPTIONS.map((grade) => (
-        <button
-          key={grade}
-          onClick={() => toggleGradeFilter(grade)}
-          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-            filters.grades.includes(grade)
-              ? 'bg-indigo-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          {grade}
-        </button>
-      ))}
-    </div>
-  </div>
-)}
+              {/* Grade Filter */}
+              {(searchType === 'farmers' || searchType === 'buyers') && (
+                <div className="mb-8">
+                  <label className="block text-sm font-bold text-gray-900 mb-3">
+                    Crop Grade <span className="text-xs text-gray-400 font-normal">(select any)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {GRADE_OPTIONS.map((grade) => (
+                      <button
+                        key={grade}
+                        onClick={() => toggleGradeFilter(grade)}
+                        className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${filters.grades.includes(grade) ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                      >
+                        {grade}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-{/* Certification Type Filter — farmers only */}
-{searchType === 'farmers' && (
-  <div className="mb-8">
-    <label className="block text-sm font-bold text-gray-900 mb-3">
-      Certification Type <span className="text-xs text-gray-400 font-normal">(select any)</span>
-    </label>
-    <div className="flex flex-wrap gap-2">
-      {CERTIFICATION_TYPES.map((cert) => (
-        <button
-          key={cert.value}
-          onClick={() => toggleCertFilter(cert.value)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-            filters.certTypes.includes(cert.value)
-              ? 'bg-green-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <span>{cert.icon}</span>{cert.label}
-        </button>
-      ))}
-    </div>
-  </div>
-)}
+              {/* Certification Type Filter */}
+              {searchType === 'farmers' && (
+                <div className="mb-8">
+                  <label className="block text-sm font-bold text-gray-900 mb-3">
+                    Certification Type <span className="text-xs text-gray-400 font-normal">(select any)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {CERTIFICATION_TYPES.map((cert) => (
+                      <button
+                        key={cert.value}
+                        onClick={() => toggleCertFilter(cert.value)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${filters.certTypes.includes(cert.value) ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                      >
+                        <span>{cert.icon}</span>{cert.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Equipment Filter */}
               <div className="mb-8">
@@ -604,10 +585,7 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
                     <button
                       key={equip}
                       onClick={() => toggleEquipmentFilter(equip)}
-                      className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${filters.equipment.includes(equip)
-                        ? 'bg-brand-700 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                      className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${filters.equipment.includes(equip) ? 'bg-brand-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                     >
                       {equip}
                     </button>
@@ -642,28 +620,28 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
                 </button>
               ))}
               {filters.grades.map((grade) => (
-  <button
-    key={`grade-${grade}`}
-    onClick={() => toggleGradeFilter(grade)}
-    className="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium flex items-center gap-2 active:scale-95 transition-transform"
-  >
-    {grade} Grade
-    <i className="ph-bold ph-x text-sm"></i>
-  </button>
-))}
-{filters.certTypes.map((cert) => {
-  const found = CERTIFICATION_TYPES.find(c => c.value === cert);
-  return found ? (
-    <button
-      key={`cert-${cert}`}
-      onClick={() => toggleCertFilter(cert)}
-      className="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-2 active:scale-95 transition-transform"
-    >
-      {found.icon} {found.label}
-      <i className="ph-bold ph-x text-sm"></i>
-    </button>
-  ) : null;
-})}
+                <button
+                  key={`grade-${grade}`}
+                  onClick={() => toggleGradeFilter(grade)}
+                  className="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium flex items-center gap-2 active:scale-95 transition-transform"
+                >
+                  {grade} Grade
+                  <i className="ph-bold ph-x text-sm"></i>
+                </button>
+              ))}
+              {filters.certTypes.map((cert) => {
+                const found = CERTIFICATION_TYPES.find(c => c.value === cert);
+                return found ? (
+                  <button
+                    key={`cert-${cert}`}
+                    onClick={() => toggleCertFilter(cert)}
+                    className="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-xs font-medium flex items-center gap-2 active:scale-95 transition-transform"
+                  >
+                    {found.icon} {found.label}
+                    <i className="ph-bold ph-x text-sm"></i>
+                  </button>
+                ) : null;
+              })}
               {filters.equipment.map((equip) => (
                 <button
                   key={`equip-${equip}`}
@@ -710,7 +688,6 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
           </div>
         )}
 
-
         {/* Results Header */}
         <section className="px-6 mb-4 relative z-10 flex items-center justify-between">
           <p className="text-sm font-medium text-gray-500">
@@ -741,13 +718,10 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
             const filteredFarmers = farmers
               .filter((farmer) => {
                 const query = searchQuery.toLowerCase();
-
                 return query === '' ||
                   farmer.name?.toLowerCase().includes(query) ||
                   farmer.location?.toLowerCase().includes(query) ||
-                  farmer.crops?.some(crop =>
-                    crop.crop_name?.toLowerCase().includes(query)
-                  );
+                  farmer.crops?.some(crop => crop.crop_name?.toLowerCase().includes(query));
               })
               .sort((a, b) => {
                 if (sortBy === 'nearby') {
@@ -769,23 +743,12 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
                 <i className="ph-bold ph-magnifying-glass text-4xl text-gray-300 mb-3 block"></i>
                 <p className="text-gray-500 font-medium">
                   {searchQuery
-                    ? `No ${
-                        searchType === 'farmers' ? 'farmers' :
-                        searchType === 'wastage' ? 'wastage crop buyers' :
-                        searchType === 'supplier' ? 'supplier' :
-                        'buyers'
-                      } found matching "${searchQuery}"`
-                    : `No ${
-                        searchType === 'farmers' ? 'farmers' :
-                        searchType === 'wastage' ? 'wastage crop buyers' :
-                        searchType === 'supplier' ? 'suppliers' :
-                        'buyers'
-                      } found with selected filters`}
+                    ? `No ${searchType === 'farmers' ? 'farmers' : searchType === 'wastage' ? 'wastage crop buyers' : searchType === 'supplier' ? 'supplier' : 'buyers'} found matching "${searchQuery}"`
+                    : `No ${searchType === 'farmers' ? 'farmers' : searchType === 'wastage' ? 'wastage crop buyers' : searchType === 'supplier' ? 'suppliers' : 'buyers'} found with selected filters`}
                 </p>
               </div>
             ) : (
               <>
-                {/* 🔹 LIST */}
                 {filteredFarmers.slice(0, visibleCount).map((farmer) => (
                   <div
                     key={farmer.id}
@@ -814,14 +777,11 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                          searchType === 'farmers'
-                            ? 'bg-green-100 text-green-700'
-                            : searchType === 'wastage'
-                            ? 'bg-amber-100 text-amber-700'
-                            : searchType === 'supplier'
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'bg-blue-100 text-blue-700'
-                          }`}>
+                          searchType === 'farmers' ? 'bg-green-100 text-green-700' :
+                          searchType === 'wastage' ? 'bg-amber-100 text-amber-700' :
+                          searchType === 'supplier' ? 'bg-purple-100 text-purple-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>
                           {searchType === 'farmers' ? '🌾 Farmer' :
                            searchType === 'wastage' ? '♻️ Wastage Buyer' :
                            searchType === 'supplier' ? '🏭 supplier' :
@@ -839,20 +799,14 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
                     {/* Followers/Following */}
                     <div className="flex gap-3 mb-4">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
-                        }}
+                        onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=followers`); }}
                         className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95"
                       >
                         <i className="ph-bold ph-user-circle text-brand-600 text-sm"></i>
                         <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
                       </button>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/farmer-profile?id=${farmer.id}&tab=following`);
-                        }}
+                        onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=following`); }}
                         className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95"
                       >
                         <i className="ph-bold ph-user-check text-blue-600 text-sm"></i>
@@ -872,28 +826,23 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
                             <span
                               key={i}
                               className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                searchType === 'farmers'
-                                  ? 'bg-green-100 text-green-800'
-                                  : searchType === 'wastage'
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : searchType === 'supplier'
-                                  ? 'bg-purple-100 text-purple-800'
-                                  : 'bg-orange-100 text-orange-800'
+                                searchType === 'farmers' ? 'bg-green-100 text-green-800' :
+                                searchType === 'wastage' ? 'bg-amber-100 text-amber-800' :
+                                searchType === 'supplier' ? 'bg-purple-100 text-purple-800' :
+                                'bg-orange-100 text-orange-800'
                               }`}
                             >
                               {searchType === 'farmers' ? '🌾' :
                                searchType === 'wastage' ? '♻️' :
                                searchType === 'supplier' ? '🏭' :
                                '🛒'} {crop.crop_name}
-                               {(crop as any).certification_type && (() => {
-  const cert = CERTIFICATION_TYPES.find(c => c.value === (crop as any).certification_type);
-  return cert ? (
-    <span className="ml-1 text-[9px] font-black opacity-80">{cert.icon}</span>
-  ) : null;
-})()}
-{(crop as any).grade && (
-  <span className="ml-1 text-[9px] font-black opacity-70">·{(crop as any).grade}</span>
-)}
+                              {crop.certification_type && (() => {
+                                const cert = CERTIFICATION_TYPES.find(c => c.value === crop.certification_type);
+                                return cert ? <span className="ml-1 text-[9px] font-black opacity-80">{cert.icon}</span> : null;
+                              })()}
+                              {crop.grade && (
+                                <span className="ml-1 text-[9px] font-black opacity-70">·{crop.grade}</span>
+                              )}
                             </span>
                           ))}
                           {displayCrops.length > 5 && (
@@ -905,55 +854,37 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
                       ) : null;
                     })()}
 
-                    {/* Stats Row — different for farmers vs buyers vs supplier */}
+                    {/* Stats Row */}
                     <div className="flex gap-3 mb-4">
                       {searchType === 'farmers' ? (
                         <>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=crops`); }}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors active:scale-95"
-                          >
+                          <button onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=crops`); }} className="flex items-center gap-1.5 px-3 py-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-plant text-green-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.crops_count || 0} Crops</span>
                           </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`); }}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors active:scale-95"
-                          >
+                          <button onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`); }} className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-wrench text-blue-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Equipment</span>
                           </button>
                         </>
                       ) : searchType === 'supplier' ? (
                         <>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`); }}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95"
-                          >
+                          <button onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`); }} className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-package text-purple-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Products</span>
                           </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=followers`); }}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95"
-                          >
+                          <button onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=followers`); }} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-users text-gray-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
                           </button>
                         </>
                       ) : (
                         <>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=crops`); }}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors active:scale-95"
-                          >
+                          <button onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=crops`); }} className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-shopping-bag text-orange-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.crops_count || 0} Buying Interests</span>
                           </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=followers`); }}
-                            className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95"
-                          >
+                          <button onClick={(e) => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=followers`); }} className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-users text-purple-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
                           </button>
@@ -963,7 +894,6 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
 
                     {/* Action Buttons */}
                     <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
-                      {/* Call Button */}
                       <button
                         onClick={(e) => {
                           e.preventDefault();
@@ -980,8 +910,6 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
                         <i className="ph-bold ph-phone"></i>
                         Call
                       </button>
-
-                      {/* Chat Button */}
                       <button
                         onClick={(e) => {
                           e.preventDefault();
@@ -993,8 +921,6 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
                         <i className="ph-bold ph-chat-circle"></i>
                         Chat
                       </button>
-
-                      {/* Directions Button */}
                       <button
                         onClick={(e) => {
                           e.preventDefault();
@@ -1022,7 +948,6 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
                   </div>
                 ))}
 
-                {/* 🔹 LOAD MORE BUTTON */}
                 {filteredFarmers.length > visibleCount && (
                   <div className="flex justify-center mt-6">
                     <button
@@ -1038,7 +963,6 @@ if (filters.certTypes.length > 0) params.append('certTypes', filters.certTypes.j
           })()}
         </section>
       </div>
-
     </>
   );
 }

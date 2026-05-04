@@ -13,11 +13,11 @@ export async function GET(request: NextRequest) {
     const equipment = searchParams.get("equipment")?.split(",").filter(Boolean) || [];
     const yieldDateFrom = searchParams.get("yieldDateFrom") || null;
     const yieldDateTo = searchParams.get("yieldDateTo") || null;
-    const searchType = searchParams.get("type") || "farmers"; // "farmers", "buyers", "supplier"
+    const searchType = searchParams.get("type") || "farmers";
     const showWasteBuyers = searchParams.get("wasteOnly") === "true";
     const currentUserId = searchParams.get("currentUserId");
     const grades = searchParams.get("grades")?.split(",").filter(Boolean) || [];
-const certTypes = searchParams.get("certTypes")?.split(",").filter(Boolean) || [];
+    const certTypes = searchParams.get("certTypes")?.split(",").filter(Boolean) || [];
 
     // Ensure required columns exist
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION`.catch(() => { });
@@ -26,13 +26,11 @@ const certTypes = searchParams.get("certTypes")?.split(",").filter(Boolean) || [
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone TEXT`.catch(() => { });
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS location TEXT`.catch(() => { });
 
-    // Map searchType to DB role value
     const targetRole =
       searchType === "farmers" ? 'farmer' :
       searchType === "supplier" ? 'supplier' :
-      'buyer'; // covers "buyers" and "wastage"
+      'buyer';
 
-    // Fetch users matching role — also include users where role_id matches as fallback
     const farmers = await sql`
       SELECT
         u.id, u.name, u.email,
@@ -56,9 +54,8 @@ const certTypes = searchParams.get("certTypes")?.split(",").filter(Boolean) || [
       GROUP BY u.id, u.name, u.email, u.image, u.latitude, u.longitude, u.location, u.phone, u.role
     `;
 
-    // Calculate distance for all farmers (Haversine formula)
     const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-      const R = 6371; // Earth's radius in km
+      const R = 6371;
       const dLat = ((lat2 - lat1) * Math.PI) / 180;
       const dLon = ((lon2 - lon1) * Math.PI) / 180;
       const a =
@@ -71,101 +68,78 @@ const certTypes = searchParams.get("certTypes")?.split(",").filter(Boolean) || [
       return R * c;
     };
 
-    // If user location is (0,0) or missing, treat as no location — all distances unknown
     const userHasLocation = latitude !== 0 || longitude !== 0;
 
-    // Map farmers with calculated distance (null lat/lon gets distance = 9999 so they sort last)
     const farmersWithDistance = (farmers as any[]).map((farmer: any) => ({
       ...farmer,
       distance: (userHasLocation && farmer.latitude != null && farmer.longitude != null)
-  ? calculateDistance(latitude, longitude, parseFloat(farmer.latitude), parseFloat(farmer.longitude))
-  : null
-  
+        ? calculateDistance(latitude, longitude, parseFloat(farmer.latitude), parseFloat(farmer.longitude))
+        : null
     }));
 
-    // Filter by distance if enabled (only applies to users with actual location)
+    // BUG FIX 4: Exclude null-distance users when distance filter is active
     const filteredByDistance = distance !== null
-      ? farmersWithDistance.filter((farmer: any) => farmer.distance == null || farmer.distance <= distance)
+      ? farmersWithDistance.filter((farmer: any) => farmer.distance != null && farmer.distance <= distance)
       : farmersWithDistance;
 
-    // Filter by minimum rating (skip for now since rating column doesn't exist in reservations)
     const filteredByRating = filteredByDistance;
 
-    // Get farmer/buyer IDs that match crop filter
-    let farmerWithCropsIds: string[] = [];
-    if (crops.length > 0 || showWasteBuyers) {
-      if (showWasteBuyers || searchType === "wastage") {
-        // Get buyers who buy crop waste
-        const wasteBuyers = await sql`
-          SELECT DISTINCT c.user_id
-          FROM crops c
-          JOIN "user" u ON c.user_id = u.id
-          WHERE c.is_crop_waste = true AND u.role = 'buyer'
-        `;
-        farmerWithCropsIds = (wasteBuyers as any[]).map((row: any) => row.user_id);
-      } else if (crops.length > 0) {
-        // Match by crop_name only — role filter on user already handles buyer/farmer distinction
-        const farmersWithCrops = await sql`
-          SELECT DISTINCT user_id
-          FROM crops
-          WHERE LOWER(crop_name) IN (${sql.join(crops.map(c => c.toLowerCase()), sql`, `)})
-          ${yieldDateFrom || yieldDateTo ? sql`AND expected_yield_date IS NOT NULL` : sql``}
-          ${yieldDateFrom && yieldDateTo ? sql`AND expected_yield_date BETWEEN ${yieldDateFrom}::date AND ${yieldDateTo}::date` :
-            yieldDateFrom ? sql`AND expected_yield_date >= ${yieldDateFrom}::date` :
-              yieldDateTo ? sql`AND expected_yield_date <= ${yieldDateTo}::date` : sql``}
-              ${grades.length > 0 ? sql`AND LOWER(COALESCE(grade, '')) IN (${sql.join(grades.map(g => g.toLowerCase()), sql`, `)})` : sql``}
-${certTypes.length > 0 ? sql`AND LOWER(COALESCE(certification_type, '')) IN (${sql.join(certTypes.map(c => c.toLowerCase()), sql`, `)})` : sql``}
-        `;
-        farmerWithCropsIds = (farmersWithCrops as any[]).map((row: any) => row.user_id);
-      }
-    }
+    // BUG FIX 2+3: Date filter + grade/cert filter all unified into one crop-matching query
+    // This runs whenever ANY of: crops, dates, grades, certTypes are set
+    const hasCropFilter = crops.length > 0;
+    const hasDateFilter = yieldDateFrom || yieldDateTo;
+    const hasGradeFilter = grades.length > 0;
+    const hasCertFilter = certTypes.length > 0;
 
-    // Get farmer IDs that match equipment filter
-    let farmerWithEquipmentIds: string[] = [];
-    if (equipment.length > 0) {
-      const farmersWithEquipment = await sql`
-        SELECT DISTINCT owner_id 
-        FROM machinery 
-        WHERE name ILIKE ${`%${equipment[0]}%`}
+    let farmerWithCropsIds: string[] | null = null; // null = no filter applied
+
+    if (showWasteBuyers || searchType === "wastage") {
+      const wasteBuyers = await sql`
+        SELECT DISTINCT c.user_id
+        FROM crops c
+        JOIN "user" u ON c.user_id = u.id
+        WHERE c.is_crop_waste = true AND u.role = 'buyer'
       `;
-      farmerWithEquipmentIds = (farmersWithEquipment as any[]).map((row: any) => row.owner_id);
-
-      // If multiple equipment selected, include farmers with any of those equipment
-      if (equipment.length > 1) {
-        for (let i = 1; i < equipment.length; i++) {
-          const moreEquipment = await sql`
-            SELECT DISTINCT owner_id 
-            FROM machinery 
-            WHERE name ILIKE ${`%${equipment[i]}%`}
-          `;
-          const moreIds = (moreEquipment as any[]).map((row: any) => row.owner_id);
-          farmerWithEquipmentIds = [...new Set([...farmerWithEquipmentIds, ...moreIds])];
-        }
-      }
+      farmerWithCropsIds = (wasteBuyers as any[]).map((row: any) => row.user_id);
+    } else if (hasCropFilter || hasDateFilter || hasGradeFilter || hasCertFilter) {
+      // BUG FIX 2: Date filter now runs independently of crop name filter
+      // BUG FIX 3: Grade/cert unified into a single query to avoid split-filter ID mismatch
+      const matchingCrops = await sql`
+        SELECT DISTINCT user_id
+        FROM crops
+        WHERE 1=1
+        ${hasCropFilter ? sql`AND LOWER(crop_name) IN (${sql.join(crops.map(c => c.toLowerCase()), sql`, `)})` : sql``}
+        ${hasDateFilter ? sql`AND expected_yield_date IS NOT NULL` : sql``}
+        ${yieldDateFrom && yieldDateTo
+          ? sql`AND expected_yield_date BETWEEN ${yieldDateFrom}::date AND ${yieldDateTo}::date`
+          : yieldDateFrom
+          ? sql`AND expected_yield_date >= ${yieldDateFrom}::date`
+          : yieldDateTo
+          ? sql`AND expected_yield_date <= ${yieldDateTo}::date`
+          : sql``}
+        ${hasGradeFilter ? sql`AND LOWER(COALESCE(grade, '')) IN (${sql.join(grades.map(g => g.toLowerCase()), sql`, `)})` : sql``}
+        ${hasCertFilter ? sql`AND LOWER(COALESCE(certification_type, '')) IN (${sql.join(certTypes.map(c => c.toLowerCase()), sql`, `)})` : sql``}
+      `;
+      farmerWithCropsIds = (matchingCrops as any[]).map((row: any) => row.user_id);
     }
 
-    // Apply crop and equipment filters
-    let result = filteredByRating;
-    if (crops.length > 0 || showWasteBuyers) {
-      result = result.filter((farmer: any) => farmerWithCropsIds.includes(farmer.id));
-    }
+    let farmerWithEquipmentIds: string[] | null = null;
     if (equipment.length > 0) {
-      result = result.filter((farmer: any) => farmerWithEquipmentIds.includes(farmer.id));
+      const allEquipMatches = await Promise.all(
+        equipment.map(eq => sql`SELECT DISTINCT owner_id FROM machinery WHERE name ILIKE ${`%${eq}%`}`)
+      );
+      const ids = allEquipMatches.flatMap((rows: any[]) => rows.map((r: any) => r.owner_id));
+      farmerWithEquipmentIds = [...new Set(ids)];
     }
 
-    // Grade / CertType filter — runs even if no crop name filter is active
-if (grades.length > 0 || certTypes.length > 0) {
-  const gradeCertRows = await sql`
-    SELECT DISTINCT user_id FROM crops
-    WHERE 1=1
-    ${grades.length > 0 ? sql`AND LOWER(COALESCE(grade, '')) IN (${sql.join(grades.map(g => g.toLowerCase()), sql`, `)})` : sql``}
-    ${certTypes.length > 0 ? sql`AND LOWER(COALESCE(certification_type, '')) IN (${sql.join(certTypes.map(c => c.toLowerCase()), sql`, `)})` : sql``}
-  `;
-  const gradeCertIds = (gradeCertRows as any[]).map((r: any) => r.user_id);
-  result = result.filter((farmer: any) => gradeCertIds.includes(farmer.id));
-}
+    let result = filteredByRating;
+    if (farmerWithCropsIds !== null) {
+      result = result.filter((farmer: any) => farmerWithCropsIds!.includes(farmer.id));
+    }
+    if (farmerWithEquipmentIds !== null) {
+      result = result.filter((farmer: any) => farmerWithEquipmentIds!.includes(farmer.id));
+    }
 
-    // Fetch all necessary data in 4 batch queries (no loops)
     const farmerIds = result.map((f: any) => f.id);
 
     let allCrops: any[] = [];
@@ -176,7 +150,7 @@ if (grades.length > 0 || certTypes.length > 0) {
     if (farmerIds.length > 0) {
       [allCrops, allEquipment, allFollowers, allFollowing] = await Promise.all([
         sql`
-          SELECT user_id, crop_name, years_of_experience, expertise_level, is_crop_waste,grade, certification_type
+          SELECT user_id, crop_name, years_of_experience, expertise_level, is_crop_waste, grade, certification_type
           FROM crops
           WHERE user_id = ANY(${farmerIds}::text[])
           ORDER BY created_at DESC
@@ -202,9 +176,6 @@ if (grades.length > 0 || certTypes.length > 0) {
       ]);
     }
 
-    
-
-    // Create lookup maps
     const cropsMap = new Map();
     const equipmentMap = new Map();
     const followersMap = new Map();
@@ -216,7 +187,10 @@ if (grades.length > 0 || certTypes.length > 0) {
         crop_name: crop.crop_name,
         years_of_experience: crop.years_of_experience,
         expertise_level: crop.expertise_level,
-        is_crop_waste: crop.is_crop_waste
+        is_crop_waste: crop.is_crop_waste,
+        // BUG FIX 1: grade and certification_type were fetched but never included in the map
+        grade: crop.grade,
+        certification_type: crop.certification_type,
       });
     });
 
@@ -239,20 +213,18 @@ if (grades.length > 0 || certTypes.length > 0) {
       followingMap.set(f.user_id, f.count || 0);
     });
 
-    // Build farmers with details
     const farmersWithDetails = result.map((farmer: any) => {
       const allFarmerCrops = cropsMap.get(farmer.id) || [];
       const equipment = (equipmentMap.get(farmer.id) || []).slice(0, 5);
 
-      // For wastage search, only surface waste crops in the crops array
-      const crops = (showWasteBuyers)
+      const cropsFiltered = showWasteBuyers
         ? allFarmerCrops.filter((c: any) => c.is_crop_waste)
         : allFarmerCrops;
 
       return {
         ...farmer,
-        crops,
-        crops_count: crops.length,          // reflects filtered count
+        crops: cropsFiltered,
+        crops_count: cropsFiltered.length,
         equipment,
         equipment_count: parseInt(farmer.equipment_count) || 0,
         rating: null,
@@ -261,12 +233,11 @@ if (grades.length > 0 || certTypes.length > 0) {
       };
     });
 
-    // Sort by distance
     farmersWithDetails.sort((a, b) => {
-  if (a.distance == null) return 1;
-  if (b.distance == null) return -1;
-  return a.distance - b.distance;
-});
+      if (a.distance == null) return 1;
+      if (b.distance == null) return -1;
+      return a.distance - b.distance;
+    });
 
     return NextResponse.json(farmersWithDetails);
   } catch (error: any) {
