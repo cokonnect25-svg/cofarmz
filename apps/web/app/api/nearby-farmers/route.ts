@@ -121,7 +121,10 @@ ${hasCropFilter ? sql`
     WHERE c2.user_id = crops.user_id
       AND c2.crop_name IS NOT NULL
       AND LOWER(TRIM(c2.crop_name)) ILIKE ANY (ARRAY[
-        ${sql.join(crops.map(c => `%${c}%`), sql`, `)}
+        ${sql.join(
+  crops.map(c => sql`${`%${c}%`}`),
+  sql`, `
+)}
       ])
   )
 ` : sql`TRUE`}
@@ -130,14 +133,17 @@ AND
 
 -- 🏷️ Grade
 ${hasGradeFilter ? sql`
-  EXISTS (
-    SELECT 1 FROM crops c3
-    WHERE c3.user_id = crops.user_id
-      AND c3.grade IS NOT NULL
-      AND LOWER(REPLACE(TRIM(c3.grade), ' ', '')) ILIKE ANY (ARRAY[
-        ${sql.join(grades.map(g => `%${g.replace(/\s/g, '')}%`), sql`, `)}
-      ])
-  )
+EXISTS (
+  SELECT 1 FROM crops c3
+  WHERE c3.user_id = crops.user_id
+    AND c3.grade IS NOT NULL
+    AND LOWER(REPLACE(TRIM(c3.grade), ' ', '')) ILIKE ANY (ARRAY[
+      ${sql.join(
+        grades.map(g => sql`${`%${g.replace(/\s/g, '')}%`}`),
+        sql`, `
+      )}
+    ])
+)
 ` : sql`TRUE`}
 
 AND
@@ -149,7 +155,10 @@ ${hasCertFilter ? sql`
     WHERE c4.user_id = crops.user_id
       AND c4.certification_type IS NOT NULL
       AND LOWER(TRIM(c4.certification_type)) ILIKE ANY (ARRAY[
-        ${sql.join(certTypes.map(c => `%${c}%`), sql`, `)}
+        ${sql.join(
+  certTypes.map(c => sql`${`%${c}%`}`),
+  sql`, `
+)}
       ])
   )
 ` : sql`TRUE`}
