@@ -112,54 +112,54 @@ export async function GET(request: NextRequest) {
           SELECT user_id
           FROM crops
           GROUP BY user_id
-          HAVING
+HAVING
 
-            -- 🌾 Crop filter
-            ${hasCropFilter
-              ? sql`
-                BOOL_OR(
-                  crop_name IS NOT NULL AND
-                  LOWER(TRIM(crop_name)) ILIKE ANY (ARRAY[
-                    ${sql.join(crops.map(c => `%${c}%`), sql`, `)}
-                  ])
-                )
-              `
-              : sql`TRUE`}
+-- 🌾 Crop
+${hasCropFilter ? sql`
+  EXISTS (
+    SELECT 1 FROM crops c2
+    WHERE c2.user_id = crops.user_id
+      AND c2.crop_name IS NOT NULL
+      AND LOWER(TRIM(c2.crop_name)) ILIKE ANY (ARRAY[
+        ${sql.join(crops.map(c => `%${c}%`), sql`, `)}
+      ])
+  )
+` : sql`TRUE`}
 
-            AND
+AND
 
-            -- 🏷️ Grade filter (FIXED)
-            ${hasGradeFilter
-              ? sql`
-                BOOL_OR(
-                  grade IS NOT NULL AND
-                  LOWER(TRIM(grade)) ILIKE ANY (ARRAY[
-                    ${sql.join(grades.map(g => `%${g}%`), sql`, `)}
-                  ])
-                )
-              `
-              : sql`TRUE`}
+-- 🏷️ Grade
+${hasGradeFilter ? sql`
+  EXISTS (
+    SELECT 1 FROM crops c3
+    WHERE c3.user_id = crops.user_id
+      AND c3.grade IS NOT NULL
+      AND LOWER(REPLACE(TRIM(c3.grade), ' ', '')) ILIKE ANY (ARRAY[
+        ${sql.join(grades.map(g => `%${g.replace(/\s/g, '')}%`), sql`, `)}
+      ])
+  )
+` : sql`TRUE`}
 
-            AND
+AND
 
-            -- 🌿 Certification filter (FIXED)
-            ${hasCertFilter
-              ? sql`
-                BOOL_OR(
-                  certification_type IS NOT NULL AND
-                  LOWER(TRIM(certification_type)) ILIKE ANY (ARRAY[
-                    ${sql.join(certTypes.map(c => `%${c}%`), sql`, `)}
-                  ])
-                )
-              `
-              : sql`TRUE`}
+-- 🌿 Certification
+${hasCertFilter ? sql`
+  EXISTS (
+    SELECT 1 FROM crops c4
+    WHERE c4.user_id = crops.user_id
+      AND c4.certification_type IS NOT NULL
+      AND LOWER(TRIM(c4.certification_type)) ILIKE ANY (ARRAY[
+        ${sql.join(certTypes.map(c => `%${c}%`), sql`, `)}
+      ])
+  )
+` : sql`TRUE`}
 
             AND
 
             -- 📅 Date filter
             ${hasDateFilter
               ? sql`
-                BOOL_OR(
+                EXISTS(
                   expected_yield_date IS NOT NULL
                   AND (
                     (${yieldDateFrom ? sql`expected_yield_date >= ${yieldDateFrom}::date` : sql`TRUE`})
