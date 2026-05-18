@@ -200,7 +200,6 @@ function FarmerProfileContent() {
   const [mounted, setMounted] = useState(false);
   const [showCallModal, setShowCallModal] = useState(false);
   const [callType] = useState<'audio' | 'video'>('audio');
-  const [expandedCropIdx, setExpandedCropIdx] = useState<number | null>(null);
 
   // Manage which sections are open (multi-expand)
   const [openSections, setOpenSections] = useState<Set<string>>(() => {
