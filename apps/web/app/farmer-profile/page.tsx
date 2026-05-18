@@ -200,6 +200,7 @@ function FarmerProfileContent() {
   const [mounted, setMounted] = useState(false);
   const [showCallModal, setShowCallModal] = useState(false);
   const [callType] = useState<'audio' | 'video'>('audio');
+  const [expandedCropIdx, setExpandedCropIdx] = useState<number | null>(null);
 
   // Manage which sections are open (multi-expand)
   const [openSections, setOpenSections] = useState<Set<string>>(() => {
@@ -207,9 +208,6 @@ function FarmerProfileContent() {
     if (tabParam) initial.add(tabParam);
     return initial;
   });
-
-  // Which crop card is expanded (shows inline certs + reels)
-  const [expandedCropIdx, setExpandedCropIdx] = useState<number | null>(null);
 
   const toggleSection = (section: string) => {
     setOpenSections(prev => {
@@ -417,7 +415,7 @@ function FarmerProfileContent() {
             {[
               { key: 'followers', label: 'Followers', count: profile.followers_count, icon: Users, show: true },
               { key: 'following', label: 'Following', count: profile.following_count, icon: UserCheck, show: true },
-              { key: 'crops', label: role === 'buyer' ? 'Crops/Commodities' : 'Crops/Commodities', count: profile.crops_count, icon: Wheat, show: true },
+              { key: 'crops', label: role === 'buyer' ? 'Crops' : 'Crops', count: profile.crops_count, icon: Wheat, show: true },
               { key: 'equipment', label: 'Equipment', count: profile.equipments_count, icon: Tractor, show: true },
             ].map(({ key, label, count, icon: Icon }) => (
               <button
@@ -524,7 +522,7 @@ function FarmerProfileContent() {
         {hasCrops && (
           <div>
             <SectionHeader
-              title={role === 'buyer' ? 'Crops/Commodities Interested' : 'Crops/Commodities'}
+              title={role === 'buyer' ? 'Commodities Interested' : 'Crops & Expertise'}
               count={crops.length}
               expanded={openSections.has('crops')}
               onToggle={() => toggleSection('crops')}
@@ -537,24 +535,36 @@ function FarmerProfileContent() {
                   const isOpen = expandedCropIdx === idx;
                   const hasCropCerts = (crop.certificates?.length ?? 0) > 0;
                   const hasCropReels = (crop.reels?.length ?? 0) > 0;
-                  const hasDetails = hasCropCerts || hasCropReels;
                   const isWaste = crop.is_crop_waste;
+
+                  // Also match certs globally by crop name as fallback
+                  // (in case API doesn't return crop_names on certificates yet)
+                  const fallbackCerts = certificates.filter(c => {
+                    if (hasCropCerts) return false; // already have linked ones
+                    const haystack = [
+                      c.name,
+                      ...(Array.isArray(c.crop_names) ? c.crop_names : [])
+                    ].join(' ').toLowerCase();
+                    return haystack.includes(crop.crop_name.toLowerCase());
+                  });
+                  const displayCerts = hasCropCerts ? crop.certificates! : fallbackCerts;
+                  const displayReels = hasCropReels ? crop.reels! : reels.filter(r =>
+                    Array.isArray(r.crop_tags)
+                      ? r.crop_tags.some(t => t.toLowerCase() === crop.crop_name.toLowerCase())
+                      : (r.caption || '').toLowerCase().includes(crop.crop_name.toLowerCase())
+                  );
 
                   return (
                     <div
                       key={idx}
-                      className={`rounded-2xl border overflow-hidden transition-all ${isWaste ? 'border-amber-200 bg-amber-50' : 'border-gray-100 bg-gray-50'} ${isOpen ? 'shadow-md' : ''}`}
+                      className={`rounded-2xl border overflow-hidden transition-all duration-200 ${
+                        isWaste ? 'border-amber-200 bg-amber-50' : 'border-gray-100 bg-gray-50'
+                      } ${isOpen ? 'shadow-md border-green-200' : ''}`}
                     >
-                      {/* Crop Header Row — always visible */}
+                      {/* ── Crop Header — always tap to expand ── */}
                       <button
                         className="w-full text-left p-3"
-                        onClick={() => {
-                          if (hasDetails) {
-                            setExpandedCropIdx(isOpen ? null : idx);
-                          } else if (role === 'farmer' && !isWaste) {
-                            router.push(`/nearby-farmers?crops=${encodeURIComponent(crop.crop_name)}`);
-                          }
-                        }}
+                        onClick={() => setExpandedCropIdx(isOpen ? null : idx)}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
@@ -566,31 +576,26 @@ function FarmerProfileContent() {
                             {isWaste && (
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-700 uppercase">Waste</span>
                             )}
-                            {/* cert + reel pill badges */}
-                            {hasCropCerts && (
+                            {displayCerts.length > 0 && (
                               <span className="flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
                                 <Award className="w-2.5 h-2.5" />
-                                {crop.certificates!.length} cert{crop.certificates!.length !== 1 ? 's' : ''}
+                                {displayCerts.length} cert{displayCerts.length !== 1 ? 's' : ''}
                               </span>
                             )}
-                            {hasCropReels && (
+                            {displayReels.length > 0 && (
                               <span className="flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">
                                 <PlayCircle className="w-2.5 h-2.5" />
-                                {crop.reels!.length} reel{crop.reels!.length !== 1 ? 's' : ''}
+                                {displayReels.length} reel{displayReels.length !== 1 ? 's' : ''}
                               </span>
                             )}
                           </div>
-                          {hasDetails
-                            ? (isOpen
-                              ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                              : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />)
-                            : role === 'farmer' && !isWaste
-                              ? <TrendingUp className="w-4 h-4 text-green-500 flex-shrink-0" />
-                              : null
+                          {isOpen
+                            ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
                           }
                         </div>
 
-                        {/* Meta row */}
+                        {/* Meta row — always visible */}
                         <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
                           {crop.years_of_experience > 0 && (
                             <span className="text-xs text-gray-500">
@@ -611,93 +616,123 @@ function FarmerProfileContent() {
                         </div>
                       </button>
 
-                      {/* ── Expanded: Certificates ─────────────────────────── */}
-                      {isOpen && hasCropCerts && (
-                        <div className="border-t border-dashed border-yellow-200 bg-yellow-50/60 px-3 py-2">
-                          <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-2 flex items-center gap-1">
-                            <Award className="w-3 h-3" /> Certificates &amp; Grades
-                          </p>
-                          <div className="space-y-2">
-                            {crop.certificates!.map((cert) => (
-                              <div key={cert.id} className="flex items-start gap-2 bg-white rounded-xl p-2.5 border border-yellow-100 shadow-sm">
-                                <div className="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
-                                  <Award className="w-4 h-4 text-yellow-600" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <p className="font-bold text-gray-900 text-xs">{cert.name}</p>
-                                    {cert.grade && (
-                                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">
-                                        Grade: {cert.grade}
-                                      </span>
-                                    )}
-                                    {cert.verified && (
-                                      <span className="flex items-center gap-0.5 text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded-full">
-                                        <BadgeCheck className="w-2.5 h-2.5" /> Verified
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-[11px] text-gray-500 mt-0.5">By: {cert.issued_by}</p>
-                                  {cert.issued_date && (
-                                    <p className="text-[11px] text-gray-400">
-                                      {new Date(cert.issued_date).toLocaleDateString('en-IN')}
-                                      {cert.expiry_date && ` – ${new Date(cert.expiry_date).toLocaleDateString('en-IN')}`}
-                                    </p>
-                                  )}
-                                </div>
-                                {cert.certificate_url && (
-                                  <a href={cert.certificate_url} target="_blank" rel="noreferrer"
-                                    className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition flex-shrink-0">
-                                    <ExternalLink className="w-3.5 h-3.5 text-gray-500" />
-                                  </a>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      {/* ── Expanded Panel ── */}
+                      {isOpen && (
+                        <div className="border-t border-dashed border-gray-200">
 
-                      {/* ── Expanded: Reels ────────────────────────────────── */}
-                      {isOpen && hasCropReels && (
-                        <div className={`border-t border-dashed ${hasCropCerts ? 'border-red-100' : 'border-gray-200'} bg-gray-900/5 px-3 py-2`}>
-                          <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-                            <PlayCircle className="w-3 h-3" /> Tales
-                          </p>
-                          <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
-                            {crop.reels!.map((reel) => (
-                              <div
-                                key={reel.id}
-                                onClick={() => router.push(`/reels?reelId=${reel.id}&userId=${profile!.id}`)}
-                                className="relative flex-shrink-0 w-24 aspect-[9/16] rounded-xl overflow-hidden bg-black cursor-pointer group active:scale-95 transition-transform"
-                              >
-                                <video
-                                  src={reel.video_url}
-                                  className="w-full h-full object-cover pointer-events-none"
-                                  preload="metadata"
-                                  playsInline
-                                  muted
-                                  poster={reel.thumbnail_url || undefined}
-                                />
-                                <div className="absolute inset-0 bg-black/25 group-hover:bg-black/10 transition-colors" />
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                  <PlayCircle className="w-7 h-7 text-white/80" />
-                                </div>
-                                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-1.5 py-1.5">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="flex items-center gap-0.5 text-white text-[9px] font-bold">
-                                      <Heart className="w-2.5 h-2.5" />{reel.likes || 0}
-                                    </span>
-                                    <span className="flex items-center gap-0.5 text-white text-[9px] font-bold">
-                                      <MessageSquare className="w-2.5 h-2.5" />{reel.comments || 0}
-                                    </span>
+                          {/* Certificates & Grades */}
+                          {displayCerts.length > 0 ? (
+                            <div className="bg-yellow-50/70 px-3 py-3">
+                              <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-2 flex items-center gap-1">
+                                <Award className="w-3 h-3" /> Certificates &amp; Grades
+                              </p>
+                              <div className="space-y-2">
+                                {displayCerts.map((cert) => (
+                                  <div key={cert.id} className="flex items-start gap-2 bg-white rounded-xl p-2.5 border border-yellow-100 shadow-sm">
+                                    <div className="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                                      <Award className="w-4 h-4 text-yellow-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <p className="font-bold text-gray-900 text-xs">{cert.name}</p>
+                                        {cert.grade && (
+                                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">
+                                            Grade: {cert.grade}
+                                          </span>
+                                        )}
+                                        {cert.verified && (
+                                          <span className="flex items-center gap-0.5 text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded-full">
+                                            <BadgeCheck className="w-2.5 h-2.5" /> Verified
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-[11px] text-gray-500 mt-0.5">By: {cert.issued_by}</p>
+                                      {cert.issued_date && (
+                                        <p className="text-[11px] text-gray-400">
+                                          {new Date(cert.issued_date).toLocaleDateString('en-IN')}
+                                          {cert.expiry_date && ` – ${new Date(cert.expiry_date).toLocaleDateString('en-IN')}`}
+                                        </p>
+                                      )}
+                                    </div>
+                                    {cert.certificate_url && (
+                                      <a href={cert.certificate_url} target="_blank" rel="noreferrer"
+                                        onClick={e => e.stopPropagation()}
+                                        className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition flex-shrink-0">
+                                        <ExternalLink className="w-3.5 h-3.5 text-gray-500" />
+                                      </a>
+                                    )}
                                   </div>
-                                </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                          {/* Caption of first reel as teaser */}
-                          {crop.reels![0]?.caption && (
-                            <p className="text-xs text-gray-500 mt-1.5 line-clamp-2 italic">"{crop.reels![0].caption}"</p>
+                            </div>
+                          ) : (
+                            <div className="bg-yellow-50/40 px-3 py-2.5 flex items-center gap-2">
+                              <Award className="w-4 h-4 text-gray-300" />
+                              <p className="text-xs text-gray-400 italic">No certificates linked to this crop yet</p>
+                            </div>
+                          )}
+
+                          {/* Reels for this crop */}
+                          {displayReels.length > 0 && (
+                            <div className="bg-gray-900/[0.04] px-3 py-3 border-t border-dashed border-gray-200">
+                              <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-2 flex items-center gap-1">
+                                <PlayCircle className="w-3 h-3" /> Reels for this crop
+                              </p>
+                              <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                                {displayReels.map((reel) => (
+                                  <div
+                                    key={reel.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      router.push(`/reels?reelId=${reel.id}&userId=${profile!.id}`);
+                                    }}
+                                    className="relative flex-shrink-0 w-24 aspect-[9/16] rounded-xl overflow-hidden bg-black cursor-pointer active:scale-95 transition-transform"
+                                  >
+                                    <video
+                                      src={reel.video_url}
+                                      className="w-full h-full object-cover pointer-events-none"
+                                      preload="metadata"
+                                      playsInline
+                                      muted
+                                      poster={reel.thumbnail_url || undefined}
+                                    />
+                                    <div className="absolute inset-0 bg-black/25" />
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <PlayCircle className="w-7 h-7 text-white/80" />
+                                    </div>
+                                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-1.5 py-1.5">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="flex items-center gap-0.5 text-white text-[9px] font-bold">
+                                          <Heart className="w-2.5 h-2.5" />{reel.likes || 0}
+                                        </span>
+                                        <span className="flex items-center gap-0.5 text-white text-[9px] font-bold">
+                                          <MessageSquare className="w-2.5 h-2.5" />{reel.comments || 0}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              {displayReels[0]?.caption && (
+                                <p className="text-xs text-gray-500 mt-1.5 line-clamp-2 italic">"{displayReels[0].caption}"</p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* View nearby farmers — now inside the panel, not the only action */}
+                          {role === 'farmer' && !isWaste && (
+                            <div className="px-3 py-2.5 border-t border-gray-100 bg-white">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(`/nearby-farmers?crops=${encodeURIComponent(crop.crop_name)}`);
+                                }}
+                                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-green-50 text-green-700 text-xs font-bold border border-green-200 hover:bg-green-100 transition"
+                              >
+                                <TrendingUp className="w-3.5 h-3.5" />
+                                Find nearby farmers growing {crop.crop_name}
+                              </button>
+                            </div>
                           )}
                         </div>
                       )}
@@ -820,7 +855,7 @@ function FarmerProfileContent() {
         <div className="mt-2 bg-white border-y p-4">
           <div className="flex items-center gap-2 mb-3">
             <PlayCircle className="w-5 h-5 text-red-500" />
-            <h3 className="text-base font-bold text-gray-900">Tales ({reels.length})</h3>
+            <h3 className="text-base font-bold text-gray-900">Reels ({reels.length})</h3>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {reels.map((reel) => (
