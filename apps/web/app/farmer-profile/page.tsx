@@ -7,7 +7,7 @@ import {
   ArrowLeft, MessageCircle, Phone, MapPin, Heart, MessageSquare,
   ChevronUp, ChevronDown, Leaf, ShoppingCart, Award, Package,
   Tractor, Users, UserCheck, Star, Calendar, TrendingUp,
-  BadgeCheck, Wheat, Recycle, Info, ExternalLink, PlayCircle
+  BadgeCheck, Wheat, Info, ExternalLink, PlayCircle
 } from 'lucide-react';
 import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
@@ -22,6 +22,8 @@ interface Certificate {
   expiry_date?: string;
   certificate_url?: string;
   verified?: boolean;
+  grade?: string;           // e.g. "A+", "Grade 1", "Premium"
+  crop_names?: string[];    // crops this certificate is linked to
 }
 
 interface FarmerProfile {
@@ -53,6 +55,7 @@ interface Reel {
   likes: number;
   comments: number;
   is_liked: boolean;
+  crop_tags?: string[];   // crop names this reel is tagged with
 }
 
 interface Follower {
@@ -69,6 +72,9 @@ interface Crop {
   expected_yield_quantity?: number | null;
   expected_yield_quantity_uom?: string;
   is_crop_waste: boolean;
+  // linked data — populated client-side by matching crop_name
+  certificates?: Certificate[];
+  reels?: Reel[];
 }
 
 interface Equipment {
@@ -194,6 +200,7 @@ function FarmerProfileContent() {
   const [mounted, setMounted] = useState(false);
   const [showCallModal, setShowCallModal] = useState(false);
   const [callType] = useState<'audio' | 'video'>('audio');
+  const [expandedCropIdx, setExpandedCropIdx] = useState<number | null>(null);
 
   // Manage which sections are open (multi-expand)
   const [openSections, setOpenSections] = useState<Set<string>>(() => {
@@ -201,6 +208,9 @@ function FarmerProfileContent() {
     if (tabParam) initial.add(tabParam);
     return initial;
   });
+
+  // Which crop card is expanded (shows inline certs + reels)
+  const [expandedCropIdx, setExpandedCropIdx] = useState<number | null>(null);
 
   const toggleSection = (section: string) => {
     setOpenSections(prev => {
@@ -230,13 +240,33 @@ function FarmerProfileContent() {
 
       setProfile(data);
       setIsFollowing(data.isFollowing || false);
-      setReels(Array.isArray(data.reels) ? data.reels : []);
+
+      const rawCrops: Crop[] = Array.isArray(data.crops) ? data.crops : [];
+      const rawCerts: Certificate[] = Array.isArray(data.certificates) ? data.certificates : [];
+      const rawReels: Reel[] = Array.isArray(data.reels) ? data.reels : [];
+
+      // Enrich each crop with matching certificates and reels
+      const enrichedCrops = rawCrops.map(crop => {
+        const cropLower = crop.crop_name.toLowerCase();
+        const linkedCerts = rawCerts.filter(c =>
+          Array.isArray(c.crop_names)
+            ? c.crop_names.some(cn => cn.toLowerCase() === cropLower)
+            : false
+        );
+        const linkedReels = rawReels.filter(r =>
+          Array.isArray(r.crop_tags)
+            ? r.crop_tags.some(t => t.toLowerCase() === cropLower)
+            : false
+        );
+        return { ...crop, certificates: linkedCerts, reels: linkedReels };
+      });
+
+      setCrops(enrichedCrops);
+      setCertificates(rawCerts);
+      setReels(rawReels);
+      setEquipment(Array.isArray(data.equipment) ? data.equipment : []);
       setFollowers(Array.isArray(data.followers) ? data.followers : []);
       setFollowing(Array.isArray(data.following) ? data.following : []);
-      setCrops(Array.isArray(data.crops) ? data.crops : []);
-      setEquipment(Array.isArray(data.equipment) ? data.equipment : []);
-      setCertificates(Array.isArray(data.certificates) ? data.certificates : []);
-      setError(null);
     } catch (e: any) {
       setError(e?.message || 'Unknown error');
     } finally {
@@ -295,8 +325,6 @@ function FarmerProfileContent() {
   const hasFollowers = followers.length > 0;
   const hasFollowing = following.length > 0;
   const hasReels = reels.length > 0;
-  const wasteCrops = crops.filter(c => c.is_crop_waste);
-  const regularCrops = crops.filter(c => !c.is_crop_waste);
 
   return (
     <div className="min-h-[100dvh] bg-gray-50 pb-24">
@@ -390,7 +418,7 @@ function FarmerProfileContent() {
             {[
               { key: 'followers', label: 'Followers', count: profile.followers_count, icon: Users, show: true },
               { key: 'following', label: 'Following', count: profile.following_count, icon: UserCheck, show: true },
-              { key: 'crops', label: role === 'buyer' ? 'Crops' : 'Crops', count: profile.crops_count, icon: Wheat, show: true },
+              { key: 'crops', label: role === 'buyer' ? 'Crops/Commodities' : 'Crops/Commodities', count: profile.crops_count, icon: Wheat, show: true },
               { key: 'equipment', label: 'Equipment', count: profile.equipments_count, icon: Tractor, show: true },
             ].map(({ key, label, count, icon: Icon }) => (
               <button
@@ -497,7 +525,7 @@ function FarmerProfileContent() {
         {hasCrops && (
           <div>
             <SectionHeader
-              title={role === 'buyer' ? 'Commodities Interested' : 'Crops & Expertise'}
+              title={role === 'buyer' ? 'Crops/Commodities Interested' : 'Crops/Commodities'}
               count={crops.length}
               expanded={openSections.has('crops')}
               onToggle={() => toggleSection('crops')}
@@ -505,84 +533,178 @@ function FarmerProfileContent() {
               color="text-green-600"
             />
             {openSections.has('crops') && (
-              <div className="px-4 pb-3">
-                {/* Regular crops */}
-                {regularCrops.length > 0 && (
-                  <>
-                    {wasteCrops.length > 0 && (
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-2 mb-2">
-                        {role === 'buyer' ? 'Commodities' : 'Crops'}
-                      </p>
-                    )}
-                    <div className="space-y-2">
-                      {regularCrops.map((crop, idx) => (
-                        <div
-                          key={idx}
-                          onClick={() => role === 'farmer'
-                            ? router.push(`/nearby-farmers?crops=${encodeURIComponent(crop.crop_name)}`)
-                            : undefined}
-                          className={`rounded-2xl border border-gray-100 p-3 bg-gray-50 ${role === 'farmer' ? 'cursor-pointer hover:bg-green-50 hover:border-green-200 active:bg-green-100 transition' : ''}`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-base">🌾</span>
-                              <span className="font-black text-gray-900 text-sm">{crop.crop_name}</span>
-                              {crop.expertise_level && <ExpertiseBadge level={crop.expertise_level} />}
-                            </div>
-                            {role === 'farmer' && (
-                              <span className="text-xs text-green-600 font-bold flex items-center gap-0.5 flex-shrink-0">
-                                View <TrendingUp className="w-3 h-3" />
-                              </span>
-                            )}
-                          </div>
-                          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                            {crop.years_of_experience > 0 && (
-                              <span className="text-xs text-gray-500">
-                                <span className="font-semibold text-gray-700">{crop.years_of_experience}y</span> experience
-                              </span>
-                            )}
-                            {crop.expected_yield_date && (
-                              <span className="text-xs text-blue-600 font-medium flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {role === 'buyer' ? 'Needed by' : 'Yield by'}: {new Date(crop.expected_yield_date).toLocaleDateString('en-IN')}
-                              </span>
-                            )}
-                            {crop.expected_yield_quantity && (
-                              <span className="text-xs text-blue-600 font-medium">
-                                Qty: {crop.expected_yield_quantity} {crop.expected_yield_quantity_uom || 'kg'}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
+              <div className="px-4 pb-3 space-y-2 pt-1">
+                {crops.map((crop, idx) => {
+                  const isOpen = expandedCropIdx === idx;
+                  const hasCropCerts = (crop.certificates?.length ?? 0) > 0;
+                  const hasCropReels = (crop.reels?.length ?? 0) > 0;
+                  const hasDetails = hasCropCerts || hasCropReels;
+                  const isWaste = crop.is_crop_waste;
 
-                {/* Crop Waste */}
-                {wasteCrops.length > 0 && (
-                  <>
-                    <p className="text-xs font-bold text-amber-500 uppercase tracking-widest mt-4 mb-2 flex items-center gap-1">
-                      <Recycle className="w-3.5 h-3.5" /> Crop Waste Interest
-                    </p>
-                    <div className="space-y-2">
-                      {wasteCrops.map((crop, idx) => (
-                        <div key={idx} className="rounded-2xl border border-amber-100 p-3 bg-amber-50">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-base">♻️</span>
-                            <span className="font-black text-amber-800 text-sm">{crop.crop_name}</span>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-700 uppercase">Waste</span>
+                  return (
+                    <div
+                      key={idx}
+                      className={`rounded-2xl border overflow-hidden transition-all ${isWaste ? 'border-amber-200 bg-amber-50' : 'border-gray-100 bg-gray-50'} ${isOpen ? 'shadow-md' : ''}`}
+                    >
+                      {/* Crop Header Row — always visible */}
+                      <button
+                        className="w-full text-left p-3"
+                        onClick={() => {
+                          if (hasDetails) {
+                            setExpandedCropIdx(isOpen ? null : idx);
+                          } else if (role === 'farmer' && !isWaste) {
+                            router.push(`/nearby-farmers?crops=${encodeURIComponent(crop.crop_name)}`);
+                          }
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                            <span className="text-base">{isWaste ? '♻️' : '🌾'}</span>
+                            <span className={`font-black text-sm ${isWaste ? 'text-amber-800' : 'text-gray-900'}`}>
+                              {crop.crop_name}
+                            </span>
+                            {crop.expertise_level && <ExpertiseBadge level={crop.expertise_level} />}
+                            {isWaste && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-700 uppercase">Waste</span>
+                            )}
+                            {/* cert + reel pill badges */}
+                            {hasCropCerts && (
+                              <span className="flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+                                <Award className="w-2.5 h-2.5" />
+                                {crop.certificates!.length} cert{crop.certificates!.length !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {hasCropReels && (
+                              <span className="flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+                                <PlayCircle className="w-2.5 h-2.5" />
+                                {crop.reels!.length} reel{crop.reels!.length !== 1 ? 's' : ''}
+                              </span>
+                            )}
                           </div>
+                          {hasDetails
+                            ? (isOpen
+                              ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                              : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />)
+                            : role === 'farmer' && !isWaste
+                              ? <TrendingUp className="w-4 h-4 text-green-500 flex-shrink-0" />
+                              : null
+                          }
+                        </div>
+
+                        {/* Meta row */}
+                        <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+                          {crop.years_of_experience > 0 && (
+                            <span className="text-xs text-gray-500">
+                              <span className="font-semibold text-gray-700">{crop.years_of_experience}y</span> experience
+                            </span>
+                          )}
+                          {crop.expected_yield_date && (
+                            <span className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {role === 'buyer' ? 'Needed by' : 'Yield by'}: {new Date(crop.expected_yield_date).toLocaleDateString('en-IN')}
+                            </span>
+                          )}
                           {crop.expected_yield_quantity && (
-                            <p className="text-xs text-amber-600 mt-1">
+                            <span className="text-xs text-blue-600 font-medium">
                               Qty: {crop.expected_yield_quantity} {crop.expected_yield_quantity_uom || 'kg'}
-                            </p>
+                            </span>
                           )}
                         </div>
-                      ))}
+                      </button>
+
+                      {/* ── Expanded: Certificates ─────────────────────────── */}
+                      {isOpen && hasCropCerts && (
+                        <div className="border-t border-dashed border-yellow-200 bg-yellow-50/60 px-3 py-2">
+                          <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-2 flex items-center gap-1">
+                            <Award className="w-3 h-3" /> Certificates &amp; Grades
+                          </p>
+                          <div className="space-y-2">
+                            {crop.certificates!.map((cert) => (
+                              <div key={cert.id} className="flex items-start gap-2 bg-white rounded-xl p-2.5 border border-yellow-100 shadow-sm">
+                                <div className="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                                  <Award className="w-4 h-4 text-yellow-600" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="font-bold text-gray-900 text-xs">{cert.name}</p>
+                                    {cert.grade && (
+                                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">
+                                        Grade: {cert.grade}
+                                      </span>
+                                    )}
+                                    {cert.verified && (
+                                      <span className="flex items-center gap-0.5 text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded-full">
+                                        <BadgeCheck className="w-2.5 h-2.5" /> Verified
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-gray-500 mt-0.5">By: {cert.issued_by}</p>
+                                  {cert.issued_date && (
+                                    <p className="text-[11px] text-gray-400">
+                                      {new Date(cert.issued_date).toLocaleDateString('en-IN')}
+                                      {cert.expiry_date && ` – ${new Date(cert.expiry_date).toLocaleDateString('en-IN')}`}
+                                    </p>
+                                  )}
+                                </div>
+                                {cert.certificate_url && (
+                                  <a href={cert.certificate_url} target="_blank" rel="noreferrer"
+                                    className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition flex-shrink-0">
+                                    <ExternalLink className="w-3.5 h-3.5 text-gray-500" />
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ── Expanded: Reels ────────────────────────────────── */}
+                      {isOpen && hasCropReels && (
+                        <div className={`border-t border-dashed ${hasCropCerts ? 'border-red-100' : 'border-gray-200'} bg-gray-900/5 px-3 py-2`}>
+                          <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-2 flex items-center gap-1">
+                            <PlayCircle className="w-3 h-3" /> Tales
+                          </p>
+                          <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+                            {crop.reels!.map((reel) => (
+                              <div
+                                key={reel.id}
+                                onClick={() => router.push(`/reels?reelId=${reel.id}&userId=${profile!.id}`)}
+                                className="relative flex-shrink-0 w-24 aspect-[9/16] rounded-xl overflow-hidden bg-black cursor-pointer group active:scale-95 transition-transform"
+                              >
+                                <video
+                                  src={reel.video_url}
+                                  className="w-full h-full object-cover pointer-events-none"
+                                  preload="metadata"
+                                  playsInline
+                                  muted
+                                  poster={reel.thumbnail_url || undefined}
+                                />
+                                <div className="absolute inset-0 bg-black/25 group-hover:bg-black/10 transition-colors" />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <PlayCircle className="w-7 h-7 text-white/80" />
+                                </div>
+                                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-1.5 py-1.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="flex items-center gap-0.5 text-white text-[9px] font-bold">
+                                      <Heart className="w-2.5 h-2.5" />{reel.likes || 0}
+                                    </span>
+                                    <span className="flex items-center gap-0.5 text-white text-[9px] font-bold">
+                                      <MessageSquare className="w-2.5 h-2.5" />{reel.comments || 0}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          {/* Caption of first reel as teaser */}
+                          {crop.reels![0]?.caption && (
+                            <p className="text-xs text-gray-500 mt-1.5 line-clamp-2 italic">"{crop.reels![0].caption}"</p>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </>
-                )}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -699,7 +821,7 @@ function FarmerProfileContent() {
         <div className="mt-2 bg-white border-y p-4">
           <div className="flex items-center gap-2 mb-3">
             <PlayCircle className="w-5 h-5 text-red-500" />
-            <h3 className="text-base font-bold text-gray-900">Reels ({reels.length})</h3>
+            <h3 className="text-base font-bold text-gray-900">Tales ({reels.length})</h3>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {reels.map((reel) => (
