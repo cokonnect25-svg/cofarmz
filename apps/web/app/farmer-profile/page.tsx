@@ -3,9 +3,26 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense, useCallback } from 'react';
-import { ArrowLeft, MessageCircle, Phone, MapPin, Heart, MessageSquare, ChevronUp, Leaf, ShoppingCart } from 'lucide-react';
+import {
+  ArrowLeft, MessageCircle, Phone, MapPin, Heart, MessageSquare,
+  ChevronUp, ChevronDown, Leaf, ShoppingCart, Award, Package,
+  Tractor, Users, UserCheck, Star, Calendar, TrendingUp,
+  BadgeCheck, Wheat, Recycle, Info, ExternalLink, PlayCircle
+} from 'lucide-react';
 import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
+
+// ─── Interfaces ──────────────────────────────────────────────────────────────
+
+interface Certificate {
+  id: string;
+  name: string;
+  issued_by: string;
+  issued_date?: string;
+  expiry_date?: string;
+  certificate_url?: string;
+  verified?: boolean;
+}
 
 interface FarmerProfile {
   id: string;
@@ -13,13 +30,19 @@ interface FarmerProfile {
   email: string;
   image: string;
   location: string;
-  role: 'farmer' | 'buyer';
+  role: 'farmer' | 'buyer' | 'supplier';
+  bio?: string;
   followers_count: number;
   following_count: number;
   crops_count: number;
   equipments_count: number;
+  certificates_count?: number;
   isFollowing: boolean;
   phone?: string;
+  rating?: number;
+  reviews_count?: number;
+  member_since?: string;
+  is_verified?: boolean;
 }
 
 interface Reel {
@@ -44,6 +67,7 @@ interface Crop {
   expertise_level: string;
   expected_yield_date?: string | null;
   expected_yield_quantity?: number | null;
+  expected_yield_quantity_uom?: string;
   is_crop_waste: boolean;
 }
 
@@ -53,7 +77,102 @@ interface Equipment {
   model: string;
   daily_rate: number;
   image_url: string;
+  condition?: string;
+  availability?: boolean;
 }
+
+// ─── Role Config ──────────────────────────────────────────────────────────────
+
+const ROLE_CONFIG = {
+  farmer: {
+    label: 'Farmer',
+    icon: Leaf,
+    gradient: 'from-green-500 to-emerald-600',
+    badge: 'bg-green-100 text-green-700',
+    accent: 'text-green-600',
+    accentBg: 'bg-green-600',
+    accentLight: 'bg-green-50',
+    border: 'border-green-200',
+    tag: 'bg-green-100 text-green-700',
+  },
+  buyer: {
+    label: 'Buyer',
+    icon: ShoppingCart,
+    gradient: 'from-blue-500 to-indigo-600',
+    badge: 'bg-blue-100 text-blue-700',
+    accent: 'text-blue-600',
+    accentBg: 'bg-blue-600',
+    accentLight: 'bg-blue-50',
+    border: 'border-blue-200',
+    tag: 'bg-blue-100 text-blue-700',
+  },
+  supplier: {
+    label: 'Supplier',
+    icon: Package,
+    gradient: 'from-amber-500 to-orange-600',
+    badge: 'bg-amber-100 text-amber-700',
+    accent: 'text-amber-600',
+    accentBg: 'bg-amber-600',
+    accentLight: 'bg-amber-50',
+    border: 'border-amber-200',
+    tag: 'bg-amber-100 text-amber-700',
+  },
+};
+
+// ─── Section Header ───────────────────────────────────────────────────────────
+
+function SectionHeader({
+  title, count, expanded, onToggle, icon: Icon, color = 'text-gray-900'
+}: {
+  title: string; count?: number; expanded: boolean;
+  onToggle: () => void; icon: any; color?: string;
+}) {
+  return (
+    <div
+      onClick={onToggle}
+      className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition select-none"
+    >
+      <div className="flex items-center gap-2">
+        <Icon className={`w-4 h-4 ${color}`} />
+        <h3 className={`font-bold text-base ${color}`}>
+          {title}
+          {count !== undefined && (
+            <span className="ml-1 text-sm font-normal text-gray-500">({count})</span>
+          )}
+        </h3>
+      </div>
+      {expanded
+        ? <ChevronUp className="w-5 h-5 text-gray-400" />
+        : <ChevronDown className="w-5 h-5 text-gray-400" />}
+    </div>
+  );
+}
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="px-4 py-6 text-center text-gray-400 text-sm italic">{text}</div>
+  );
+}
+
+// ─── Expertise Badge ──────────────────────────────────────────────────────────
+
+function ExpertiseBadge({ level }: { level: string }) {
+  const map: Record<string, string> = {
+    beginner: 'bg-gray-100 text-gray-600',
+    intermediate: 'bg-yellow-100 text-yellow-700',
+    advanced: 'bg-green-100 text-green-700',
+    expert: 'bg-purple-100 text-purple-700',
+  };
+  return (
+    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${map[level?.toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
+      {level}
+    </span>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 function FarmerProfileContent() {
   const { user } = useAuth();
@@ -71,328 +190,249 @@ function FarmerProfileContent() {
   const [following, setFollowing] = useState<Follower[]>([]);
   const [crops, setCrops] = useState<Crop[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
-  const [expandedSection, setExpandedSection] = useState<string | null>(tabParam || null);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [mounted, setMounted] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
   const [showCallModal, setShowCallModal] = useState(false);
-  const [callType, setCallType] = useState<'audio' | 'video'>('audio');
-  const [matchingResults, setMatchingResults] = useState<any[]>([]);
-  const [loadingMatches, setLoadingMatches] = useState(false);
+  const [callType] = useState<'audio' | 'video'>('audio');
+
+  // Manage which sections are open (multi-expand)
+  const [openSections, setOpenSections] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    if (tabParam) initial.add(tabParam);
+    return initial;
+  });
+
+  const toggleSection = (section: string) => {
+    setOpenSections(prev => {
+      const next = new Set(prev);
+      if (next.has(section)) next.delete(section);
+      else next.add(section);
+      return next;
+    });
+  };
 
   const fetchProfile = useCallback(async () => {
     if (!farmerId || !user) return;
     try {
       const url = getApiUrl(`/api/farmers/profile?farmerId=${encodeURIComponent(farmerId)}`);
-      console.log('Fetching farmer profile from:', url);
-
-      const res = await fetch(url, {
-        headers: {
-          'x-user-id': user.id
-        }
-      });
+      const res = await fetch(url, { headers: { 'x-user-id': user.id } });
 
       if (!res.ok) {
-        const contentType = res.headers.get('content-type');
-        let errorData: any = {};
-
-        try {
-          if (contentType?.includes('application/json')) {
-            errorData = await res.json();
-          } else {
-            const text = await res.text();
-            console.error('Non-JSON response from API:', text.substring(0, 200));
-            errorData = { error: `HTTP ${res.status}: ${res.statusText}` };
-          }
-        } catch (e) {
-          console.error('Error parsing response:', e);
-          errorData = { error: `HTTP ${res.status}: Failed to parse response` };
-        }
-
-        console.error('Profile API error - Status:', res.status, 'Data:', errorData);
-        throw new Error(errorData.error || `HTTP ${res.status}: Failed to fetch profile`);
+        const ct = res.headers.get('content-type');
+        let err: any = {};
+        try { err = ct?.includes('json') ? await res.json() : { error: `HTTP ${res.status}` }; }
+        catch { err = { error: `HTTP ${res.status}` }; }
+        throw new Error(err.error || `HTTP ${res.status}`);
       }
 
       const data = await res.json();
-      if (!data || !data.id) {
-        console.error('Invalid profile data:', data);
-        throw new Error('Received invalid profile data');
-      }
+      if (!data?.id) throw new Error('Invalid profile data');
+
       setProfile(data);
       setIsFollowing(data.isFollowing || false);
       setReels(Array.isArray(data.reels) ? data.reels : []);
       setFollowers(Array.isArray(data.followers) ? data.followers : []);
       setFollowing(Array.isArray(data.following) ? data.following : []);
-      const cropsData = Array.isArray(data.crops) ? data.crops : [];
-      setCrops(cropsData);
+      setCrops(Array.isArray(data.crops) ? data.crops : []);
       setEquipment(Array.isArray(data.equipment) ? data.equipment : []);
-      setDataLoaded(true);
+      setCertificates(Array.isArray(data.certificates) ? data.certificates : []);
       setError(null);
-
-      // Fetch matches if viewing own profile
-      if (user?.id === farmerId && cropsData.length > 0) {
-        fetchMatches(cropsData, data);
-      }
-    } catch (error: any) {
-      const errorMessage = error?.message || 'Unknown error occurred';
-      console.error('Error fetching profile:', errorMessage);
-      setError(errorMessage);
+    } catch (e: any) {
+      setError(e?.message || 'Unknown error');
     } finally {
       setLoading(false);
     }
   }, [farmerId, user]);
 
-  useEffect(() => {
-    if (mounted && farmerId && user) {
-      fetchProfile();
-    }
-  }, [mounted, farmerId, user, fetchProfile]);
-
-  const fetchMatches = async (profileCrops: Crop[], profileData: FarmerProfile) => {
-    if (!user?.id) return;
-    setLoadingMatches(true);
-    try {
-      const uniqueCrops = [...new Set(profileCrops.map(c => c.crop_name))];
-      // Basic location fallback
-      let lat = profileData.location ? 0 : 0; // The API profile doesn't have lat/lon directly in the interface yet
-      let lon = 0;
-
-      const buyersRes = await fetch(getApiUrl(`/api/nearby-farmers?type=buyers&crops=${uniqueCrops.join(',')}&latitude=${lat}&longitude=${lon}&currentUserId=${user.id}`));
-      const buyersData = await buyersRes.json();
-      
-      const mapped = (Array.isArray(buyersData) ? buyersData : []).map((f: any) => ({
-        ...f,
-        crops: Array.isArray(f.crops) 
-          ? f.crops.map((c: any) => ({ 
-              crop_name: c.crop_name || c, 
-              is_crop_waste: !!c.is_crop_waste 
-            })) 
-          : [],
-        distance: parseFloat(f.distance) || 9999,
-      }));
-      setMatchingResults(mapped);
-    } catch (err) {
-      console.error("Error fetching matches for public profile:", err);
-    } finally {
-      setLoadingMatches(false);
-    }
-  };
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { if (mounted && farmerId && user) fetchProfile(); }, [mounted, farmerId, user, fetchProfile]);
 
   const handleFollow = async () => {
     if (!farmerId || !user) return;
-
+    const method = isFollowing ? 'DELETE' : 'POST';
     try {
-      if (isFollowing) {
-        const response = await fetch(getApiUrl(`/api/follows`), {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-user-id': user.id
-          },
-          body: JSON.stringify({ followingId: farmerId })
-        });
-        if (response.ok) {
-          setIsFollowing(false);
-          if (profile) {
-            setProfile({ ...profile, followers_count: profile.followers_count - 1 });
-          }
-        } else {
-          const error = await response.json();
-          console.error('Unfollow error:', error);
-        }
-      } else {
-        const response = await fetch(getApiUrl(`/api/follows`), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-user-id': user.id
-          },
-          body: JSON.stringify({ followingId: farmerId })
-        });
-        if (response.ok) {
-          setIsFollowing(true);
-          if (profile) {
-            setProfile({ ...profile, followers_count: profile.followers_count + 1 });
-          }
-        } else {
-          const error = await response.json();
-          console.error('Follow error:', error);
-        }
+      const res = await fetch(getApiUrl('/api/follows'), {
+        method,
+        headers: { 'Content-Type': 'application/json', 'x-user-id': user.id },
+        body: JSON.stringify({ followingId: farmerId }),
+      });
+      if (res.ok) {
+        setIsFollowing(!isFollowing);
+        setProfile(p => p ? {
+          ...p,
+          followers_count: p.followers_count + (isFollowing ? -1 : 1)
+        } : p);
       }
-    } catch (error) {
-      console.error('Error following/unfollowing:', error);
-    }
+    } catch (e) { console.error(e); }
   };
 
-  const fetchSectionData = useCallback(async (section: string) => {
-    // Data is already loaded from initial fetchProfile, no need to refetch
-    console.log(`Data already loaded, section ${section} ready to display`);
-  }, []);
+  // ── Loading / Error States ──────────────────────────────────────────────────
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[100dvh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[100dvh]">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600" />
+    </div>
+  );
 
-  if (error || !profile || !user) {
-    return (
-      <div className="flex items-center justify-center min-h-[100dvh] flex-col gap-4">
-        <p className="text-gray-500">{error || 'Profile not found'}</p>
-        <button
-          onClick={() => router.back()}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold"
-        >
-          Go Back
-        </button>
-      </div>
-    );
-  }
+  if (error || !profile || !user) return (
+    <div className="flex items-center justify-center min-h-[100dvh] flex-col gap-4">
+      <p className="text-gray-500">{error || 'Profile not found'}</p>
+      <button onClick={() => router.back()} className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold">
+        Go Back
+      </button>
+    </div>
+  );
 
   const isOwnProfile = user?.id === farmerId;
+  const role = (profile.role as keyof typeof ROLE_CONFIG) || 'farmer';
+  const rc = ROLE_CONFIG[role] || ROLE_CONFIG.farmer;
+  const RoleIcon = rc.icon;
+
+  // Sections to show: only if data exists OR always show crops/equipment if counts > 0
+  const hasCrops = crops.length > 0;
+  const hasEquipment = equipment.length > 0;
+  const hasCertificates = certificates.length > 0;
+  const hasFollowers = followers.length > 0;
+  const hasFollowing = following.length > 0;
+  const hasReels = reels.length > 0;
+  const wasteCrops = crops.filter(c => c.is_crop_waste);
+  const regularCrops = crops.filter(c => !c.is_crop_waste);
 
   return (
-    <div className="min-min-h-[100dvh] bg-gray-50">
-      {/* Header */}
-      <div className="sticky top-0 bg-white border-b px-4 py-3 flex items-center z-40">
-        <button onClick={() => router.back()} className="mr-3">
+    <div className="min-h-[100dvh] bg-gray-50 pb-24">
+
+      {/* ── Sticky Header ────────────────────────────────────────────────────── */}
+      <div className="sticky top-0 bg-white border-b px-4 py-3 flex items-center z-40 shadow-sm">
+        <button onClick={() => router.back()} className="mr-3 p-1 rounded-full hover:bg-gray-100 transition">
           <ArrowLeft className="w-6 h-6 text-gray-900" />
         </button>
-        <h1 className="text-xl font-bold text-gray-900">{profile.name}</h1>
+        <h1 className="text-xl font-bold text-gray-900 truncate flex-1">{profile.name}</h1>
+        {profile.is_verified && <BadgeCheck className="w-5 h-5 text-blue-500 ml-2 flex-shrink-0" />}
       </div>
 
-      {/* Profile Section */}
+      {/* ── Cover + Avatar + Info ─────────────────────────────────────────────── */}
       <div className="bg-white border-b">
         {/* Cover */}
-        <div className="h-24 bg-gradient-to-r from-green-500 to-green-600"></div>
+        <div className={`h-28 bg-gradient-to-r ${rc.gradient} relative overflow-hidden`}>
+          <div className="absolute inset-0 opacity-20"
+            style={{ backgroundImage: 'repeating-linear-gradient(45deg,transparent,transparent 20px,rgba(255,255,255,.15) 20px,rgba(255,255,255,.15) 40px)' }} />
+        </div>
 
-        {/* Profile Info */}
-        <div className="px-4 pb-4">
-          <div className="flex justify-between items-start -mt-12 mb-4">
-            <img
-              src={profile.image || 'https://via.placeholder.com/80'}
-              alt={profile.name}
-              className="w-20 h-20 rounded-full border-4 border-white object-cover"
-            />
+        <div className="px-4 pb-5">
+          {/* Avatar row */}
+          <div className="flex justify-between items-end -mt-10 mb-3">
+            <div className="relative">
+              <img
+                src={profile.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(profile.name)}`}
+                alt={profile.name}
+                className="w-20 h-20 rounded-full border-4 border-white object-cover shadow-md"
+              />
+              {profile.is_verified && (
+                <BadgeCheck className="absolute bottom-0 right-0 w-5 h-5 text-blue-500 bg-white rounded-full" />
+              )}
+            </div>
             {!isOwnProfile && (
               <button
                 onClick={handleFollow}
-                className={`${isFollowing
-                    ? 'bg-gray-200 text-gray-900'
-                    : 'bg-green-600 text-white'
-                  } px-6 py-2 rounded-full font-semibold text-sm`}
+                className={`px-5 py-2 rounded-full font-bold text-sm transition ${isFollowing
+                  ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                  : `${rc.accentBg} text-white hover:opacity-90`}`}
               >
                 {isFollowing ? 'Following' : 'Follow'}
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-3 mb-2">
-            <h2 className="text-xl font-bold text-gray-900">{profile.name}</h2>
-            <div className={`px-3 py-1 rounded-full ${profile.role === 'farmer' ? 'bg-green-100' : 'bg-blue-100'}`}>
-              <span className={`text-xs font-semibold flex items-center gap-1 ${profile.role === 'farmer' ? 'text-green-700' : 'text-blue-700'}`}>
-                {profile.role === 'farmer' ? (
-                  <>
-                    <Leaf className="w-4 h-4" />
-                    Farmer
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart className="w-4 h-4" />
-                    Buyer
-                  </>
-                )}
+          {/* Name + role */}
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <h2 className="text-xl font-black text-gray-900">{profile.name}</h2>
+            <span className={`flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full ${rc.badge}`}>
+              <RoleIcon className="w-3 h-3" />
+              {rc.label}
+            </span>
+          </div>
+
+          {/* Location */}
+          {profile.location && (
+            <p className="text-sm text-gray-500 flex items-center gap-1 mb-1">
+              <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+              {profile.location}
+            </p>
+          )}
+
+          {/* Bio */}
+          {profile.bio && (
+            <p className="text-sm text-gray-600 mt-2 leading-relaxed">{profile.bio}</p>
+          )}
+
+          {/* Rating */}
+          {profile.rating !== undefined && profile.rating > 0 && (
+            <div className="flex items-center gap-1 mt-2">
+              {[1, 2, 3, 4, 5].map(s => (
+                <Star key={s} className={`w-3.5 h-3.5 ${s <= Math.round(profile.rating!) ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`} />
+              ))}
+              <span className="text-xs text-gray-500 ml-1">
+                {profile.rating.toFixed(1)} {profile.reviews_count ? `(${profile.reviews_count} reviews)` : ''}
               </span>
             </div>
-          </div>
-          <p className="text-sm text-gray-600 flex items-center gap-1">
-            <MapPin className="w-4 h-4" /> {profile.location || 'Location not set'}
-          </p>
+          )}
 
-          {/* Stats - Clickable */}
-          <div className="grid grid-cols-4 gap-2 mt-4 text-center">
-            <button
-              onClick={() => {
-                if (expandedSection === 'followers') {
-                  setExpandedSection(null);
-                } else {
-                  setExpandedSection('followers');
-                  fetchSectionData('followers');
-                }
-              }}
-              className="cursor-pointer hover:bg-gray-50 p-2 rounded transition"
-            >
-              <p className="font-bold text-lg text-gray-900">{profile.followers_count}</p>
-              <p className="text-xs text-gray-600">Followers</p>
-            </button>
-            <button
-              onClick={() => {
-                if (expandedSection === 'following') {
-                  setExpandedSection(null);
-                } else {
-                  setExpandedSection('following');
-                  fetchSectionData('following');
-                }
-              }}
-              className="cursor-pointer hover:bg-gray-50 p-2 rounded transition"
-            >
-              <p className="font-bold text-lg text-gray-900">{profile.following_count}</p>
-              <p className="text-xs text-gray-600">Following</p>
-            </button>
-            <button
-              onClick={() => {
-                if (expandedSection === 'crops') {
-                  setExpandedSection(null);
-                } else {
-                  setExpandedSection('crops');
-                  fetchSectionData('crops');
-                }
-              }}
-              className="cursor-pointer hover:bg-gray-50 p-2 rounded transition"
-            >
-              <p className="font-bold text-lg text-gray-900">{profile.crops_count}</p>
-              <p className="text-xs text-gray-600">Crops</p>
-            </button>
-            <button
-              onClick={() => {
-                if (expandedSection === 'equipment') {
-                  setExpandedSection(null);
-                } else {
-                  setExpandedSection('equipment');
-                  fetchSectionData('equipment');
-                }
-              }}
-              className="cursor-pointer hover:bg-gray-50 p-2 rounded transition"
-            >
-              <p className="font-bold text-lg text-gray-900">{profile.equipments_count}</p>
-              <p className="text-xs text-gray-600">Equipment</p>
-            </button>
+          {/* Member since */}
+          {profile.member_since && (
+            <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              Member since {new Date(profile.member_since).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+            </p>
+          )}
+
+          {/* ── Stats Bar ──────────────────────────────────────────────────── */}
+          <div className="grid grid-cols-4 gap-1 mt-4 rounded-2xl bg-gray-50 border border-gray-100 overflow-hidden">
+            {[
+              { key: 'followers', label: 'Followers', count: profile.followers_count, icon: Users, show: true },
+              { key: 'following', label: 'Following', count: profile.following_count, icon: UserCheck, show: true },
+              { key: 'crops', label: role === 'buyer' ? 'Crops' : 'Crops', count: profile.crops_count, icon: Wheat, show: true },
+              { key: 'equipment', label: 'Equipment', count: profile.equipments_count, icon: Tractor, show: true },
+            ].map(({ key, label, count, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => toggleSection(key)}
+                className={`py-3 flex flex-col items-center gap-0.5 transition ${openSections.has(key) ? `${rc.accentLight}` : 'hover:bg-gray-100'}`}
+              >
+                <Icon className={`w-4 h-4 ${openSections.has(key) ? rc.accent : 'text-gray-400'}`} />
+                <p className={`font-black text-base leading-none ${openSections.has(key) ? rc.accent : 'text-gray-900'}`}>{count}</p>
+                <p className="text-[10px] text-gray-500 font-medium">{label}</p>
+              </button>
+            ))}
           </div>
 
-          {/* Actions */}
+          {/* Certificates quick badge */}
+          {hasCertificates && (
+            <button
+              onClick={() => toggleSection('certificates')}
+              className={`mt-3 flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold transition w-full ${openSections.has('certificates') ? `${rc.accentLight} ${rc.border} ${rc.accent}` : 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'}`}
+            >
+              <Award className="w-4 h-4 text-amber-500" />
+              {certificates.length} Certificate{certificates.length !== 1 ? 's' : ''} &amp; Verifications
+              {openSections.has('certificates') ? <ChevronUp className="w-4 h-4 ml-auto" /> : <ChevronDown className="w-4 h-4 ml-auto" />}
+            </button>
+          )}
+
+          {/* ── Action Buttons ────────────────────────────────────────────── */}
           {!isOwnProfile && (
             <div className="flex gap-2 mt-4">
               <button
                 onClick={() => router.push(`/messages?ownerId=${profile.id}&ownerName=${encodeURIComponent(profile.name)}`)}
-                className="flex-1 bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"
+                className={`flex-1 ${rc.accentBg} text-white py-2.5 rounded-xl font-bold hover:opacity-90 transition flex items-center justify-center gap-2`}
               >
                 <MessageCircle className="w-4 h-4" />
                 Message
               </button>
               <button
                 onClick={() => {
-                  if (profile.phone) {
-                    window.location.href = `tel:${profile.phone}`;
-                  } else {
-                    alert('Phone number not available');
-                  }
+                  if (profile.phone) window.location.href = `tel:${profile.phone}`;
+                  else alert('Phone number not available');
                 }}
-                className="flex-1 bg-gray-200 text-gray-900 py-2 rounded-lg font-semibold hover:bg-gray-300 transition flex items-center justify-center gap-2"
+                className="flex-1 bg-gray-100 text-gray-800 py-2.5 rounded-xl font-bold hover:bg-gray-200 transition flex items-center justify-center gap-2"
               >
                 <Phone className="w-4 h-4" />
                 Call
@@ -402,245 +442,272 @@ function FarmerProfileContent() {
         </div>
       </div>
 
-      {/* Matching Sections for Profile Owner */}
-      {/* {user?.id === profile.id && crops.length > 0 && !loadingMatches && (
-        <div className="px-6 py-6 border-b bg-gray-50/50">
-          {(() => {
-            const userCropNames = crops.map(c => c.crop_name.toLowerCase());
-            const userCropSet = new Set(userCropNames);
+      {/* ── Expandable Sections ───────────────────────────────────────────────── */}
+      <div className="mt-2 bg-white border-y divide-y divide-gray-100">
 
-            const matchedWasteBuyers = matchingResults
-              .map(r => {
-                const matchingWasteCrops = r.crops
-                  .filter((c: any) => c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
-                  .map((c: any) => c.crop_name);
-                return matchingWasteCrops.length > 0 ? { ...r, matchingCrops: matchingWasteCrops } : null;
-              })
-              .filter(Boolean);
-
-            const renderCard = (person: any, color: string) => (
-              <div key={person.id}
-                onClick={() => router.push(`/farmer-profile?id=${person.id}`)}
-                className="flex-shrink-0 w-40 bg-white rounded-3xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all text-center">
-                <div className="mb-3 mx-auto w-16 h-16">
-                  <img
-                    src={person.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(person.name)}`}
-                    alt={person.name}
-                    className="w-full h-full rounded-full object-cover border-2 border-white shadow-sm"
-                  />
-                </div>
-                <p className="text-sm font-black text-gray-900 truncate mb-0.5">{person.name}</p>
-                <div className="flex flex-wrap gap-1 justify-center mt-2">
-                  {person.matchingCrops.map((crop: string) => (
-                    <span key={crop} className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${color}`}>
-                      {crop}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            );
-
-            if (matchedWasteBuyers.length === 0) return null;
-
-            return (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-lg font-black text-gray-900 leading-tight">Buyers Interest For Your Crop Waste</h2>
-                    <p className="text-amber-600 text-[10px] font-bold uppercase tracking-wider">Potential waste buyers nearby</p>
-                  </div>
-                  <button onClick={() => router.push('/nearby-farmers?type=buyers')}
-                    className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-600">
-                    <i className="ph-bold ph-arrow-right text-xs"></i>
-                  </button>
-                </div>
-                <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
-                  {matchedWasteBuyers.slice(0, 5).map((p: any) => renderCard(p, 'bg-amber-100 text-amber-700'))}
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      )} 
-       */}
-
-      {/* Expandable Sections */}
-      <div className="bg-white border-b">
-        {/* Followers Section */}
-        {expandedSection === 'followers' && (
-          <div className="border-t">
-            <div className="px-4 py-3 border-b flex items-center justify-between cursor-pointer hover:bg-gray-50"
-              onClick={() => setExpandedSection(null)}>
-              <h3 className="font-bold text-gray-900">Followers ({followers.length})</h3>
-              <ChevronUp className="w-5 h-5 text-gray-600" />
-            </div>
-            <div className="divide-y">
-              {followers.length === 0 ? (
-                <div className="px-4 py-4 text-center text-gray-500 text-sm">No followers yet</div>
-              ) : (
-                followers.map((follower) => (
-                  <button
-                    key={follower.id}
-                    onClick={() => {
-                      if (follower.id === user.id) {
-                        router.push('/user-profile');
-                      } else {
-                        router.push(`/farmer-profile?id=${follower.id}`);
-                      }
-                    }}
-                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={follower.image || 'https://via.placeholder.com/40'}
-                        alt={follower.name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                      <p className="font-semibold text-gray-900">{follower.name}</p>
+        {/* ── Certificates ───────────────────────────────────────────────────── */}
+        {hasCertificates && (
+          <div>
+            <SectionHeader
+              title="Certificates & Verifications"
+              count={certificates.length}
+              expanded={openSections.has('certificates')}
+              onToggle={() => toggleSection('certificates')}
+              icon={Award}
+              color="text-amber-600"
+            />
+            {openSections.has('certificates') && (
+              <div className="divide-y divide-gray-50 px-4 pb-2">
+                {certificates.map((cert) => (
+                  <div key={cert.id} className="py-3 flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                      <Award className="w-5 h-5 text-amber-600" />
                     </div>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Following Section */}
-        {expandedSection === 'following' && (
-          <div className="border-t">
-            <div className="px-4 py-3 border-b flex items-center justify-between cursor-pointer hover:bg-gray-50"
-              onClick={() => setExpandedSection(null)}>
-              <h3 className="font-bold text-gray-900">Following ({following.length})</h3>
-              <ChevronUp className="w-5 h-5 text-gray-600" />
-            </div>
-            <div className="divide-y">
-              {following.length === 0 ? (
-                <div className="px-4 py-4 text-center text-gray-500 text-sm">Not following anyone yet</div>
-              ) : (
-                following.map((followUser) => (
-                  <button
-                    key={followUser.id}
-                    onClick={() => {
-                      if (followUser.id === user.id) {
-                        router.push('/user-profile');
-                      } else {
-                        router.push(`/farmer-profile?id=${followUser.id}`);
-                      }
-                    }}
-                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={followUser.image || 'https://via.placeholder.com/40'}
-                        alt={followUser.name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                      <p className="font-semibold text-gray-900">{followUser.name}</p>
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Crops Section */}
-        {expandedSection === 'crops' && (
-          <div className="border-t">
-            <div className="px-4 py-3 border-b flex items-center justify-between cursor-pointer hover:bg-gray-50"
-              onClick={() => { console.log('Closing crops section'); setExpandedSection(null); }}>
-              <h3 className="font-bold text-gray-900">Crops ({crops.length})</h3>
-              <ChevronUp className="w-5 h-5 text-gray-600" />
-            </div>
-            <div className="divide-y">
-              {crops && crops.length > 0 ? (
-                crops.map((crop, idx) => (
-                  <div key={idx} className={`px-4 py-4 transition-colors ${profile.role === 'farmer' ? 'cursor-pointer hover:bg-green-50 active:bg-green-100' : ''}`}
-                    onClick={() => profile.role === 'farmer' && router.push(`/nearby-farmers?crops=${encodeURIComponent(crop.crop_name)}`)}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-base font-black text-green-700">🌾 {crop.crop_name}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 uppercase">{crop.expertise_level}</span>
-                        </div>
-                        {crop.years_of_experience ? (
-                          <p className="text-sm text-gray-500">Experience: {crop.years_of_experience} years</p>
-                        ) : null}
-                        {crop.expected_yield_date && (
-                          <p className="text-xs text-blue-600 font-medium mt-1">{profile.role === 'farmer' ? 'Yield' : 'Needed by'}: {new Date(crop.expected_yield_date).toLocaleDateString()}</p>
-                        )}
-                        {crop.expected_yield_quantity && (
-                          <p className="text-xs text-blue-600 font-medium">Qty: {crop.expected_yield_quantity} {(crop as any).expected_yield_quantity_uom || 'kg'}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold text-gray-900 text-sm">{cert.name}</p>
+                        {cert.verified && (
+                          <span className="flex items-center gap-0.5 text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                            <BadgeCheck className="w-3 h-3" /> Verified
+                          </span>
                         )}
                       </div>
-                      {profile.role === 'farmer' && (
-                        <div className="flex items-center gap-1 text-green-600 text-xs font-bold ml-3">
-                          <span>View Farmers</span>
-                          <i className="ph-bold ph-arrow-right text-xs"></i>
-                        </div>
+                      <p className="text-xs text-gray-500 mt-0.5">Issued by: {cert.issued_by}</p>
+                      {cert.issued_date && (
+                        <p className="text-xs text-gray-400">
+                          Issued: {new Date(cert.issued_date).toLocaleDateString('en-IN')}
+                          {cert.expiry_date && ` · Expires: ${new Date(cert.expiry_date).toLocaleDateString('en-IN')}`}
+                        </p>
                       )}
                     </div>
+                    {cert.certificate_url && (
+                      <a href={cert.certificate_url} target="_blank" rel="noreferrer"
+                        className="flex-shrink-0 p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition">
+                        <ExternalLink className="w-4 h-4 text-gray-500" />
+                      </a>
+                    )}
                   </div>
-                ))
-              ) : (
-                <div className="px-4 py-4 text-center text-gray-500 text-sm">No crops expertise added yet</div>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Equipment Section */}
-        {expandedSection === 'equipment' && (
-          <div className="border-t">
-            <div className="px-4 py-3 border-b flex items-center justify-between cursor-pointer hover:bg-gray-50"
-              onClick={() => { console.log('Closing equipment section'); setExpandedSection(null); }}>
-              <h3 className="font-bold text-gray-900">Equipment ({equipment.length})</h3>
-              <ChevronUp className="w-5 h-5 text-gray-600" />
-            </div>
-            <div className="divide-y">
-              {equipment && equipment.length > 0 ? (
-                equipment.map((equip) => (
+        {/* ── Crops / Commodities ─────────────────────────────────────────────── */}
+        {hasCrops && (
+          <div>
+            <SectionHeader
+              title={role === 'buyer' ? 'Commodities Interested' : 'Crops & Expertise'}
+              count={crops.length}
+              expanded={openSections.has('crops')}
+              onToggle={() => toggleSection('crops')}
+              icon={Wheat}
+              color="text-green-600"
+            />
+            {openSections.has('crops') && (
+              <div className="px-4 pb-3">
+                {/* Regular crops */}
+                {regularCrops.length > 0 && (
+                  <>
+                    {wasteCrops.length > 0 && (
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-2 mb-2">
+                        {role === 'buyer' ? 'Commodities' : 'Crops'}
+                      </p>
+                    )}
+                    <div className="space-y-2">
+                      {regularCrops.map((crop, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => role === 'farmer'
+                            ? router.push(`/nearby-farmers?crops=${encodeURIComponent(crop.crop_name)}`)
+                            : undefined}
+                          className={`rounded-2xl border border-gray-100 p-3 bg-gray-50 ${role === 'farmer' ? 'cursor-pointer hover:bg-green-50 hover:border-green-200 active:bg-green-100 transition' : ''}`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-base">🌾</span>
+                              <span className="font-black text-gray-900 text-sm">{crop.crop_name}</span>
+                              {crop.expertise_level && <ExpertiseBadge level={crop.expertise_level} />}
+                            </div>
+                            {role === 'farmer' && (
+                              <span className="text-xs text-green-600 font-bold flex items-center gap-0.5 flex-shrink-0">
+                                View <TrendingUp className="w-3 h-3" />
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                            {crop.years_of_experience > 0 && (
+                              <span className="text-xs text-gray-500">
+                                <span className="font-semibold text-gray-700">{crop.years_of_experience}y</span> experience
+                              </span>
+                            )}
+                            {crop.expected_yield_date && (
+                              <span className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {role === 'buyer' ? 'Needed by' : 'Yield by'}: {new Date(crop.expected_yield_date).toLocaleDateString('en-IN')}
+                              </span>
+                            )}
+                            {crop.expected_yield_quantity && (
+                              <span className="text-xs text-blue-600 font-medium">
+                                Qty: {crop.expected_yield_quantity} {crop.expected_yield_quantity_uom || 'kg'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Crop Waste */}
+                {wasteCrops.length > 0 && (
+                  <>
+                    <p className="text-xs font-bold text-amber-500 uppercase tracking-widest mt-4 mb-2 flex items-center gap-1">
+                      <Recycle className="w-3.5 h-3.5" /> Crop Waste Interest
+                    </p>
+                    <div className="space-y-2">
+                      {wasteCrops.map((crop, idx) => (
+                        <div key={idx} className="rounded-2xl border border-amber-100 p-3 bg-amber-50">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-base">♻️</span>
+                            <span className="font-black text-amber-800 text-sm">{crop.crop_name}</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-700 uppercase">Waste</span>
+                          </div>
+                          {crop.expected_yield_quantity && (
+                            <p className="text-xs text-amber-600 mt-1">
+                              Qty: {crop.expected_yield_quantity} {crop.expected_yield_quantity_uom || 'kg'}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Equipment ───────────────────────────────────────────────────────── */}
+        {hasEquipment && (
+          <div>
+            <SectionHeader
+              title="Equipment Available"
+              count={equipment.length}
+              expanded={openSections.has('equipment')}
+              onToggle={() => toggleSection('equipment')}
+              icon={Tractor}
+              color="text-orange-600"
+            />
+            {openSections.has('equipment') && (
+              <div className="divide-y divide-gray-50">
+                {equipment.map((equip) => (
                   <button
                     key={equip.id}
                     onClick={() => router.push(`/machinery-details?id=${equip.id}`)}
-                    className="w-full px-4 py-4 flex gap-3 hover:bg-gray-50 transition text-left"
+                    className="w-full px-4 py-3 flex gap-3 hover:bg-gray-50 active:bg-gray-100 transition text-left"
                   >
                     <img
                       src={equip.image_url || 'https://via.placeholder.com/60'}
                       alt={equip.name}
-                      className="w-16 h-16 rounded object-cover"
+                      className="w-16 h-16 rounded-xl object-cover flex-shrink-0 bg-gray-100"
                     />
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900">{equip.name}</p>
-                      <p className="text-sm text-gray-600">Model: {equip.model}</p>
-                      <p className="text-sm text-green-600 font-semibold mt-1">₹{equip.daily_rate}/day</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-900 text-sm">{equip.name}</p>
+                      <p className="text-xs text-gray-500">Model: {equip.model}</p>
+                      {equip.condition && (
+                        <p className="text-xs text-gray-400">Condition: {equip.condition}</p>
+                      )}
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-sm font-black text-green-600">₹{equip.daily_rate.toLocaleString('en-IN')}/day</p>
+                        {equip.availability !== undefined && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${equip.availability ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                            {equip.availability ? 'Available' : 'Rented'}
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    <ExternalLink className="w-4 h-4 text-gray-300 flex-shrink-0 self-center" />
                   </button>
-                ))
-              ) : (
-                <div className="px-4 py-4 text-center text-gray-500 text-sm">No equipment available yet</div>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
+
+        {/* ── Followers ────────────────────────────────────────────────────────── */}
+        <div>
+          <SectionHeader
+            title="Followers"
+            count={followers.length}
+            expanded={openSections.has('followers')}
+            onToggle={() => toggleSection('followers')}
+            icon={Users}
+            color="text-indigo-600"
+          />
+          {openSections.has('followers') && (
+            <div className="divide-y divide-gray-50">
+              {!hasFollowers
+                ? <EmptyState text="No followers yet" />
+                : followers.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => router.push(f.id === user.id ? '/user-profile' : `/farmer-profile?id=${f.id}`)}
+                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition text-left"
+                  >
+                    <img src={f.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(f.name)}`}
+                      alt={f.name} className="w-10 h-10 rounded-full object-cover" />
+                    <p className="font-semibold text-gray-900 text-sm">{f.name}</p>
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Following ────────────────────────────────────────────────────────── */}
+        <div>
+          <SectionHeader
+            title="Following"
+            count={following.length}
+            expanded={openSections.has('following')}
+            onToggle={() => toggleSection('following')}
+            icon={UserCheck}
+            color="text-violet-600"
+          />
+          {openSections.has('following') && (
+            <div className="divide-y divide-gray-50">
+              {!hasFollowing
+                ? <EmptyState text="Not following anyone yet" />
+                : following.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => router.push(f.id === user.id ? '/user-profile' : `/farmer-profile?id=${f.id}`)}
+                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition text-left"
+                  >
+                    <img src={f.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(f.name)}`}
+                      alt={f.name} className="w-10 h-10 rounded-full object-cover" />
+                    <p className="font-semibold text-gray-900 text-sm">{f.name}</p>
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Reels Section */}
-      <div className="p-4">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Reels</h3>
-        {reels.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No reels yet</p>
+      {/* ── Reels Section ─────────────────────────────────────────────────────── */}
+      {hasReels && (
+        <div className="mt-2 bg-white border-y p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <PlayCircle className="w-5 h-5 text-red-500" />
+            <h3 className="text-base font-bold text-gray-900">Reels ({reels.length})</h3>
           </div>
-        ) : (
           <div className="grid grid-cols-3 gap-2">
             {reels.map((reel) => (
               <div
                 key={reel.id}
-                className="relative aspect-[9/16] rounded-xl overflow-hidden bg-black cursor-pointer group active:scale-95 transition-transform"
                 onClick={() => router.push(`/reels?reelId=${reel.id}&userId=${profile.id}`)}
+                className="relative aspect-[9/16] rounded-xl overflow-hidden bg-black cursor-pointer group active:scale-95 transition-transform"
               >
-                {/* Video thumbnail */}
                 <video
                   src={reel.video_url}
                   className="w-full h-full object-cover pointer-events-none"
@@ -649,37 +716,38 @@ function FarmerProfileContent() {
                   muted
                   poster={reel.thumbnail_url || undefined}
                 />
-
-                {/* Dark overlay */}
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-
-                {/* Play icon center */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity">
+                <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-                    <i className="ph-fill ph-play text-white text-lg ml-0.5"></i>
+                    <PlayCircle className="w-5 h-5 text-white" />
                   </div>
                 </div>
-
-                {/* Stats bottom */}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-2">
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-2">
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-0.5 text-white">
-                      <Heart className="w-3 h-3" />
-                      <span className="text-[10px] font-bold">{reel.likes || 0}</span>
-                    </div>
-                    <div className="flex items-center gap-0.5 text-white">
-                      <MessageSquare className="w-3 h-3" />
-                      <span className="text-[10px] font-bold">{reel.comments || 0}</span>
-                    </div>
+                    <span className="flex items-center gap-0.5 text-white text-[10px] font-bold">
+                      <Heart className="w-3 h-3" />{reel.likes || 0}
+                    </span>
+                    <span className="flex items-center gap-0.5 text-white text-[10px] font-bold">
+                      <MessageSquare className="w-3 h-3" />{reel.comments || 0}
+                    </span>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* In-App Call Modal */}
+      {/* ── Nothing to show fallback ──────────────────────────────────────────── */}
+      {!hasCrops && !hasEquipment && !hasCertificates && !hasReels && (
+        <div className="mt-8 text-center text-gray-400 px-6">
+          <Info className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+          <p className="font-semibold text-gray-500">No additional profile info yet</p>
+          <p className="text-sm mt-1">This user hasn't added crops, equipment, or certificates.</p>
+        </div>
+      )}
+
+      {/* ── In-App Call Modal ─────────────────────────────────────────────────── */}
       {showCallModal && profile && (
         <InAppCall
           isOpen={showCallModal}
@@ -691,21 +759,17 @@ function FarmerProfileContent() {
           userId={user?.id || ''}
         />
       )}
-
-      <div className="h-20"></div>
     </div>
   );
 }
 
 export default function FarmerProfilePage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-[100dvh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-        </div>
-      }
-    >
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[100dvh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600" />
+      </div>
+    }>
       <FarmerProfileContent />
     </Suspense>
   );
