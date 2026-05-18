@@ -518,7 +518,7 @@ function FarmerProfileContent() {
             {[
               { key: 'followers', label: 'Followers', count: profile.followers_count, icon: Users, show: true },
               { key: 'following', label: 'Following', count: profile.following_count, icon: UserCheck, show: true },
-              { key: 'crops', label: role === 'buyer' ? 'Crops' : 'Crops', count: profile.crops_count, icon: Wheat, show: true },
+              { key: 'crops', label: role === 'buyer' ? 'Crops/Commodities' : 'Crops/Commodities', count: profile.crops_count, icon: Wheat, show: true },
               { key: 'equipment', label: 'Equipment', count: profile.equipments_count, icon: Tractor, show: true },
             ].map(({ key, label, count, icon: Icon }) => (
               <button
@@ -565,7 +565,7 @@ function FarmerProfileContent() {
         {hasCrops && (
           <div>
             <SectionHeader
-              title={role === 'buyer' ? 'Commodities Interested' : 'Crops & Expertise'}
+              title={role === 'buyer' ? 'Crops/Commodities Interested' : 'Crops/Commodities'}
               count={crops.length}
               expanded={openSections.has('crops')}
               onToggle={() => toggleSection('crops')}
@@ -734,7 +734,7 @@ function FarmerProfileContent() {
                           {displayReels.length > 0 && (
                             <div className="bg-gray-900/[0.04] px-3 py-3 border-t border-dashed border-gray-200">
                               <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-                                <PlayCircle className="w-3 h-3" /> Reels for this crop
+                                <PlayCircle className="w-3 h-3" /> Tales for this crop
                               </p>
                               <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                                 {displayReels.map((reel) => (
@@ -891,7 +891,7 @@ function FarmerProfileContent() {
         <div className="mt-2 bg-white border-y p-4">
           <div className="flex items-center gap-2 mb-3">
             <PlayCircle className="w-5 h-5 text-red-500" />
-            <h3 className="text-base font-bold text-gray-900">Reels ({reels.length})</h3>
+            <h3 className="text-base font-bold text-gray-900">Tales ({reels.length})</h3>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {reels.map((reel) => (
