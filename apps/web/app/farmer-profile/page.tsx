@@ -806,35 +806,51 @@ function FarmerProfileContent() {
                 {equipment.length === 0 ? (
                   <EmptyState text="No equipment listed yet" />
                 ) : (
-                  equipment.map((equip) => (
-                    <button
-                      key={equip.id}
-                      onClick={() => router.push(`/machinery-details?id=${equip.id}`)}
-                      className="w-full px-4 py-3 flex gap-3 hover:bg-gray-50 active:bg-gray-100 transition text-left"
-                    >
-                      <img
-                        src={equip.image_url || 'https://via.placeholder.com/60'}
-                        alt={equip.name}
-                        className="w-16 h-16 rounded-xl object-cover flex-shrink-0 bg-gray-100"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-gray-900 text-sm">{equip.name}</p>
-                        <p className="text-xs text-gray-500">Model: {equip.model}</p>
-                        {equip.condition && (
-                          <p className="text-xs text-gray-400">Condition: {equip.condition}</p>
+                  equipment.map((equip: any, idx: number) => {
+                    const equipId   = equip.id   ?? idx;
+                    const equipName = equip.name  || equip.machinery_name || 'Unnamed Equipment';
+                    const equipModel = equip.model || equip.machinery_model || '';
+                    const equipRate  = equip.daily_rate ?? equip.rate ?? 0;
+                    const equipImg   = equip.image_url  || equip.image || '';
+                    const equipCond  = equip.condition  || '';
+                    const equipAvail = equip.availability ?? equip.is_available ?? null;
+
+                    return (
+                      <button
+                        key={equipId}
+                        onClick={() => router.push(`/machinery-details?id=${equipId}`)}
+                        className="w-full px-4 py-3 flex gap-3 hover:bg-gray-50 active:bg-gray-100 transition text-left"
+                      >
+                        {equipImg ? (
+                          <img
+                            src={equipImg}
+                            alt={equipName}
+                            className="w-16 h-16 rounded-xl object-cover flex-shrink-0 bg-gray-100"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
+                            <Tractor className="w-7 h-7 text-orange-300" />
+                          </div>
                         )}
-                        <div className="flex items-center justify-between mt-1">
-                          <p className="text-sm font-black text-green-600">₹{equip.daily_rate.toLocaleString('en-IN')}/day</p>
-                          {equip.availability !== undefined && (
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${equip.availability ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                              {equip.availability ? 'Available' : 'Rented'}
-                            </span>
-                          )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-gray-900 text-sm">{equipName}</p>
+                          {equipModel ? <p className="text-xs text-gray-500">Model: {equipModel}</p> : null}
+                          {equipCond  ? <p className="text-xs text-gray-400">Condition: {equipCond}</p> : null}
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="text-sm font-black text-green-600">
+                              ₹{Number(equipRate).toLocaleString('en-IN')}/day
+                            </p>
+                            {equipAvail !== null && (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${equipAvail ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                                {equipAvail ? 'Available' : 'Rented'}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <ExternalLink className="w-4 h-4 text-gray-300 flex-shrink-0 self-center" />
-                    </button>
-                  ))
+                        <ExternalLink className="w-4 h-4 text-gray-300 flex-shrink-0 self-center" />
+                      </button>
+                    );
+                  })
                 )}
               </div>
             )}

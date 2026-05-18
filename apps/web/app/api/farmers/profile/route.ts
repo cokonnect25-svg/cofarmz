@@ -191,6 +191,7 @@ export async function GET(request: Request) {
     }
 
     // ── Response ─────────────────────────────────────────────────────────────
+    console.log(`[profile] farmerId=${farmerId} equipment count=${equipment.length}`, equipment.slice(0, 2));
     return NextResponse.json({
       id: farmer.id,
       name: farmer.name,
