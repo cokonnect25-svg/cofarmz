@@ -76,18 +76,22 @@ export async function GET(request: Request) {
       `;
     } catch (e) { console.error("following:", e); }
 
-    // ── Crops ────────────────────────────────────────────────────────────────
+    // ── Crops (with cert fields inline) ─────────────────────────────────────
     let crops: any[] = [];
     try {
       crops = await sql`
         SELECT
+          id,
           crop_name,
           years_of_experience,
           expertise_level,
           expected_yield_date,
           expected_yield_quantity,
           expected_yield_quantity_uom,
-          is_crop_waste
+          is_crop_waste,
+          certificate_url,
+          grade,
+          certification_type
         FROM crops
         WHERE user_id = ${farmerId}
         ORDER BY crop_name
@@ -106,60 +110,9 @@ export async function GET(request: Request) {
       `;
     } catch (e) { console.error("equipment:", e); }
 
-    // ── Certificates ─────────────────────────────────────────────────────────
-    // Try joining via user_certificates → certificates table.
-    // Falls back gracefully if the table doesn't exist yet.
-    let certificates: any[] = [];
-    try {
-      // Primary: user_certificates join (most common schema)
-      certificates = await sql`
-        SELECT
-          uc.id,
-          c.name,
-          c.issuing_body  AS issued_by,
-          uc.issued_date,
-          uc.expiry_date,
-          uc.certificate_url,
-          uc.grade,
-          uc.verified,
-          uc.crop_name          -- the specific crop this cert covers (nullable)
-        FROM user_certificates uc
-        JOIN certificates c ON uc.certificate_id = c.id
-        WHERE uc.user_id = ${farmerId}
-        ORDER BY uc.issued_date DESC NULLS LAST
-      `;
-    } catch (e) {
-      // Fallback: maybe the table is just "certificates" with user_id directly
-      try {
-        certificates = await sql`
-          SELECT
-            id,
-            name,
-            issued_by,
-            issued_date,
-            expiry_date,
-            certificate_url,
-            grade,
-            verified,
-            crop_name
-          FROM certificates
-          WHERE user_id = ${farmerId}
-          ORDER BY issued_date DESC NULLS LAST
-        `;
-      } catch (e2) {
-        console.error("certificates fetch failed (both attempts):", e2);
-        certificates = [];
-      }
-    }
-
-    // Normalise: build crop_names array from the single crop_name column
-    // so the frontend matching logic works uniformly.
-    certificates = certificates.map((cert: any) => ({
-      ...cert,
-      crop_names: cert.crop_name
-        ? [cert.crop_name]
-        : [],          // empty = applies to all / not crop-specific
-    }));
+    // ── Certificates come from crops inline (certificate_url, grade, certification_type)
+    // No separate certificates table query needed.
+    const certificates: any[] = [];
 
     // ── Reels ────────────────────────────────────────────────────────────────
     let reels: any[] = [];

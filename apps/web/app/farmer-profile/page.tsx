@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, Suspense, useCallback } from 'react';
+import { useEffect, useState, Suspense, useCallback, useRef } from 'react';
 import {
   ArrowLeft, MessageCircle, Phone, MapPin, Heart, MessageSquare,
   ChevronUp, ChevronDown, Leaf, ShoppingCart, Award, Package,
@@ -72,6 +72,9 @@ interface Crop {
   expected_yield_quantity?: number | null;
   expected_yield_quantity_uom?: string;
   is_crop_waste: boolean;
+  certificate_url?: string | null;
+  grade?: string | null;
+  certification_type?: string | null;
   // linked data — populated client-side by matching crop_name
   certificates?: Certificate[];
   reels?: Reel[];
@@ -159,6 +162,106 @@ function SectionHeader({
 function EmptyState({ text }: { text: string }) {
   return (
     <div className="px-4 py-6 text-center text-gray-400 text-sm italic">{text}</div>
+  );
+}
+
+// ─── VideoThumb ───────────────────────────────────────────────────────────────
+// Auto-generates a thumbnail by seeking the video to 0.5s and drawing to canvas.
+// Falls back gracefully if the video is cross-origin or metadata can't load.
+
+function VideoThumb({
+  reel,
+  onClick,
+  small = false,
+}: {
+  reel: { id: string; video_url: string; thumbnail_url?: string; likes: number; comments: number };
+  onClick: (e: React.MouseEvent) => void;
+  small?: boolean;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [poster, setPoster] = useState<string>(reel.thumbnail_url || '');
+  const [captured, setCaptured] = useState(!!reel.thumbnail_url);
+
+  useEffect(() => {
+    if (reel.thumbnail_url) return; // already stored — nothing to do
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    const capture = () => {
+      try {
+        canvas.width = video.videoWidth || 320;
+        canvas.height = video.videoHeight || 568;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        setPoster(canvas.toDataURL('image/jpeg', 0.75));
+      } catch {
+        /* cross-origin — skip capture, video element will show */
+      } finally {
+        setCaptured(true);
+      }
+    };
+
+    const onMeta = () => { video.currentTime = 0.5; };
+    const onSeeked = () => capture();
+
+    video.addEventListener('loadedmetadata', onMeta);
+    video.addEventListener('seeked', onSeeked);
+    return () => {
+      video.removeEventListener('loadedmetadata', onMeta);
+      video.removeEventListener('seeked', onSeeked);
+    };
+  }, [reel.video_url, reel.thumbnail_url]);
+
+  const sizeClass = small ? 'w-24' : 'w-full';
+  const iconSize  = small ? 'w-7 h-7' : 'w-9 h-9';
+
+  return (
+    <div
+      onClick={onClick}
+      className={`relative ${sizeClass} aspect-[9/16] rounded-xl overflow-hidden bg-gray-900 cursor-pointer active:scale-95 transition-transform flex-shrink-0`}
+    >
+      {/* Hidden canvas for frame extraction */}
+      <canvas ref={canvasRef} className="hidden" />
+
+      {/* Hidden video for metadata + seek (only when no stored thumbnail) */}
+      {!reel.thumbnail_url && (
+        <video
+          ref={videoRef}
+          src={reel.video_url}
+          className={captured && poster ? 'hidden' : 'w-full h-full object-cover pointer-events-none'}
+          preload="metadata"
+          playsInline
+          muted
+          crossOrigin="anonymous"
+        />
+      )}
+
+      {/* Captured / stored poster */}
+      {poster && (
+        <img src={poster} alt="reel" className="absolute inset-0 w-full h-full object-cover" />
+      )}
+
+      {/* Overlays */}
+      <div className="absolute inset-0 bg-black/25" />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className={`${iconSize} rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30`}>
+          <PlayCircle className={`${small ? 'w-4 h-4' : 'w-5 h-5'} text-white`} />
+        </div>
+      </div>
+      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5">
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-0.5 text-white text-[10px] font-bold">
+            <Heart className={small ? 'w-2.5 h-2.5' : 'w-3 h-3'} />{reel.likes || 0}
+          </span>
+          <span className="flex items-center gap-0.5 text-white text-[10px] font-bold">
+            <MessageSquare className={small ? 'w-2.5 h-2.5' : 'w-3 h-3'} />{reel.comments || 0}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -430,18 +533,6 @@ function FarmerProfileContent() {
             ))}
           </div>
 
-          {/* Certificates quick badge */}
-          {hasCertificates && (
-            <button
-              onClick={() => toggleSection('certificates')}
-              className={`mt-3 flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold transition w-full ${openSections.has('certificates') ? `${rc.accentLight} ${rc.border} ${rc.accent}` : 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'}`}
-            >
-              <Award className="w-4 h-4 text-amber-500" />
-              {certificates.length} Certificate{certificates.length !== 1 ? 's' : ''} &amp; Verifications
-              {openSections.has('certificates') ? <ChevronUp className="w-4 h-4 ml-auto" /> : <ChevronDown className="w-4 h-4 ml-auto" />}
-            </button>
-          )}
-
           {/* ── Action Buttons ────────────────────────────────────────────── */}
           {!isOwnProfile && (
             <div className="flex gap-2 mt-4">
@@ -470,54 +561,6 @@ function FarmerProfileContent() {
       {/* ── Expandable Sections ───────────────────────────────────────────────── */}
       <div className="mt-2 bg-white border-y divide-y divide-gray-100">
 
-        {/* ── Certificates ───────────────────────────────────────────────────── */}
-        {hasCertificates && (
-          <div>
-            <SectionHeader
-              title="Certificates & Verifications"
-              count={certificates.length}
-              expanded={openSections.has('certificates')}
-              onToggle={() => toggleSection('certificates')}
-              icon={Award}
-              color="text-amber-600"
-            />
-            {openSections.has('certificates') && (
-              <div className="divide-y divide-gray-50 px-4 pb-2">
-                {certificates.map((cert) => (
-                  <div key={cert.id} className="py-3 flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                      <Award className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-bold text-gray-900 text-sm">{cert.name}</p>
-                        {cert.verified && (
-                          <span className="flex items-center gap-0.5 text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
-                            <BadgeCheck className="w-3 h-3" /> Verified
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-0.5">Issued by: {cert.issued_by}</p>
-                      {cert.issued_date && (
-                        <p className="text-xs text-gray-400">
-                          Issued: {new Date(cert.issued_date).toLocaleDateString('en-IN')}
-                          {cert.expiry_date && ` · Expires: ${new Date(cert.expiry_date).toLocaleDateString('en-IN')}`}
-                        </p>
-                      )}
-                    </div>
-                    {cert.certificate_url && (
-                      <a href={cert.certificate_url} target="_blank" rel="noreferrer"
-                        className="flex-shrink-0 p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition">
-                        <ExternalLink className="w-4 h-4 text-gray-500" />
-                      </a>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* ── Crops / Commodities ─────────────────────────────────────────────── */}
         {hasCrops && (
           <div>
@@ -533,31 +576,30 @@ function FarmerProfileContent() {
               <div className="px-4 pb-3 space-y-2 pt-1">
                 {crops.map((crop, idx) => {
                   const isOpen = expandedCropIdx === idx;
-                  const hasCropCerts = (crop.certificates?.length ?? 0) > 0;
-                  const hasCropReels = (crop.reels?.length ?? 0) > 0;
                   const isWaste = crop.is_crop_waste;
 
-                  // Certs that explicitly name this crop
-                  const specificCerts = certificates.filter(c =>
-                    Array.isArray(c.crop_names) && c.crop_names.length > 0
-                      ? c.crop_names.some((cn: string) => cn.toLowerCase() === crop.crop_name.toLowerCase())
-                      : false
-                  );
-                  // General certs (no crop_name set) — show on every crop
-                  const generalCerts = certificates.filter(c =>
-                    !Array.isArray(c.crop_names) || c.crop_names.length === 0
-                  );
-                  const displayCerts = specificCerts.length > 0
-                    ? specificCerts          // prefer specific matches
-                    : generalCerts;          // fall back to general certs
+                  // Cert data lives directly on the crop row
+                  const hasCert = !!(crop.certificate_url || crop.grade || crop.certification_type);
 
-                  const displayReels = (crop.reels && crop.reels.length > 0)
-                    ? crop.reels
-                    : reels.filter(r =>
-                        Array.isArray(r.crop_tags) && r.crop_tags.length > 0
-                          ? r.crop_tags.some((t: string) => t.toLowerCase() === crop.crop_name.toLowerCase())
-                          : (r.caption || '').toLowerCase().includes(crop.crop_name.toLowerCase())
-                      );
+                  // Reels: match by crop_tags, fall back to caption keyword
+                  const displayReels = reels.filter(r =>
+                    Array.isArray(r.crop_tags) && r.crop_tags.length > 0
+                      ? r.crop_tags.some((t: string) => t.toLowerCase() === crop.crop_name.toLowerCase())
+                      : (r.caption || '').toLowerCase().includes(crop.crop_name.toLowerCase())
+                  );
+
+                  // Find certification label
+                  const CERT_TYPES: Record<string, { label: string; icon: string }> = {
+                    organic:        { label: 'Organic Certified',                  icon: '🌿' },
+                    ipm:            { label: 'IPM (Low Pesticide)',                 icon: '🛡️' },
+                    gap:            { label: 'Good Agricultural Practices (GAP)',   icon: '✅' },
+                    natural:        { label: 'Natural Farming',                     icon: '🍃' },
+                    residue_free:   { label: 'Residue-Free',                        icon: '🧪' },
+                    premium:        { label: 'Premium Quality',                     icon: '⭐' },
+                    export_quality: { label: 'Export Quality',                      icon: '🌍' },
+                    other:          { label: 'Other',                               icon: '📜' },
+                  };
+                  const certType = crop.certification_type ? CERT_TYPES[crop.certification_type] : null;
 
                   return (
                     <div
@@ -581,10 +623,10 @@ function FarmerProfileContent() {
                             {isWaste && (
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-700 uppercase">Waste</span>
                             )}
-                            {displayCerts.length > 0 && (
+                            {hasCert && (
                               <span className="flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
                                 <Award className="w-2.5 h-2.5" />
-                                {displayCerts.length} cert{displayCerts.length !== 1 ? 's' : ''}
+                                {crop.grade ? `Grade ${crop.grade}` : 'Certified'}
                               </span>
                             )}
                             {displayReels.length > 0 && (
@@ -625,49 +667,60 @@ function FarmerProfileContent() {
                       {isOpen && (
                         <div className="border-t border-dashed border-gray-200">
 
-                          {/* Certificates & Grades */}
-                          {displayCerts.length > 0 ? (
+                          {/* ── Cert / Grade Panel ── */}
+                          {hasCert ? (
                             <div className="bg-yellow-50/70 px-3 py-3">
                               <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-2 flex items-center gap-1">
-                                <Award className="w-3 h-3" /> Certificates &amp; Grades
+                                <Award className="w-3 h-3" /> Certificate &amp; Grade
                               </p>
-                              <div className="space-y-2">
-                                {displayCerts.map((cert) => (
-                                  <div key={cert.id} className="flex items-start gap-2 bg-white rounded-xl p-2.5 border border-yellow-100 shadow-sm">
-                                    <div className="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
-                                      <Award className="w-4 h-4 text-yellow-600" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-1.5 flex-wrap">
-                                        <p className="font-bold text-gray-900 text-xs">{cert.name}</p>
-                                        {cert.grade && (
-                                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">
-                                            Grade: {cert.grade}
-                                          </span>
-                                        )}
-                                        {cert.verified && (
-                                          <span className="flex items-center gap-0.5 text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded-full">
-                                            <BadgeCheck className="w-2.5 h-2.5" /> Verified
-                                          </span>
-                                        )}
-                                      </div>
-                                      <p className="text-[11px] text-gray-500 mt-0.5">By: {cert.issued_by}</p>
-                                      {cert.issued_date && (
-                                        <p className="text-[11px] text-gray-400">
-                                          {new Date(cert.issued_date).toLocaleDateString('en-IN')}
-                                          {cert.expiry_date && ` – ${new Date(cert.expiry_date).toLocaleDateString('en-IN')}`}
-                                        </p>
-                                      )}
-                                    </div>
-                                    {cert.certificate_url && (
-                                      <a href={cert.certificate_url} target="_blank" rel="noreferrer"
-                                        onClick={e => e.stopPropagation()}
-                                        className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition flex-shrink-0">
-                                        <ExternalLink className="w-3.5 h-3.5 text-gray-500" />
-                                      </a>
-                                    )}
+                              <div className="bg-white rounded-xl p-3 border border-yellow-100 shadow-sm space-y-2">
+
+                                {/* Grade */}
+                                {crop.grade && (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
+                                      <span className="w-6 h-6 rounded-lg bg-yellow-100 flex items-center justify-center text-sm">🏅</span>
+                                      Grade
+                                    </span>
+                                    <span className="text-sm font-black text-yellow-700 bg-yellow-50 px-3 py-0.5 rounded-full border border-yellow-200">
+                                      {crop.grade}
+                                    </span>
                                   </div>
-                                ))}
+                                )}
+
+                                {/* Certification type */}
+                                {certType && (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
+                                      <span className="w-6 h-6 rounded-lg bg-green-100 flex items-center justify-center text-sm">{certType.icon}</span>
+                                      Certification
+                                    </span>
+                                    <span className="text-xs font-black text-green-700 bg-green-50 px-3 py-0.5 rounded-full border border-green-200">
+                                      {certType.label}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Certificate document link */}
+                                {crop.certificate_url && (
+                                  <div className="flex items-center justify-between pt-1 border-t border-yellow-100">
+                                    <span className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
+                                      <span className="w-6 h-6 rounded-lg bg-indigo-100 flex items-center justify-center text-sm">
+                                        {crop.certificate_url.toLowerCase().endsWith('.pdf') ? '📄' : '🖼️'}
+                                      </span>
+                                      Document
+                                    </span>
+                                    <a
+                                      href={crop.certificate_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      onClick={e => e.stopPropagation()}
+                                      className="flex items-center gap-1 text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200 hover:bg-indigo-100 transition"
+                                    >
+                                      View <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           ) : (
@@ -685,37 +738,15 @@ function FarmerProfileContent() {
                               </p>
                               <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                                 {displayReels.map((reel) => (
-                                  <div
+                                  <VideoThumb
                                     key={reel.id}
+                                    reel={reel}
+                                    small
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       router.push(`/reels?reelId=${reel.id}&userId=${profile!.id}`);
                                     }}
-                                    className="relative flex-shrink-0 w-24 aspect-[9/16] rounded-xl overflow-hidden bg-black cursor-pointer active:scale-95 transition-transform"
-                                  >
-                                    <video
-                                      src={reel.video_url}
-                                      className="w-full h-full object-cover pointer-events-none"
-                                      preload="metadata"
-                                      playsInline
-                                      muted
-                                      poster={reel.thumbnail_url || undefined}
-                                    />
-                                    <div className="absolute inset-0 bg-black/25" />
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                      <PlayCircle className="w-7 h-7 text-white/80" />
-                                    </div>
-                                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-1.5 py-1.5">
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="flex items-center gap-0.5 text-white text-[9px] font-bold">
-                                          <Heart className="w-2.5 h-2.5" />{reel.likes || 0}
-                                        </span>
-                                        <span className="flex items-center gap-0.5 text-white text-[9px] font-bold">
-                                          <MessageSquare className="w-2.5 h-2.5" />{reel.comments || 0}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
+                                  />
                                 ))}
                               </div>
                               {displayReels[0]?.caption && (
@@ -864,36 +895,11 @@ function FarmerProfileContent() {
           </div>
           <div className="grid grid-cols-3 gap-2">
             {reels.map((reel) => (
-              <div
+              <VideoThumb
                 key={reel.id}
+                reel={reel}
                 onClick={() => router.push(`/reels?reelId=${reel.id}&userId=${profile.id}`)}
-                className="relative aspect-[9/16] rounded-xl overflow-hidden bg-black cursor-pointer group active:scale-95 transition-transform"
-              >
-                <video
-                  src={reel.video_url}
-                  className="w-full h-full object-cover pointer-events-none"
-                  preload="metadata"
-                  playsInline
-                  muted
-                  poster={reel.thumbnail_url || undefined}
-                />
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-                    <PlayCircle className="w-5 h-5 text-white" />
-                  </div>
-                </div>
-                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-2">
-                  <div className="flex items-center gap-2">
-                    <span className="flex items-center gap-0.5 text-white text-[10px] font-bold">
-                      <Heart className="w-3 h-3" />{reel.likes || 0}
-                    </span>
-                    <span className="flex items-center gap-0.5 text-white text-[10px] font-bold">
-                      <MessageSquare className="w-3 h-3" />{reel.comments || 0}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              />
             ))}
           </div>
         </div>
