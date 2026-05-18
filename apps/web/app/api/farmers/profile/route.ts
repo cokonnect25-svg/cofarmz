@@ -6,14 +6,13 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const farmerId = searchParams.get("farmerId") || searchParams.get("userId") || searchParams.get("id");
-    const tab = searchParams.get("tab");
     const currentUserId = request.headers.get("x-user-id");
 
     if (!farmerId) {
       return NextResponse.json({ error: "Missing farmerId" }, { status: 400 });
     }
 
-    // Fetch farmer profile with role information
+    // ── Core profile ────────────────────────────────────────────────────────
     const farmers = await sql`
       SELECT
         u.id, u.name, u.email, u.phone, u.image, u.location,
@@ -32,47 +31,33 @@ export async function GET(request: Request) {
     }
 
     const farmer = farmers[0];
-    
-    // Get counts
-    let followers_count = 0;
-    let following_count = 0;
-    let crops_count = 0;
-    let equipments_count = 0;
-    let crops: any[] = [];
-    let equipment: any[] = [];
-    let followers: any[] = [];
-    let following: any[] = [];
+
+    // ── Counts ───────────────────────────────────────────────────────────────
+    let followers_count = 0, following_count = 0, crops_count = 0, equipments_count = 0;
 
     try {
-      const result = await sql`SELECT COUNT(*) as count FROM follows WHERE following_id = ${farmerId}`;
-      followers_count = parseInt(String(result?.[0]?.count || 0));
-    } catch (e) {
-      console.error("Error counting followers:", e);
-    }
+      const r = await sql`SELECT COUNT(*) as count FROM follows WHERE following_id = ${farmerId}`;
+      followers_count = parseInt(String(r?.[0]?.count || 0));
+    } catch (e) { console.error("followers count:", e); }
 
     try {
-      const result = await sql`SELECT COUNT(*) as count FROM follows WHERE user_id = ${farmerId}`;
-      following_count = parseInt(String(result?.[0]?.count || 0));
-    } catch (e) {
-      console.error("Error counting following:", e);
-    }
+      const r = await sql`SELECT COUNT(*) as count FROM follows WHERE user_id = ${farmerId}`;
+      following_count = parseInt(String(r?.[0]?.count || 0));
+    } catch (e) { console.error("following count:", e); }
 
     try {
-      const result = await sql`SELECT COUNT(*) as count FROM crops WHERE user_id = ${farmerId}`;
-      crops_count = parseInt(String(result?.[0]?.count || 0));
-    } catch (e) {
-      console.error("Error counting crops:", e);
-    }
+      const r = await sql`SELECT COUNT(*) as count FROM crops WHERE user_id = ${farmerId}`;
+      crops_count = parseInt(String(r?.[0]?.count || 0));
+    } catch (e) { console.error("crops count:", e); }
 
     try {
-      const result = await sql`SELECT COUNT(*) as count FROM machinery WHERE owner_id = ${farmerId}`;
-      equipments_count = parseInt(String(result?.[0]?.count || 0));
-    } catch (e) {
-      console.error("Error counting equipment:", e);
-    }
+      const r = await sql`SELECT COUNT(*) as count FROM machinery WHERE owner_id = ${farmerId}`;
+      equipments_count = parseInt(String(r?.[0]?.count || 0));
+    } catch (e) { console.error("equipment count:", e); }
 
-    // Always fetch all data (followers, following, crops, equipment)
-    // This ensures data is available when sections are clicked
+    // ── Followers / Following ────────────────────────────────────────────────
+    let followers: any[] = [], following: any[] = [];
+
     try {
       followers = await sql`
         SELECT u.id, u.name, u.image FROM follows f
@@ -80,10 +65,7 @@ export async function GET(request: Request) {
         WHERE f.following_id = ${farmerId}
         ORDER BY f.created_at DESC
       `;
-    } catch (e) {
-      console.error("Error fetching followers:", e);
-      followers = [];
-    }
+    } catch (e) { console.error("followers:", e); }
 
     try {
       following = await sql`
@@ -92,70 +74,153 @@ export async function GET(request: Request) {
         WHERE f.user_id = ${farmerId}
         ORDER BY f.created_at DESC
       `;
-    } catch (e) {
-      console.error("Error fetching following:", e);
-      following = [];
-    }
+    } catch (e) { console.error("following:", e); }
 
+    // ── Crops ────────────────────────────────────────────────────────────────
+    let crops: any[] = [];
     try {
-      crops = await sql`SELECT crop_name, years_of_experience, expertise_level, is_crop_waste FROM crops WHERE user_id = ${farmerId} LIMIT 50`;
-    } catch (e) {
-      console.error("Error fetching crops:", e);
-      crops = [];
-    }
+      crops = await sql`
+        SELECT
+          crop_name,
+          years_of_experience,
+          expertise_level,
+          expected_yield_date,
+          expected_yield_quantity,
+          expected_yield_quantity_uom,
+          is_crop_waste
+        FROM crops
+        WHERE user_id = ${farmerId}
+        ORDER BY crop_name
+        LIMIT 50
+      `;
+    } catch (e) { console.error("crops:", e); }
 
+    // ── Equipment ────────────────────────────────────────────────────────────
+    let equipment: any[] = [];
     try {
-      equipment = await sql`SELECT id, name, model, daily_rate, image_url FROM machinery WHERE owner_id = ${farmerId} LIMIT 50`;
+      equipment = await sql`
+        SELECT id, name, model, daily_rate, image_url, condition, availability
+        FROM machinery
+        WHERE owner_id = ${farmerId}
+        LIMIT 50
+      `;
+    } catch (e) { console.error("equipment:", e); }
+
+    // ── Certificates ─────────────────────────────────────────────────────────
+    // Try joining via user_certificates → certificates table.
+    // Falls back gracefully if the table doesn't exist yet.
+    let certificates: any[] = [];
+    try {
+      // Primary: user_certificates join (most common schema)
+      certificates = await sql`
+        SELECT
+          uc.id,
+          c.name,
+          c.issuing_body  AS issued_by,
+          uc.issued_date,
+          uc.expiry_date,
+          uc.certificate_url,
+          uc.grade,
+          uc.verified,
+          uc.crop_name          -- the specific crop this cert covers (nullable)
+        FROM user_certificates uc
+        JOIN certificates c ON uc.certificate_id = c.id
+        WHERE uc.user_id = ${farmerId}
+        ORDER BY uc.issued_date DESC NULLS LAST
+      `;
     } catch (e) {
-      console.error("Error fetching equipment:", e);
-      equipment = [];
+      // Fallback: maybe the table is just "certificates" with user_id directly
+      try {
+        certificates = await sql`
+          SELECT
+            id,
+            name,
+            issued_by,
+            issued_date,
+            expiry_date,
+            certificate_url,
+            grade,
+            verified,
+            crop_name
+          FROM certificates
+          WHERE user_id = ${farmerId}
+          ORDER BY issued_date DESC NULLS LAST
+        `;
+      } catch (e2) {
+        console.error("certificates fetch failed (both attempts):", e2);
+        certificates = [];
+      }
     }
 
-    // Fetch user's reels
+    // Normalise: build crop_names array from the single crop_name column
+    // so the frontend matching logic works uniformly.
+    certificates = certificates.map((cert: any) => ({
+      ...cert,
+      crop_names: cert.crop_name
+        ? [cert.crop_name]
+        : [],          // empty = applies to all / not crop-specific
+    }));
+
+    // ── Reels ────────────────────────────────────────────────────────────────
     let reels: any[] = [];
     try {
       reels = await sql`
-        SELECT 
+        SELECT
           r.id, r.user_id, r.video_url, r.caption, r.thumbnail_url, r.created_at,
-          (SELECT COUNT(*) FROM reel_likes WHERE reel_id = r.id) as likes,
-          (SELECT COUNT(*) FROM reel_comments WHERE reel_id = r.id) as comments
+          (SELECT COUNT(*) FROM reel_likes    WHERE reel_id = r.id) AS likes,
+          (SELECT COUNT(*) FROM reel_comments WHERE reel_id = r.id) AS comments
         FROM reels r
         WHERE r.user_id = ${farmerId}
         ORDER BY r.created_at DESC
         LIMIT 50
       `;
 
-      // Add is_liked status if current user is logged in
       if (currentUserId) {
         reels = await Promise.all(reels.map(async (reel) => {
           try {
-            const likeCheck = await sql`SELECT COUNT(*) as count FROM reel_likes WHERE reel_id = ${reel.id} AND user_id = ${currentUserId}`;
-            return {
-              ...reel,
-              is_liked: parseInt(String(likeCheck?.[0]?.count || 0)) > 0
-            };
-          } catch (e) {
-            return { ...reel, is_liked: false };
-          }
+            const lc = await sql`
+              SELECT COUNT(*) as count FROM reel_likes
+              WHERE reel_id = ${reel.id} AND user_id = ${currentUserId}
+            `;
+            return { ...reel, is_liked: parseInt(String(lc?.[0]?.count || 0)) > 0 };
+          } catch { return { ...reel, is_liked: false }; }
         }));
       }
-    } catch (e) {
-      console.error("Error fetching reels:", e);
-      reels = [];
-    }
 
-    // Check if current user is following this farmer
+      // Attach crop tags from reel_crop_tags table (if it exists)
+      try {
+        const reelIds = reels.map((r: any) => r.id);
+        if (reelIds.length > 0) {
+          const tags = await sql`
+            SELECT reel_id, crop_name FROM reel_crop_tags
+            WHERE reel_id = ANY(${reelIds}::uuid[])
+          `;
+          const tagMap: Record<string, string[]> = {};
+          tags.forEach((t: any) => {
+            if (!tagMap[t.reel_id]) tagMap[t.reel_id] = [];
+            tagMap[t.reel_id].push(t.crop_name);
+          });
+          reels = reels.map((r: any) => ({ ...r, crop_tags: tagMap[r.id] || [] }));
+        }
+      } catch {
+        // reel_crop_tags table may not exist yet — crop matching falls back to caption
+        reels = reels.map((r: any) => ({ ...r, crop_tags: [] }));
+      }
+    } catch (e) { console.error("reels:", e); }
+
+    // ── Follow status ────────────────────────────────────────────────────────
     let isFollowing = false;
     if (currentUserId && currentUserId !== farmerId) {
       try {
-        const followCheck = await sql`SELECT COUNT(*) as count FROM follows WHERE user_id = ${currentUserId} AND following_id = ${farmerId}`;
-        isFollowing = parseInt(String(followCheck?.[0]?.count || 0)) > 0;
-      } catch (e) {
-        console.error("Error checking follow status:", e);
-      }
+        const fc = await sql`
+          SELECT COUNT(*) as count FROM follows
+          WHERE user_id = ${currentUserId} AND following_id = ${farmerId}
+        `;
+        isFollowing = parseInt(String(fc?.[0]?.count || 0)) > 0;
+      } catch (e) { console.error("follow check:", e); }
     }
 
-    // Reverse geocode if location text is missing but lat/lon exist
+    // ── Reverse geocode fallback ─────────────────────────────────────────────
     let locationText = farmer.location || "";
     if (!locationText && farmer.latitude && farmer.longitude) {
       try {
@@ -169,12 +234,11 @@ export async function GET(request: Request) {
           locationText = [addr.suburb || addr.village || addr.town, addr.city || addr.county, addr.state]
             .filter(Boolean).join(', ');
         }
-      } catch (e) {
-        // ignore geocode errors
-      }
+      } catch { /* ignore */ }
     }
 
-    const response = {
+    // ── Response ─────────────────────────────────────────────────────────────
+    return NextResponse.json({
       id: farmer.id,
       name: farmer.name,
       email: farmer.email,
@@ -188,15 +252,16 @@ export async function GET(request: Request) {
       following_count,
       crops_count,
       equipments_count,
-      crops: Array.isArray(crops) ? crops : [],
-      equipment: Array.isArray(equipment) ? equipment : [],
-      followers: Array.isArray(followers) ? followers : [],
-      following: Array.isArray(following) ? following : [],
-      reels: Array.isArray(reels) ? reels : [],
-      isFollowing
-    };
+      certificates_count: certificates.length,
+      crops:        Array.isArray(crops)        ? crops        : [],
+      equipment:    Array.isArray(equipment)    ? equipment    : [],
+      followers:    Array.isArray(followers)    ? followers    : [],
+      following:    Array.isArray(following)    ? following    : [],
+      reels:        Array.isArray(reels)        ? reels        : [],
+      certificates: Array.isArray(certificates) ? certificates : [],
+      isFollowing,
+    });
 
-    return NextResponse.json(response);
   } catch (error: any) {
     console.error("Farmer profile error:", error);
     return NextResponse.json(
@@ -205,4 +270,3 @@ export async function GET(request: Request) {
     );
   }
 }
-

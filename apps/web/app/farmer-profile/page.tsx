@@ -537,22 +537,27 @@ function FarmerProfileContent() {
                   const hasCropReels = (crop.reels?.length ?? 0) > 0;
                   const isWaste = crop.is_crop_waste;
 
-                  // Also match certs globally by crop name as fallback
-                  // (in case API doesn't return crop_names on certificates yet)
-                  const fallbackCerts = certificates.filter(c => {
-                    if (hasCropCerts) return false; // already have linked ones
-                    const haystack = [
-                      c.name,
-                      ...(Array.isArray(c.crop_names) ? c.crop_names : [])
-                    ].join(' ').toLowerCase();
-                    return haystack.includes(crop.crop_name.toLowerCase());
-                  });
-                  const displayCerts = hasCropCerts ? crop.certificates! : fallbackCerts;
-                  const displayReels = hasCropReels ? crop.reels! : reels.filter(r =>
-                    Array.isArray(r.crop_tags)
-                      ? r.crop_tags.some(t => t.toLowerCase() === crop.crop_name.toLowerCase())
-                      : (r.caption || '').toLowerCase().includes(crop.crop_name.toLowerCase())
+                  // Certs that explicitly name this crop
+                  const specificCerts = certificates.filter(c =>
+                    Array.isArray(c.crop_names) && c.crop_names.length > 0
+                      ? c.crop_names.some((cn: string) => cn.toLowerCase() === crop.crop_name.toLowerCase())
+                      : false
                   );
+                  // General certs (no crop_name set) — show on every crop
+                  const generalCerts = certificates.filter(c =>
+                    !Array.isArray(c.crop_names) || c.crop_names.length === 0
+                  );
+                  const displayCerts = specificCerts.length > 0
+                    ? specificCerts          // prefer specific matches
+                    : generalCerts;          // fall back to general certs
+
+                  const displayReels = (crop.reels && crop.reels.length > 0)
+                    ? crop.reels
+                    : reels.filter(r =>
+                        Array.isArray(r.crop_tags) && r.crop_tags.length > 0
+                          ? r.crop_tags.some((t: string) => t.toLowerCase() === crop.crop_name.toLowerCase())
+                          : (r.caption || '').toLowerCase().includes(crop.crop_name.toLowerCase())
+                      );
 
                   return (
                     <div
