@@ -103,7 +103,7 @@ export async function GET(request: Request) {
     let equipment: any[] = [];
     try {
       equipment = await sql`
-        SELECT id, name, model, daily_rate, image_url, condition, availability
+        SELECT id, name, model, daily_rate, image_url
         FROM machinery
         WHERE owner_id = ${farmerId}
         LIMIT 50
