@@ -7,7 +7,7 @@ import {
   ArrowLeft, MessageCircle, Phone, MapPin, Heart, MessageSquare,
   ChevronUp, ChevronDown, Leaf, ShoppingCart, Award, Package,
   Tractor, Users, UserCheck, Star, Calendar, TrendingUp,
-  BadgeCheck, Wheat, Info, ExternalLink, PlayCircle
+  BadgeCheck, Wheat, Info, ExternalLink, PlayCircle, X
 } from 'lucide-react';
 import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
@@ -304,6 +304,7 @@ function FarmerProfileContent() {
   const [showCallModal, setShowCallModal] = useState(false);
   const [callType] = useState<'audio' | 'video'>('audio');
   const [expandedCropIdx, setExpandedCropIdx] = useState<number | null>(null);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   // Manage which sections are open (multi-expand)
   const [openSections, setOpenSections] = useState<Set<string>>(() => {
@@ -450,11 +451,20 @@ function FarmerProfileContent() {
           {/* Avatar row */}
           <div className="flex justify-between items-end -mt-10 mb-3">
             <div className="relative">
-              <img
-                src={profile.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(profile.name)}`}
-                alt={profile.name}
-                className="w-20 h-20 rounded-full border-4 border-white object-cover shadow-md"
-              />
+              <button
+                onClick={() => setShowPhotoModal(true)}
+                className="relative focus:outline-none active:scale-95 transition-transform"
+              >
+                <img
+                  src={profile.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(profile.name)}`}
+                  alt={profile.name}
+                  className="w-20 h-20 rounded-full border-4 border-white object-cover shadow-md"
+                />
+                {/* view hint ring on hover */}
+                <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="text-white text-[10px] font-bold">View</span>
+                </div>
+              </button>
               {profile.is_verified && (
                 <BadgeCheck className="absolute bottom-0 right-0 w-5 h-5 text-blue-500 bg-white rounded-full" />
               )}
@@ -518,7 +528,7 @@ function FarmerProfileContent() {
             {[
               { key: 'followers', label: 'Followers', count: profile.followers_count, icon: Users, show: true },
               { key: 'following', label: 'Following', count: profile.following_count, icon: UserCheck, show: true },
-              { key: 'crops', label: role === 'buyer' ? 'Crops/Commodities' : 'Crops/Commodities', count: profile.crops_count, icon: Wheat, show: true },
+              { key: 'crops', label: role === 'buyer' ? 'Crops' : 'Crops', count: profile.crops_count, icon: Wheat, show: true },
               { key: 'equipment', label: 'Equipment', count: profile.equipments_count, icon: Tractor, show: true },
             ].map(({ key, label, count, icon: Icon }) => (
               <button
@@ -565,7 +575,7 @@ function FarmerProfileContent() {
         {hasCrops && (
           <div>
             <SectionHeader
-              title={role === 'buyer' ? 'Crops/Commodities Interested' : 'Crops/Commodities'}
+              title={role === 'buyer' ? 'Commodities Interested' : 'Crops & Expertise'}
               count={crops.length}
               expanded={openSections.has('crops')}
               onToggle={() => toggleSection('crops')}
@@ -734,7 +744,7 @@ function FarmerProfileContent() {
                           {displayReels.length > 0 && (
                             <div className="bg-gray-900/[0.04] px-3 py-3 border-t border-dashed border-gray-200">
                               <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-                                <PlayCircle className="w-3 h-3" /> Tales for this crop
+                                <PlayCircle className="w-3 h-3" /> Reels for this crop
                               </p>
                               <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                                 {displayReels.map((reel) => (
@@ -781,11 +791,11 @@ function FarmerProfileContent() {
         )}
 
         {/* ── Equipment ───────────────────────────────────────────────────────── */}
-        {hasEquipment && (
+        {(hasEquipment || profile.equipments_count > 0) && (
           <div>
             <SectionHeader
               title="Equipment Available"
-              count={equipment.length}
+              count={profile.equipments_count}
               expanded={openSections.has('equipment')}
               onToggle={() => toggleSection('equipment')}
               icon={Tractor}
@@ -793,35 +803,39 @@ function FarmerProfileContent() {
             />
             {openSections.has('equipment') && (
               <div className="divide-y divide-gray-50">
-                {equipment.map((equip) => (
-                  <button
-                    key={equip.id}
-                    onClick={() => router.push(`/machinery-details?id=${equip.id}`)}
-                    className="w-full px-4 py-3 flex gap-3 hover:bg-gray-50 active:bg-gray-100 transition text-left"
-                  >
-                    <img
-                      src={equip.image_url || 'https://via.placeholder.com/60'}
-                      alt={equip.name}
-                      className="w-16 h-16 rounded-xl object-cover flex-shrink-0 bg-gray-100"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-900 text-sm">{equip.name}</p>
-                      <p className="text-xs text-gray-500">Model: {equip.model}</p>
-                      {equip.condition && (
-                        <p className="text-xs text-gray-400">Condition: {equip.condition}</p>
-                      )}
-                      <div className="flex items-center justify-between mt-1">
-                        <p className="text-sm font-black text-green-600">₹{equip.daily_rate.toLocaleString('en-IN')}/day</p>
-                        {equip.availability !== undefined && (
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${equip.availability ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                            {equip.availability ? 'Available' : 'Rented'}
-                          </span>
+                {equipment.length === 0 ? (
+                  <EmptyState text="No equipment listed yet" />
+                ) : (
+                  equipment.map((equip) => (
+                    <button
+                      key={equip.id}
+                      onClick={() => router.push(`/machinery-details?id=${equip.id}`)}
+                      className="w-full px-4 py-3 flex gap-3 hover:bg-gray-50 active:bg-gray-100 transition text-left"
+                    >
+                      <img
+                        src={equip.image_url || 'https://via.placeholder.com/60'}
+                        alt={equip.name}
+                        className="w-16 h-16 rounded-xl object-cover flex-shrink-0 bg-gray-100"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-900 text-sm">{equip.name}</p>
+                        <p className="text-xs text-gray-500">Model: {equip.model}</p>
+                        {equip.condition && (
+                          <p className="text-xs text-gray-400">Condition: {equip.condition}</p>
                         )}
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-sm font-black text-green-600">₹{equip.daily_rate.toLocaleString('en-IN')}/day</p>
+                          {equip.availability !== undefined && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${equip.availability ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                              {equip.availability ? 'Available' : 'Rented'}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <ExternalLink className="w-4 h-4 text-gray-300 flex-shrink-0 self-center" />
-                  </button>
-                ))}
+                      <ExternalLink className="w-4 h-4 text-gray-300 flex-shrink-0 self-center" />
+                    </button>
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -891,7 +905,7 @@ function FarmerProfileContent() {
         <div className="mt-2 bg-white border-y p-4">
           <div className="flex items-center gap-2 mb-3">
             <PlayCircle className="w-5 h-5 text-red-500" />
-            <h3 className="text-base font-bold text-gray-900">Tales ({reels.length})</h3>
+            <h3 className="text-base font-bold text-gray-900">Reels ({reels.length})</h3>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {reels.map((reel) => (
@@ -911,6 +925,46 @@ function FarmerProfileContent() {
           <Info className="w-10 h-10 mx-auto mb-2 text-gray-300" />
           <p className="font-semibold text-gray-500">No additional profile info yet</p>
           <p className="text-sm mt-1">This user hasn't added crops, equipment, or certificates.</p>
+        </div>
+      )}
+
+      {/* ── Profile Photo Modal ───────────────────────────────────────────────── */}
+      {showPhotoModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setShowPhotoModal(false)}
+        >
+          <div className="relative max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            {/* Close button */}
+            <button
+              onClick={() => setShowPhotoModal(false)}
+              className="absolute -top-10 right-0 p-2 text-white/80 hover:text-white transition"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Full-size photo */}
+            <img
+              src={profile.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(profile.name)}`}
+              alt={profile.name}
+              className="w-full aspect-square rounded-2xl object-cover shadow-2xl border-4 border-white/10"
+            />
+
+            {/* Name + role bar */}
+            <div className="mt-3 flex items-center gap-2 justify-center">
+              <p className="text-white font-bold text-lg">{profile.name}</p>
+              <span className={`flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${rc.badge}`}>
+                <RoleIcon className="w-3 h-3" />
+                {rc.label}
+              </span>
+              {profile.is_verified && <BadgeCheck className="w-5 h-5 text-blue-400" />}
+            </div>
+            {profile.location && (
+              <p className="text-white/60 text-xs text-center mt-1 flex items-center justify-center gap-1">
+                <MapPin className="w-3 h-3" />{profile.location}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
