@@ -74,15 +74,35 @@ export function useAuth() {
     return result;
   }
 
-  async function signUp(email: string, password: string, name: string) {
-    const result = await authClient.signUp.email({ email, password, name });
-    if (result.error) throw new Error(result.error.message || "Failed to create account");
-    if (isMobile && result.data?.user) {
-      storeMobileSession(result.data.user);
-      setMobileUser(result.data.user);
+async function signUp(email: string, password: string, name: string, role: 'farmer' | 'buyer' | 'supplier' | 'spo' = 'farmer') {
+  const result = await authClient.signUp.email({ email, password, name });
+  if (result.error) throw new Error(result.error.message || "Failed to create account");
+
+  // Save role to your backend immediately after account creation
+  if (result.data?.user?.id) {
+    try {
+      const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || '').replace(/\/$/, '');
+      await fetch(`${backendUrl}/api/users/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: result.data.user.id,
+          email: result.data.user.email,
+          role,
+          role_confirmed: true,   // skip the role modal on home page
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to save role after signup:', err);
     }
-    return result;
   }
+
+  if (isMobile && result.data?.user) {
+    storeMobileSession({ ...result.data.user, role });
+    setMobileUser({ ...result.data.user, role });
+  }
+  return result;
+}
 
   async function signOut() {
     clearMobileSession();

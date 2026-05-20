@@ -28,9 +28,10 @@ export async function GET(request: NextRequest) {
       sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS location TEXT`.catch(() => {}),
     ]);
 
-    const targetRole =
-      searchType === "farmers"  ? "farmer"  :
-      searchType === "supplier" ? "supplier" : "buyer";
+const targetRole =
+  searchType === "farmers"  ? "farmer"   :
+  searchType === "supplier" ? "supplier" :
+  searchType === "spo"      ? "spo"      : "buyer";
 
     // ── fetch users by role ─────────────────────────────────────────────────
     const users = await sql`
@@ -47,8 +48,10 @@ export async function GET(request: NextRequest) {
       WHERE (
         u.role = ${targetRole}
         OR (u.role IS NULL AND u.role_id = ${
-          targetRole === "farmer" ? 1 : targetRole === "supplier" ? 3 : 2
-        })
+  targetRole === "farmer"   ? 1 :
+  targetRole === "supplier" ? 3 :
+  targetRole === "spo"      ? 4 : 2
+})
       )
       ${currentUserId ? sql`AND u.id != ${currentUserId}` : sql``}
       GROUP BY u.id, u.name, u.email, u.image,

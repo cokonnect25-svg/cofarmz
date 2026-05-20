@@ -16,7 +16,7 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [userType, setUserType] = useState<'farmer' | 'buyer' | 'supplier'>('farmer');
+  const [userType, setUserType] = useState<'farmer' | 'buyer' | 'supplier' | 'spo'>('farmer');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -44,7 +44,7 @@ export default function SignupPage() {
 
     setIsLoading(true);
     try {
-      await signUp(email, password, name);
+      await signUp(email, password, name, userType);
       // Redirect to select-role which shows full Terms & Conditions and lets user pick their role
       window.location.replace('/select-role');
     } catch (err: any) {
@@ -167,42 +167,55 @@ export default function SignupPage() {
             {/* Account Type */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">I am a</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setUserType('farmer')}
-                  className={`py-3 px-4 rounded-xl border-2 font-semibold text-sm transition flex items-center justify-center gap-2 ${userType === 'farmer'
-                      ? 'border-green-600 bg-green-50 text-green-800'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                    }`}
-                >
-                  <span className="text-lg">🧑‍🌾</span>
-                  Farmer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUserType('buyer')}
-                  className={`py-3 px-4 rounded-xl border-2 font-semibold text-sm transition flex items-center justify-center gap-2 ${userType === 'buyer'
-                      ? 'border-green-600 bg-green-50 text-green-800'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                    }`}
-                >
-                  <span className="text-lg">🛒</span>
-                  Buyer
-                </button>
-                <button
-  type="button"
-  onClick={() => setUserType('supplier')}
-  className={`py-3 px-4 rounded-xl border-2 font-semibold text-sm transition flex items-center justify-center gap-2 ${
-    userType === 'supplier'
-      ? 'border-green-600 bg-green-50 text-green-800'
-      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-  }`}
->
-  <span className="text-lg">🏭</span>
-  supplier
-</button>
-              </div>
+<div className="grid grid-cols-2 gap-3">
+  <button
+    type="button"
+    onClick={() => setUserType('farmer')}
+    className={`py-3 px-4 rounded-xl border-2 font-semibold text-sm transition flex items-center justify-center gap-2 ${
+      userType === 'farmer'
+        ? 'border-green-600 bg-green-50 text-green-800'
+        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+    }`}
+  >
+    <span className="text-lg">🧑‍🌾</span> Farmer
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setUserType('buyer')}
+    className={`py-3 px-4 rounded-xl border-2 font-semibold text-sm transition flex items-center justify-center gap-2 ${
+      userType === 'buyer'
+        ? 'border-green-600 bg-green-50 text-green-800'
+        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+    }`}
+  >
+    <span className="text-lg">🛒</span> Buyer
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setUserType('supplier')}
+    className={`py-3 px-4 rounded-xl border-2 font-semibold text-sm transition flex items-center justify-center gap-2 ${
+      userType === 'supplier'
+        ? 'border-green-600 bg-green-50 text-green-800'
+        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+    }`}
+  >
+    <span className="text-lg">🏭</span> Supplier
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setUserType('spo')}
+    className={`py-3 px-4 rounded-xl border-2 font-semibold text-sm transition flex items-center justify-center gap-2 ${
+      userType === 'spo'
+        ? 'border-green-600 bg-green-50 text-green-800'
+        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+    }`}
+  >
+    <span className="text-lg">🏢</span> SPO
+  </button>
+</div>
             </div>
 
             {/* Name */}

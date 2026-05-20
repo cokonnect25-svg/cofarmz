@@ -74,6 +74,7 @@ function HomePageContent() {
   const [roleUpdating, setRoleUpdating] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [supplierResults, setsupplierResults] = useState<Farmer[]>([]);
+  const [spoResults, setSpoResults] = useState<Farmer[]>([]);
 
   
  
@@ -109,7 +110,7 @@ function HomePageContent() {
     checkRole();
   }, [user?.id]);
 
-  const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier') => {
+const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'spo') => {
     setRoleUpdating(true);
     try {
       const res = await fetch(getApiUrl('/api/users/profile'), {
@@ -154,8 +155,10 @@ const fetchMatches = (lat: number, lon: number) => {
     fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
 
     fetch(getApiUrl(`/api/nearby-farmers?type=supplier&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+
+    fetch(getApiUrl(`/api/nearby-farmers?type=spo&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
   ])
-    .then(([farmersData, buyersData, wasteBuyersData, suppliersData]) => {
+    .then(([farmersData, buyersData, wasteBuyersData, suppliersData, spoData]) => {
       const normalize = (arr: any[]) => arr.map((f: any) => ({
         ...f,
         crops: Array.isArray(f.crops)
@@ -176,6 +179,9 @@ const fetchMatches = (lat: number, lon: number) => {
 setsupplierResults(
   normalize(suppliersData).filter(s => s.role === 'supplier')
 );
+ setSpoResults(
+    normalize(Array.isArray(spoData) ? spoData : []).filter(s => s.role === 'spo')
+  );
     })
     .catch(console.error)
     .finally(() => setLoadingMatches(false));
@@ -570,6 +576,31 @@ setsupplierResults(
       : renderEmpty('No suppliers available nearby')}
   </div>
 </div>
+<div className="mb-4">
+  <div className="flex items-center justify-between mb-5">
+    <div>
+      <h2 className="text-2xl font-black text-gray-900 tracking-tight">
+        Nearby SPOs
+      </h2>
+      <p className="text-teal-600 text-xs font-bold uppercase tracking-wider">
+        Self Producer Organizations near you
+      </p>
+    </div>
+    <button
+      onClick={() => router.push('/nearby-farmers?type=spo')}
+      className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 hover:bg-teal-600 hover:text-white transition-all shadow-sm"
+    >
+      <i className="ph-bold ph-arrow-right"></i>
+    </button>
+  </div>
+  <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
+    {spoResults.length > 0
+      ? spoResults.slice(0, 10).map((p: any) =>
+          renderCard(p, 'bg-teal-50 text-teal-700')
+        )
+      : renderEmpty('No SPOs available nearby')}
+  </div>
+</div>
                   </div>
                 );
               })()}
@@ -865,6 +896,26 @@ setsupplierResults(
                   <div className="absolute right-6 animate-spin w-5 h-5 border-2 border-brand-600 border-t-transparent rounded-full" />
                 )}
               </button>
+              <button
+  onClick={() => agreedToTerms && handleSelectRole('spo')}
+  disabled={roleUpdating || !agreedToTerms}
+  className={`group relative flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${
+    agreedToTerms
+      ? 'border-gray-100 hover:border-brand-600 hover:bg-brand-50 cursor-pointer'
+      : 'border-gray-100 opacity-50 cursor-not-allowed'
+  }`}
+>
+  <div className="p-3 bg-gray-50 rounded-xl group-hover:bg-white transition-colors">
+    <i className="ph-fill ph-buildings text-2xl text-gray-600 group-hover:text-brand-600"></i>
+  </div>
+  <div>
+    <span className="block font-bold text-gray-900">I am an SPO</span>
+    <span className="text-xs text-gray-400">Self Producer Organization</span>
+  </div>
+  {roleUpdating && (
+    <div className="absolute right-6 animate-spin w-5 h-5 border-2 border-brand-600 border-t-transparent rounded-full" />
+  )}
+</button>
               </div>
             </div>
           </div>
