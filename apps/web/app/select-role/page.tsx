@@ -31,7 +31,7 @@ function SelectRoleContent() {
       .catch(() => { });
   }, [mounted, loading, user, router]);
 
-  const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier') => {
+const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'spo') => {
     if (!user?.email || selecting || !agreed) return;
     setSelecting(true);
     setError('');
@@ -196,6 +196,26 @@ function SelectRoleContent() {
   {agreed && (
     <i className="ph-bold ph-arrow-right text-purple-500 text-lg ml-auto"></i>
   )}
+</button>
+<button
+  onClick={() => handleSelectRole('spo')}
+  disabled={selecting || !agreed}
+  className={`w-full border-2 rounded-2xl p-4 flex items-center gap-4 transition-all text-left active:scale-[0.98] ${
+    agreed
+      ? 'bg-teal-50 hover:bg-teal-100 border-teal-200 hover:border-teal-500'
+      : 'bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed'
+  }`}
+>
+  <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${
+    agreed ? 'bg-teal-600' : 'bg-gray-300'
+  }`}>
+    <span className="text-2xl">🏢</span>
+  </div>
+  <div>
+    <p className="font-black text-gray-900">SPO</p>
+    <p className="text-gray-500 text-xs mt-0.5">Self Producer Organization</p>
+  </div>
+  {agreed && <i className="ph-bold ph-arrow-right text-teal-500 text-lg ml-auto"></i>}
 </button>
           </div>
 
