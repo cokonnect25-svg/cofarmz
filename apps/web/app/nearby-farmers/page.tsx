@@ -82,14 +82,15 @@ function NearbyFarmersContent() {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
 
-  const rawType = searchParams.get('type');
-  const initialType =
-    rawType === 'buyers'   ? 'buyers'   :
-    rawType === 'wastage'  ? 'wastage'  :
-    rawType === 'supplier' ? 'supplier' :
-    'farmers';
+const rawType = searchParams.get('type');
+const initialType =
+  rawType === 'buyers'   ? 'buyers'   :
+  rawType === 'wastage'  ? 'wastage'  :
+  rawType === 'supplier' ? 'supplier' :
+  rawType === 'spo'      ? 'spo'      :
+  'farmers';
 
-  const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 'supplier'>(initialType);
+const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 'supplier' | 'spo'>(initialType);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy]           = useState('nearby');
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -284,12 +285,12 @@ function NearbyFarmersContent() {
   };
 
   // ── core fetch ──────────────────────────────────────────────────────────────
-  const fetchNearbyFarmers = async (
-    latitude: number,
-    longitude: number,
-    type: 'farmers' | 'buyers' | 'wastage' | 'supplier' = 'farmers',
-    overrideFilters?: typeof filters,
-  ) => {
+const fetchNearbyFarmers = async (
+  latitude: number,
+  longitude: number,
+  type: 'farmers' | 'buyers' | 'wastage' | 'supplier' | 'spo' = 'farmers',
+  overrideFilters?: typeof filters,
+) => {
     // Use explicitly-passed filters first, then the always-current ref
     const f = overrideFilters ?? filtersRef.current;
     setLoadingFarmers(true);
@@ -365,10 +366,11 @@ function NearbyFarmersContent() {
                 <i className="ph-bold ph-arrow-left text-lg"></i>
               </button>
               <h1 className="text-2xl font-bold text-gray-900">
-                {searchType === 'farmers'  ? 'Nearby Farmers'    :
-                 searchType === 'buyers'   ? 'Nearby Buyers'     :
-                 searchType === 'wastage'  ? 'Crop Waste Buyers' :
-                 searchType === 'supplier' ? 'Nearby Suppliers'  : 'Nearby'}
+{searchType === 'farmers'  ? 'Nearby Farmers'    :
+ searchType === 'buyers'   ? 'Nearby Buyers'     :
+ searchType === 'wastage'  ? 'Crop Waste Buyers' :
+ searchType === 'supplier' ? 'Nearby Suppliers'  :
+ searchType === 'spo'      ? 'Nearby SPOs'       : 'Nearby'}
               </h1>
             </div>
             <button
@@ -381,20 +383,23 @@ function NearbyFarmersContent() {
 
           {/* Tab toggle */}
           <div className="flex gap-2 mb-4">
-            {([ 
-              { key: 'farmers',  label: 'Farmers',   icon: 'ph-leaf',          active: 'bg-brand-700', inactive: 'bg-gray-100 text-gray-700' },
-              { key: 'buyers',   label: 'Buyers',    icon: 'ph-shopping-cart', active: 'bg-brand-700', inactive: 'bg-gray-100 text-gray-700' },
-              { key: 'wastage',  label: 'Wastage',   icon: 'ph-recycle',       active: 'bg-amber-600', inactive: 'bg-gray-100 text-gray-700' },
-              { key: 'supplier', label: 'Suppliers', icon: null,               active: 'bg-purple-600',inactive: 'bg-gray-100 text-gray-700' },
-            ] as const).map(tab => (
+{([ 
+  { key: 'farmers',  label: 'Farmers',   icon: 'ph-leaf',          active: 'bg-brand-700',  inactive: 'bg-gray-100 text-gray-700' },
+  { key: 'buyers',   label: 'Buyers',    icon: 'ph-shopping-cart', active: 'bg-brand-700',  inactive: 'bg-gray-100 text-gray-700' },
+  { key: 'wastage',  label: 'Wastage',   icon: 'ph-recycle',       active: 'bg-amber-600',  inactive: 'bg-gray-100 text-gray-700' },
+  { key: 'supplier', label: 'Suppliers', icon: null,               active: 'bg-purple-600', inactive: 'bg-gray-100 text-gray-700' },
+  { key: 'spo',      label: 'SPOs',      icon: null,               active: 'bg-teal-600',   inactive: 'bg-gray-100 text-gray-700' },
+] as const).map(tab => (
               <button
                 key={tab.key}
                 onClick={() => { setSearchType(tab.key as any); setSortBy('nearby'); }}
                 className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === tab.key ? `${tab.active} text-white` : tab.inactive}`}
               >
-                {tab.icon
-                  ? <><i className={`ph-bold ${tab.icon} mr-1`}></i>{tab.label}</>
-                  : <>🏭 {tab.label}</>}
+{tab.icon
+  ? <><i className={`ph-bold ${tab.icon} mr-1`}></i>{tab.label}</>
+  : tab.key === 'spo'
+    ? <>🏢 {tab.label}</>
+    : <>🏭 {tab.label}</>}
               </button>
             ))}
           </div>
@@ -603,9 +608,12 @@ function NearbyFarmersContent() {
         {/* Results header */}
         <section className="px-6 mb-4 relative z-10 flex items-center justify-between">
           <p className="text-sm font-medium text-gray-500">
-            {loadingFarmers ? 'Searching...' : `Found ${farmers.length} ${
-              searchType === 'farmers' ? 'farmer' : searchType === 'wastage' ? 'wastage buyer' : searchType === 'supplier' ? 'supplier' : 'buyer'
-            }${farmers.length !== 1 ? 's' : ''}`}
+{loadingFarmers ? 'Searching...' : `Found ${farmers.length} ${
+  searchType === 'farmers'  ? 'farmer'       :
+  searchType === 'wastage'  ? 'wastage buyer':
+  searchType === 'supplier' ? 'supplier'     :
+  searchType === 'spo'      ? 'SPO'          : 'buyer'
+}${farmers.length !== 1 ? 's' : ''}`}
           </p>
           <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-900 shadow-soft font-medium text-sm" onClick={() => setShowSortMenu(true)}>
             <i className="ph-bold ph-funnel text-base"></i>
@@ -648,9 +656,16 @@ function NearbyFarmersContent() {
               <div className="text-center py-10">
                 <i className="ph-bold ph-magnifying-glass text-4xl text-gray-300 mb-3 block"></i>
                 <p className="text-gray-500 font-medium">
-                  {searchQuery
-                    ? `No ${searchType === 'farmers' ? 'farmers' : searchType === 'wastage' ? 'wastage buyers' : searchType === 'supplier' ? 'suppliers' : 'buyers'} found matching "${searchQuery}"`
-                    : `No ${searchType === 'farmers' ? 'farmers' : searchType === 'wastage' ? 'wastage buyers' : searchType === 'supplier' ? 'suppliers' : 'buyers'} found with selected filters`}
+                  {(() => {
+  const label =
+    searchType === 'farmers'  ? 'farmers'       :
+    searchType === 'wastage'  ? 'wastage buyers' :
+    searchType === 'supplier' ? 'suppliers'      :
+    searchType === 'spo'      ? 'SPOs'           : 'buyers';
+  return searchQuery
+    ? `No ${label} found matching "${searchQuery}"`
+    : `No ${label} found with selected filters`;
+})()}
                 </p>
               </div>
             ) : (
@@ -676,15 +691,17 @@ function NearbyFarmersContent() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                          searchType === 'farmers'  ? 'bg-green-100 text-green-700'  :
-                          searchType === 'wastage'  ? 'bg-amber-100 text-amber-700'  :
-                          searchType === 'supplier' ? 'bg-purple-100 text-purple-700':
-                          'bg-blue-100 text-blue-700'}`}>
-                          {searchType === 'farmers'  ? '🌾 Farmer'         :
-                           searchType === 'wastage'  ? '♻️ Wastage Buyer'  :
-                           searchType === 'supplier' ? '🏭 Supplier'       :
-                           '🛒 Buyer'}
-                        </span>
+  searchType === 'farmers'  ? 'bg-green-100 text-green-700'  :
+  searchType === 'wastage'  ? 'bg-amber-100 text-amber-700'  :
+  searchType === 'supplier' ? 'bg-purple-100 text-purple-700':
+  searchType === 'spo'      ? 'bg-teal-100 text-teal-700'    :
+  'bg-blue-100 text-blue-700'}`}>
+  {searchType === 'farmers'  ? '🌾 Farmer'        :
+   searchType === 'wastage'  ? '♻️ Wastage Buyer' :
+   searchType === 'supplier' ? '🏭 Supplier'      :
+   searchType === 'spo'      ? '🏢 SPO'           :
+   '🛒 Buyer'}
+</span>
                         {farmer.rating && (
                           <div className="flex items-center gap-1 bg-amber-50 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
                             <i className="ph-fill ph-star text-amber-500 text-sm"></i>
@@ -715,10 +732,11 @@ function NearbyFarmersContent() {
                         <div className="flex flex-wrap gap-1.5 mb-3">
                           {displayCrops.slice(0, 5).map((crop, i) => (
                             <span key={i} className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                              searchType === 'farmers'  ? 'bg-green-100 text-green-800'  :
-                              searchType === 'wastage'  ? 'bg-amber-100 text-amber-800'  :
-                              searchType === 'supplier' ? 'bg-purple-100 text-purple-800':
-                              'bg-orange-100 text-orange-800'}`}>
+  searchType === 'farmers'  ? 'bg-green-100 text-green-800'  :
+  searchType === 'wastage'  ? 'bg-amber-100 text-amber-800'  :
+  searchType === 'supplier' ? 'bg-purple-100 text-purple-800':
+  searchType === 'spo'      ? 'bg-teal-100 text-teal-800'    :
+  'bg-orange-100 text-orange-800'}`}>
                               {searchType === 'farmers'  ? '🌾' :
                                searchType === 'wastage'  ? '♻️' :
                                searchType === 'supplier' ? '🏭' : '🛒'} {crop.crop_name}
@@ -760,7 +778,19 @@ function NearbyFarmersContent() {
                             <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
                           </button>
                         </>
-                      ) : (
+                      ) :  searchType === 'spo' ? (
+  <>
+    <button onClick={e => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`); }}
+      className="flex items-center gap-1.5 px-3 py-2 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors active:scale-95">
+      <i className="ph-bold ph-package text-teal-600 text-sm"></i>
+      <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Equipment</span>
+    </button>
+    <button onClick={e => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=followers`); }}
+      className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
+      <i className="ph-bold ph-users text-gray-600 text-sm"></i>
+      <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
+    </button>
+  </>) :(
                         <>
                           <button onClick={e => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=crops`); }} className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-shopping-bag text-orange-600 text-sm"></i>
