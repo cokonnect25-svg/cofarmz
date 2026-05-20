@@ -110,7 +110,7 @@ function HomePageContent() {
     checkRole();
   }, [user?.id]);
 
-const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'spo') => {
+const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'fpo') => {
     setRoleUpdating(true);
     try {
       const res = await fetch(getApiUrl('/api/users/profile'), {
@@ -143,7 +143,7 @@ const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'spo') =
             // 2. Fetch Relevant Crops
             const userCrops = profile.crops?.map((c: any) => c.crop_name) || [];
 
-           if (userCrops.length > 0 || profile.role === 'supplier' || profile.role === 'spo') {
+           if (userCrops.length > 0 || profile.role === 'supplier' || profile.role === 'fpo') {
 setLoadingMatches(true);
 
 const fetchMatches = (lat: number, lon: number) => {
@@ -156,7 +156,7 @@ const fetchMatches = (lat: number, lon: number) => {
 
     fetch(getApiUrl(`/api/nearby-farmers?type=supplier&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
 
-    fetch(getApiUrl(`/api/nearby-farmers?type=spo&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+    fetch(getApiUrl(`/api/nearby-farmers?type=fpo&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
   ])
     .then(([farmersData, buyersData, wasteBuyersData, suppliersData, spoData]) => {
       const normalize = (arr: any[]) => arr.map((f: any) => ({
@@ -180,7 +180,7 @@ setsupplierResults(
   normalize(suppliersData).filter(s => s.role === 'supplier')
 );
  setSpoResults(
-    normalize(Array.isArray(spoData) ? spoData : []).filter(s => s.role === 'spo')
+    normalize(Array.isArray(spoData) ? spoData : []).filter(s => s.role === 'fpo')
   );
     })
     .catch(console.error)
@@ -262,7 +262,7 @@ setsupplierResults(
       const uid = user?.id;
       if (!uid || !userProfile) return;
       const userCrops = userProfile.crops?.map((c: any) => c.crop_name) || [];
-     if (userProfile?.role !== 'supplier' && userProfile?.role !== 'spo' && userCrops.length === 0) return;
+     if (userProfile?.role !== 'supplier' && userProfile?.role !== 'fpo' && userCrops.length === 0) return;
       const uniqueCrops = [...new Set(userCrops)];
       setLoadingMatches(true);
       Promise.all([
@@ -472,7 +472,7 @@ setsupplierResults(
                 return (
                   <div>
                     {/* Complete profile prompt when no crops */}
-                   {userProfile?.role !== 'supplier' && userProfile?.role !== 'spo' && userCropNames.length === 0 && (
+                   {userProfile?.role !== 'supplier' && userProfile?.role !== 'fpo' && userCropNames.length === 0 && (
                       <div className="bg-gradient-to-br from-brand-50 to-emerald-50 rounded-3xl p-8 text-center border border-brand-100 mb-6 shadow-premium relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform"></div>
                         <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
@@ -580,14 +580,14 @@ setsupplierResults(
   <div className="flex items-center justify-between mb-5">
     <div>
       <h2 className="text-2xl font-black text-gray-900 tracking-tight">
-        Nearby SPOs
+        Nearby FPOs
       </h2>
       <p className="text-teal-600 text-xs font-bold uppercase tracking-wider">
         Self Producer Organizations near you
       </p>
     </div>
     <button
-      onClick={() => router.push('/nearby-farmers?type=spo')}
+      onClick={() => router.push('/nearby-farmers?type=fpo')}
       className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 hover:bg-teal-600 hover:text-white transition-all shadow-sm"
     >
       <i className="ph-bold ph-arrow-right"></i>
@@ -598,7 +598,7 @@ setsupplierResults(
       ? spoResults.slice(0, 10).map((p: any) =>
           renderCard(p, 'bg-teal-50 text-teal-700')
         )
-      : renderEmpty('No SPOs available nearby')}
+      : renderEmpty('No FPOs available nearby')}
   </div>
 </div>
                   </div>
@@ -897,7 +897,7 @@ setsupplierResults(
                 )}
               </button>
               <button
-  onClick={() => agreedToTerms && handleSelectRole('spo')}
+  onClick={() => agreedToTerms && handleSelectRole('fpo')}
   disabled={roleUpdating || !agreedToTerms}
   className={`group relative flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left ${
     agreedToTerms
@@ -909,7 +909,7 @@ setsupplierResults(
     <i className="ph-fill ph-buildings text-2xl text-gray-600 group-hover:text-brand-600"></i>
   </div>
   <div>
-    <span className="block font-bold text-gray-900">I am an SPO</span>
+    <span className="block font-bold text-gray-900">I am an FPO</span>
     <span className="text-xs text-gray-400">Self Producer Organization</span>
   </div>
   {roleUpdating && (

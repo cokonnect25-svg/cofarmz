@@ -386,7 +386,7 @@ function ProfileContent() {
   const [volume, setVolume] = useState(0);
   const videoRefsMap = useRef<{ [key: string]: HTMLVideoElement | null }>({});
   const [userReviews, setUserReviews] = useState<{ [key: number]: any }>({});
-  const [userRole, setUserRole] = useState<'farmer' | 'buyer' | 'supplier' | 'spo'>('buyer');
+  const [userRole, setUserRole] = useState<'farmer' | 'buyer' | 'supplier' | 'fpo'>('buyer');
   const [showCallModal, setShowCallModal] = useState(false);
   const [callRecipient, setCallRecipient] = useState<{ id: string; name: string; image: string } | null>(null);
   const [callType, setCallType] = useState<'audio' | 'video'>('audio');
@@ -415,7 +415,7 @@ function ProfileContent() {
   }, [mounted, user?.id]);
 
 useEffect(() => {
-  if (userRole === 'supplier' || userRole === 'spo') setExpandedSection('equipment');
+  if (userRole === 'supplier' || userRole === 'fpo') setExpandedSection('equipment');
 }, [userRole]);
 
 
@@ -944,7 +944,7 @@ useEffect(() => {
 <p className="text-xs text-gray-500 mt-0.5">
   {userRole === 'farmer' ? '🌾 Farmer Profile' 
   : userRole === 'supplier' ? '🏭 Supplier Profile' 
-  : userRole === 'spo' ? '🏢 SPO Profile'
+  : userRole === 'fpo' ? '🏢 FPO Profile'
   : '🛒 Buyer Profile'}
 </p>        </div>
         <div className="flex items-center gap-2">
@@ -980,17 +980,17 @@ useEffect(() => {
             <div className={`px-3 py-1 rounded-full ${
   userRole === 'farmer' ? 'bg-green-100' 
   : userRole === 'supplier' ? 'bg-purple-100' 
-  : userRole === 'spo' ? 'bg-teal-100'
+  : userRole === 'fpo' ? 'bg-teal-100'
   : 'bg-blue-100'}`}>
   <span className={`text-xs font-semibold ${
     userRole === 'farmer' ? 'text-green-700' 
     : userRole === 'supplier' ? 'text-purple-700' 
-    : userRole === 'spo' ? 'text-teal-700'
+    : userRole === 'fpo' ? 'text-teal-700'
     : 'text-blue-700'}`}>
     {userRole === 'farmer' ? '🌾 Farmer' 
     : userRole === 'buyer' ? '🛒 Buyer' 
     : userRole === 'supplier' ? '🏭 Supplier'
-    : '🏢 SPO'}
+    : '🏢 FPO'}
   </span>
 </div>
           </div>
@@ -1009,7 +1009,7 @@ useEffect(() => {
               <p className="font-bold text-lg text-gray-900">{followingCount}</p>
               <p className="text-xs text-gray-600">Following</p>
             </button>
-           {userRole !== 'supplier' && userRole !== 'spo' && (
+           {userRole !== 'supplier' && userRole !== 'fpo' && (
               <button onClick={() => { if (expandedSection === 'crops') { setExpandedSection(null); } else { setExpandedSection('crops'); fetchUserCrops(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
                 <p className="font-bold text-lg text-gray-900">{farmerCrops.length}</p>
                 <p className="text-xs text-gray-600">Crops</p>
@@ -1107,7 +1107,7 @@ useEffect(() => {
                     </div>
                   ))}</div>
                 }
-               {userRole !== 'supplier' && userRole !== 'spo' && (
+               {userRole !== 'supplier' && userRole !== 'fpo' && (
 
                   <button onClick={() => setShowAddCropForm(true)} className="w-full mt-4 text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2">
                     <i className="ph-bold ph-plus text-sm"></i>Add Crop

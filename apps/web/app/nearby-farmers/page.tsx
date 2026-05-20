@@ -87,10 +87,10 @@ const initialType =
   rawType === 'buyers'   ? 'buyers'   :
   rawType === 'wastage'  ? 'wastage'  :
   rawType === 'supplier' ? 'supplier' :
-  rawType === 'spo'      ? 'spo'      :
+  rawType === 'fpo'      ? 'fpo'      :
   'farmers';
 
-const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 'supplier' | 'spo'>(initialType);
+const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 'supplier' | 'fpo'>(initialType);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy]           = useState('nearby');
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -288,7 +288,7 @@ const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 
 const fetchNearbyFarmers = async (
   latitude: number,
   longitude: number,
-  type: 'farmers' | 'buyers' | 'wastage' | 'supplier' | 'spo' = 'farmers',
+  type: 'farmers' | 'buyers' | 'wastage' | 'supplier' | 'fpo' = 'farmers',
   overrideFilters?: typeof filters,
 ) => {
     // Use explicitly-passed filters first, then the always-current ref
@@ -370,7 +370,7 @@ const fetchNearbyFarmers = async (
  searchType === 'buyers'   ? 'Nearby Buyers'     :
  searchType === 'wastage'  ? 'Crop Waste Buyers' :
  searchType === 'supplier' ? 'Nearby Suppliers'  :
- searchType === 'spo'      ? 'Nearby SPOs'       : 'Nearby'}
+ searchType === 'fpo'      ? 'Nearby FPOs'       : 'Nearby'}
               </h1>
             </div>
             <button
@@ -388,7 +388,7 @@ const fetchNearbyFarmers = async (
     { key: 'buyers',   label: 'Buyers',    emoji: '🛒', active: 'bg-brand-700'  },
     { key: 'wastage',  label: 'Wastage',   emoji: '♻️', active: 'bg-amber-600'  },
     { key: 'supplier', label: 'Suppliers', emoji: '🏭', active: 'bg-purple-600' },
-    { key: 'spo',      label: 'SPOs',      emoji: '🏢', active: 'bg-teal-600'   },
+    { key: 'fpo',      label: 'FPOs',      emoji: '🏢', active: 'bg-teal-600'   },
   ] as const).map(tab => (
     <button
       key={tab.key}
@@ -613,7 +613,7 @@ const fetchNearbyFarmers = async (
   searchType === 'farmers'  ? 'farmer'       :
   searchType === 'wastage'  ? 'wastage buyer':
   searchType === 'supplier' ? 'supplier'     :
-  searchType === 'spo'      ? 'SPO'          : 'buyer'
+  searchType === 'fpo'      ? 'FPO'          : 'buyer'
 }${farmers.length !== 1 ? 's' : ''}`}
           </p>
           <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-900 shadow-soft font-medium text-sm" onClick={() => setShowSortMenu(true)}>
@@ -662,7 +662,7 @@ const fetchNearbyFarmers = async (
     searchType === 'farmers'  ? 'farmers'       :
     searchType === 'wastage'  ? 'wastage buyers' :
     searchType === 'supplier' ? 'suppliers'      :
-    searchType === 'spo'      ? 'SPOs'           : 'buyers';
+    searchType === 'fpo'      ? 'FPOs'           : 'buyers';
   return searchQuery
     ? `No ${label} found matching "${searchQuery}"`
     : `No ${label} found with selected filters`;
@@ -677,7 +677,7 @@ const fetchNearbyFarmers = async (
                     {/* Header row */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3 flex-1">
-                        <img src={farmer.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${farmer.id}`} alt={farmer.name} className="w-12 h-12 rounded-full object-cover bg-gray-100" />
+                        <img src={farmer.image} alt={farmer.name} className="w-12 h-12 rounded-full object-cover bg-gray-100" />
                         <div className="flex-1 min-w-0">
                           <h3 className="font-bold text-gray-900 truncate">{farmer.name}</h3>
                           <p className="text-xs text-gray-500 flex items-center gap-1">
@@ -695,12 +695,12 @@ const fetchNearbyFarmers = async (
   searchType === 'farmers'  ? 'bg-green-100 text-green-700'  :
   searchType === 'wastage'  ? 'bg-amber-100 text-amber-700'  :
   searchType === 'supplier' ? 'bg-purple-100 text-purple-700':
-  searchType === 'spo'      ? 'bg-teal-100 text-teal-700'    :
+  searchType === 'fpo'      ? 'bg-teal-100 text-teal-700'    :
   'bg-blue-100 text-blue-700'}`}>
   {searchType === 'farmers'  ? '🌾 Farmer'        :
    searchType === 'wastage'  ? '♻️ Wastage Buyer' :
    searchType === 'supplier' ? '🏭 Supplier'      :
-   searchType === 'spo'      ? '🏢 SPO'           :
+   searchType === 'fpo'      ? '🏢 FPO'           :
    '🛒 Buyer'}
 </span>
                         {farmer.rating && (
@@ -736,7 +736,7 @@ const fetchNearbyFarmers = async (
   searchType === 'farmers'  ? 'bg-green-100 text-green-800'  :
   searchType === 'wastage'  ? 'bg-amber-100 text-amber-800'  :
   searchType === 'supplier' ? 'bg-purple-100 text-purple-800':
-  searchType === 'spo'      ? 'bg-teal-100 text-teal-800'    :
+  searchType === 'fpo'      ? 'bg-teal-100 text-teal-800'    :
   'bg-orange-100 text-orange-800'}`}>
                               {searchType === 'farmers'  ? '🌾' :
                                searchType === 'wastage'  ? '♻️' :
@@ -779,7 +779,7 @@ const fetchNearbyFarmers = async (
                             <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
                           </button>
                         </>
-                      ) :  searchType === 'spo' ? (
+                      ) :  searchType === 'fpo' ? (
   <>
     <button onClick={e => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`); }}
       className="flex items-center gap-1.5 px-3 py-2 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors active:scale-95">

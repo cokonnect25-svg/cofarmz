@@ -74,7 +74,7 @@ export function useAuth() {
     return result;
   }
 
-async function signUp(email: string, password: string, name: string, role: 'farmer' | 'buyer' | 'supplier' | 'spo' = 'farmer') {
+async function signUp(email: string, password: string, name: string, role: 'farmer' | 'buyer' | 'supplier' | 'fpo' = 'farmer') {
   const result = await authClient.signUp.email({ email, password, name });
   if (result.error) throw new Error(result.error.message || "Failed to create account");
 

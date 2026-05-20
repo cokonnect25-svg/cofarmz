@@ -31,7 +31,7 @@ function SelectRoleContent() {
       .catch(() => { });
   }, [mounted, loading, user, router]);
 
-const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'spo') => {
+const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'fpo') => {
     if (!user?.email || selecting || !agreed) return;
     setSelecting(true);
     setError('');
@@ -198,7 +198,7 @@ const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'spo') =
   )}
 </button>
 <button
-  onClick={() => handleSelectRole('spo')}
+  onClick={() => handleSelectRole('fpo')}
   disabled={selecting || !agreed}
   className={`w-full border-2 rounded-2xl p-4 flex items-center gap-4 transition-all text-left active:scale-[0.98] ${
     agreed
@@ -212,7 +212,7 @@ const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'spo') =
     <span className="text-2xl">🏢</span>
   </div>
   <div>
-    <p className="font-black text-gray-900">SPO</p>
+    <p className="font-black text-gray-900">FPO</p>
     <p className="text-gray-500 text-xs mt-0.5">Self Producer Organization</p>
   </div>
   {agreed && <i className="ph-bold ph-arrow-right text-teal-500 text-lg ml-auto"></i>}

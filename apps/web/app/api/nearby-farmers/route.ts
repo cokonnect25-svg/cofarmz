@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 const targetRole =
   searchType === "farmers"  ? "farmer"   :
   searchType === "supplier" ? "supplier" :
-  searchType === "spo"      ? "spo"      : "buyer";
+  searchType === "fpo"      ? "fpo"      : "buyer";
 
     // ── fetch users by role ─────────────────────────────────────────────────
     const users = await sql`
@@ -50,7 +50,7 @@ const targetRole =
         OR (u.role IS NULL AND u.role_id = ${
   targetRole === "farmer"   ? 1 :
   targetRole === "supplier" ? 3 :
-  targetRole === "spo"      ? 4 : 2
+  targetRole === "fpo"      ? 4 : 2
 })
       )
       ${currentUserId ? sql`AND u.id != ${currentUserId}` : sql``}
