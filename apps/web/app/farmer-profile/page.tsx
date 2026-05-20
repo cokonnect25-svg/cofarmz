@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
+import UserAvatar from '@/app/components/UserAvatar';
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────
 
@@ -455,10 +456,11 @@ function FarmerProfileContent() {
                 onClick={() => setShowPhotoModal(true)}
                 className="relative focus:outline-none active:scale-95 transition-transform"
               >
-                <img
-                  src={profile.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(profile.name)}`}
-                  alt={profile.name}
-                  className="w-20 h-20 rounded-full border-4 border-white object-cover shadow-md"
+                <UserAvatar
+                  image={profile.image}
+                  name={profile.name}
+                  size={80}
+                  className="rounded-full border-4 border-white shadow-md"
                 />
                 {/* view hint ring on hover */}
                 <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -960,10 +962,12 @@ function FarmerProfileContent() {
             </button>
 
             {/* Full-size photo */}
-            <img
-              src={profile.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(profile.name)}`}
-              alt={profile.name}
-              className="w-full aspect-square rounded-2xl object-cover shadow-2xl border-4 border-white/10"
+            <UserAvatar
+              image={profile.image}
+              name={profile.name}
+              size={320}
+              className="rounded-2xl shadow-2xl"
+              style={{ width: '100%', aspectRatio: '1', border: '4px solid rgba(255,255,255,0.1)' }}
             />
 
             {/* Name + role bar */}

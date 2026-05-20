@@ -10,6 +10,7 @@ import { MapPin, ChevronUp, LogOut, X, Phone, MessageCircle, MapPinIcon, Heart, 
 import dynamic from 'next/dynamic';
 import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
+import UserAvatar from '@/app/components/UserAvatar';
 
 const MapPicker = dynamic(() => import('@/app/components/MapPicker'), { ssr: false });
 
@@ -965,7 +966,7 @@ useEffect(() => {
           <div className="flex justify-between items-start -mt-12 mb-4">
             <div className="relative group">
               <button onClick={() => setShowProfileImageModal(true)} className="relative cursor-pointer">
-                <img src={profileData?.image || user?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`} alt={user?.name || 'Profile'} className="w-20 h-20 rounded-full border-4 border-white object-cover hover:opacity-80 transition" />
+                <UserAvatar image={profileData?.image || user?.image} name={user?.name} size={80} className="rounded-full border-4 border-white hover:opacity-80 transition" style={{ borderWidth: 4, borderStyle: 'solid', borderColor: 'white' }} />
                 <div className="absolute inset-0 bg-black/30 rounded-full opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                   <span className="text-white text-xs font-semibold">View</span>
                 </div>
@@ -1045,7 +1046,7 @@ useEffect(() => {
                 : <div className="space-y-3">{followers.map(follower => (
                   <button key={follower.id} onClick={() => router.push(`/farmer-profile?id=${follower.id}`)} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg w-full text-left hover:bg-gray-100 transition">
                     <div className="flex items-center gap-3 flex-1">
-                      <img src={follower.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${follower.id}`} alt={follower.name} className="w-10 h-10 rounded-full object-cover" />
+                     <UserAvatar image={follower.image} name={follower.name} size={40} />
                       <p className="font-semibold text-sm text-gray-900">{follower.name}</p>
                     </div>
                   </button>
@@ -1184,7 +1185,7 @@ useEffect(() => {
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900 cursor-pointer hover:text-green-700 transition-colors" onClick={() => router.push(`/machinery-details?id=${booking.machinery_id}`)}>{booking.machinery_name}</h3>
                       {booking.owner_id && (<div className="flex items-center gap-1.5 mt-1.5 cursor-pointer group" onClick={() => router.push(`/farmer-profile?id=${booking.owner_id}`)}>
-                        <img src={booking.owner_image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(booking.owner_name || 'O')}&backgroundColor=166534&textColor=ffffff`} className="w-5 h-5 rounded-full object-cover" alt="" />
+                        <UserAvatar image={booking.owner_image} name={booking.owner_name || 'O'} size={20} />
                         <span className="text-xs text-gray-600 group-hover:text-green-700 transition font-medium">{booking.owner_name || 'Owner'}</span>
                         <i className="ph ph-arrow-right text-gray-400 text-[10px]"></i>
                       </div>)}
@@ -1245,7 +1246,7 @@ useEffect(() => {
                         <h3 className="font-bold text-gray-900 text-lg truncate">{rental.machinery_name}</h3>
                         <div className="mt-2 border-y border-gray-50 py-2">
                           <div className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded-lg px-1 transition" onClick={() => rental.user_id && router.push(`/farmer-profile?id=${rental.user_id}`)}>
-                            <img src={rental.renter_image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(rental.renter_name || 'U')}&backgroundColor=166534&textColor=ffffff`} className="w-6 h-6 rounded-full object-cover" alt="" />
+                            <UserAvatar image={rental.renter_image} name={rental.renter_name || 'U'} size={24} />
                             <p className="text-xs font-bold text-gray-700 truncate flex-1">{rental.renter_name || 'Anonymous Renter'}</p>
                             <i className="ph ph-arrow-right text-gray-400 text-xs"></i>
                           </div>
@@ -1690,7 +1691,7 @@ useEffect(() => {
               <button onClick={() => setShowProfileImageModal(false)} className="p-1 hover:bg-white/20 rounded-lg transition"><X className="w-5 h-5 text-white" /></button>
             </div>
             <div className="p-6 flex flex-col items-center">
-              <img src={user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`} alt={user.name} className="w-64 h-64 rounded-lg object-cover border-4 border-green-100 shadow-md mb-6" />
+              <UserAvatar image={user.image} name={user.name} size={256} className="rounded-lg mb-6" style={{ border: '4px solid #dcfce7', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
               <button onClick={handleProfilePhotoClick} disabled={isUploadingPhoto} className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
                 <i className="ph-bold ph-pencil text-sm"></i><span>Change Photo</span>
               </button>
@@ -1728,7 +1729,7 @@ useEffect(() => {
             <video ref={el => { if (el) videoRefsMap.current[selectedReel.id] = el; }} src={selectedReel.video_url} className="w-full h-full object-contain" autoPlay loop playsInline muted={isMuted} onClick={e => { const v = e.currentTarget; v.paused ? v.play() : v.pause(); }} />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none"></div>
             <div className="absolute top-4 left-4 flex items-center gap-2">
-              <img src={user?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`} alt={user?.name} className="w-10 h-10 rounded-full border-2 border-white" />
+              <UserAvatar image={user?.image} name={user?.name} size={40} style={{ border: '2px solid white' }} />
               <p className="text-white font-semibold text-sm">{user?.name}</p>
             </div>
             <div className="absolute right-3 bottom-20 flex flex-col gap-6 text-white">
