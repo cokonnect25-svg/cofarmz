@@ -382,27 +382,28 @@ const fetchNearbyFarmers = async (
           </div>
 
           {/* Tab toggle */}
-          <div className="flex gap-2 mb-4">
-{([ 
-  { key: 'farmers',  label: 'Farmers',   icon: 'ph-leaf',          active: 'bg-brand-700',  inactive: 'bg-gray-100 text-gray-700' },
-  { key: 'buyers',   label: 'Buyers',    icon: 'ph-shopping-cart', active: 'bg-brand-700',  inactive: 'bg-gray-100 text-gray-700' },
-  { key: 'wastage',  label: 'Wastage',   icon: 'ph-recycle',       active: 'bg-amber-600',  inactive: 'bg-gray-100 text-gray-700' },
-  { key: 'supplier', label: 'Suppliers', icon: null,               active: 'bg-purple-600', inactive: 'bg-gray-100 text-gray-700' },
-  { key: 'spo',      label: 'SPOs',      icon: null,               active: 'bg-teal-600',   inactive: 'bg-gray-100 text-gray-700' },
-] as const).map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => { setSearchType(tab.key as any); setSortBy('nearby'); }}
-                className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === tab.key ? `${tab.active} text-white` : tab.inactive}`}
-              >
-{tab.icon
-  ? <><i className={`ph-bold ${tab.icon} mr-1`}></i>{tab.label}</>
-  : tab.key === 'spo'
-    ? <>🏢 {tab.label}</>
-    : <>🏭 {tab.label}</>}
-              </button>
-            ))}
-          </div>
+<div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar pb-1">
+  {([
+    { key: 'farmers',  label: 'Farmers',   emoji: '🌾', active: 'bg-brand-700'  },
+    { key: 'buyers',   label: 'Buyers',    emoji: '🛒', active: 'bg-brand-700'  },
+    { key: 'wastage',  label: 'Wastage',   emoji: '♻️', active: 'bg-amber-600'  },
+    { key: 'supplier', label: 'Suppliers', emoji: '🏭', active: 'bg-purple-600' },
+    { key: 'spo',      label: 'SPOs',      emoji: '🏢', active: 'bg-teal-600'   },
+  ] as const).map(tab => (
+    <button
+      key={tab.key}
+      onClick={() => { setSearchType(tab.key as any); setSortBy('nearby'); }}
+      className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap flex-shrink-0
+        ${searchType === tab.key
+          ? `${tab.active} text-white shadow-md`
+          : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'
+        }`}
+    >
+      <span>{tab.emoji}</span>
+      {tab.label}
+    </button>
+  ))}
+</div>
 
           {/* Search */}
           <div className="relative mb-4">
