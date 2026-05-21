@@ -416,7 +416,8 @@ function ProfileContent() {
   }, [mounted, user?.id]);
 
 useEffect(() => {
-  if (userRole === 'supplier' || userRole === 'fpo') setExpandedSection('equipment');
+  if (userRole === 'supplier') setExpandedSection('equipment');
+  else if (userRole === 'fpo') setExpandedSection('crops'); // FPO defaults to crops
 }, [userRole]);
 
 
@@ -707,15 +708,15 @@ useEffect(() => {
         body: JSON.stringify({
           user_id: user.id,
           crop_name: newCrop.crop_name,
-          years_of_experience: userRole === 'farmer' ? (newCrop.years_of_experience ? parseInt(newCrop.years_of_experience) : null) : null,
-          expertise_level: userRole === 'farmer' ? newCrop.expertise_level : 'Beginner',
+          years_of_experience: (userRole === 'farmer' || userRole === 'fpo')  ? (newCrop.years_of_experience ? parseInt(newCrop.years_of_experience) : null) : null,
+          expertise_level: (userRole === 'farmer' || userRole === 'fpo') ? newCrop.expertise_level : 'Beginner',
           expected_yield_date: newCrop.expected_yield_date || null,
           expected_yield_quantity: newCrop.expected_yield_quantity ? parseFloat(newCrop.expected_yield_quantity) : null,
           expected_yield_quantity_uom: newCrop.expected_yield_quantity_uom || 'kg',
           crop_type: 'grow',
           is_crop_waste: userRole === 'buyer' ? newCrop.is_crop_waste : false,
           certificate_url: newCrop.certificate_url || null,
-          certification_type: userRole === 'farmer' ? (newCrop.certification_type || null) : null,
+          certification_type: (userRole === 'farmer' || userRole === 'fpo') ? (newCrop.certification_type || null) : null,
           grade: newCrop.grade || null,
         }),
       });
@@ -796,15 +797,15 @@ useEffect(() => {
         body: JSON.stringify({
           id: editingCrop.id,
           crop_name: editCropForm.crop_name,
-          years_of_experience: userRole === 'farmer' ? (editCropForm.years_of_experience ? parseInt(editCropForm.years_of_experience) : null) : null,
-          expertise_level: userRole === 'farmer' ? editCropForm.expertise_level : 'Beginner',
+          years_of_experience: userRole === 'farmer' || userRole === 'fpo' ? (editCropForm.years_of_experience ? parseInt(editCropForm.years_of_experience) : null) : null,
+          expertise_level: userRole === 'farmer' || userRole === 'fpo' ? editCropForm.expertise_level : 'Beginner',
           expected_yield_date: editCropForm.expected_yield_date || null,
           expected_yield_quantity: editCropForm.expected_yield_quantity ? parseFloat(editCropForm.expected_yield_quantity) : null,
           expected_yield_quantity_uom: editCropForm.expected_yield_quantity_uom || 'kg',
           crop_type: 'grow',
           is_crop_waste: userRole === 'buyer' ? editCropForm.is_crop_waste : false,
           certificate_url: editCropForm.certificate_url || null,
-          certification_type: userRole === 'farmer' ? (editCropForm.certification_type || null) : null,
+          certification_type: userRole === 'farmer' || userRole === 'fpo' ? (editCropForm.certification_type || null) : null,
           grade: editCropForm.grade || null,
         }),
       });
@@ -1010,7 +1011,7 @@ useEffect(() => {
               <p className="font-bold text-lg text-gray-900">{followingCount}</p>
               <p className="text-xs text-gray-600">Following</p>
             </button>
-           {userRole !== 'supplier' && userRole !== 'fpo' && (
+           {userRole !== 'supplier' && (
               <button onClick={() => { if (expandedSection === 'crops') { setExpandedSection(null); } else { setExpandedSection('crops'); fetchUserCrops(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
                 <p className="font-bold text-lg text-gray-900">{farmerCrops.length}</p>
                 <p className="text-xs text-gray-600">Crops</p>
@@ -1087,7 +1088,7 @@ useEffect(() => {
                         {crop.years_of_experience ? <p>Experience: {crop.years_of_experience} years</p> : null}
                         {crop.expertise_level && <p>Level: {crop.expertise_level}</p>}
                         {crop.is_crop_waste && <p className="text-orange-700 font-semibold">🌾 Crop Waste</p>}
-                        {crop.expected_yield_date && <p className="text-green-700 font-medium">{userRole === 'farmer' ? 'Expected Yield' : 'Want to Buy By'}: {new Date(crop.expected_yield_date).toLocaleDateString()}</p>}
+                        {crop.expected_yield_date && <p className="text-green-700 font-medium">{userRole === 'farmer' || userRole === 'fpo' ? 'Expected Yield' : 'Want to Buy By'}: {new Date(crop.expected_yield_date).toLocaleDateString()}</p>}
                         {crop.expected_yield_quantity && <p className="text-green-700 font-medium">Quantity: {crop.expected_yield_quantity} {crop.expected_yield_quantity_uom}</p>}
                         {/* ── NEW: show grade & certificate badge in list ── */}
                         {crop.grade && <p className="text-indigo-700 font-semibold">Grade: {crop.grade}</p>}
@@ -1108,7 +1109,7 @@ useEffect(() => {
                     </div>
                   ))}</div>
                 }
-               {userRole !== 'supplier' && userRole !== 'fpo' && (
+               {userRole !== 'supplier' &&  (
 
                   <button onClick={() => setShowAddCropForm(true)} className="w-full mt-4 text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2">
                     <i className="ph-bold ph-plus text-sm"></i>Add Crop
@@ -1422,7 +1423,7 @@ useEffect(() => {
                 )}
               </div>
               {/* Farmer-only */}
-              {userRole === 'farmer' && (<>
+              {(userRole === 'farmer' || userRole === 'fpo') && (<>
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">Years of Experience</label>
                   <input type="number" inputMode="numeric" value={newCrop.years_of_experience} onChange={e => { const val = e.target.value.replace(/[^0-9]/g, ''); const num = parseInt(val); if (val === '' || (num >= 0 && num <= 80)) setNewCrop(p => ({ ...p, years_of_experience: val })); }} onKeyDown={e => ['-', '+', 'e', 'E', '.'].includes(e.key) && e.preventDefault()} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
@@ -1443,13 +1444,13 @@ useEffect(() => {
               )}
               {/* Date */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">{userRole === 'farmer' ? 'Expected Yield Date' : 'Want to Buy By'}</label>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">{userRole === 'farmer' || userRole === 'fpo' ? 'Expected Yield Date' : 'Want to Buy By'}</label>
                 <input type="date" min={localDate} value={newCrop.expected_yield_date} onChange={e => setNewCrop(p => ({ ...p, expected_yield_date: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
               </div>
               {/* Quantity + unit */}
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">{userRole === 'farmer' ? 'Expected Quantity' : 'Quantity Needed'}</label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">{userRole === 'farmer' || userRole === 'fpo' ? 'Expected Quantity' : 'Quantity Needed'}</label>
                   <input type="number" min="1" step="0.1" value={newCrop.expected_yield_quantity} onChange={e => { const val = e.target.value; if (val === '' || parseFloat(val) >= 0) setNewCrop(p => ({ ...p, expected_yield_quantity: val })); }} onKeyDown={e => ['-', '+', 'e', 'E'].includes(e.key) && e.preventDefault()} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
                 <div className="w-24">
@@ -1491,7 +1492,7 @@ useEffect(() => {
     </div>
   </div>
               {/* ── NEW: Certificate ── */}
-              {userRole === 'farmer' && (
+              {userRole === 'farmer' || userRole === 'fpo'  && (
               <CertificateUploader value={newCrop.certificate_url} onChange={url => setNewCrop(p => ({ ...p, certificate_url: url }))} accentColor="green" />
               )}
               {/* Actions */}
@@ -1546,7 +1547,7 @@ useEffect(() => {
                 )}
               </div>
               {/* Farmer-only */}
-              {userRole === 'farmer' && (<>
+              {(userRole === 'farmer' || userRole === 'fpo') && (<>
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">Years of Experience</label>
                   <input type="number" inputMode="numeric" value={editCropForm.years_of_experience} onChange={e => { const val = e.target.value.replace(/[^0-9]/g, ''); const num = parseInt(val); if (val === '' || (num >= 0 && num <= 80)) setEditCropForm(p => ({ ...p, years_of_experience: val })); }} onKeyDown={e => ['-', '+', 'e', 'E', '.'].includes(e.key) && e.preventDefault()} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -1567,13 +1568,13 @@ useEffect(() => {
               )}
               {/* Date — ✅ FIXED: bound to editCropForm, not newCrop */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">{userRole === 'farmer' ? 'Expected Yield Date' : 'Want to Buy By'}</label>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">{userRole === 'farmer' || userRole === 'fpo' ? 'Expected Yield Date' : 'Want to Buy By'}</label>
                 <input type="date" min={localDate} value={editCropForm.expected_yield_date} onChange={e => setEditCropForm(p => ({ ...p, expected_yield_date: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               {/* Quantity + unit */}
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">{userRole === 'farmer' ? 'Expected Quantity' : 'Quantity Needed'}</label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">{userRole === 'farmer' || userRole === 'fpo' ? 'Expected Quantity' : 'Quantity Needed'}</label>
                   <input type="number" inputMode="decimal" value={editCropForm.expected_yield_quantity} onChange={e => { const val = e.target.value.replace(/[^0-9.]/g, ''); const parts = val.split('.'); const clean = parts[0] + (parts.length > 1 ? '.' + parts[1] : ''); if (clean === '' || (parseFloat(clean) > 0 && parseFloat(clean) <= 1000000)) setEditCropForm(p => ({ ...p, expected_yield_quantity: clean })); }} onKeyDown={e => ['-', '+', 'e', 'E'].includes(e.key) && e.preventDefault()} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div className="w-24">
@@ -1592,7 +1593,7 @@ useEffect(() => {
                 </select>
               </div>
               {/* ── Certification Type — farmer only ── */}
-{userRole === 'farmer' && (
+{(userRole === 'farmer' || userRole === 'fpo') && (
   <div>
     <label className="block text-sm font-semibold text-gray-900 mb-2">
       Certification Type <span className="text-gray-400 font-normal text-xs">(optional)</span>
@@ -1627,9 +1628,9 @@ useEffect(() => {
   </div>
 )}
               {/* ── NEW: Certificate ── */}
-              {userRole === 'farmer' && (
-              <CertificateUploader value={editCropForm.certificate_url} onChange={url => setEditCropForm(p => ({ ...p, certificate_url: url }))} accentColor="blue" />
-              )}
+              {userRole === 'farmer' || userRole === 'fpo' ? (
+                <CertificateUploader value={editCropForm.certificate_url} onChange={url => setEditCropForm(p => ({ ...p, certificate_url: url }))} accentColor="blue" />
+              ) : null}
               {/* Actions */}
               <div className="flex gap-3 pt-4">
                 <button onClick={() => { setEditingCrop(null); setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '',certification_type: null }); setEditCropSuggestions([]); setShowEditCropSuggestions(false); }} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition">Cancel</button>
