@@ -5,6 +5,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Capacitor } from '@capacitor/core';
 import { getApiUrl } from '@/lib/api';
+import UserAvatar from '@/app/components/UserAvatar';
 
 interface Machinery {
   id: string;
@@ -429,13 +430,14 @@ setsupplierResults(
                   <div key={person.id}
                     onClick={() => router.push(`/farmer-profile?id=${person.id}`)}
                     className="flex-shrink-0 w-44 bg-white rounded-[32px] p-5 shadow-premium border border-gray-50 cursor-pointer hover:shadow-float hover:-translate-y-1 transition-all text-center group">
-                    <div className="relative mb-4 mx-auto w-20 h-20">
-                      <img
-                        src={person.image }
-                        alt={person.name}
-                        className="w-full h-full rounded-full object-cover border-2 border-white shadow-sm"
-                      />
-                    </div>
+<div className="relative mb-4 mx-auto w-20 h-20">
+  <UserAvatar
+    image={person.image}
+    name={person.name}
+    size={80}
+    className="rounded-full border-2 border-white shadow-sm"
+  />
+</div>
                     <p className="text-base font-black text-gray-900 truncate mb-0.5">{person.name}</p>
                     <p className="text-[10px] text-gray-400 flex items-center justify-center gap-1 mb-3 font-bold">
                       <i className="ph-fill ph-map-pin text-brand-500 text-[10px]"></i>
