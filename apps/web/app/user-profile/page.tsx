@@ -1060,7 +1060,7 @@ useEffect(() => {
                 : <div className="space-y-3">{following.map(u => (
                   <button key={u.id} onClick={() => router.push(`/farmer-profile?id=${u.id}`)} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg w-full text-left hover:bg-gray-100 transition">
                     <div className="flex items-center gap-3 flex-1">
-                      <img src={u.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.id}`} alt={u.name} className="w-10 h-10 rounded-full object-cover" />
+                      <img src={u.image } alt={u.name} className="w-10 h-10 rounded-full object-cover" />
                       <p className="font-semibold text-sm text-gray-900">{u.name}</p>
                     </div>
                   </button>

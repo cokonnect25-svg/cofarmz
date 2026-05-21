@@ -165,7 +165,7 @@ function ChatContent() {
                       className="w-full px-6 py-4 flex items-center gap-4 active:bg-gray-50 hover:bg-gray-50 transition-colors"
                     >
                       <img
-                        src={u.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`}
+                        src={u.image }
                         alt={u.name}
                         className="w-14 h-14 rounded-full object-cover flex-shrink-0"
                       />
@@ -287,7 +287,7 @@ function ChatContent() {
                       className="w-full flex items-center gap-3 py-3 px-2 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
                     >
                       <img
-                        src={u.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`}
+                        src={u.image }
                         alt={u.name}
                         className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                       />

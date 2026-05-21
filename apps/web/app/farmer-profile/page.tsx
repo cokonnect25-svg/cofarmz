@@ -879,7 +879,7 @@ function FarmerProfileContent() {
                     onClick={() => router.push(f.id === user.id ? '/user-profile' : `/farmer-profile?id=${f.id}`)}
                     className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition text-left"
                   >
-                    <img src={f.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(f.name)}`}
+                    <img src={f.image }
                       alt={f.name} className="w-10 h-10 rounded-full object-cover" />
                     <p className="font-semibold text-gray-900 text-sm">{f.name}</p>
                   </button>
@@ -908,7 +908,7 @@ function FarmerProfileContent() {
                     onClick={() => router.push(f.id === user.id ? '/user-profile' : `/farmer-profile?id=${f.id}`)}
                     className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition text-left"
                   >
-                    <img src={f.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(f.name)}`}
+                    <img src={f.image }
                       alt={f.name} className="w-10 h-10 rounded-full object-cover" />
                     <p className="font-semibold text-gray-900 text-sm">{f.name}</p>
                   </button>

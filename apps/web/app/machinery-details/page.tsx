@@ -722,7 +722,7 @@ function MachineryDetailsContent() {
                     onClick={() => router.push(`/farmer-profile?id=${review.user_id}`)}
                   >
                     <img
-                      src={review.reviewer_image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${review.user_id}`}
+                      src={review.reviewer_image }
                       alt={review.reviewer_name}
                       className="w-10 h-10 rounded-full object-cover bg-gray-100 shadow-sm"
                     />
@@ -1548,7 +1548,7 @@ onClick={() => {
                 <div className="flex items-center gap-3">
                   <div className="cursor-pointer" onClick={() => { setShowBookingSuccess(false); router.push(`/farmer-profile?id=${ownerId}`); }}>
                     <img
-                      src={ownerProfile?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${ownerId}`}
+                      src={ownerProfile?.image }
                       alt={ownerName}
                       className="w-10 h-10 rounded-full object-cover"
                     />

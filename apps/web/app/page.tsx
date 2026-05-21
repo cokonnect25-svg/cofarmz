@@ -431,7 +431,7 @@ setsupplierResults(
                     className="flex-shrink-0 w-44 bg-white rounded-[32px] p-5 shadow-premium border border-gray-50 cursor-pointer hover:shadow-float hover:-translate-y-1 transition-all text-center group">
                     <div className="relative mb-4 mx-auto w-20 h-20">
                       <img
-                        src={person.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(person.name)}`}
+                        src={person.image }
                         alt={person.name}
                         className="w-full h-full rounded-full object-cover border-2 border-white shadow-sm"
                       />
