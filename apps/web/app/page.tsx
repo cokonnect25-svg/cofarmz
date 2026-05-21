@@ -583,7 +583,7 @@ setsupplierResults(
         Nearby FPOs
       </h2>
       <p className="text-teal-600 text-xs font-bold uppercase tracking-wider">
-        Self Producer Organizations near you
+        Farmer Produce Organisation near you
       </p>
     </div>
     <button
@@ -910,7 +910,7 @@ setsupplierResults(
   </div>
   <div>
     <span className="block font-bold text-gray-900">I am an FPO</span>
-    <span className="text-xs text-gray-400">Self Producer Organization</span>
+    <span className="text-xs text-gray-400">Farmer Produce Organization</span>
   </div>
   {roleUpdating && (
     <div className="absolute right-6 animate-spin w-5 h-5 border-2 border-brand-600 border-t-transparent rounded-full" />

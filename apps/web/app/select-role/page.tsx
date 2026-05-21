@@ -213,7 +213,7 @@ const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'fpo') =
   </div>
   <div>
     <p className="font-black text-gray-900">FPO</p>
-    <p className="text-gray-500 text-xs mt-0.5">Self Producer Organization</p>
+    <p className="text-gray-500 text-xs mt-0.5">Farmer Produce Organization</p>
   </div>
   {agreed && <i className="ph-bold ph-arrow-right text-teal-500 text-lg ml-auto"></i>}
 </button>

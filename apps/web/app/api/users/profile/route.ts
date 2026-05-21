@@ -79,7 +79,7 @@ await sql`
     (1, 'farmer',   'Farmer'),
     (2, 'buyer',    'Buyer'),
     (3, 'supplier', 'Supplier'),
-    (4, 'fpo',      'Self Producer Organization')
+    (4, 'fpo',      'Farmer Produce Organization')
   ON CONFLICT (id) DO NOTHING
 `;
       await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'buyer'`;
