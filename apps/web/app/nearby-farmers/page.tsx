@@ -7,7 +7,7 @@ import { getApiUrl } from '@/lib/api';
 
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
-
+import UserAvatar from '@/app/components/UserAvatar';
 
 interface FarmerCrop {
   crop_name: string;
@@ -677,7 +677,7 @@ const fetchNearbyFarmers = async (
                     {/* Header row */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3 flex-1">
-                        <img src={farmer.image} alt={farmer.name} className="w-12 h-12 rounded-full object-cover bg-gray-100" />
+                        <UserAvatar image={farmer.image} name={farmer.name} size={48} className="rounded-full" />
                         <div className="flex-1 min-w-0">
                           <h3 className="font-bold text-gray-900 truncate">{farmer.name}</h3>
                           <p className="text-xs text-gray-500 flex items-center gap-1">
