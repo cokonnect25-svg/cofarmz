@@ -37,7 +37,7 @@ const targetRole =
     const users = await sql`
       SELECT
         u.id, u.name, u.email,
-        COALESCE(u.image, 'https://api.dicebear.com/7.x/avataaars/svg?seed=' || u.id) AS image,
+        u.image AS image,
         u.latitude, u.longitude,
         COALESCE(u.location, '')  AS location,
         COALESCE(u.phone,    '')  AS phone,

@@ -1,7 +1,7 @@
 (()=>{var e={};e.id=6108,e.ids=[6108],e.modules={10846:e=>{"use strict";e.exports=require("next/dist/compiled/next-server/app-page.runtime.prod.js")},44870:e=>{"use strict";e.exports=require("next/dist/compiled/next-server/app-route.runtime.prod.js")},3295:e=>{"use strict";e.exports=require("next/dist/server/app-render/after-task-async-storage.external.js")},29294:e=>{"use strict";e.exports=require("next/dist/server/app-render/work-async-storage.external.js")},63033:e=>{"use strict";e.exports=require("next/dist/server/app-render/work-unit-async-storage.external.js")},55511:e=>{"use strict";e.exports=require("crypto")},29021:e=>{"use strict";e.exports=require("fs")},91645:e=>{"use strict";e.exports=require("net")},21820:e=>{"use strict";e.exports=require("os")},74998:e=>{"use strict";e.exports=require("perf_hooks")},27910:e=>{"use strict";e.exports=require("stream")},34631:e=>{"use strict";e.exports=require("tls")},76387:(e,t,r)=>{"use strict";r.r(t),r.d(t,{patchFetch:()=>_,routeModule:()=>c,serverHooks:()=>E,workAsyncStorage:()=>p,workUnitAsyncStorage:()=>m});var a={};r.r(a),r.d(a,{GET:()=>d,dynamic:()=>l});var i=r(42706),s=r(28203),n=r(45994),o=r(97662),u=r(39187);let l="force-dynamic";async function d(e){try{let t;let r=e.nextUrl.searchParams,a=parseFloat(r.get("latitude")||"0"),i=parseFloat(r.get("longitude")||"0"),s=r.get("distance")?parseInt(r.get("distance")||"50"):null;parseFloat(r.get("minRating")||"0");let n=r.get("crops")?.split(",").filter(Boolean)||[],l=r.get("equipment")?.split(",").filter(Boolean)||[],d=r.get("yieldDateFrom")||null,c=r.get("yieldDateTo")||null,p=r.get("type")||"farmers",m="true"===r.get("wasteOnly"),E=r.get("currentUserId");await (0,o.A)`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION`.catch(()=>{}),await (0,o.A)`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION`.catch(()=>{});let _="farmers"===p?"farmer":"buyer";try{t=await (0,o.A)`
         SELECT
           u.id, u.name, u.email,
-          COALESCE(u.image, 'https://api.dicebear.com/7.x/avataaars/svg?seed=' || u.id) as image,
+          u.image as image,
           u.latitude, u.longitude,
           COALESCE(u.location, '') as location,
           COALESCE(u.phone, '') as phone,
@@ -15,7 +15,7 @@
       `}catch{t=await (0,o.A)`
         SELECT
           u.id, u.name, u.email,
-          COALESCE(u.image, 'https://api.dicebear.com/7.x/avataaars/svg?seed=' || u.id) as image,
+          u.image as image,
           u.latitude, u.longitude,
           COALESCE(u.location, '') as location,
           COALESCE(u.phone, '') as phone,
