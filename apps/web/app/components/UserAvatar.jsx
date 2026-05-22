@@ -1,7 +1,7 @@
 'use client';
 
 // ── UserAvatar ────────────────────────────────────────────────────────────────
-// Drop-in replacement for <img> tags that fall back to dicebear.
+// Drop-in replacement for <img> tags that fall back to initials avatar.
 // Shows the user's profile image if available, otherwise shows
 // the first letter of their name with a coloured background.
 //
@@ -45,36 +45,52 @@ export function UserAvatar({ image, name, size = 40, className = '', style = {} 
     ...style,
   };
 
-  if (image) {
+  // No image (null, undefined, empty string) — show initial avatar directly
+  if (!image) {
     return (
+      <span className={className} style={baseStyle} aria-label={name}>
+        {initial}
+      </span>
+    );
+  }
+
+  // Image exists — render it with a hidden fallback sibling
+  // If the image fails to load (404, broken URL, etc.), onError
+  // hides the <img> and reveals the fallback <span>
+  return (
+    <>
       <img
         src={image}
         alt={name || ''}
         width={size}
         height={size}
         className={className}
-        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, ...style }}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          objectFit: 'cover',
+          flexShrink: 0,
+          ...style,
+        }}
         onError={(e) => {
-          // If image fails to load, replace with initial avatar
           e.currentTarget.style.display = 'none';
           const sibling = e.currentTarget.nextElementSibling;
-          if (sibling) sibling.style.display = 'inline-flex';
+          if (sibling) sibling.style.removeProperty('display');
         }}
       />
-    );
-  }
-
-  return (
-    <span className={className} style={baseStyle} aria-label={name}>
-      {initial}
-    </span>
+      <span
+        className={className}
+        style={{ ...baseStyle, display: 'none' }}
+        aria-label={name}
+      >
+        {initial}
+      </span>
+    </>
   );
 }
 
-// Simpler version for cases where you need both img + fallback in same element
-// Use this when you can't change markup easily — just replaces the src
-export function getAvatarSrc(image, name) {
-  // Returns image src if exists, otherwise returns null (use UserAvatar component instead)
+export function getAvatarSrc(image) {
   return image || null;
 }
 
