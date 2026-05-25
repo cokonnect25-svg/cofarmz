@@ -438,7 +438,9 @@ setsupplierResults(
     className="rounded-full border-2 border-white shadow-sm"
   />
 </div>
-                    <p className="text-base font-black text-gray-900 truncate mb-0.5">{person.name}</p>
+                    <p className="text-base font-black text-gray-900 mb-0.5 leading-tight line-clamp-2 min-h-[40px]">
+  {person.name}
+</p>
                     <p className="text-[10px] text-gray-400 flex items-center justify-center gap-1 mb-3 font-bold">
                       <i className="ph-fill ph-map-pin text-brand-500 text-[10px]"></i>
                       {person.location
