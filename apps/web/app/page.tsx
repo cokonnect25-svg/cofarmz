@@ -76,7 +76,7 @@ function HomePageContent() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [supplierResults, setsupplierResults] = useState<Farmer[]>([]);
   const [spoResults, setSpoResults] = useState<Farmer[]>([]);
-
+const [expandedId, setExpandedId] = useState<string | null>(null);
   
  
 
@@ -438,7 +438,18 @@ setsupplierResults(
     className="rounded-full border-2 border-white shadow-sm"
   />
 </div>
-                    <p className="text-base font-black text-gray-900 mb-0.5 leading-tight line-clamp-4 min-h-[40px]">
+<p
+  onClick={(e) => {
+    e.stopPropagation();
+    setExpandedId(expandedId === person.id ? null : person.id);
+  }}
+  className={`
+    text-base font-black text-gray-900 mb-0.5
+    leading-tight break-words cursor-pointer transition-all
+    ${expandedId === person.id ? '' : 'line-clamp-2'}
+  `}
+  title={person.name}
+>
   {person.name}
 </p>
                     <p className="text-[10px] text-gray-400 flex items-center justify-center gap-1 mb-3 font-bold">
