@@ -845,7 +845,6 @@ useEffect(() => {
   return;
 }
     if (!editForm.name.trim()) { alert('Name is required'); return; }
-    if (editForm.phone.length !== 10) { alert('Phone must be 10 digits'); return; }
     if (!emailRegex.test(editForm.email)) { alert('Enter a valid email'); return; }
     setIsUpdatingProfile(true);
     try {
