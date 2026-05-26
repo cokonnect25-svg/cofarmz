@@ -839,7 +839,6 @@ useEffect(() => {
     if (
   !editForm.name.trim() ||
   !editForm.email.trim() ||
-  !editForm.phone.trim() ||
   !editForm.location.trim()
 ) {
   alert('Name, email, phone and location are required');
