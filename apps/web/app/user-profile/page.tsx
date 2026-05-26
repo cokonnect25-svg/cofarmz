@@ -836,7 +836,15 @@ useEffect(() => {
   const handleUpdateProfile = async () => {
     if (!user?.id) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!editForm.name || !editForm.email || !editForm.phone) { alert('All fields are required'); return; }
+    if (
+  !editForm.name.trim() ||
+  !editForm.email.trim() ||
+  !editForm.phone.trim() ||
+  !editForm.location.trim()
+) {
+  alert('Name, email, phone and location are required');
+  return;
+}
     if (!editForm.name.trim()) { alert('Name is required'); return; }
     if (editForm.phone.length !== 10) { alert('Phone must be 10 digits'); return; }
     if (!emailRegex.test(editForm.email)) { alert('Enter a valid email'); return; }

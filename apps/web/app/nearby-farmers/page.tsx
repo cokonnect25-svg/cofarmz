@@ -678,8 +678,17 @@ const fetchNearbyFarmers = async (
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3 flex-1">
                         <UserAvatar image={farmer.image} name={farmer.name} size={48} className="rounded-full" />
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-gray-900 truncate">{farmer.name}</h3>
+<div className="flex-1 min-w-0 overflow-hidden">
+  <h3
+    className="font-bold text-gray-900 leading-snug break-words overflow-hidden"
+    style={{
+      display: '-webkit-box',
+      WebkitLineClamp: 2,
+      WebkitBoxOrient: 'vertical',
+    }}
+  >
+    {farmer.name}
+  </h3>
                           <p className="text-xs text-gray-500 flex items-center gap-1">
                             <i className="ph-fill ph-map-pin text-brand-600"></i>
                             {farmer.distance >= 9999
