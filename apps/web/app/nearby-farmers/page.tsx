@@ -496,7 +496,7 @@ const fetchNearbyFarmers = async (
               </div>
 
               {/* Grade */}
-              {(searchType === 'farmers' || searchType === 'buyers') && (
+              {(searchType === 'farmers' || searchType === 'buyers'|| searchType === 'fpo') && (
                 <div className="mb-8">
                   <label className="block text-sm font-bold text-gray-900 mb-3">
                     Crop Grade <span className="text-xs text-gray-400 font-normal">(select any)</span>
@@ -512,7 +512,7 @@ const fetchNearbyFarmers = async (
               )}
 
               {/* Certification */}
-              {searchType === 'farmers' && (
+              {searchType === 'farmers' || searchType === 'buyers'|| searchType === 'fpo' && (
                 <div className="mb-8">
                   <label className="block text-sm font-bold text-gray-900 mb-3">
                     Certification Type <span className="text-xs text-gray-400 font-normal">(select any)</span>
