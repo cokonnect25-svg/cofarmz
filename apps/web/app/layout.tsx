@@ -134,8 +134,7 @@ export default function RootLayout({
       <body className="antialiased bg-surface-muted" suppressHydrationWarning>
         <AppGenProvider>
           <OfflineWrapper>
-            {/* ✅ GoogleTranslate moved inside OfflineWrapper — won't mount when offline */}
-            <GoogleTranslate />
+            <GoogleTranslate/>
             <LayoutContent>{children}</LayoutContent>
           </OfflineWrapper>
         </AppGenProvider>
