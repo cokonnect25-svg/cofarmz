@@ -8,12 +8,7 @@
 
 /* Hide scrollbar for native app feel */
 
-html,
-body,
-#__next {
-  height: 100%;
-  overflow: hidden;
-}
+
 
 ::-webkit-scrollbar {
   display: none;
