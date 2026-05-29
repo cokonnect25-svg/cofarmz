@@ -92,24 +92,31 @@ const [expandedId, setExpandedId] = useState<string | null>(null);
 
 
   // Check if role is confirmed
-  useEffect(() => {
-    if (!user?.id) return;
-    
-    const checkRole = async () => {
-      try {
-        const res = await fetch(getApiUrl(`/api/users/profile?userId=${user.id}`));
-        if (res.ok) {
-          const profile = await res.json();
-          if (profile.role_confirmed !== true) {
-            setShowRoleModal(true);
-          }
+ useEffect(() => {
+  if (!user?.id) return;
+
+  const checkRole = async () => {
+    try {
+      const res = await fetch(getApiUrl(`/api/users/profile?userId=${user.id}`));
+      if (res.ok) {
+        const profile = await res.json();
+
+        // ✅ Superadmin bypasses terms/role modal → go straight to admin dashboard
+        if (profile.role === 'superadmin' || profile.role_id === 5) {
+          router.replace('/admin/dashboard');
+          return;
         }
-      } catch (err) {
-        console.error("Error checking role:", err);
+
+        if (profile.role_confirmed !== true) {
+          setShowRoleModal(true);
+        }
       }
-    };
-    checkRole();
-  }, [user?.id]);
+    } catch (err) {
+      console.error("Error checking role:", err);
+    }
+  };
+  checkRole();
+}, [user?.id]);
 
 const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'fpo') => {
     setRoleUpdating(true);

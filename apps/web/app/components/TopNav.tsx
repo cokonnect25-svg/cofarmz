@@ -310,7 +310,7 @@ const handleOpenNotifPanel = () => {
       <button
         onClick={() => {
           setShowNotifPanel(false);
-          setShowAllNotifications(false); // reset on close
+          setShowAllNotifications(false); // reset on close3 
         }}
         className="text-gray-400 hover:text-gray-600 transition"
       >
