@@ -503,8 +503,10 @@ function ReelsContent() {
                 }
               </button>
 
-              <div className="absolute right-4 md:right-[calc(50%-180px)] lg:right-[calc(50%-230px)] md:bottom-24 flex flex-col gap-5 text-white z-30" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 88px)' }}>
-                {/* Views */}
+<div
+  className="absolute right-4 md:right-[calc(50%-180px)] lg:right-[calc(50%-230px)] flex flex-col gap-5 text-white z-30"
+  style={{ bottom: 'calc(env(safe-area-inset-bottom) + 88px)' }}
+>                {/* Views */}
                 <div className="flex flex-col items-center gap-1 group">
                   <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl transition-all group-hover:scale-110">
                     <i className="ph-fill ph-eye text-[24px] drop-shadow-xl"></i>
@@ -513,6 +515,26 @@ function ReelsContent() {
                     {reel.views > 999 ? `${(reel.views / 1000).toFixed(1)}k` : reel.views || 0}
                   </span>
                 </div>
+                {/* Mute / Unmute */}
+<button
+  onClick={(e) => {
+    e.stopPropagation();
+    setIsMuted((prev) => !prev);
+  }}
+  className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
+>
+  <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl">
+    {isMuted ? (
+      <i className="ph-fill ph-speaker-slash text-[24px] text-white" />
+    ) : (
+      <i className="ph-fill ph-speaker-high text-[24px] text-white" />
+    )}
+  </div>
+
+  <span className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase">
+    {isMuted ? 'Mute' : 'Sound'}
+  </span>
+</button>
 
                 {/* Like */}
                 <button
