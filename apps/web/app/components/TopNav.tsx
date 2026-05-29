@@ -295,11 +295,11 @@ const handleOpenNotifPanel = () => {
   className="relative p-2 hover:bg-gray-100 rounded-full transition"
 >
   <Bell className="w-5 h-5 text-gray-700" />
-  {pendingCount > 0 && (
-    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-white text-[9px] font-black flex items-center justify-center">
-      {pendingCount}
-    </span>
-  )}
+{(unreadCount > 0 || pendingCount > 0) && (
+  <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-white text-[9px] font-black flex items-center justify-center">
+    {unreadCount + pendingCount}
+  </span>
+)}
 </button>
 
                   {/* Notification Dropdown */}
