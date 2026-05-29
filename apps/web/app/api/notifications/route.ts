@@ -127,6 +127,16 @@ const sinceDate = since
       LIMIT 10
     `.catch(() => []);
 
+    // Global announcements
+const announcements = await sql`
+  SELECT id, title, body, created_at
+  FROM announcements
+  WHERE created_at > ${sinceDate}
+    AND (expires_at IS NULL OR expires_at > NOW())
+  ORDER BY created_at DESC
+  LIMIT 5
+`.catch(() => []);
+
     const notifications: any[] = [];
 
     newMessages.forEach((msg: any) => {
@@ -208,6 +218,18 @@ ownerBookingUpdates.forEach((booking: any) => {
         available: !eq.is_unavailable,
       });
     });
+
+    announcements.forEach((ann: any) => {
+  notifications.push({
+    id: `ann-${ann.id}`,
+    type: 'announcement',
+    title: `📢 ${ann.title}`,
+    body: ann.body,
+    image: null,
+    time: ann.created_at,
+    link: `/home`,
+  });
+});
 
     // Sort by time descending
     notifications.sort(
