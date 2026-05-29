@@ -20,23 +20,21 @@ function MessagesContent() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-const scrollToBottom = () => {
+useEffect(() => {
   const container = messagesContainerRef.current;
 
   if (!container) return;
 
-  const isNearBottom =
-    container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+  const distanceFromBottom =
+    container.scrollHeight -
+    container.scrollTop -
+    container.clientHeight;
 
-  if (isNearBottom) {
+  if (distanceFromBottom < 150) {
     requestAnimationFrame(() => {
       container.scrollTop = container.scrollHeight;
     });
   }
-};
-
-useEffect(() => {
-  scrollToBottom();
 }, [messages]);
 
 
@@ -94,10 +92,10 @@ useEffect(() => {
   };
 
  return (
-  <div className="h-[100dvh] flex flex-col bg-white overflow-hidden">
+  <div className="fixed inset-0 flex flex-col bg-white overflow-hidden">
 
     {/* HEADER */}
-    <div className="flex-shrink-0 bg-green-600 text-white px-4 py-3 flex items-center gap-3 z-10">
+    <div className="flex-shrink-0 bg-green-600 text-white px-4 py-3 flex items-center gap-3">
       <Link href={`/machinery-details?id=${machineryId}`}>
         <ArrowLeft className="w-6 h-6 cursor-pointer" />
       </Link>
@@ -109,7 +107,7 @@ useEffect(() => {
     </div>
 
     {/* SCROLLABLE MESSAGE AREA */}
-   <div
+<div
   ref={messagesContainerRef}
   className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-4"
 >
@@ -167,7 +165,7 @@ useEffect(() => {
     </div>
 
     {/* INPUT */}
-    <div className="flex-shrink-0 border-t bg-white px-4 py-3 flex items-center gap-2 sticky bottom-0">
+    <div className="flex-shrink-0 border-t bg-white px-4 py-3 flex items-center gap-2 ">
       <input
         type="text"
         value={newMessage}

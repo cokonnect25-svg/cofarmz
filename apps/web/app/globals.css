@@ -7,6 +7,14 @@
    ========================================== */
 
 /* Hide scrollbar for native app feel */
+
+html,
+body,
+#__next {
+  height: 100%;
+  overflow: hidden;
+}
+
 ::-webkit-scrollbar {
   display: none;
 }
@@ -276,3 +284,7 @@ main {
 .animate-slide-up {
   animation: slide-up 0.3s ease-out forwards;
 }
+
+/* globals.css */
+
+
