@@ -276,6 +276,9 @@ function ProfileContent() {
   const [matchingResults, setMatchingResults] = useState<any[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
+  const [pendingFollowRequests, setPendingFollowRequests] = useState<any[]>([]);
+const [showFollowRequests, setShowFollowRequests] = useState(false);
+const [processingFollow, setProcessingFollow] = useState<string | null>(null);
 
   const today = new Date();
   const localDate = new Date(
@@ -472,22 +475,24 @@ useEffect(() => {
     } catch (error) { console.error('Error fetching user profile:', error); }
   };
 
-  const fetchFollowersCounts = async () => {
-    if (!user?.id) return;
-    try {
-      const res = await fetch(getApiUrl(`/api/follows?user_id=${user.id}&type=both`));
-      if (res.ok) {
-        const data = await res.json();
-        setFollowersCount(data.followers_count ?? 0);
-        setFollowingCount(data.following_count ?? 0);
-      } else {
-        setFollowersCount(0); setFollowingCount(0);
+ const fetchFollowersCounts = async () => {
+  if (!user?.id) return;
+  try {
+    const res = await fetch(getApiUrl(`/api/follows?user_id=${user.id}&type=both`));
+    if (res.ok) {
+      const data = await res.json();
+      setFollowersCount(data.followers_count ?? 0);
+      setFollowingCount(data.following_count ?? 0);
+      // Fetch pending requests if any
+      if ((data.pending_count ?? 0) > 0) {
+        const reqRes = await fetch(getApiUrl(`/api/follows?user_id=${user.id}&type=pending_requests`));
+        if (reqRes.ok) setPendingFollowRequests(await reqRes.json());
       }
-    } catch (error) {
-      console.error('Error fetching counts:', error);
-      setFollowersCount(0); setFollowingCount(0);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching counts:', error);
+  }
+};
 
   const fetchUserCrops = async () => {
     if (!user?.id) return [];
@@ -894,6 +899,28 @@ useEffect(() => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+
+  const handleFollowAction = async (followerId: string, action: 'accepted' | 'rejected') => {
+  setProcessingFollow(followerId);
+  try {
+    const res = await fetch(getApiUrl('/api/follows'), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': user!.id },
+      body: JSON.stringify({ followerId, action }),
+    });
+    if (res.ok) {
+      setPendingFollowRequests(prev => prev.filter(r => r.user_id !== followerId));
+      if (action === 'accepted') {
+        setFollowersCount(prev => prev + 1);
+      }
+    }
+  } catch (e) {
+    console.error(e);
+  } finally {
+    setProcessingFollow(null);
+  }
+};
+
   const uploadProfilePhoto = async (dataUrl: string) => {
     try {
       setIsUploadingPhoto(true); setUploadError(null);
@@ -949,12 +976,12 @@ useEffect(() => {
       <div className="sticky top-0 bg-white border-b px-4 py-3 flex items-center justify-between z-40">
         <div>
           <h1 className="text-xl font-bold text-gray-900">My Profile</h1>
-<p className="text-xs text-gray-500 mt-0.5">
-  {userRole === 'farmer' ? '🌾 Farmer Profile' 
-  : userRole === 'supplier' ? '🏭 Supplier Profile' 
-  : userRole === 'fpo' ? '🏢 FPO Profile'
-  : '🛒 Buyer Profile'}
-</p>        </div>
+          <p className="text-xs text-gray-500 mt-0.5">
+           {userRole === 'farmer' ? '🌾 Farmer Profile' 
+             : userRole === 'supplier' ? '🏭 Supplier Profile' 
+             : userRole === 'fpo' ? '🏢 FPO Profile'
+             : '🛒 Buyer Profile'}
+        </p>        </div>
         <div className="flex items-center gap-2">
           <button onClick={handleOpenEditModal} className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition text-sm font-bold text-gray-700 active:scale-95">
             <i className="ph-bold ph-pencil text-base"></i>Edit
@@ -986,21 +1013,21 @@ useEffect(() => {
           <div className="flex items-center gap-3 mb-2">
             <h2 className="text-xl font-bold text-gray-900">{user?.name || 'User'}</h2>
             <div className={`px-3 py-1 rounded-full ${
-  userRole === 'farmer' ? 'bg-green-100' 
-  : userRole === 'supplier' ? 'bg-purple-100' 
-  : userRole === 'fpo' ? 'bg-teal-100'
-  : 'bg-blue-100'}`}>
-  <span className={`text-xs font-semibold ${
-    userRole === 'farmer' ? 'text-green-700' 
-    : userRole === 'supplier' ? 'text-purple-700' 
-    : userRole === 'fpo' ? 'text-teal-700'
-    : 'text-blue-700'}`}>
-    {userRole === 'farmer' ? '🌾 Farmer' 
-    : userRole === 'buyer' ? '🛒 Buyer' 
-    : userRole === 'supplier' ? '🏭 Supplier'
-    : '🏢 FPO'}
-  </span>
-</div>
+              userRole === 'farmer' ? 'bg-green-100' 
+              : userRole === 'supplier' ? 'bg-purple-100' 
+              : userRole === 'fpo' ? 'bg-teal-100'
+              : 'bg-blue-100'}`}>
+              <span className={`text-xs font-semibold ${
+                userRole === 'farmer' ? 'text-green-700' 
+                : userRole === 'supplier' ? 'text-purple-700' 
+                : userRole === 'fpo' ? 'text-teal-700'
+                : 'text-blue-700'}`}>
+                {userRole === 'farmer' ? '🌾 Farmer' 
+                : userRole === 'buyer' ? '🛒 Buyer' 
+                : userRole === 'supplier' ? '🏭 Supplier'
+                : '🏢 FPO'}
+              </span>
+            </div>
           </div>
           <button onClick={handleOpenEditModal} className="text-sm flex items-center gap-1 mt-1 hover:opacity-80 transition">
             <MapPin className="w-4 h-4 text-green-600 flex-shrink-0" />
@@ -1029,10 +1056,10 @@ useEffect(() => {
             </button>
           </div>
         </div>
-      </div>
+       </div>
 
-      {/* Expanded sections */}
-      {expandedSection && (
+        {/* Expanded sections */}
+        {expandedSection && (
         <div className="bg-white border-b">
           <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
             <h3 className="font-bold text-gray-900 text-sm uppercase">
@@ -1165,10 +1192,10 @@ useEffect(() => {
             )}
           </div>
         </div>
-      )}
+        )}
 
-      {/* Tab Navigation */}
-      <div className="bg-white border-b">
+        {/* Tab Navigation */}
+        <div className="bg-white border-b">
         <div className="flex">
           {(['bookings', 'rentals', 'favourites', 'reels'] as const).map(tab => (
             <button key={tab} onClick={() => { setActiveTab(tab); if (tab === 'bookings') fetchBookings(); else if (tab === 'rentals') fetchRentals(); else if (tab === 'favourites') fetchFavoriteEquipment(); else if (tab === 'reels') fetchMyReels(); }}
@@ -1385,9 +1412,9 @@ useEffect(() => {
                 </div>
               )}
               {selectedCrop.certification_type && (() => {
-  const cert = CERTIFICATION_TYPES.find(c => c.value === selectedCrop.certification_type);
-  return cert ? (
-    <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100/50">
+     const cert = CERTIFICATION_TYPES.find(c => c.value === selectedCrop.certification_type);
+     return cert ? (
+      <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100/50">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center text-sm">{cert.icon}</div>
         <span className="text-sm font-bold text-gray-500">Certification</span>
@@ -1395,9 +1422,9 @@ useEffect(() => {
       <span className="text-sm font-black text-green-700 bg-white px-3 py-1 rounded-lg border border-green-100 shadow-sm">
         {cert.icon} {cert.label}
       </span>
-    </div>
-  ) : null;
-})()}
+     </div>
+      ) : null;
+      })()}
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={() => { setSelectedCrop(null); handleEditCropClick(selectedCrop); }} className="flex-1 py-3 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm hover:bg-blue-100 transition">✏️ Edit</button>
@@ -1475,10 +1502,10 @@ useEffect(() => {
                 </select>
               </div>
               <div>
-    <label className="block text-sm font-semibold text-gray-900 mb-2">
+     <label className="block text-sm font-semibold text-gray-900 mb-2">
       Certification Type <span className="text-gray-400 font-normal text-xs">(optional)</span>
-    </label>
-    <div className="flex flex-wrap gap-2">
+     </label>
+     <div className="flex flex-wrap gap-2">
       {CERTIFICATION_TYPES.map(cert => (
         <button
           key={cert.value}
@@ -1495,8 +1522,8 @@ useEffect(() => {
           <span>{cert.icon}</span>{cert.label}
         </button>
       ))}
-    </div>
-  </div>
+     </div>
+     </div>
               {/* ── NEW: Certificate ── */}
               {userRole === 'farmer' || userRole === 'fpo'  && (
               <CertificateUploader value={newCrop.certificate_url} onChange={url => setNewCrop(p => ({ ...p, certificate_url: url }))} accentColor="green" />
@@ -1599,12 +1626,12 @@ useEffect(() => {
                 </select>
               </div>
               {/* ── Certification Type — farmer only ── */}
-{(userRole === 'farmer' || userRole === 'fpo') && (
-  <div>
-    <label className="block text-sm font-semibold text-gray-900 mb-2">
+     {(userRole === 'farmer' || userRole === 'fpo') && (
+     <div>
+     <label className="block text-sm font-semibold text-gray-900 mb-2">
       Certification Type <span className="text-gray-400 font-normal text-xs">(optional)</span>
-    </label>
-    <div className="flex flex-wrap gap-2">
+     </label>
+     <div className="flex flex-wrap gap-2">
       {CERTIFICATION_TYPES.map(cert => (
         <button
           key={cert.value}
@@ -1621,18 +1648,18 @@ useEffect(() => {
           <span>{cert.icon}</span>{cert.label}
         </button>
       ))}
-    </div>
-    {editCropForm.certification_type && (
-      <button
-        type="button"
-        onClick={() => setEditCropForm(p => ({ ...p, certification_type: null }))}
-        className="mt-2 text-xs text-red-500 font-semibold hover:underline flex items-center gap-1"
-      >
-        <i className="ph-bold ph-x-circle text-sm"></i> Clear certification
-      </button>
-    )}
-  </div>
-)}
+          </div>
+          {editCropForm.certification_type && (
+            <button
+              type="button"
+              onClick={() => setEditCropForm(p => ({ ...p, certification_type: null }))}
+              className="mt-2 text-xs text-red-500 font-semibold hover:underline flex items-center gap-1"
+            >
+              <i className="ph-bold ph-x-circle text-sm"></i> Clear certification
+            </button>
+          )}
+        </div>
+      )}
               {/* ── NEW: Certificate ── */}
               {userRole === 'farmer' || userRole === 'fpo' ? (
                 <CertificateUploader value={editCropForm.certificate_url} onChange={url => setEditCropForm(p => ({ ...p, certificate_url: url }))} accentColor="blue" />
@@ -1755,6 +1782,73 @@ useEffect(() => {
       )}
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+      {/* ── Follow Requests Notification Bell ── */}
+{pendingFollowRequests.length > 0 && (
+  <button
+    onClick={() => setShowFollowRequests(true)}
+    className="fixed top-16 right-4 z-50 w-12 h-12 bg-green-600 rounded-full flex items-center justify-center shadow-lg"
+  >
+    <i className="ph-fill ph-user-plus text-white text-xl"></i>
+    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-[10px] font-black flex items-center justify-center">
+      {pendingFollowRequests.length}
+    </span>
+  </button>
+)}
+
+{/* ── Follow Requests Modal ── */}
+{showFollowRequests && (
+  <div className="fixed inset-0 bg-black/50 z-[60] flex items-end justify-center">
+    <div className="bg-white rounded-t-3xl w-full max-w-md max-h-[70vh] overflow-hidden flex flex-col">
+      <div className="flex items-center justify-between px-5 py-4 border-b">
+        <h3 className="text-lg font-black text-gray-900">Follow Requests</h3>
+        <button onClick={() => setShowFollowRequests(false)} className="p-1 hover:bg-gray-100 rounded-full">
+          <X className="w-5 h-5 text-gray-600" />
+        </button>
+      </div>
+      <div className="overflow-y-auto flex-1 divide-y divide-gray-100">
+        {pendingFollowRequests.length === 0 ? (
+          <p className="text-center text-gray-400 text-sm py-10">No pending requests</p>
+        ) : (
+          pendingFollowRequests.map((req) => (
+            <div key={req.user_id} className="flex items-center gap-3 px-5 py-4">
+              <img
+                src={req.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(req.name)}`}
+                alt={req.name}
+                className="w-12 h-12 rounded-full object-cover flex-shrink-0 cursor-pointer"
+                onClick={() => { setShowFollowRequests(false); router.push(`/farmer-profile?id=${req.user_id}`); }}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-gray-900 text-sm truncate">{req.name}</p>
+                {req.location && <p className="text-xs text-gray-400 truncate">{req.location}</p>}
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  {new Date(req.created_at).toLocaleDateString('en-IN')}
+                </p>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <button
+                  onClick={() => handleFollowAction(req.user_id, 'rejected')}
+                  disabled={processingFollow === req.user_id}
+                  className="px-3 py-1.5 rounded-xl border-2 border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Decline
+                </button>
+                <button
+                  onClick={() => handleFollowAction(req.user_id, 'accepted')}
+                  disabled={processingFollow === req.user_id}
+                  className="px-3 py-1.5 rounded-xl bg-green-600 text-white text-xs font-bold hover:bg-green-700 disabled:opacity-50 flex items-center gap-1"
+                >
+                  {processingFollow === req.user_id
+                    ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    : 'Accept'}
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

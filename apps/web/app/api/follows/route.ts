@@ -6,39 +6,53 @@ export async function POST(request: Request) {
   try {
     const { followingId } = await request.json();
     const userId = request.headers.get("x-user-id");
-
     if (!userId || !followingId) {
-      return NextResponse.json(
-        { error: "Missing userId or followingId" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
-
-    // Check if already following
     const existing = await sql`
       SELECT id FROM follows WHERE user_id = ${userId} AND following_id = ${followingId}
     `;
-
     if (existing.length > 0) {
-      return NextResponse.json(
-        { error: "Already following" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Already following" }, { status: 400 });
     }
-
     const result = await sql`
-      INSERT INTO follows (user_id, following_id)
-      VALUES (${userId}, ${followingId})
+      INSERT INTO follows (user_id, following_id, status, updated_at)
+      VALUES (${userId}, ${followingId}, 'pending', NOW())
       RETURNING *
     `;
-
     return NextResponse.json(result[0], { status: 201 });
   } catch (error) {
     console.error("Follow error:", error);
-    return NextResponse.json(
-      { error: "Failed to follow user" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to follow" }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const { followerId, action } = await request.json();
+    const userId = request.headers.get("x-user-id");
+    if (!userId || !followerId || !['accepted', 'rejected'].includes(action)) {
+      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    }
+    if (action === 'rejected') {
+      await sql`
+        DELETE FROM follows WHERE user_id = ${followerId} AND following_id = ${userId}
+      `;
+      return NextResponse.json({ success: true, action: 'rejected' });
+    }
+    const result = await sql`
+      UPDATE follows
+      SET status = 'accepted', updated_at = NOW()
+      WHERE user_id = ${followerId} AND following_id = ${userId}
+      RETURNING *
+    `;
+    if (result.length === 0) {
+      return NextResponse.json({ error: "Follow request not found" }, { status: 404 });
+    }
+    return NextResponse.json({ success: true, action: 'accepted' });
+  } catch (error) {
+    console.error("Follow PATCH error:", error);
+    return NextResponse.json({ error: "Failed to update follow" }, { status: 500 });
   }
 }
 
@@ -46,25 +60,13 @@ export async function DELETE(request: Request) {
   try {
     const { followingId } = await request.json();
     const userId = request.headers.get("x-user-id");
-
     if (!userId || !followingId) {
-      return NextResponse.json(
-        { error: "Missing userId or followingId" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
-
-    await sql`
-      DELETE FROM follows WHERE user_id = ${userId} AND following_id = ${followingId}
-    `;
-
+    await sql`DELETE FROM follows WHERE user_id = ${userId} AND following_id = ${followingId}`;
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Unfollow error:", error);
-    return NextResponse.json(
-      { error: "Failed to unfollow user" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to unfollow" }, { status: 500 });
   }
 }
 
@@ -75,79 +77,76 @@ export async function GET(request: Request) {
     const type = searchParams.get("type");
 
     if (!userId) {
-      return NextResponse.json(
-        { error: "Missing userId or farmerId" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
     }
 
-    // If type is specified, return only that type
+    if (type === "pending_requests") {
+      // People who want to follow userId but haven't been accepted yet
+      const requests = await sql`
+        SELECT f.id, f.user_id, f.created_at, u.name, u.image, u.location, u.role
+        FROM follows f
+        JOIN "user" u ON u.id = f.user_id
+        WHERE f.following_id = ${userId} AND f.status = 'pending'
+        ORDER BY f.created_at DESC
+      `;
+      return NextResponse.json(requests);
+    }
+
     if (type === "followers") {
       const followers = await sql`
         SELECT u.id, u.name, u.image FROM follows f
         JOIN "user" u ON f.user_id = u.id
-        WHERE f.following_id = ${userId}
+        WHERE f.following_id = ${userId} AND f.status = 'accepted'
         ORDER BY f.created_at DESC
       `;
       return NextResponse.json(followers);
-    } else if (type === "following") {
+    }
+
+    if (type === "following") {
       const following = await sql`
         SELECT u.id, u.name, u.image FROM follows f
         JOIN "user" u ON f.following_id = u.id
-        WHERE f.user_id = ${userId}
+        WHERE f.user_id = ${userId} AND f.status = 'accepted'
         ORDER BY f.created_at DESC
       `;
       return NextResponse.json(following);
     }
 
-    // If type is 'both', return counts
     if (type === "both") {
-      const followersCountResult = await sql`
-        SELECT COUNT(*) as count FROM follows
-        WHERE following_id = ${userId}
+      const followersCount = await sql`
+        SELECT COUNT(*)::int as count FROM follows
+        WHERE following_id = ${userId} AND status = 'accepted'
       `;
-
-      const followingCountResult = await sql`
-        SELECT COUNT(*) as count FROM follows
-        WHERE user_id = ${userId}
+      const followingCount = await sql`
+        SELECT COUNT(*)::int as count FROM follows
+        WHERE user_id = ${userId} AND status = 'accepted'
       `;
-
-      const followersCount = followersCountResult && followersCountResult.length > 0 
-        ? parseInt(followersCountResult[0].count || 0) 
-        : 0;
-      
-      const followingCount = followingCountResult && followingCountResult.length > 0 
-        ? parseInt(followingCountResult[0].count || 0) 
-        : 0;
-
+      const pendingCount = await sql`
+        SELECT COUNT(*)::int as count FROM follows
+        WHERE following_id = ${userId} AND status = 'pending'
+      `;
       return NextResponse.json({
-        followers_count: followersCount,
-        following_count: followingCount
+        followers_count: followersCount[0]?.count ?? 0,
+        following_count: followingCount[0]?.count ?? 0,
+        pending_count: pendingCount[0]?.count ?? 0,
       });
     }
 
-    // If no type specified, return both arrays
     const followers = await sql`
       SELECT u.id, u.name, u.image FROM follows f
       JOIN "user" u ON f.user_id = u.id
-      WHERE f.following_id = ${userId}
+      WHERE f.following_id = ${userId} AND f.status = 'accepted'
       ORDER BY f.created_at DESC
     `;
-
     const following = await sql`
       SELECT u.id, u.name, u.image FROM follows f
       JOIN "user" u ON f.following_id = u.id
-      WHERE f.user_id = ${userId}
+      WHERE f.user_id = ${userId} AND f.status = 'accepted'
       ORDER BY f.created_at DESC
     `;
-
     return NextResponse.json({ followers, following });
   } catch (error) {
     console.error("Get follows error:", error);
-    return NextResponse.json(
-      { error: "Failed to get follows" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to get follows" }, { status: 500 });
   }
 }
-

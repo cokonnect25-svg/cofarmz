@@ -137,6 +137,19 @@ const announcements = await sql`
   LIMIT 5
 `.catch(() => []);
 
+
+// Pending follow requests for this user
+const followRequests = await sql`
+  SELECT f.user_id, f.created_at, u.name, u.image
+  FROM follows f
+  JOIN "user" u ON u.id = f.user_id
+  WHERE f.following_id = ${userId}
+    AND f.status = 'pending'
+    AND f.created_at > ${sinceDate}
+  ORDER BY f.created_at DESC
+  LIMIT 10
+`.catch(() => []);
+
     const notifications: any[] = [];
 
     newMessages.forEach((msg: any) => {
@@ -230,6 +243,22 @@ ownerBookingUpdates.forEach((booking: any) => {
     link: `/home`,
   });
 });
+
+
+followRequests.forEach((req: any) => {
+  notifications.push({
+    id: `follow-req-${req.user_id}`,
+    type: 'follow_request',
+    title: 'New Follow Request',
+    body: `${req.name} wants to follow you`,
+    image: req.image,
+    time: req.created_at,
+    link: `/user-profile`,
+    followerId: req.user_id,
+  });
+});
+
+
 
     // Sort by time descending
     notifications.sort(
