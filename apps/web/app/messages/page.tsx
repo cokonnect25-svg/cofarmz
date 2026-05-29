@@ -23,18 +23,6 @@ function MessagesContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  useEffect(() => {
-  const input = document.querySelector("input");
-
-  const handler = () => {
-    setTimeout(() => {
-      input?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 300);
-  };
-
-  input?.addEventListener("focus", handler);
-  return () => input?.removeEventListener("focus", handler);
-}, []);
 
   useEffect(() => {
     const fetchMessages = async () => {

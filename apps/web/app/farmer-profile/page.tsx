@@ -306,6 +306,7 @@ function FarmerProfileContent() {
   const [callType] = useState<'audio' | 'video'>('audio');
   const [expandedCropIdx, setExpandedCropIdx] = useState<number | null>(null);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [followStatus, setFollowStatus] = useState<'none' | 'pending' | 'accepted'>('none');
 
   // Manage which sections are open (multi-expand)
   const [openSections, setOpenSections] = useState<Set<string>>(() => {
@@ -342,6 +343,15 @@ function FarmerProfileContent() {
 
       setProfile(data);
       setIsFollowing(data.isFollowing || false);
+      // Check follow status
+if (data.isFollowing) {
+  setFollowStatus('accepted');
+} else {
+  // Check if pending
+  const pendingRes = await fetch(getApiUrl(`/api/follows?user_id=${user.id}&following_id=${farmerId}&type=status`));
+  // Simpler: just track in profile API, for now default to none
+  setFollowStatus(data.isFollowing ? 'accepted' : 'none');
+}
 
       const rawCrops: Crop[] = Array.isArray(data.crops) ? data.crops : [];
       const rawCerts: Certificate[] = Array.isArray(data.certificates) ? data.certificates : [];
@@ -379,24 +389,40 @@ function FarmerProfileContent() {
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => { if (mounted && farmerId && user) fetchProfile(); }, [mounted, farmerId, user, fetchProfile]);
 
-  const handleFollow = async () => {
-    if (!farmerId || !user) return;
-    const method = isFollowing ? 'DELETE' : 'POST';
+const handleFollow = async () => {
+  if (!farmerId || !user) return;
+
+  if (followStatus === 'accepted' || isFollowing) {
+    // Unfollow
     try {
       const res = await fetch(getApiUrl('/api/follows'), {
-        method,
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json', 'x-user-id': user.id },
         body: JSON.stringify({ followingId: farmerId }),
       });
       if (res.ok) {
-        setIsFollowing(!isFollowing);
-        setProfile(p => p ? {
-          ...p,
-          followers_count: p.followers_count + (isFollowing ? -1 : 1)
-        } : p);
+        setFollowStatus('none');
+        setIsFollowing(false);
+        setProfile(p => p ? { ...p, followers_count: p.followers_count - 1 } : p);
       }
     } catch (e) { console.error(e); }
-  };
+    return;
+  }
+
+  if (followStatus === 'pending') return; // already requested
+
+  // Send follow request
+  try {
+    const res = await fetch(getApiUrl('/api/follows'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': user.id },
+      body: JSON.stringify({ followingId: farmerId }),
+    });
+    if (res.ok) {
+      setFollowStatus('pending');
+    }
+  } catch (e) { console.error(e); }
+};
 
   // ── Loading / Error States ──────────────────────────────────────────────────
 
@@ -471,16 +497,24 @@ function FarmerProfileContent() {
                 <BadgeCheck className="absolute bottom-0 right-0 w-5 h-5 text-blue-500 bg-white rounded-full" />
               )}
             </div>
-            {!isOwnProfile && (
-              <button
-                onClick={handleFollow}
-                className={`px-5 py-2 rounded-full font-bold text-sm transition ${isFollowing
-                  ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                  : `${rc.accentBg} text-white hover:opacity-90`}`}
-              >
-                {isFollowing ? 'Following' : 'Follow'}
-              </button>
-            )}
+{!isOwnProfile && (
+  <button
+    onClick={handleFollow}
+    className={`px-5 py-2 rounded-full font-bold text-sm transition ${
+      followStatus === 'accepted' || isFollowing
+        ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+        : followStatus === 'pending'
+        ? 'bg-yellow-100 text-yellow-700 border border-yellow-300 cursor-default'
+        : `${rc.accentBg} text-white hover:opacity-90`
+    }`}
+  >
+    {followStatus === 'accepted' || isFollowing
+      ? 'Following'
+      : followStatus === 'pending'
+      ? 'Requested'
+      : 'Follow'}
+  </button>
+)}
           </div>
 
           {/* Name + role */}

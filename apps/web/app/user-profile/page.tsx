@@ -475,18 +475,22 @@ useEffect(() => {
     } catch (error) { console.error('Error fetching user profile:', error); }
   };
 
- const fetchFollowersCounts = async () => {
+const fetchFollowersCounts = async () => {
   if (!user?.id) return;
   try {
     const res = await fetch(getApiUrl(`/api/follows?user_id=${user.id}&type=both`));
     if (res.ok) {
       const data = await res.json();
+      console.log('follows data:', data); // ← check this in browser console
       setFollowersCount(data.followers_count ?? 0);
       setFollowingCount(data.following_count ?? 0);
-      // Fetch pending requests if any
       if ((data.pending_count ?? 0) > 0) {
         const reqRes = await fetch(getApiUrl(`/api/follows?user_id=${user.id}&type=pending_requests`));
-        if (reqRes.ok) setPendingFollowRequests(await reqRes.json());
+        if (reqRes.ok) {
+          const requests = await reqRes.json();
+          console.log('pending requests:', requests); // ← check this too
+          setPendingFollowRequests(requests);
+        }
       }
     }
   } catch (error) {
