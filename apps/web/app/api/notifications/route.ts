@@ -128,12 +128,28 @@ const sinceDate = since
     `.catch(() => []);
 
     // Global announcements
+// Global announcements — notify all users
 const announcements = await sql`
-  SELECT id, title, body, created_at
-  FROM announcements
-  WHERE created_at > ${sinceDate}
-    AND (expires_at IS NULL OR expires_at > NOW())
-  ORDER BY created_at DESC
+  SELECT a.id, a.title, a.body, a.created_at, u.name AS admin_name, u.image AS admin_image
+  FROM announcements a
+  LEFT JOIN "user" u ON u.id = a.created_by         
+  WHERE a.created_at > ${sinceDate}
+    AND (a.expires_at IS NULL OR a.expires_at > NOW())
+  ORDER BY a.created_at DESC
+  LIMIT 5
+`.catch(() => []);
+
+
+// New reels posted by admins — notify all users
+const adminReels = await sql`
+  SELECT r.id, r.caption, r.thumbnail_url, r.created_at,
+         u.name AS admin_name, u.image AS admin_image
+  FROM reels r
+  JOIN "user" u ON u.id = r.user_id
+  WHERE (u.role = 'superadmin' OR u.role_id = 5)
+    AND r.user_id != ${userId}          -- don't notify the admin about their own reel
+    AND r.created_at > ${sinceDate}
+  ORDER BY r.created_at DESC
   LIMIT 5
 `.catch(() => []);
 
@@ -232,15 +248,31 @@ ownerBookingUpdates.forEach((booking: any) => {
       });
     });
 
-    announcements.forEach((ann: any) => {
+announcements.forEach((ann: any) => {
   notifications.push({
     id: `ann-${ann.id}`,
     type: 'announcement',
     title: `📢 ${ann.title}`,
     body: ann.body,
-    image: null,
+    image: ann.admin_image ?? null,
     time: ann.created_at,
     link: `/home`,
+  });
+});
+
+adminReels.forEach((reel: any) => {
+  notifications.push({
+    id: `reel-${reel.id}`,
+    type: 'admin_reel',
+    title: `🎬 New Video from ${reel.admin_name}`,
+    body: reel.caption
+      ? reel.caption.length > 60
+        ? reel.caption.substring(0, 60) + '...'
+        : reel.caption
+      : 'Check out the latest video',
+    image: reel.thumbnail_url ?? reel.admin_image ?? null,
+    time: reel.created_at,
+    link: `/reels?id=${reel.id}`,
   });
 });
 
