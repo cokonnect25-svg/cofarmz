@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
+import { getApiUrl } from "@/lib/api";
 import {
   AreaChart,
   Area,
@@ -16,7 +17,6 @@ import {
   Cell,
 } from "recharts";
 
-// ── Types ──────────────────────────────────────────────────────────────────
 interface DailyGrowth {
   date: string;
   new_users: number;
@@ -32,7 +32,6 @@ interface Stats {
   byRole: RoleCount[];
 }
 
-// ── DailyGrowthChart component ─────────────────────────────────────────────
 function DailyGrowthChart({ data }: { data: DailyGrowth[] }) {
   if (!data || data.length === 0) {
     return (
@@ -46,7 +45,6 @@ function DailyGrowthChart({ data }: { data: DailyGrowth[] }) {
     );
   }
 
-  // Format dates to short labels
   const formatted = data.map((d) => ({
     ...d,
     label: new Date(d.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
@@ -99,7 +97,6 @@ function DailyGrowthChart({ data }: { data: DailyGrowth[] }) {
   );
 }
 
-// ── RoleBreakdownChart component ───────────────────────────────────────────
 const ROLE_COLORS: Record<string, string> = {
   farmer: "#16a34a",
   buyer: "#2563eb",
@@ -115,20 +112,13 @@ function RoleBreakdownChart({ data }: { data: RoleCount[] }) {
     <ResponsiveContainer width="100%" height={200}>
       <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-<Tooltip
-  contentStyle={{
-    background: "#fff",
-    border: "none",
-    borderRadius: "12px",
-    boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
-    fontSize: "12px",
-    fontWeight: 700,
-  }}
-  formatter={(value: any, name: any, props: any) => [
-    `${props.payload.count} users`,
-    props.payload.role,
-  ]}
-/>
+        <XAxis
+          dataKey="role"
+          tickFormatter={(value) => value.toUpperCase()}
+          tick={{ fontSize: 10, fill: "#9ca3af", fontWeight: 700 }}
+          axisLine={false}
+          tickLine={false}
+        />
         <YAxis
           allowDecimals={false}
           tick={{ fontSize: 10, fill: "#9ca3af", fontWeight: 600 }}
@@ -144,17 +134,14 @@ function RoleBreakdownChart({ data }: { data: RoleCount[] }) {
             fontSize: "12px",
             fontWeight: 700,
           }}
-formatter={(value: any, _name: any, props: any) => [
-  `${props?.payload?.count ?? value} users`,
-  props?.payload?.role ?? _name,
-]}
+          formatter={(value: any, _name: any, props: any) => [
+            `${props?.payload?.count ?? value} users`,
+            props?.payload?.role ?? _name,
+          ]}
         />
         <Bar dataKey="count" radius={[6, 6, 0, 0]}>
           {data.map((entry, index) => (
-            <Cell
-              key={index}
-              fill={ROLE_COLORS[entry.role] || "#6b7280"}
-            />
+            <Cell key={index} fill={ROLE_COLORS[entry.role] || "#6b7280"} />
           ))}
         </Bar>
       </BarChart>
@@ -162,36 +149,65 @@ formatter={(value: any, _name: any, props: any) => [
   );
 }
 
-// ── Main Dashboard ─────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  // ── Key fix: verify role from DB, not session ──
+  const [verified, setVerified] = useState<"pending" | "ok" | "denied">("pending");
 
-  // Guard: non-admins get bounced
   useEffect(() => {
-    if (!loading && user?.role !== "superadmin") {
-      router.replace("/home");
+    // Wait until auth is ready
+    if (loading) return;
+
+    // Not logged in at all
+    if (!user?.id) {
+      router.replace("/login");
+      return;
     }
-  }, [user, loading]);
 
+    // Fetch profile from DB to check actual role
+    fetch(getApiUrl(`/api/users/profile?userId=${user.id}`))
+      .then((r) => r.json())
+      .then((profile) => {
+        if (profile.role === "superadmin" || profile.role_id === 5) {
+          setVerified("ok");
+        } else {
+          setVerified("denied");
+          router.replace("/home");
+        }
+      })
+      .catch(() => {
+        setVerified("denied");
+        router.replace("/home");
+      });
+  }, [user?.id, loading]);
+
+  // Fetch stats only after verified
   useEffect(() => {
-    if (user?.role !== "superadmin") return;
-    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/admin/stats`)
+    if (verified !== "ok") return;
+    fetch(getApiUrl(`/api/admin/stats`))
       .then((r) => r.json())
       .then((data) => setStats(data))
       .catch(console.error)
       .finally(() => setLoadingStats(false));
-  }, [user]);
+  }, [verified]);
 
-  if (loading || !user) {
+  // Show spinner while auth loads OR while verifying role
+  if (loading || verified === "pending") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-10 h-10 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-gray-400 font-semibold">Verifying access...</p>
+        </div>
       </div>
     );
   }
+
+  // Denied — show nothing (redirect is happening)
+  if (verified === "denied") return null;
 
   const totalUsers = stats?.byRole?.reduce((sum, r) => sum + r.count, 0) ?? 0;
   const todayGrowth = stats?.dailyGrowth?.at(-1)?.new_users ?? 0;
@@ -212,7 +228,7 @@ export default function AdminDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs font-bold text-gray-500 hidden sm:block">{user.name}</span>
+          <span className="text-xs font-bold text-gray-500 hidden sm:block">{user?.name}</span>
           <button
             onClick={signOut}
             className="text-xs font-bold text-red-500 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors"
@@ -290,7 +306,6 @@ export default function AdminDashboard() {
           ) : (
             <>
               <RoleBreakdownChart data={stats?.byRole ?? []} />
-              {/* Role legend pills */}
               <div className="flex flex-wrap gap-2 mt-4">
                 {(stats?.byRole ?? []).map((r) => (
                   <span
