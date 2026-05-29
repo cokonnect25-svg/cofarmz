@@ -129,27 +129,30 @@ const sinceDate = since
 
     // Global announcements
 // Global announcements — notify all users
-const announcements = await sql`
-  SELECT a.id, a.title, a.body, a.created_at, u.name AS admin_name, u.image AS admin_image
-  FROM announcements a
-  LEFT JOIN "user" u ON u.id = a.created_by         
-  WHERE a.created_at > ${sinceDate}
-    AND (a.expires_at IS NULL OR a.expires_at > NOW())
-  ORDER BY a.created_at DESC
-  LIMIT 5
-`.catch(() => []);
+// In your notifications route — use a fixed 7-day window for admin content
+const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-
-// New reels posted by admins — notify all users
+// New reels posted by admins — always use 7-day window, ignore `since`
 const adminReels = await sql`
   SELECT r.id, r.caption, r.thumbnail_url, r.created_at,
          u.name AS admin_name, u.image AS admin_image
   FROM reels r
   JOIN "user" u ON u.id = r.user_id
   WHERE (u.role = 'superadmin' OR u.role_id = 5)
-    AND r.user_id != ${userId}          -- don't notify the admin about their own reel
-    AND r.created_at > ${sinceDate}
+    AND r.user_id != ${userId}
+    AND r.created_at > ${sevenDaysAgo}   -- ← fixed 7-day window, not sinceDate
   ORDER BY r.created_at DESC
+  LIMIT 5
+`.catch(() => []);
+
+// Same fix for announcements
+const announcements = await sql`
+  SELECT a.id, a.title, a.body, a.created_at, u.name AS admin_name, u.image AS admin_image
+  FROM announcements a
+  LEFT JOIN "user" u ON u.id = a.created_by
+  WHERE a.created_at > ${sevenDaysAgo}   -- ← fixed 7-day window
+    AND (a.expires_at IS NULL OR a.expires_at > NOW())
+  ORDER BY a.created_at DESC
   LIMIT 5
 `.catch(() => []);
 

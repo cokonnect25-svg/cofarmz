@@ -4,8 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
-import UserAvatar from '@/app/components/UserAvatar';
-import { ArrowLeft, Bell, UserPlus, MessageCircle, Package, Megaphone } from 'lucide-react';
+import { ArrowLeft, Bell, UserPlus, MessageCircle, Package, Megaphone, Video } from 'lucide-react';
 
 interface Notification {
   id: string;
@@ -102,25 +101,40 @@ function NotificationsContent() {
     }
   };
 
+  // ── FIX: handle admin_reel navigation — extract reel id from link and navigate
+  const handleNotifClick = (notif: Notification) => {
+    if (!notif.link) return;
+
+    if (notif.type === 'admin_reel') {
+      // link is like /reels?id=reel_xxx — navigate directly, reels page reads ?id param
+      router.push(notif.link);
+      return;
+    }
+
+    router.push(notif.link);
+  };
+
   const getNotifIcon = (type: string) => {
     switch (type) {
-      case 'follow_request': return <UserPlus className="w-5 h-5 text-green-600" />;
-      case 'message': return <MessageCircle className="w-5 h-5 text-blue-600" />;
+      case 'follow_request':  return <UserPlus className="w-5 h-5 text-green-600" />;
+      case 'message':         return <MessageCircle className="w-5 h-5 text-blue-600" />;
       case 'booking_new':
-      case 'booking_update': return <Package className="w-5 h-5 text-amber-600" />;
-      case 'announcement': return <Megaphone className="w-5 h-5 text-purple-600" />;
-      default: return <Bell className="w-5 h-5 text-gray-500" />;
+      case 'booking_update':  return <Package className="w-5 h-5 text-amber-600" />;
+      case 'announcement':    return <Megaphone className="w-5 h-5 text-purple-600" />;
+      case 'admin_reel':      return <Video className="w-5 h-5 text-pink-600" />;   // ← FIX
+      default:                return <Bell className="w-5 h-5 text-gray-500" />;
     }
   };
 
   const getNotifBg = (type: string) => {
     switch (type) {
-      case 'follow_request': return 'bg-green-50';
-      case 'message': return 'bg-blue-50';
+      case 'follow_request':  return 'bg-green-50';
+      case 'message':         return 'bg-blue-50';
       case 'booking_new':
-      case 'booking_update': return 'bg-amber-50';
-      case 'announcement': return 'bg-purple-50';
-      default: return 'bg-gray-50';
+      case 'booking_update':  return 'bg-amber-50';
+      case 'announcement':    return 'bg-purple-50';
+      case 'admin_reel':      return 'bg-pink-50';   // ← FIX
+      default:                return 'bg-gray-50';
     }
   };
 
@@ -241,12 +255,24 @@ function NotificationsContent() {
               {notifications.map((notif) => (
                 <div
                   key={notif.id}
-                  onClick={() => notif.link && router.push(notif.link)}
+                  onClick={() => handleNotifClick(notif)}
                   className="flex items-start gap-3 px-4 py-4 hover:bg-gray-50 transition cursor-pointer active:bg-gray-100"
                 >
                   {/* Icon or avatar */}
                   <div className="flex-shrink-0">
-                    {notif.image ? (
+                    {/* ── FIX: for admin_reel, show thumbnail if available, else icon ── */}
+                    {notif.type === 'admin_reel' && notif.image ? (
+                      <div className="relative">
+                        <img
+                          src={notif.image}
+                          alt=""
+                          className="w-11 h-11 rounded-xl object-cover"
+                        />
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-pink-50 flex items-center justify-center border-2 border-white">
+                          <Video className="w-3 h-3 text-pink-600" />
+                        </div>
+                      </div>
+                    ) : notif.image ? (
                       <div className="relative">
                         <img
                           src={notif.image}
@@ -279,12 +305,19 @@ function NotificationsContent() {
                   {/* Status badge for bookings */}
                   {notif.status && (
                     <span className={`text-[10px] font-black px-2 py-0.5 rounded-full flex-shrink-0 ${
-                      notif.status === 'accepted' ? 'bg-green-100 text-green-700' :
-                      notif.status === 'rejected' ? 'bg-red-100 text-red-600' :
+                      notif.status === 'accepted'  ? 'bg-green-100 text-green-700' :
+                      notif.status === 'rejected'  ? 'bg-red-100 text-red-600' :
                       notif.status === 'cancelled' ? 'bg-gray-100 text-gray-600' :
                       'bg-blue-100 text-blue-700'
                     }`}>
                       {notif.status}
+                    </span>
+                  )}
+
+                  {/* ── FIX: "Watch" pill for admin reel notifications ── */}
+                  {notif.type === 'admin_reel' && (
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full flex-shrink-0 bg-pink-100 text-pink-600">
+                      Watch
                     </span>
                   )}
                 </div>
