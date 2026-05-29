@@ -27,6 +27,7 @@
     "@phosphor-icons/web": "^2.1.2",
     "@types/leaflet": "^1.9.21",
     "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.3",
     "better-auth": "^1.2.5",
     "google-auth-library": "^10.6.2",
     "leaflet": "^1.9.4",
