@@ -18,10 +18,26 @@ function MessagesContent() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+const scrollToBottom = () => {
+  const container = messagesContainerRef.current;
+
+  if (!container) return;
+
+  const isNearBottom =
+    container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+
+  if (isNearBottom) {
+    requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+    });
+  }
+};
+
+useEffect(() => {
+  scrollToBottom();
+}, [messages]);
 
 
   useEffect(() => {
@@ -49,9 +65,7 @@ function MessagesContent() {
   }, [user?.id, ownerId]);
 
   // Scroll to bottom whenever messages change
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !user?.id || !ownerId) return;
@@ -95,7 +109,10 @@ function MessagesContent() {
     </div>
 
     {/* SCROLLABLE MESSAGE AREA */}
-    <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-4">
+   <div
+  ref={messagesContainerRef}
+  className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-4"
+>
       {loading && (
         <p className="text-gray-500 text-center text-sm">
           Loading messages...
