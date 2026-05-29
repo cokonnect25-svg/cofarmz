@@ -5,6 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { getApiUrl } from '@/lib/api';
+import { Bell } from 'lucide-react';
+
 
 // Two separate keys:
 // NOTIF_SEEN_KEY  → "since" cursor for the API – updated after each successful fetch
@@ -64,6 +66,7 @@ export default function TopNav() {
   const plusRef = useRef<HTMLDivElement>(null);
   // Add this state near the other notification states
 const [showAllNotifications, setShowAllNotifications] = useState(false);
+const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     const match = document.cookie.match(/googtrans=\/en\/([a-z]+)/);
@@ -82,6 +85,15 @@ const [showAllNotifications, setShowAllNotifications] = useState(false);
     window.addEventListener('profileImageUpdated', handler);
     return () => window.removeEventListener('profileImageUpdated', handler);
   }, []);
+
+  useEffect(() => {
+  if (!user?.id) return;
+  // Check pending follow requests count
+  fetch(getApiUrl(`/api/follows?user_id=${user.id}&type=both`))
+    .then(r => r.json())
+    .then(data => setPendingCount(data.pending_count ?? 0))
+    .catch(() => {});
+}, [user?.id]);
 
   // ---------------------------------------------------------------------------
   // Fetch notifications
@@ -278,18 +290,17 @@ const handleOpenNotifPanel = () => {
 
                 {/* Notification Bell */}
                 <div className="relative" ref={notifRef}>
-                  <button
-                    onClick={handleOpenNotifPanel}
-                    className="relative flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 transition-colors"
-                    title="Notifications"
-                  >
-                    <i className="ph ph-bell text-[20px] text-gray-600" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 shadow-sm">
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </span>
-                    )}
-                  </button>
+<button
+  onClick={() => router.push('/notifications')}
+  className="relative p-2 hover:bg-gray-100 rounded-full transition"
+>
+  <Bell className="w-5 h-5 text-gray-700" />
+  {pendingCount > 0 && (
+    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-white text-[9px] font-black flex items-center justify-center">
+      {pendingCount}
+    </span>
+  )}
+</button>
 
                   {/* Notification Dropdown */}
 {/* Notification Dropdown */}

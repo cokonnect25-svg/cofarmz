@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePathname } from "next/navigation";
 import AdSplash from "./components/AdSplash";
 
+
 const TOP_NAV_H = 64;
 const BOTTOM_NAV_H = 60;
 

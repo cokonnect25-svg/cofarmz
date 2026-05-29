@@ -1788,72 +1788,10 @@ const fetchFollowersCounts = async () => {
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
       {/* ── Follow Requests Notification Bell ── */}
-{pendingFollowRequests.length > 0 && (
-  <button
-    onClick={() => setShowFollowRequests(true)}
-    className="fixed top-16 right-4 z-50 w-12 h-12 bg-green-600 rounded-full flex items-center justify-center shadow-lg"
-  >
-    <i className="ph-fill ph-user-plus text-white text-xl"></i>
-    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-[10px] font-black flex items-center justify-center">
-      {pendingFollowRequests.length}
-    </span>
-  </button>
-)}
+
 
 {/* ── Follow Requests Modal ── */}
-{showFollowRequests && (
-  <div className="fixed inset-0 bg-black/50 z-[60] flex items-end justify-center">
-    <div className="bg-white rounded-t-3xl w-full max-w-md max-h-[70vh] overflow-hidden flex flex-col">
-      <div className="flex items-center justify-between px-5 py-4 border-b">
-        <h3 className="text-lg font-black text-gray-900">Follow Requests</h3>
-        <button onClick={() => setShowFollowRequests(false)} className="p-1 hover:bg-gray-100 rounded-full">
-          <X className="w-5 h-5 text-gray-600" />
-        </button>
-      </div>
-      <div className="overflow-y-auto flex-1 divide-y divide-gray-100">
-        {pendingFollowRequests.length === 0 ? (
-          <p className="text-center text-gray-400 text-sm py-10">No pending requests</p>
-        ) : (
-          pendingFollowRequests.map((req) => (
-            <div key={req.user_id} className="flex items-center gap-3 px-5 py-4">
-              <img
-                src={req.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(req.name)}`}
-                alt={req.name}
-                className="w-12 h-12 rounded-full object-cover flex-shrink-0 cursor-pointer"
-                onClick={() => { setShowFollowRequests(false); router.push(`/farmer-profile?id=${req.user_id}`); }}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-gray-900 text-sm truncate">{req.name}</p>
-                {req.location && <p className="text-xs text-gray-400 truncate">{req.location}</p>}
-                <p className="text-[10px] text-gray-400 mt-0.5">
-                  {new Date(req.created_at).toLocaleDateString('en-IN')}
-                </p>
-              </div>
-              <div className="flex gap-2 flex-shrink-0">
-                <button
-                  onClick={() => handleFollowAction(req.user_id, 'rejected')}
-                  disabled={processingFollow === req.user_id}
-                  className="px-3 py-1.5 rounded-xl border-2 border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Decline
-                </button>
-                <button
-                  onClick={() => handleFollowAction(req.user_id, 'accepted')}
-                  disabled={processingFollow === req.user_id}
-                  className="px-3 py-1.5 rounded-xl bg-green-600 text-white text-xs font-bold hover:bg-green-700 disabled:opacity-50 flex items-center gap-1"
-                >
-                  {processingFollow === req.user_id
-                    ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    : 'Accept'}
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  </div>
-)}
+
     </div>
   );
 }
