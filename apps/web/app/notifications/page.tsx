@@ -4,7 +4,10 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
-import { ArrowLeft, Bell, UserPlus, MessageCircle, Package, Megaphone, Video } from 'lucide-react';
+import {
+  ArrowLeft, Bell, UserPlus, MessageCircle,
+  Package, Megaphone, Video, ChevronDown, ChevronUp, X
+} from 'lucide-react';
 
 interface Notification {
   id: string;
@@ -28,6 +31,81 @@ interface FollowRequest {
 
 const NOTIF_READ_KEY = 'cofarmz_notif_read_at';
 
+// ── Announcement expand modal (inline, no navigation) ──────────────────────
+function AnnouncementModal({
+  notif,
+  onClose,
+}: {
+  notif: Notification;
+  onClose: () => void;
+}) {
+  return (
+    // backdrop — tap outside to close
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-0 sm:px-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Purple header stripe */}
+        <div className="bg-purple-600 px-5 pt-5 pb-4 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+            <Megaphone className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold text-purple-200 uppercase tracking-wider mb-0.5">
+              Announcement
+            </p>
+            <h2 className="text-white font-black text-base leading-snug">
+              {notif.title}
+            </h2>
+            <p className="text-purple-200 text-xs mt-1">
+              {new Date(notif.time).toLocaleDateString('en-IN', {
+                day: 'numeric', month: 'long', year: 'numeric',
+                hour: '2-digit', minute: '2-digit',
+              })}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-full bg-purple-500 hover:bg-purple-400 transition flex-shrink-0"
+          >
+            <X className="w-4 h-4 text-white" />
+          </button>
+        </div>
+
+        {/* Optional image */}
+        {notif.image && (
+          <img
+            src={notif.image}
+            alt=""
+            className="w-full max-h-48 object-cover"
+          />
+        )}
+
+        {/* Body */}
+        <div className="px-5 py-5">
+          <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+            {notif.body}
+          </p>
+        </div>
+
+        {/* Close button */}
+        <div className="px-5 pb-6">
+          <button
+            onClick={onClose}
+            className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold text-sm hover:bg-purple-700 active:scale-95 transition-transform"
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function NotificationsContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -36,6 +114,8 @@ function NotificationsContent() {
   const [loadingData, setLoadingData] = useState(true);
   const [processingFollow, setProcessingFollow] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  // ── NEW: which announcement is expanded ──
+  const [expandedAnnouncement, setExpandedAnnouncement] = useState<Notification | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -72,7 +152,6 @@ function NotificationsContent() {
         setFollowRequests(Array.isArray(requests) ? requests : []);
       }
 
-      // Mark as read
       localStorage.setItem(NOTIF_READ_KEY, new Date().toISOString());
       setUnreadCount(0);
     } catch (e) {
@@ -101,16 +180,13 @@ function NotificationsContent() {
     }
   };
 
-  // ── FIX: handle admin_reel navigation — extract reel id from link and navigate
+  // ── UPDATED: announcements expand inline; everything else navigates ──
   const handleNotifClick = (notif: Notification) => {
-    if (!notif.link) return;
-
-    if (notif.type === 'admin_reel') {
-      // link is like /reels?id=reel_xxx — navigate directly, reels page reads ?id param
-      router.push(notif.link);
+    if (notif.type === 'announcement') {
+      setExpandedAnnouncement(notif);
       return;
     }
-
+    if (!notif.link) return;
     router.push(notif.link);
   };
 
@@ -121,7 +197,7 @@ function NotificationsContent() {
       case 'booking_new':
       case 'booking_update':  return <Package className="w-5 h-5 text-amber-600" />;
       case 'announcement':    return <Megaphone className="w-5 h-5 text-purple-600" />;
-      case 'admin_reel':      return <Video className="w-5 h-5 text-pink-600" />;   // ← FIX
+      case 'admin_reel':      return <Video className="w-5 h-5 text-pink-600" />;
       default:                return <Bell className="w-5 h-5 text-gray-500" />;
     }
   };
@@ -133,7 +209,7 @@ function NotificationsContent() {
       case 'booking_new':
       case 'booking_update':  return 'bg-amber-50';
       case 'announcement':    return 'bg-purple-50';
-      case 'admin_reel':      return 'bg-pink-50';   // ← FIX
+      case 'admin_reel':      return 'bg-pink-50';
       default:                return 'bg-gray-50';
     }
   };
@@ -146,6 +222,15 @@ function NotificationsContent() {
 
   return (
     <div className="min-h-[100dvh] bg-gray-50">
+
+      {/* ── Announcement modal (rendered at root so it overlays everything) ── */}
+      {expandedAnnouncement && (
+        <AnnouncementModal
+          notif={expandedAnnouncement}
+          onClose={() => setExpandedAnnouncement(null)}
+        />
+      )}
+
       {/* Header */}
       <div className="sticky top-0 bg-white border-b px-4 py-3 flex items-center gap-3 z-40 shadow-sm">
         <button onClick={() => router.back()} className="p-1 rounded-full hover:bg-gray-100 transition">
@@ -162,7 +247,7 @@ function NotificationsContent() {
 
       <div className="max-w-lg mx-auto px-4 py-4 space-y-4">
 
-        {/* ── Follow Requests Section ── */}
+        {/* ── Follow Requests ── */}
         {followRequests.length > 0 && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50 bg-green-50">
@@ -258,27 +343,18 @@ function NotificationsContent() {
                   onClick={() => handleNotifClick(notif)}
                   className="flex items-start gap-3 px-4 py-4 hover:bg-gray-50 transition cursor-pointer active:bg-gray-100"
                 >
-                  {/* Icon or avatar */}
+                  {/* Icon / avatar */}
                   <div className="flex-shrink-0">
-                    {/* ── FIX: for admin_reel, show thumbnail if available, else icon ── */}
                     {notif.type === 'admin_reel' && notif.image ? (
                       <div className="relative">
-                        <img
-                          src={notif.image}
-                          alt=""
-                          className="w-11 h-11 rounded-xl object-cover"
-                        />
+                        <img src={notif.image} alt="" className="w-11 h-11 rounded-xl object-cover" />
                         <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-pink-50 flex items-center justify-center border-2 border-white">
                           <Video className="w-3 h-3 text-pink-600" />
                         </div>
                       </div>
                     ) : notif.image ? (
                       <div className="relative">
-                        <img
-                          src={notif.image}
-                          alt=""
-                          className="w-11 h-11 rounded-full object-cover"
-                        />
+                        <img src={notif.image} alt="" className="w-11 h-11 rounded-full object-cover" />
                         <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full ${getNotifBg(notif.type)} flex items-center justify-center border-2 border-white`}>
                           {getNotifIcon(notif.type)}
                         </div>
@@ -302,7 +378,7 @@ function NotificationsContent() {
                     </p>
                   </div>
 
-                  {/* Status badge for bookings */}
+                  {/* Badges */}
                   {notif.status && (
                     <span className={`text-[10px] font-black px-2 py-0.5 rounded-full flex-shrink-0 ${
                       notif.status === 'accepted'  ? 'bg-green-100 text-green-700' :
@@ -314,10 +390,16 @@ function NotificationsContent() {
                     </span>
                   )}
 
-                  {/* ── FIX: "Watch" pill for admin reel notifications ── */}
                   {notif.type === 'admin_reel' && (
                     <span className="text-[10px] font-black px-2 py-0.5 rounded-full flex-shrink-0 bg-pink-100 text-pink-600">
                       Watch
+                    </span>
+                  )}
+
+                  {/* ── Tap-to-read cue for announcements ── */}
+                  {notif.type === 'announcement' && (
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full flex-shrink-0 bg-purple-100 text-purple-700 flex items-center gap-0.5">
+                      Read <ChevronDown className="w-3 h-3" />
                     </span>
                   )}
                 </div>
