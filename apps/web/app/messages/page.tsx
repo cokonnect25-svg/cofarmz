@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { Send, ArrowLeft } from 'lucide-react';
 import { getApiUrl } from '@/lib/api';
 
+const TOP_NAV_H = 64;
+const BOTTOM_NAV_H = 60;
+
 function MessagesContent() {
   const searchParams = useSearchParams();
   const ownerId = searchParams.get('ownerId');
@@ -17,26 +20,19 @@ function MessagesContent() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-useEffect(() => {
-  const container = messagesContainerRef.current;
-
-  if (!container) return;
-
-  const distanceFromBottom =
-    container.scrollHeight -
-    container.scrollTop -
-    container.clientHeight;
-
-  if (distanceFromBottom < 150) {
-    requestAnimationFrame(() => {
-      container.scrollTop = container.scrollHeight;
-    });
-  }
-}, [messages]);
-
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom < 150) {
+      requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
+    }
+  }, [messages]);
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -61,9 +57,6 @@ useEffect(() => {
     const interval = setInterval(fetchMessages, 3000);
     return () => clearInterval(interval);
   }, [user?.id, ownerId]);
-
-  // Scroll to bottom whenever messages change
-
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !user?.id || !ownerId) return;
@@ -91,103 +84,95 @@ useEffect(() => {
     }
   };
 
- return (
-  <div className="fixed inset-0 flex flex-col bg-white overflow-hidden">
-
-    {/* HEADER */}
-    <div className="flex-shrink-0 bg-green-600 text-white px-4 py-3 flex items-center gap-3">
-      <Link href={`/machinery-details?id=${machineryId}`}>
-        <ArrowLeft className="w-6 h-6 cursor-pointer" />
-      </Link>
-
-      <div>
-        <h1 className="font-bold text-lg">Chat with Owner</h1>
-        <p className="text-sm text-green-100">{ownerName}</p>
-      </div>
-    </div>
-
-    {/* SCROLLABLE MESSAGE AREA */}
-<div
-  ref={messagesContainerRef}
-  className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-4"
->
-      {loading && (
-        <p className="text-gray-500 text-center text-sm">
-          Loading messages...
-        </p>
-      )}
-
-      {!loading && messages.length === 0 && (
-        <div className="h-full flex items-center justify-center">
-          <p className="text-gray-400 text-sm text-center">
-            No messages yet.
-            <br />
-            Start the conversation!
-          </p>
+  return (
+    <div
+      className="fixed left-0 right-0 flex flex-col bg-white"
+      style={{
+        top: `calc(${TOP_NAV_H}px + env(safe-area-inset-top))`,
+        bottom: `calc(${BOTTOM_NAV_H}px + env(safe-area-inset-bottom))`,
+      }}
+    >
+      {/* HEADER */}
+      <div className="flex-shrink-0 bg-green-600 text-white px-4 py-3 flex items-center gap-3">
+        <Link href={`/machinery-details?id=${machineryId}`}>
+          <ArrowLeft className="w-6 h-6 cursor-pointer" />
+        </Link>
+        <div>
+          <h1 className="font-bold text-lg">Chat with Owner</h1>
+          <p className="text-sm text-green-100">{ownerName}</p>
         </div>
-      )}
+      </div>
 
-      {messages.map((msg) => (
-        <div
-          key={msg.id}
-          className={`flex ${
-            msg.sender_id === user?.id
-              ? 'justify-end'
-              : 'justify-start'
-          }`}
-        >
-          <div
-            className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm ${
-              msg.sender_id === user?.id
-                ? 'bg-green-500 text-white rounded-br-sm'
-                : 'bg-gray-100 text-gray-900 rounded-bl-sm'
-            }`}
-          >
-            <p>{msg.message}</p>
+      {/* SCROLLABLE MESSAGE AREA */}
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-4"
+      >
+        {loading && (
+          <p className="text-gray-500 text-center text-sm">Loading messages...</p>
+        )}
 
-            <p
-              className={`text-xs mt-1 ${
-                msg.sender_id === user?.id
-                  ? 'text-green-100'
-                  : 'text-gray-400'
-              }`}
-            >
-              {new Date(msg.created_at).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+        {!loading && messages.length === 0 && (
+          <div className="h-full flex items-center justify-center">
+            <p className="text-gray-400 text-sm text-center">
+              No messages yet.
+              <br />
+              Start the conversation!
             </p>
           </div>
-        </div>
-      ))}
+        )}
 
-      <div ref={messagesEndRef} />
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`flex ${
+              msg.sender_id === user?.id ? 'justify-end' : 'justify-start'
+            }`}
+          >
+            <div
+              className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm ${
+                msg.sender_id === user?.id
+                  ? 'bg-green-500 text-white rounded-br-sm'
+                  : 'bg-gray-100 text-gray-900 rounded-bl-sm'
+              }`}
+            >
+              <p>{msg.message}</p>
+              <p
+                className={`text-xs mt-1 ${
+                  msg.sender_id === user?.id ? 'text-green-100' : 'text-gray-400'
+                }`}
+              >
+                {new Date(msg.created_at).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* INPUT */}
+      <div className="flex-shrink-0 border-t bg-white px-4 py-3 flex items-center gap-2">
+        <input
+          type="text"
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+          placeholder="Type a message..."
+          className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30"
+          disabled={sending}
+        />
+        <button
+          onClick={handleSendMessage}
+          disabled={sending || !newMessage.trim()}
+          className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center disabled:opacity-40"
+        >
+          <Send className="w-4 h-4 text-white" />
+        </button>
+      </div>
     </div>
-
-    {/* INPUT */}
-    <div className="flex-shrink-0 border-t bg-white px-4 py-3 flex items-center gap-2 ">
-      <input
-        type="text"
-        value={newMessage}
-        onChange={(e) => setNewMessage(e.target.value)}
-        onKeyDown={(e) =>
-          e.key === 'Enter' && handleSendMessage()
-        }
-        placeholder="Type a message..."
-        className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30"
-        disabled={sending}
-      />
-
-      <button
-        onClick={handleSendMessage}
-        disabled={sending || !newMessage.trim()}
-        className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center disabled:opacity-40"
-      >
-        <Send className="w-4 h-4 text-white" />
-      </button>
-    </div>
-  </div>
-);
+  );
 }
 
 export default function MessagesPage() {
