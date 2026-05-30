@@ -41,10 +41,11 @@ function AnnouncementModal({
 }) {
   return (
     // backdrop — tap outside to close
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-0 sm:px-4"
-      onClick={onClose}
-    >
+<div
+  className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-0 sm:px-4"
+  style={{ paddingBottom: 'calc(60px + env(safe-area-inset-bottom))' }}
+  onClick={onClose}
+>
       <div
         className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
