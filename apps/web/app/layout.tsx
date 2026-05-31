@@ -17,15 +17,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePathname } from "next/navigation";
 import AdSplash from "./components/AdSplash";
 
-
 const TOP_NAV_H = 64;
 const BOTTOM_NAV_H = 60;
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
-
   const { user } = useAuth();
   const pathname = usePathname();
-
   const [showSplash, setShowSplash] = useState(false);
 
   useEffect(() => {
@@ -56,7 +53,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex flex-col min-h-[100dvh]">
-      {/* ✅ Phosphor loads only when online (inside OfflineWrapper → LayoutContent) */}
+      {/* Phosphor icons - lazy loaded */}
       <Script
         src="https://unpkg.com/@phosphor-icons/web"
         strategy="lazyOnload"
@@ -122,20 +119,50 @@ export default function RootLayout({
         <link rel="shortcut icon" href="/assets/cofarmz-logo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/assets/cofarmz-logo.png" />
         <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,400&display=swap" />
-        {/* ✅ Phosphor script removed from here — now loaded conditionally via next/script inside LayoutContent */}
 
+        {/* Google Translate CSS cleanup */}
         <style>{`
-          .goog-te-banner-frame { display: none !important; }
-          body { top: 0 !important; }
-          #google_translate_element { position: absolute; opacity: 0; pointer-events: none; }
-          .goog-te-gadget { font-size: 0 !important; }
+          .goog-te-banner-frame,
+          .goog-te-ftab,
+          .goog-te-menu-frame,
+          .goog-te-balloon-frame,
+          #goog-gt-tt,
+          .goog-tooltip,
+          .goog-te-menu2,
+          .goog-te-gadget-icon,
+          .VIpgJd-ZVi9od-ORHb-OEVmcd,
+          .VIpgJd-ZVi9od-xl07Ob-lTBxed,
+          .VIpgJd-ZVi9od-SmfZ-OEVmcd,
+          .VIpgJd-yAWNEb-L7lbkb,
+          .VIpgJd-yAWNEb-hvhgNd,
+          .VIpgJd-yAWNEb-SmfZ,
+          .skiptranslate,
+          iframe.goog-te-banner-frame,
+          body > .skiptranslate {
+            display: none !important;
+          }
+          body {
+            top: 0 !important;
+            position: static !important;
+          }
+          .goog-te-gadget {
+            font-size: 0 !important;
+            color: transparent !important;
+          }
+          .goog-logo-link,
+          .goog-logo-link:link,
+          .goog-logo-link:visited,
+          .goog-logo-link:hover,
+          .goog-logo-link:active {
+            display: none !important;
+          }
         `}</style>
       </head>
 
       <body className="antialiased bg-surface-muted" suppressHydrationWarning>
         <AppGenProvider>
           <OfflineWrapper>
-            <GoogleTranslate/>
+            <GoogleTranslate />
             <LayoutContent>{children}</LayoutContent>
           </OfflineWrapper>
         </AppGenProvider>
