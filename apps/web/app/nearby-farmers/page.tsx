@@ -110,10 +110,11 @@ const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 
 
   const [filters, setFilters] = useState(defaultFilters);
   const [visibleCount, setVisibleCount] = useState(50);
-  // Add these refs/state near the top of NearbyFarmersContent()
+const isRestoringRef = useRef(false); 
 const scrollContainerRef = useRef<HTMLDivElement>(null);
 const SCROLL_KEY = 'nearbyFarmers_scrollY';
 const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
+const pendingScrollRef = useRef<number | null>(null);
 
   // Always-current ref so fetch closures never use stale filters
   const filtersRef = useRef(filters);
@@ -129,29 +130,29 @@ const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
   return Array.from(seen).sort();
 }, [farmers]);
 
-  useEffect(() => { setVisibleCount(50); }, [searchType, filters, searchQuery]);
+  useEffect(() => {
+  if (isRestoringRef.current) return; // don't reset while restoring
+  setVisibleCount(50);
+}, [searchType, filters, searchQuery]);
+
   useEffect(() => { setMounted(true); }, []);
 
   // Restore scroll position when returning to this page
+// REPLACE the existing restore useEffect with this:
 useEffect(() => {
   if (!mounted) return;
 
   const savedVisible = sessionStorage.getItem(VISIBLE_KEY);
-  if (savedVisible) {
-    setVisibleCount(parseInt(savedVisible));
-    sessionStorage.removeItem(VISIBLE_KEY);
-  }
+  const savedScroll  = sessionStorage.getItem(SCROLL_KEY);
+  sessionStorage.removeItem(VISIBLE_KEY);
+  sessionStorage.removeItem(SCROLL_KEY);
 
-  const savedScroll = sessionStorage.getItem(SCROLL_KEY);
+  if (savedVisible) {
+    isRestoringRef.current = true;
+    setVisibleCount(parseInt(savedVisible));
+  }
   if (savedScroll) {
-    // Wait for list to render with restored visibleCount, then scroll
-    const scrollY = parseInt(savedScroll);
-    sessionStorage.removeItem(SCROLL_KEY);
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        window.scrollTo({ top: scrollY, behavior: 'instant' });
-      }, 100); // small delay lets the list paint first
-    });
+    pendingScrollRef.current = parseInt(savedScroll);
   }
 }, [mounted]);
 
@@ -179,6 +180,8 @@ useEffect(() => {
     window.addEventListener('userLocationUpdated', handler);
     return () => window.removeEventListener('userLocationUpdated', handler);
   }, [searchType]);
+
+  
 
   // ── filter helpers ──────────────────────────────────────────────────────────
   // BUG FIX E: after toggling a chip OFF from the active-filters bar,
@@ -364,6 +367,24 @@ const fetchNearbyFarmers = async (
       setLoadingFarmers(false);
     }
   };
+
+  // Add this NEW useEffect after the farmers state is populated:
+useEffect(() => {
+  if (loadingFarmers) return;                    // still fetching
+  if (pendingScrollRef.current === null) return; // nothing to restore
+
+  const target = pendingScrollRef.current;
+  pendingScrollRef.current = null;
+  isRestoringRef.current = false;
+
+  // Use increasing delays to handle avatar/image paint time
+  const attempts = [50, 150, 350, 600];
+  attempts.forEach(delay => {
+    setTimeout(() => {
+      window.scrollTo({ top: target, behavior: 'instant' });
+    }, delay);
+  });
+}, [loadingFarmers]);
 
   // BUG FIX F: pass current `filters` state directly so the Apply button
   // never sends stale values even if filtersRef hasn't flushed yet
