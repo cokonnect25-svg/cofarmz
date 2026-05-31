@@ -95,7 +95,7 @@ function MessagesContent() {
       {/* HEADER */}
 {/* HEADER */}
 <div className="flex-shrink-0 bg-green-600 text-white px-4 py-3 flex items-center gap-3">
-  <Link href={`/machinery-details?id=${machineryId}`}>
+  <Link href={`/chat`}>
     <ArrowLeft className="w-6 h-6 cursor-pointer" />
   </Link>
   <div>
