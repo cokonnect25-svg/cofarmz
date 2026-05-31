@@ -307,6 +307,9 @@ function FarmerProfileContent() {
   const [expandedCropIdx, setExpandedCropIdx] = useState<number | null>(null);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [followStatus, setFollowStatus] = useState<'none' | 'pending' | 'accepted'>('none');
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const SCROLL_KEY = 'nearbyFarmers_scrollY';
+  const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
 
   // Manage which sections are open (multi-expand)
   const [openSections, setOpenSections] = useState<Set<string>>(() => {

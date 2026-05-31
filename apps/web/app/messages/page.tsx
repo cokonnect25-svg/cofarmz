@@ -93,15 +93,20 @@ function MessagesContent() {
       }}
     >
       {/* HEADER */}
-      <div className="flex-shrink-0 bg-green-600 text-white px-4 py-3 flex items-center gap-3">
-        <Link href={`/machinery-details?id=${machineryId}`}>
-          <ArrowLeft className="w-6 h-6 cursor-pointer" />
-        </Link>
-        <div>
-          <h1 className="font-bold text-lg">Chat with Owner</h1>
-          <p className="text-sm text-green-100">{ownerName}</p>
-        </div>
-      </div>
+{/* HEADER */}
+<div className="flex-shrink-0 bg-green-600 text-white px-4 py-3 flex items-center gap-3">
+  <Link href={`/machinery-details?id=${machineryId}`}>
+    <ArrowLeft className="w-6 h-6 cursor-pointer" />
+  </Link>
+  <div>
+    <h1 className="font-bold text-lg">Chat with Owner</h1>
+    <Link href={`/farmer-profile?id=${ownerId}`}>
+      <p className="text-sm text-green-100 underline underline-offset-2 hover:text-white transition-colors">
+        {ownerName}
+      </p>
+    </Link>
+  </div>
+</div>
 
       {/* SCROLLABLE MESSAGE AREA */}
       <div

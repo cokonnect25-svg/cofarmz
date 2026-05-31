@@ -237,6 +237,41 @@ export default function AboutPage() {
               </p>
             </div>
           </div>
+
+          {/* ── SUPPORT SECTION ── */}
+          <div className="flex justify-center pt-4">
+            <a
+              href="mailto:connect@co-konnect.com"
+              className="group relative overflow-hidden bg-white border border-brand-100 rounded-3xl px-6 py-5 shadow-soft hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 max-w-xl w-full"
+            >
+              {/* Glow */}
+              <div className="absolute inset-0 bg-gradient-to-r from-brand-500/0 via-brand-500/5 to-brand-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+              <div className="relative flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-brand-600 text-white flex items-center justify-center text-2xl shadow-lg group-hover:scale-110 transition-transform">
+                  <i className="ph-fill ph-envelope-simple"></i>
+                </div>
+
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-bold text-brand-600 uppercase tracking-wide">
+                    Need Help?
+                  </p>
+
+                  <h3 className="text-lg md:text-xl font-black text-gray-900 group-hover:text-brand-700 transition-colors">
+                    connect@co-konnect.com
+                  </h3>
+
+                  <p className="text-sm text-gray-500 font-medium">
+                    Reach out anytime — we’re here to support you 🌱
+                  </p>
+                </div>
+
+                <div className="text-brand-600 text-2xl group-hover:translate-x-1 transition-transform">
+                  <i className="ph-bold ph-arrow-up-right"></i>
+                </div>
+              </div>
+            </a>
+          </div>
         </section>
       </main>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, useRef, Suspense } from 'react';
+import { useEffect, useState, useRef, Suspense, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
 
@@ -110,12 +110,24 @@ const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 
 
   const [filters, setFilters] = useState(defaultFilters);
   const [visibleCount, setVisibleCount] = useState(50);
+  // Add these refs/state near the top of NearbyFarmersContent()
+const scrollContainerRef = useRef<HTMLDivElement>(null);
+const SCROLL_KEY = 'nearbyFarmers_scrollY';
+const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
 
   // Always-current ref so fetch closures never use stale filters
   const filtersRef = useRef(filters);
   useEffect(() => { filtersRef.current = filters; }, [filters]);
 
   const today = new Date().toISOString().split('T')[0];
+
+  const availableCrops = useMemo(() => {
+  const seen = new Set<string>();
+  farmers.forEach(f => f.crops?.forEach(c => {
+    if (c.crop_name) seen.add(c.crop_name);
+  }));
+  return Array.from(seen).sort();
+}, [farmers]);
 
   useEffect(() => { setVisibleCount(50); }, [searchType, filters, searchQuery]);
   useEffect(() => { setMounted(true); }, []);
@@ -409,7 +421,7 @@ const fetchNearbyFarmers = async (
           <div className="relative mb-4">
             <input
               type="text"
-              placeholder="Search by name, location or crops..."
+              placeholder="Search by name, location, crops... (e.g. Rice, Wheat)"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-brand-600 text-sm"
@@ -484,16 +496,39 @@ const fetchNearbyFarmers = async (
               )}
 
               {/* Crops */}
-              <div className="mb-8">
-                <label className="block text-sm font-bold text-gray-900 mb-3">Crops (select any)</label>
-                <div className="flex flex-wrap gap-2">
-                  {CROP_OPTIONS.map(crop => (
-                    <button key={crop} onClick={() => toggleCropFilter(crop)} className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${filters.crops.includes(crop) ? 'bg-brand-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                      {crop}
-                    </button>
-                  ))}
-                </div>
-              </div>
+// REPLACE in the filter modal crops section:
+<div className="mb-8">
+  <label className="block text-sm font-bold text-gray-900 mb-3">
+    Crops (select any)
+    {availableCrops.length > 0 && (
+      <span className="ml-2 text-xs font-normal text-gray-400">
+        {availableCrops.length} available
+      </span>
+    )}
+  </label>
+
+  {availableCrops.length === 0 ? (
+    <p className="text-xs text-gray-400 italic">
+      No crops found — load farmers first
+    </p>
+  ) : (
+    <div className="flex flex-wrap gap-2">
+      {availableCrops.map(crop => (
+        <button
+          key={crop}
+          onClick={() => toggleCropFilter(crop)}
+          className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+            filters.crops.includes(crop)
+              ? 'bg-brand-700 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          {crop}
+        </button>
+      ))}
+    </div>
+  )}
+</div>
 
               {/* Grade */}
               {(searchType === 'farmers' || searchType === 'buyers'|| searchType === 'fpo') && (
@@ -631,13 +666,22 @@ const fetchNearbyFarmers = async (
             </div>
           ) : (() => {
             const filteredFarmers = farmers
-              .filter(farmer => {
-                const q = searchQuery.toLowerCase();
-                return q === '' ||
-                  farmer.name?.toLowerCase().includes(q) ||
-                  farmer.location?.toLowerCase().includes(q) ||
-                  farmer.crops?.some(c => c.crop_name?.toLowerCase().includes(q));
-              })
+                .filter(farmer => {
+                  if (!searchQuery.trim()) return true;
+
+                  // Split by comma, trim, drop empty parts
+                  const terms = searchQuery
+                    .split(',')
+                    .map(t => t.trim().toLowerCase())
+                    .filter(Boolean);
+
+                  // Every term must match at least one field (AND logic across terms)
+                  return terms.every(term =>
+                    farmer.name?.toLowerCase().includes(term) ||
+                    farmer.location?.toLowerCase().includes(term) ||
+                    farmer.crops?.some(c => c.crop_name?.toLowerCase().includes(term))
+                  );
+                })
               .sort((a, b) => {
                 if (sortBy === 'nearby') {
                   const ad = (!a.distance || a.distance >= 9999) ? 999999 : a.distance;
@@ -672,7 +716,11 @@ const fetchNearbyFarmers = async (
             ) : (
               <>
                 {filteredFarmers.slice(0, visibleCount).map(farmer => (
-                  <div key={farmer.id} className="bg-white rounded-[24px] p-5 shadow-soft hover:shadow-lg transition-shadow cursor-pointer active:scale-[0.98]" onClick={() => router.push(`/farmer-profile?id=${farmer.id}`)}>
+                  <div key={farmer.id} className="bg-white rounded-[24px] p-5 shadow-soft hover:shadow-lg transition-shadow cursor-pointer active:scale-[0.98]" onClick={() => {
+  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  router.push(`/farmer-profile?id=${farmer.id}`);
+}}>
 
                     {/* Header row */}
                     <div className="flex items-start justify-between mb-4">
@@ -723,11 +771,23 @@ const fetchNearbyFarmers = async (
 
                     {/* Followers */}
                     <div className="flex gap-3 mb-4">
-                      <button onClick={e => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=followers`); }} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
+                      <button // e.g. Crops button
+onClick={e => {
+  e.stopPropagation();
+  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
+}} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
                         <i className="ph-bold ph-user-circle text-brand-600 text-sm"></i>
                         <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
                       </button>
-                      <button onClick={e => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=following`); }} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
+                      <button // e.g. Crops button
+onClick={e => {
+  e.stopPropagation();
+  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  router.push(`/farmer-profile?id=${farmer.id}&tab=following`);
+}} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
                         <i className="ph-bold ph-user-check text-blue-600 text-sm"></i>
                         <span className="text-xs font-bold text-gray-900">{farmer.following_count || 0} Following</span>
                       </button>
@@ -768,45 +828,93 @@ const fetchNearbyFarmers = async (
                     <div className="flex gap-3 mb-4">
                       {searchType === 'farmers' ? (
                         <>
-                          <button onClick={e => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=crops`); }} className="flex items-center gap-1.5 px-3 py-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors active:scale-95">
+                          <button // e.g. Crops button
+onClick={e => {
+  e.stopPropagation();
+  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  router.push(`/farmer-profile?id=${farmer.id}&tab=crops`);
+}} className="flex items-center gap-1.5 px-3 py-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-plant text-green-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.crops_count || 0} Crops</span>
                           </button>
-                          <button onClick={e => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`); }} className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors active:scale-95">
+                          <button // e.g. Crops button
+onClick={e => {
+  e.stopPropagation();
+  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`);
+}} className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-wrench text-blue-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Equipment</span>
                           </button>
                         </>
                       ) : searchType === 'supplier' ? (
                         <>
-                          <button onClick={e => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`); }} className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95">
+                          <button // e.g. Crops button
+onClick={e => {
+  e.stopPropagation();
+  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`);
+}} className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-package text-purple-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Products</span>
                           </button>
-                          <button onClick={e => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=followers`); }} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
+                          <button // e.g. Crops button
+onClick={e => {
+  e.stopPropagation();
+  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
+}} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-users text-gray-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
                           </button>
                         </>
                       ) :  searchType === 'fpo' ? (
   <>
-    <button onClick={e => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`); }}
+    <button // e.g. Crops button
+onClick={e => {
+  e.stopPropagation();
+  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`);
+}}
       className="flex items-center gap-1.5 px-3 py-2 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors active:scale-95">
       <i className="ph-bold ph-package text-teal-600 text-sm"></i>
       <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Equipment</span>
     </button>
-    <button onClick={e => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=followers`); }}
+    <button // e.g. Crops button
+onClick={e => {
+  e.stopPropagation();
+  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
+}}
       className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
       <i className="ph-bold ph-users text-gray-600 text-sm"></i>
       <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
     </button>
   </>) :(
                         <>
-                          <button onClick={e => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=crops`); }} className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors active:scale-95">
+                          <button // e.g. Crops button
+onClick={e => {
+  e.stopPropagation();
+  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  router.push(`/farmer-profile?id=${farmer.id}&tab=crops`);
+}} className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-shopping-bag text-orange-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.crops_count || 0} Buying Interests</span>
                           </button>
-                          <button onClick={e => { e.stopPropagation(); router.push(`/farmer-profile?id=${farmer.id}&tab=followers`); }} className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95">
+                          <button // e.g. Crops button
+onClick={e => {
+  e.stopPropagation();
+  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
+}} className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-users text-purple-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
                           </button>
