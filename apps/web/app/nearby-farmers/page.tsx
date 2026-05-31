@@ -114,6 +114,7 @@ const isRestoringRef = useRef(false);
 const scrollContainerRef = useRef<HTMLDivElement>(null);
 const SCROLL_KEY = 'nearbyFarmers_scrollY';
 const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
+const TYPE_KEY = 'nearbyFarmers_searchType'; 
 const pendingScrollRef = useRef<number | null>(null);
 
   // Always-current ref so fetch closures never use stale filters
@@ -768,9 +769,10 @@ const handleApplyFilters = () => {
               <>
                 {filteredFarmers.slice(0, visibleCount).map(farmer => (
                   <div key={farmer.id} className="bg-white rounded-[24px] p-5 shadow-soft hover:shadow-lg transition-shadow cursor-pointer active:scale-[0.98]" onClick={() => {
-  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
-  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-  router.push(`/farmer-profile?id=${farmer.id}`);
+sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+sessionStorage.setItem(TYPE_KEY, searchType);   // ← ADD THIS
+router.push(`/farmer-profile?id=${farmer.id}`);
 }}>
 
                     {/* Header row */}
@@ -827,6 +829,7 @@ onClick={e => {
   e.stopPropagation();
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  sessionStorage.setItem(TYPE_KEY, searchType);  
   router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
                         <i className="ph-bold ph-user-circle text-brand-600 text-sm"></i>
@@ -837,6 +840,7 @@ onClick={e => {
   e.stopPropagation();
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  sessionStorage.setItem(TYPE_KEY, searchType);  
   router.push(`/farmer-profile?id=${farmer.id}&tab=following`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
                         <i className="ph-bold ph-user-check text-blue-600 text-sm"></i>
@@ -884,6 +888,7 @@ onClick={e => {
   e.stopPropagation();
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  sessionStorage.setItem(TYPE_KEY, searchType);
   router.push(`/farmer-profile?id=${farmer.id}&tab=crops`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-plant text-green-600 text-sm"></i>
@@ -894,6 +899,7 @@ onClick={e => {
   e.stopPropagation();
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  sessionStorage.setItem(TYPE_KEY, searchType);
   router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-wrench text-blue-600 text-sm"></i>
@@ -907,6 +913,7 @@ onClick={e => {
   e.stopPropagation();
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  sessionStorage.setItem(TYPE_KEY, searchType);
   router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-package text-purple-600 text-sm"></i>
@@ -917,6 +924,7 @@ onClick={e => {
   e.stopPropagation();
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  sessionStorage.setItem(TYPE_KEY, searchType);
   router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-users text-gray-600 text-sm"></i>
@@ -930,6 +938,7 @@ onClick={e => {
   e.stopPropagation();
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  sessionStorage.setItem(TYPE_KEY, searchType);  
   router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`);
 }}
       className="flex items-center gap-1.5 px-3 py-2 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors active:scale-95">
@@ -941,6 +950,7 @@ onClick={e => {
   e.stopPropagation();
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  sessionStorage.setItem(TYPE_KEY, searchType);  
   router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
 }}
       className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
@@ -954,6 +964,7 @@ onClick={e => {
   e.stopPropagation();
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  sessionStorage.setItem(TYPE_KEY, searchType);  
   router.push(`/farmer-profile?id=${farmer.id}&tab=crops`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-shopping-bag text-orange-600 text-sm"></i>
@@ -964,6 +975,7 @@ onClick={e => {
   e.stopPropagation();
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  sessionStorage.setItem(TYPE_KEY, searchType);  
   router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-users text-purple-600 text-sm"></i>
