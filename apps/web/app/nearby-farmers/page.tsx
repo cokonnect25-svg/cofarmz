@@ -9,6 +9,11 @@ import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import UserAvatar from '@/app/components/UserAvatar';
 
+  const SCROLL_KEY = 'nearbyFarmers_scrollY';
+const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
+const TYPE_KEY = 'nearbyFarmers_searchType'; 
+const LOCATION_KEY = 'nearbyFarmers_userLocation';
+
 interface FarmerCrop {
   crop_name: string;
   years_of_experience: number | null;
@@ -94,10 +99,7 @@ function NearbyFarmersContent() {
 });
   const [locationError, setLocationError] = useState<string | null>(null);
 
-  const SCROLL_KEY = 'nearbyFarmers_scrollY';
-const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
-const TYPE_KEY = 'nearbyFarmers_searchType'; 
-const LOCATION_KEY = 'nearbyFarmers_userLocation';
+
 
 const rawType = searchParams.get('type');
 
