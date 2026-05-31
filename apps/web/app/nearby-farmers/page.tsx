@@ -82,12 +82,27 @@ function NearbyFarmersContent() {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
 
+  const SCROLL_KEY = 'nearbyFarmers_scrollY';
+const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
+const TYPE_KEY = 'nearbyFarmers_searchType'; 
+
 const rawType = searchParams.get('type');
+
+// Check if we're returning from a profile view
+const savedType = typeof window !== 'undefined' 
+  ? sessionStorage.getItem(TYPE_KEY) 
+  : null;
+
 const initialType =
-  rawType === 'buyers'   ? 'buyers'   :
-  rawType === 'wastage'  ? 'wastage'  :
-  rawType === 'supplier' ? 'supplier' :
-  rawType === 'fpo'      ? 'fpo'      :
+  savedType === 'farmers'  ? 'farmers'  :
+  savedType === 'buyers'   ? 'buyers'   :
+  savedType === 'wastage'  ? 'wastage'  :
+  savedType === 'supplier' ? 'supplier' :
+  savedType === 'fpo'      ? 'fpo'      :
+  rawType === 'buyers'     ? 'buyers'   :
+  rawType === 'wastage'    ? 'wastage'  :
+  rawType === 'supplier'   ? 'supplier' :
+  rawType === 'fpo'        ? 'fpo'      :
   'farmers';
 
 const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 'supplier' | 'fpo'>(initialType);
@@ -112,10 +127,10 @@ const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 
   const [visibleCount, setVisibleCount] = useState(50);
 const isRestoringRef = useRef(false); 
 const scrollContainerRef = useRef<HTMLDivElement>(null);
-const SCROLL_KEY = 'nearbyFarmers_scrollY';
-const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
-const TYPE_KEY = 'nearbyFarmers_searchType'; 
+
 const pendingScrollRef = useRef<number | null>(null);
+
+
 
   // Always-current ref so fetch closures never use stale filters
   const filtersRef = useRef(filters);
@@ -140,13 +155,17 @@ const pendingScrollRef = useRef<number | null>(null);
 
   // Restore scroll position when returning to this page
 // REPLACE the existing restore useEffect with this:
+// Restore scroll position when returning to this page
 useEffect(() => {
   if (!mounted) return;
 
   const savedVisible = sessionStorage.getItem(VISIBLE_KEY);
   const savedScroll  = sessionStorage.getItem(SCROLL_KEY);
+  const savedType    = sessionStorage.getItem(TYPE_KEY);   // ← ADD THIS (optional, already used above)
+  
   sessionStorage.removeItem(VISIBLE_KEY);
   sessionStorage.removeItem(SCROLL_KEY);
+  sessionStorage.removeItem(TYPE_KEY);   // ← ADD THIS
 
   if (savedVisible) {
     isRestoringRef.current = true;
@@ -390,8 +409,9 @@ useEffect(() => {
   // BUG FIX F: pass current `filters` state directly so the Apply button
   // never sends stale values even if filtersRef hasn't flushed yet
 const handleApplyFilters = () => {
-  sessionStorage.removeItem(SCROLL_KEY);   // ← add
-  sessionStorage.removeItem(VISIBLE_KEY);  // ← add
+  sessionStorage.removeItem(SCROLL_KEY);
+  sessionStorage.removeItem(VISIBLE_KEY);
+  sessionStorage.removeItem(TYPE_KEY);   // ← ADD THIS
   const lat = userLocation?.latitude ?? 0;
   const lon = userLocation?.longitude ?? 0;
   fetchNearbyFarmers(lat, lon, searchType, filters);
@@ -451,12 +471,13 @@ const handleApplyFilters = () => {
   ] as const).map(tab => (
     <button
       key={tab.key}
-      onClick={() => {
-        setSearchType(tab.key as any);
-        setSortBy('nearby');
-        sessionStorage.removeItem(SCROLL_KEY);   // ← add this
-        sessionStorage.removeItem(VISIBLE_KEY);  // ← add this
-      }}
+onClick={() => {
+  setSearchType(tab.key as any);
+  setSortBy('nearby');
+  sessionStorage.removeItem(SCROLL_KEY);
+  sessionStorage.removeItem(VISIBLE_KEY);
+  sessionStorage.removeItem(TYPE_KEY);   // ← ADD THIS
+}}
       className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap flex-shrink-0
         ${searchType === tab.key
           ? `${tab.active} text-white shadow-md`
