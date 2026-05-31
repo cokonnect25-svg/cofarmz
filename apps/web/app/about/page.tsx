@@ -311,7 +311,7 @@ export default function AboutPage() {
 
                   {/* Phone Row */}
                   <a
-                    href="tel:+919876543210"
+                    href="tel:+919177738383"
                     className="flex items-center gap-4 p-2 -m-2 rounded-2xl hover:bg-brand-50 transition-all group/link"
                   >
                     <div className="w-12 h-12 rounded-xl bg-brand-100 text-brand-600 flex items-center justify-center text-xl">
@@ -320,7 +320,7 @@ export default function AboutPage() {
                     <div className="flex-1 text-left">
                       <p className="text-xs font-bold text-brand-600 uppercase tracking-wide">Call / WhatsApp</p>
                       <p className="text-base font-black text-gray-800 group-hover/link:text-brand-700 transition-colors">
-                        +91 98765 43210
+                        +91 91777 38383
                       </p>
                     </div>
                     <div className="text-brand-400 text-xl group-hover/link:translate-x-1 transition-transform">
