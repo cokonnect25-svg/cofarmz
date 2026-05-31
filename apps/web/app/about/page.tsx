@@ -20,7 +20,7 @@ const SECTIONS = [
     lightColor: 'bg-amber-50',
     textColor: 'text-amber-700',
     border: 'border-amber-100',
-    content: "We didn’t build CoFarmz by reading about problems. We built it by seeing them closely.\n\nWe have seen farmers:\n• Struggling to find the right buyers\n• Selling crops for less than they deserve\n• Waiting without clarity or support\n• Managing everything alone\n\nThat reality stayed with us. And it led to one question: Why should a farmer struggle alone?"
+    content: "We didn't build CoFarmz by reading about problems. We built it by seeing them closely.\n\nWe have seen farmers:\n• Struggling to find the right buyers\n• Selling crops for less than they deserve\n• Waiting without clarity or support\n• Managing everything alone\n\nThat reality stayed with us. And it led to one question: Why should a farmer struggle alone?"
   },
   {
     title: 'Why CoFarmz Exists',
@@ -61,8 +61,8 @@ const SECTIONS = [
 ];
 
 const BELIEFS = [
-  "A farmer’s work deserves respect",
-  "A farmer’s time is valuable",
+  "A farmer's work deserves respect",
+  "A farmer's time is valuable",
   "Every farmer should have multiple income opportunities",
   "Strong communities create stronger outcomes"
 ];
@@ -81,8 +81,15 @@ export default function AboutPage() {
     return () => clearTimeout(timer);
   }, []);
 
+  const scrollToSection = (id:any) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
-    <div className="min-min-h-[100dvh] bg-[#F4F5F0] overflow-x-hidden">
+    <div className="min-h-[100dvh] bg-[#F4F5F0] overflow-x-hidden">
       {/* ── AMBIENT BACKGROUND GLOWS ── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-100px] right-[-100px] w-96 h-96 bg-green-500/10 rounded-full blur-3xl animate-pulse"></div>
@@ -110,6 +117,24 @@ export default function AboutPage() {
           <p className="text-brand-100 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed font-medium animate-fade-in-up">
             Founded with a simple purpose: to empower farmers through connection, technology, and fair opportunity.
           </p>
+
+          {/* ── QUICK NAV LINKS ── */}
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-4 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+            <button
+              onClick={() => scrollToSection('join-community')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/15 hover:bg-white/25 backdrop-blur-md rounded-full border border-white/20 text-white text-sm font-bold transition-all hover:scale-105"
+            >
+              <i className="ph-fill ph-users-three text-lg"></i>
+              Join Our Community
+            </button>
+            <button
+              onClick={() => scrollToSection('support-section')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/15 hover:bg-white/25 backdrop-blur-md rounded-full border border-white/20 text-white text-sm font-bold transition-all hover:scale-105"
+            >
+              <i className="ph-fill ph-headset text-lg"></i>
+              Support
+            </button>
+          </div>
         </div>
       </header>
 
@@ -212,7 +237,7 @@ export default function AboutPage() {
         </section>
 
         {/* ── FINAL CTAs ── */}
-        <section className="pb-24 text-center space-y-12 animate-fade-in-up">
+        <section id="join-community" className="pb-24 text-center space-y-12 animate-fade-in-up scroll-mt-24">
           <div className="space-y-4">
             <span className="text-5xl">🔵</span>
             <h2 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tight">Join Our Community</h2>
@@ -239,13 +264,13 @@ export default function AboutPage() {
           <div className="pt-12">
             <div className="inline-block p-4 bg-brand-50 rounded-2xl border border-brand-100 transform rotate-[-2deg] shadow-soft">
               <p className="text-brand-800 text-2xl font-black italic">
-                🔴 "You grow Food for EveryOne. Now let’s grow together."
+                🔴 "You grow Food for EveryOne. Now let's grow together."
               </p>
             </div>
           </div>
 
           {/* ── SUPPORT SECTION (sudden reveal: email + phone) ── */}
-          <div className="flex justify-center pt-4">
+          <div id="support-section" className="flex justify-center pt-4 scroll-mt-24">
             <div className="group relative overflow-hidden bg-white border border-brand-100 rounded-3xl shadow-soft hover:shadow-2xl transition-all duration-300 max-w-xl w-full p-6">
               {!supportRevealed ? (
                 <div className="flex items-center gap-4 justify-center">
