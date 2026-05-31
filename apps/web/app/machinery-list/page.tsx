@@ -1,62 +1,84 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { getApiUrl } from '@/lib/api';
 
-
+const SCROLL_KEY = 'machinery_scrollY';
+const FILTERS_KEY = 'machinery_filters';
+const SEARCH_KEY = 'machinery_search';
+const SORT_KEY = 'machinery_sort';
+const VISIBLE_KEY = 'machinery_visibleCount';
 
 export default function MachineryListPage() {
   const router = useRouter();
   const { isAuthenticated, loading } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
-  const [sortBy, setSortBy] = useState('distance');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [showSortMenu, setShowSortMenu] = useState(false);
 
   const DEFAULT_FILTERS = {
-  priceMin: 0,
-  priceMax: 500000,
-  distance: 5000,
-  startDate: '',
-  endDate: '',
-  equipmentTypes: [] as string[]
-};
-const [filters, setFilters] = useState(DEFAULT_FILTERS);
+    priceMin: 0,
+    priceMax: 500000,
+    distance: 5000,
+    startDate: '',
+    endDate: '',
+    equipmentTypes: [] as string[]
+  };
+
+  // Check sessionStorage for saved state on initial load
+  const getSavedFilters = () => {
+    if (typeof window === 'undefined') return DEFAULT_FILTERS;
+    const saved = sessionStorage.getItem(FILTERS_KEY);
+    return saved ? JSON.parse(saved) : DEFAULT_FILTERS;
+  };
+
+  const getSavedSearch = () => {
+    if (typeof window === 'undefined') return '';
+    return sessionStorage.getItem(SEARCH_KEY) || '';
+  };
+
+  const getSavedSort = () => {
+    if (typeof window === 'undefined') return 'distance';
+    return sessionStorage.getItem(SORT_KEY) || 'distance';
+  };
+
+  const [filters, setFilters] = useState(getSavedFilters);
+  const [searchQuery, setSearchQuery] = useState(getSavedSearch);
+  const [sortBy, setSortBy] = useState(getSavedSort);
   
   const [machineryData, setMachineryData] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [showSortMenu, setShowSortMenu] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [profileLocation, setProfileLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const { user } = useAuth();
 
   const today = new Date().toISOString().split('T')[0];
 
-
-  
+  // Refs for scroll restoration
+  const pendingScrollRef = useRef<number | null>(null);
+  const isRestoringRef = useRef(false);
 
   // ✅ MOVE THIS UP
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-    Math.cos((lat2 * Math.PI) / 180) *
-    Math.sin(dLon / 2) *
-    Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
 
   // Dynamic distance calculation
   const machineryWithDistances = React.useMemo(() => {
-    // Priority: real GPS → profile saved location → show location name
     const refLat = userLocation?.latitude ?? profileLocation?.latitude ?? null;
     const refLon = userLocation?.longitude ?? profileLocation?.longitude ?? null;
     return machineryData.map((item: any) => {
@@ -75,6 +97,41 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     setMounted(true);
   }, []);
 
+  // Restore scroll position after data loads
+  useEffect(() => {
+    if (!mounted) return;
+
+    const savedScroll = sessionStorage.getItem(SCROLL_KEY);
+    const savedVisible = sessionStorage.getItem(VISIBLE_KEY);
+    
+    sessionStorage.removeItem(SCROLL_KEY);
+    sessionStorage.removeItem(VISIBLE_KEY);
+    sessionStorage.removeItem(FILTERS_KEY);
+    sessionStorage.removeItem(SEARCH_KEY);
+    sessionStorage.removeItem(SORT_KEY);
+
+    if (savedScroll) {
+      pendingScrollRef.current = parseInt(savedScroll);
+    }
+  }, [mounted]);
+
+  // Apply scroll after machinery data is loaded
+  useEffect(() => {
+    if (machineryData.length === 0) return;
+    if (pendingScrollRef.current === null) return;
+
+    const target = pendingScrollRef.current;
+    pendingScrollRef.current = null;
+    isRestoringRef.current = false;
+
+    // Multiple attempts to handle image paint time
+    [50, 150, 350, 600].forEach(delay => {
+      setTimeout(() => {
+        window.scrollTo({ top: target, behavior: 'instant' });
+      }, delay);
+    });
+  }, [machineryData]);
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -84,11 +141,9 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
-      // Fetch machinery and profile immediately — don't wait for GPS
       fetchMachinery();
       fetchUserProfile();
       fetchUserFavorites();
-      // Get location in parallel; distances update automatically via useMemo when state changes
       getUserLocation();
     }
   }, [isAuthenticated, user?.id]);
@@ -155,7 +210,6 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     }
   };
 
-
   const fetchUserFavorites = async () => {
     if (!user?.id) return;
     try {
@@ -180,7 +234,6 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   const getFilteredAndSortedMachinery = () => {
     let filtered = [...machineryWithDistances];
     
-    // Filter by search query
     if (searchQuery.trim()) {
       filtered = filtered.filter(machine =>
         machine.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -188,24 +241,20 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
       );
     }
     
-    // Filter by price range
     filtered = filtered.filter(machine => 
       machine.price >= filters.priceMin && machine.price <= filters.priceMax
     );
     
-    // Filter by distance (skip items with unknown distance)
     filtered = filtered.filter(machine =>
       machine.distance == null || machine.distance <= filters.distance
     );
     
-    // Filter by equipment types (if any selected)
     if (filters.equipmentTypes.length > 0) {
       filtered = filtered.filter(machine => {
         const machineNameLower = machine.name.toLowerCase();
         const machineModelLower = (machine.model || '').toLowerCase();
         
         return filters.equipmentTypes.some(typeId => {
-          // Map filter IDs to keywords that match database values
           const typeMap: { [key: string]: string[] } = {
             'tractors': ['tractor'],
             'harvesters': ['harvester', 'combine'],
@@ -216,7 +265,6 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
           };
           
           const keywords = typeMap[typeId] || [typeId];
-          // Check if any keyword matches the machine name or model
           return keywords.some(keyword => 
             machineNameLower.includes(keyword) || 
             machineModelLower.includes(keyword)
@@ -225,7 +273,6 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
       });
     }
     
-    // Sort machinery based on selected sort option
     if (sortBy === 'distance') {
       return filtered.sort((a, b) => (a.distance ?? 99999) - (b.distance ?? 99999));
     } else if (sortBy === 'price') {
@@ -279,7 +326,6 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
       }
       
       console.log('Formatting machinery data, count:', data.length);
-      // Transform database machinery to match the UI format
       const formattedData = data.map((item: any) => {
         return {
           id: item.id,
@@ -287,7 +333,6 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
           model: item.model || 'Equipment',
           category: item.model || 'Equipment',
           price: parseFloat(item.daily_rate) || 0,
-          // Use effective_latitude/longitude (machinery own location OR owner's location fallback)
           latitude: item.effective_latitude ?? item.latitude,
           longitude: item.effective_longitude ?? item.longitude,
           availability: item.is_unavailable ? 'Not Available' : 'Available Now',
@@ -312,16 +357,24 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   };
 
   const handleResetFilters = () => {
-  setFilters(DEFAULT_FILTERS);
-  setSearchQuery('');
-};
+    setFilters(DEFAULT_FILTERS);
+    setSearchQuery('');
+  };
+
+  // ✅ SAVE STATE before navigating to machinery details
+  const saveStateAndNavigate = (machineId: string) => {
+    sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+    sessionStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
+    sessionStorage.setItem(SEARCH_KEY, searchQuery);
+    sessionStorage.setItem(SORT_KEY, sortBy);
+    router.push(`/machinery-details?id=${machineId}&source=machinery-list`);
+  };
 
   const handleFavorite = async (e: React.MouseEvent, machineryId: string) => {
     e.preventDefault();
     e.stopPropagation();
     if (!user?.id) return;
 
-    // Optimistic update — toggle instantly so the heart responds immediately
     const wasLiked = favorites.has(machineryId);
     setFavorites(prev => {
       const next = new Set(prev);
@@ -339,7 +392,6 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
         },
       });
       if (!response.ok) {
-        // Revert if API failed
         setFavorites(prev => {
           const next = new Set(prev);
           if (wasLiked) next.add(machineryId);
@@ -348,7 +400,6 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
         });
       }
     } catch {
-      // Revert on network error
       setFavorites(prev => {
         const next = new Set(prev);
         if (wasLiked) next.add(machineryId);
@@ -357,8 +408,6 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
       });
     }
   };
-
-
 
   // Show skeleton while auth is still loading (very brief)
   if (!mounted) return null;
@@ -595,7 +644,6 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
       Try adjusting your filters or search term
     </p>
 
-    {/* ✅ Only show reset if filters/search active */}
     {(searchQuery ||
       filters.equipmentTypes.length > 0 ||
       filters.priceMin !== DEFAULT_FILTERS.priceMin ||
@@ -617,7 +665,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
           <div
             key={machine.id}
             className={`group bg-white rounded-[24px] overflow-hidden shadow-sm transition-all duration-300 relative border border-gray-100 ${machine.is_unavailable ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-xl cursor-pointer active:scale-[0.98]'}`}
-            onClick={() => { if (!machine.is_unavailable) router.push(`/machinery-details?id=${machine.id}&source=machinery-list`); }}
+            onClick={() => { if (!machine.is_unavailable) saveStateAndNavigate(machine.id); }}
           >
             {/* Image Section — wide landscape */}
             <div className="relative w-full aspect-[16/9] overflow-hidden bg-gray-50">
