@@ -132,6 +132,29 @@ const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
   useEffect(() => { setVisibleCount(50); }, [searchType, filters, searchQuery]);
   useEffect(() => { setMounted(true); }, []);
 
+  // Restore scroll position when returning to this page
+useEffect(() => {
+  if (!mounted) return;
+
+  const savedVisible = sessionStorage.getItem(VISIBLE_KEY);
+  if (savedVisible) {
+    setVisibleCount(parseInt(savedVisible));
+    sessionStorage.removeItem(VISIBLE_KEY);
+  }
+
+  const savedScroll = sessionStorage.getItem(SCROLL_KEY);
+  if (savedScroll) {
+    // Wait for list to render with restored visibleCount, then scroll
+    const scrollY = parseInt(savedScroll);
+    sessionStorage.removeItem(SCROLL_KEY);
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        window.scrollTo({ top: scrollY, behavior: 'instant' });
+      }, 100); // small delay lets the list paint first
+    });
+  }
+}, [mounted]);
+
   useEffect(() => {
     if (mounted && !loading && !isAuthenticated) router.push('/login');
   }, [isAuthenticated, loading, mounted, router]);
@@ -344,12 +367,14 @@ const fetchNearbyFarmers = async (
 
   // BUG FIX F: pass current `filters` state directly so the Apply button
   // never sends stale values even if filtersRef hasn't flushed yet
-  const handleApplyFilters = () => {
-    const lat = userLocation?.latitude  ?? 0;
-    const lon = userLocation?.longitude ?? 0;
-    fetchNearbyFarmers(lat, lon, searchType, filters);
-    setShowFilter(false);
-  };
+const handleApplyFilters = () => {
+  sessionStorage.removeItem(SCROLL_KEY);   // ← add
+  sessionStorage.removeItem(VISIBLE_KEY);  // ← add
+  const lat = userLocation?.latitude ?? 0;
+  const lon = userLocation?.longitude ?? 0;
+  fetchNearbyFarmers(lat, lon, searchType, filters);
+  setShowFilter(false);
+};
 
   if (!mounted || loading || !isAuthenticated) {
     return (
@@ -404,7 +429,12 @@ const fetchNearbyFarmers = async (
   ] as const).map(tab => (
     <button
       key={tab.key}
-      onClick={() => { setSearchType(tab.key as any); setSortBy('nearby'); }}
+      onClick={() => {
+        setSearchType(tab.key as any);
+        setSortBy('nearby');
+        sessionStorage.removeItem(SCROLL_KEY);   // ← add this
+        sessionStorage.removeItem(VISIBLE_KEY);  // ← add this
+      }}
       className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap flex-shrink-0
         ${searchType === tab.key
           ? `${tab.active} text-white shadow-md`
