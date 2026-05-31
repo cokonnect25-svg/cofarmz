@@ -1052,7 +1052,7 @@ const fetchFollowersCounts = async () => {
            {userRole !== 'supplier' && (
               <button onClick={() => { if (expandedSection === 'crops') { setExpandedSection(null); } else { setExpandedSection('crops'); fetchUserCrops(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
                 <p className="font-bold text-lg text-gray-900">{farmerCrops.length}</p>
-                <p className="text-xs text-gray-600">Crops</p>
+                <p className="text-xs text-gray-600">Crops/Commodities</p>
               </button>
             )}
             <button onClick={() => { if (expandedSection === 'equipment') { setExpandedSection(null); } else { setExpandedSection('equipment'); fetchUserEquipment(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
@@ -1070,7 +1070,7 @@ const fetchFollowersCounts = async () => {
             <h3 className="font-bold text-gray-900 text-sm uppercase">
               {expandedSection === 'followers' && 'Followers'}
               {expandedSection === 'following' && 'Following'}
-              {expandedSection === 'crops' && 'Crops'}
+              {expandedSection === 'crops' && 'Crops/Commodities'}
               {expandedSection === 'equipment' && 'My Equipment'}
             </h3>
             <button onClick={() => setExpandedSection(null)} className="p-1 hover:bg-gray-200 rounded transition">
