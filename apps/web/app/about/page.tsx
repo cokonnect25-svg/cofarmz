@@ -70,9 +70,15 @@ const BELIEFS = [
 export default function AboutPage() {
   const router = useRouter();
   const [showContent, setShowContent] = useState(false);
+  const [supportRevealed, setSupportRevealed] = useState(false);
 
   useEffect(() => {
     setShowContent(true);
+    // Delay revealing support contact details (email + phone) for a "sudden" appearance effect
+    const timer = setTimeout(() => {
+      setSupportRevealed(true);
+    }, 2200);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
@@ -238,39 +244,67 @@ export default function AboutPage() {
             </div>
           </div>
 
-          {/* ── SUPPORT SECTION ── */}
+          {/* ── SUPPORT SECTION (sudden reveal: email + phone) ── */}
           <div className="flex justify-center pt-4">
-            <a
-              href="mailto:connect@co-konnect.com"
-              className="group relative overflow-hidden bg-white border border-brand-100 rounded-3xl px-6 py-5 shadow-soft hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 max-w-xl w-full"
-            >
-              {/* Glow */}
-              <div className="absolute inset-0 bg-gradient-to-r from-brand-500/0 via-brand-500/5 to-brand-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-              <div className="relative flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-brand-600 text-white flex items-center justify-center text-2xl shadow-lg group-hover:scale-110 transition-transform">
-                  <i className="ph-fill ph-envelope-simple"></i>
+            <div className="group relative overflow-hidden bg-white border border-brand-100 rounded-3xl shadow-soft hover:shadow-2xl transition-all duration-300 max-w-xl w-full p-6">
+              {!supportRevealed ? (
+                <div className="flex items-center gap-4 justify-center">
+                  <div className="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center animate-pulse">
+                    <i className="ph-fill ph-headset text-2xl text-brand-600"></i>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-brand-600">Support Center</p>
+                    <p className="text-gray-500 font-medium">Connecting you to our team...</p>
+                  </div>
                 </div>
+              ) : (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="text-center text-brand-600 text-sm font-bold -mt-2 mb-1">
+                    📞 Need help? We're here.
+                  </div>
+                  {/* Email Row */}
+                  <a
+                    href="mailto:connect@co-konnect.com"
+                    className="flex items-center gap-4 p-2 -m-2 rounded-2xl hover:bg-brand-50 transition-all group/link"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-brand-100 text-brand-600 flex items-center justify-center text-xl">
+                      <i className="ph-fill ph-envelope-simple"></i>
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-xs font-bold text-brand-600 uppercase tracking-wide">Email support</p>
+                      <p className="text-base font-black text-gray-800 group-hover/link:text-brand-700 transition-colors">
+                        connect@co-konnect.com
+                      </p>
+                    </div>
+                    <div className="text-brand-400 text-xl group-hover/link:translate-x-1 transition-transform">
+                      <i className="ph-bold ph-arrow-up-right"></i>
+                    </div>
+                  </a>
 
-                <div className="flex-1 text-left">
-                  <p className="text-sm font-bold text-brand-600 uppercase tracking-wide">
-                    Need Help?
-                  </p>
+                  {/* Divider */}
+                  <div className="border-t border-gray-100"></div>
 
-                  <h3 className="text-lg md:text-xl font-black text-gray-900 group-hover:text-brand-700 transition-colors">
-                    connect@co-konnect.com
-                  </h3>
-
-                  <p className="text-sm text-gray-500 font-medium">
-                    Reach out anytime — we’re here to support you 🌱
-                  </p>
+                  {/* Phone Row */}
+                  <a
+                    href="tel:+919876543210"
+                    className="flex items-center gap-4 p-2 -m-2 rounded-2xl hover:bg-brand-50 transition-all group/link"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-brand-100 text-brand-600 flex items-center justify-center text-xl">
+                      <i className="ph-fill ph-phone-call"></i>
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-xs font-bold text-brand-600 uppercase tracking-wide">Call / WhatsApp</p>
+                      <p className="text-base font-black text-gray-800 group-hover/link:text-brand-700 transition-colors">
+                        +91 98765 43210
+                      </p>
+                    </div>
+                    <div className="text-brand-400 text-xl group-hover/link:translate-x-1 transition-transform">
+                      <i className="ph-bold ph-arrow-up-right"></i>
+                    </div>
+                  </a>
                 </div>
-
-                <div className="text-brand-600 text-2xl group-hover:translate-x-1 transition-transform">
-                  <i className="ph-bold ph-arrow-up-right"></i>
-                </div>
-              </div>
-            </a>
+              )}
+            </div>
           </div>
         </section>
       </main>
@@ -294,7 +328,7 @@ export default function AboutPage() {
         }
         .animate-fade-in-down { animation: fade-in-down 1s ease-out forwards; }
         .animate-fade-in-up { animation: fade-in-up 1s ease-out forwards; }
-        .animate-fade-in { animation: fade-in 1.5s ease-out forwards; }
+        .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
         .wave-animation {
           animation: wave 10s infinite ease-in-out;
         }
