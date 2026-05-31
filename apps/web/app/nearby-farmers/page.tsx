@@ -79,12 +79,25 @@ function NearbyFarmersContent() {
   const [farmers, setFarmers]         = useState<Farmer[]>([]);
   const [loadingFarmers, setLoadingFarmers] = useState(false);
   const [showFilter, setShowFilter]   = useState(false);
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+ const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(() => {
+  // Try to restore from sessionStorage first (instant, no async wait)
+  if (typeof window !== 'undefined') {
+    const saved = sessionStorage.getItem(LOCATION_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.latitude && parsed.longitude) return parsed;
+      } catch {}
+    }
+  }
+  return null;
+});
   const [locationError, setLocationError] = useState<string | null>(null);
 
   const SCROLL_KEY = 'nearbyFarmers_scrollY';
 const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
 const TYPE_KEY = 'nearbyFarmers_searchType'; 
+const LOCATION_KEY = 'nearbyFarmers_userLocation';
 
 const rawType = searchParams.get('type');
 
@@ -161,11 +174,12 @@ useEffect(() => {
 
   const savedVisible = sessionStorage.getItem(VISIBLE_KEY);
   const savedScroll  = sessionStorage.getItem(SCROLL_KEY);
-  const savedType    = sessionStorage.getItem(TYPE_KEY);   // ← ADD THIS (optional, already used above)
+  const savedType    = sessionStorage.getItem(TYPE_KEY);
   
+  // Don't remove LOCATION_KEY here — keep it for the state initializer above
   sessionStorage.removeItem(VISIBLE_KEY);
   sessionStorage.removeItem(SCROLL_KEY);
-  sessionStorage.removeItem(TYPE_KEY);   // ← ADD THIS
+  sessionStorage.removeItem(TYPE_KEY);
 
   if (savedVisible) {
     isRestoringRef.current = true;
@@ -200,6 +214,25 @@ useEffect(() => {
     window.addEventListener('userLocationUpdated', handler);
     return () => window.removeEventListener('userLocationUpdated', handler);
   }, [searchType]);
+
+
+  useEffect(() => {
+  if (userLocation) {
+    sessionStorage.setItem(LOCATION_KEY, JSON.stringify(userLocation));
+  }
+}, [userLocation]);
+
+// ── IN YOUR NAVIGATION (before going to profile) ───────────────────────────
+// Save ALL state including current location
+const saveStateAndNavigate = (url: string) => {
+  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  sessionStorage.setItem(TYPE_KEY, searchType);
+  if (userLocation) {
+    sessionStorage.setItem(LOCATION_KEY, JSON.stringify(userLocation));
+  }
+  router.push(url);
+};
 
   
 
@@ -275,73 +308,111 @@ useEffect(() => {
   };
 
   // ── location helpers ────────────────────────────────────────────────────────
-  const getUserLocation = async () => {
-    try {
-      setLocationError(null);
-      let position: any;
-      let hasLocation = false;
+ const getUserLocation = async () => {
+  try {
+    setLocationError(null);
+    let position: any;
+    let hasLocation = false;
 
-      if (Capacitor.isNativePlatform()) {
-        try {
-          position = await Geolocation.getCurrentPosition();
-          hasLocation = true;
-        } catch (e) {
-          console.warn('Native geolocation failed:', e instanceof Error ? e.message : e);
-        }
-      } else {
-        try {
-          position = await Promise.race([
-            new Promise((resolve, reject) =>
-              navigator.geolocation.getCurrentPosition(
-                pos => resolve({ coords: { latitude: pos.coords.latitude, longitude: pos.coords.longitude } }),
-                reject,
-                { timeout: 5000, enableHighAccuracy: false }
-              )
-            ),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 6000)),
-          ]);
-          hasLocation = true;
-        } catch (e) {
-          console.warn('Web geolocation failed:', e instanceof Error ? e.message : e);
-        }
+    if (Capacitor.isNativePlatform()) {
+      try {
+        position = await Geolocation.getCurrentPosition();
+        hasLocation = true;
+      } catch (e) {
+        console.warn('Native geolocation failed:', e instanceof Error ? e.message : e);
       }
+    } else {
+      try {
+        position = await Promise.race([
+          new Promise((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(
+              pos => resolve({ coords: { latitude: pos.coords.latitude, longitude: pos.coords.longitude } }),
+              reject,
+              { timeout: 5000, enableHighAccuracy: false }
+            )
+          ),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 6000)),
+        ]);
+        hasLocation = true;
+      } catch (e) {
+        console.warn('Web geolocation failed:', e instanceof Error ? e.message : e);
+      }
+    }
 
-      if (hasLocation && position) {
-        const lat = (position as any).coords?.latitude  ?? (position as any).latitude;
-        const lon = (position as any).coords?.longitude ?? (position as any).longitude;
-        setUserLocation({ latitude: lat, longitude: lon });
-        fetchNearbyFarmers(lat, lon, searchType);
+    if (hasLocation && position) {
+      const lat = (position as any).coords?.latitude  ?? (position as any).latitude;
+      const lon = (position as any).coords?.longitude ?? (position as any).longitude;
+      const newLoc = { latitude: lat, longitude: lon };
+      setUserLocation(newLoc);
+      sessionStorage.setItem(LOCATION_KEY, JSON.stringify(newLoc)); // ← persist immediately
+      fetchNearbyFarmers(lat, lon, searchType);
+    } else {
+      // Only fall back to stored profile location if we have NO saved location
+      const savedLoc = sessionStorage.getItem(LOCATION_KEY);
+      if (!savedLoc) {
+        await useStoredLocation();
+      }
+      // If savedLoc exists, state initializer already set it — just fetch with it
+      else if (userLocation) {
+        fetchNearbyFarmers(userLocation.latitude, userLocation.longitude, searchType);
       } else {
         await useStoredLocation();
       }
-    } catch {
+    }
+  } catch {
+    const savedLoc = sessionStorage.getItem(LOCATION_KEY);
+    if (!savedLoc) {
+      await useStoredLocation();
+    } else if (userLocation) {
+      fetchNearbyFarmers(userLocation.latitude, userLocation.longitude, searchType);
+    } else {
       await useStoredLocation();
     }
-  };
+  }
+};
 
   const useStoredLocation = async () => {
-    if (!user?.id) { fetchNearbyFarmers(0, 0, searchType); return; }
+  // First check if we already have a saved location from session
+  const savedLoc = sessionStorage.getItem(LOCATION_KEY);
+  if (savedLoc) {
     try {
-      const res = await fetch(getApiUrl(`/api/farmers/profile?farmerId=${user.id}`), {
-        headers: { 'x-user-id': user.id },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.latitude && data.longitude) {
-          const lat = parseFloat(data.latitude);
-          const lon = parseFloat(data.longitude);
-          if (lat !== 0 || lon !== 0) {
-            setUserLocation({ latitude: lat, longitude: lon });
-            fetchNearbyFarmers(lat, lon, searchType);
-            return;
-          }
-        }
+      const parsed = JSON.parse(savedLoc);
+      if (parsed.latitude && parsed.longitude && (parsed.latitude !== 0 || parsed.longitude !== 0)) {
+        setUserLocation(parsed);
+        fetchNearbyFarmers(parsed.latitude, parsed.longitude, searchType);
+        return;
       }
     } catch {}
-    setUserLocation(null);
-    fetchNearbyFarmers(0, 0, searchType);
-  };
+  }
 
+  // Fall back to profile location from API
+  if (!user?.id) { 
+    fetchNearbyFarmers(0, 0, searchType); 
+    return; 
+  }
+  try {
+    const res = await fetch(getApiUrl(`/api/farmers/profile?farmerId=${user.id}`), {
+      headers: { 'x-user-id': user.id },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.latitude && data.longitude) {
+        const lat = parseFloat(data.latitude);
+        const lon = parseFloat(data.longitude);
+        if (lat !== 0 || lon !== 0) {
+          const loc = { latitude: lat, longitude: lon };
+          setUserLocation(loc);
+          sessionStorage.setItem(LOCATION_KEY, JSON.stringify(loc));
+          fetchNearbyFarmers(lat, lon, searchType);
+          return;
+        }
+      }
+    }
+  } catch {}
+  
+  setUserLocation(null);
+  fetchNearbyFarmers(0, 0, searchType);
+};
   // ── core fetch ──────────────────────────────────────────────────────────────
 const fetchNearbyFarmers = async (
   latitude: number,

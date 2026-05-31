@@ -9,6 +9,9 @@ import { getApiUrl } from '@/lib/api';
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 
+const SCROLL_KEY = 'reels_scrollY';
+const INDEX_KEY = 'reels_currentIndex';
+const REEL_ID_KEY = 'reels_currentReelId';
 
 interface Reel {
   id: string;
@@ -57,8 +60,12 @@ function ReelsContent() {
   const lastTapRef = useRef<number>(0);
   const [videoReady, setVideoReady] = useState<Set<string>>(new Set());
   const [shareToast, setShareToast] = useState<string | null>(null);
-  // ✅ FIX 1: Move likingRef to component level (not inside handleLike)
   const likingRef = useRef(new Set<string>());
+  
+  // Refs for scroll restoration
+  const pendingScrollRef = useRef<number | null>(null);
+  const pendingIndexRef = useRef<number | null>(null);
+  const isRestoringRef = useRef(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -88,8 +95,28 @@ function ReelsContent() {
           });
           setLikedReels(likedSet);
           setFollowingUsers(followingSet);
+          
+          // Check for saved scroll position first
+          const savedScroll = sessionStorage.getItem(SCROLL_KEY);
+          const savedIndex = sessionStorage.getItem(INDEX_KEY);
+          const savedReelId = sessionStorage.getItem(REEL_ID_KEY);
+          
+          // Clear saved state
+          sessionStorage.removeItem(SCROLL_KEY);
+          sessionStorage.removeItem(INDEX_KEY);
+          sessionStorage.removeItem(REEL_ID_KEY);
+          
           const targetReelId = searchParams.get('reelId');
-          if (targetReelId) {
+          
+          if (savedScroll && savedIndex && !targetReelId) {
+            // Restoring from profile navigation
+            isRestoringRef.current = true;
+            const idx = parseInt(savedIndex);
+            pendingScrollRef.current = parseInt(savedScroll);
+            pendingIndexRef.current = idx;
+            setCurrentReelIndex(idx);
+          } else if (targetReelId) {
+            // Deep link from URL
             const idx = data.findIndex((r: Reel) => r.id === targetReelId);
             if (idx >= 0) {
               setTimeout(() => {
@@ -112,7 +139,35 @@ function ReelsContent() {
     };
 
     fetchReels();
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, searchParams]);
+
+  // Apply scroll restoration after reels load and videos are ready
+  useEffect(() => {
+    if (reels.length === 0) return;
+    if (pendingScrollRef.current === null || pendingIndexRef.current === null) return;
+
+    const targetScroll = pendingScrollRef.current;
+    const targetIndex = pendingIndexRef.current;
+    
+    pendingScrollRef.current = null;
+    pendingIndexRef.current = null;
+
+    // Wait for DOM to settle and videos to initialize
+    const attempts = [100, 300, 600, 1000];
+    attempts.forEach(delay => {
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = targetScroll;
+          setCurrentReelIndex(targetIndex);
+        }
+      }, delay);
+    });
+
+    // Release restore lock after max delay
+    setTimeout(() => {
+      isRestoringRef.current = false;
+    }, 1200);
+  }, [reels, videoReady]);
 
   useEffect(() => {
     videosRef.current.forEach((video, idx) => {
@@ -129,7 +184,6 @@ function ReelsContent() {
   const handleLike = async (reelId: string) => {
     if (!user) return;
 
-    // ✅ FIX 1: likingRef is now at component level — valid hook usage
     const wasLiked = likedReels.has(reelId);
     if (likingRef.current.has(reelId)) return;
     likingRef.current.add(reelId);
@@ -182,7 +236,6 @@ function ReelsContent() {
         )
       );
     } finally {
-      // ✅ Always release the lock so the button works again
       likingRef.current.delete(reelId);
     }
   };
@@ -299,42 +352,50 @@ function ReelsContent() {
   };
 
   const handleShare = async (e: React.MouseEvent, reel: Reel) => {
-  e.stopPropagation();
+    e.stopPropagation();
 
-  const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`;
-  const title = reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel';
-  const text = reel.caption || 'Check out this reel on CoFarmz!';
+    const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`;
+    const title = reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel';
+    const text = reel.caption || 'Check out this reel on CoFarmz!';
 
-  if (Capacitor.isNativePlatform()) {
-    try {
-      await Share.share({ title, text, url: shareUrl });
-    } catch (err: any) {
-      // Show error visually since we can't see console
-      setShareToast(`Error: ${err?.message || 'Share failed'}`);
-      setTimeout(() => setShareToast(null), 4000);
-    }
-    return;
-  }
-
-  // web fallback
-  if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-    try {
-      await navigator.share({ title, text, url: shareUrl });
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Share.share({ title, text, url: shareUrl });
+      } catch (err: any) {
+        setShareToast(`Error: ${err?.message || 'Share failed'}`);
+        setTimeout(() => setShareToast(null), 4000);
+      }
       return;
-    } catch (err: any) {
-      if (err?.name === 'AbortError') return;
     }
-  }
 
-  try {
-    await navigator.clipboard.writeText(shareUrl);
-    setShareToast('🔗 Link copied!');
-  } catch {
-    setShareToast('Sharing not supported');
-  }
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title, text, url: shareUrl });
+        return;
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return;
+      }
+    }
 
-  setTimeout(() => setShareToast(null), 2000);
-};
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareToast('🔗 Link copied!');
+    } catch {
+      setShareToast('Sharing not supported');
+    }
+
+    setTimeout(() => setShareToast(null), 2000);
+  };
+
+  // ✅ SAVE scroll position before navigating to profile
+  const saveStateAndNavigateToProfile = (userId: string) => {
+    if (scrollContainerRef.current) {
+      sessionStorage.setItem(SCROLL_KEY, scrollContainerRef.current.scrollTop.toString());
+      sessionStorage.setItem(INDEX_KEY, currentReelIndex.toString());
+      sessionStorage.setItem(REEL_ID_KEY, reels[currentReelIndex]?.id || '');
+    }
+    router.push(`/farmer-profile?id=${userId}`);
+  };
 
   const handleScroll = useCallback(() => {
     if (!scrollContainerRef.current) return;
@@ -458,9 +519,10 @@ function ReelsContent() {
 
               <div className="absolute left-0 right-16 pr-20 md:px-0 md:pr-0 w-full max-w-sm md:max-w-md lg:max-w-lg mx-auto text-white pointer-events-none z-30" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 80px)' }}>
                 <div className="pointer-events-auto flex flex-col gap-4">
+                  {/* ✅ SAVE state and navigate to profile */}
                   <div
                     className="flex items-center gap-3 w-fit bg-black/30 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 cursor-pointer active:scale-95 transition-all group"
-                    onClick={() => router.push(`/farmer-profile?id=${reel.user_id}`)}
+                    onClick={() => saveStateAndNavigateToProfile(reel.user_id)}
                   >
                     <div className="relative">
                       <img
@@ -503,10 +565,11 @@ function ReelsContent() {
                 }
               </button>
 
-<div
-  className="absolute right-4 md:right-[calc(50%-180px)] lg:right-[calc(50%-230px)] flex flex-col gap-5 text-white z-30"
-  style={{ bottom: 'calc(env(safe-area-inset-bottom) + 88px)' }}
->                {/* Views */}
+              <div
+                className="absolute right-4 md:right-[calc(50%-180px)] lg:right-[calc(50%-230px)] flex flex-col gap-5 text-white z-30"
+                style={{ bottom: 'calc(env(safe-area-inset-bottom) + 88px)' }}
+              >
+                {/* Views */}
                 <div className="flex flex-col items-center gap-1 group">
                   <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl transition-all group-hover:scale-110">
                     <i className="ph-fill ph-eye text-[24px] drop-shadow-xl"></i>
@@ -515,26 +578,26 @@ function ReelsContent() {
                     {reel.views > 999 ? `${(reel.views / 1000).toFixed(1)}k` : reel.views || 0}
                   </span>
                 </div>
+                
                 {/* Mute / Unmute */}
-<button
-  onClick={(e) => {
-    e.stopPropagation();
-    setIsMuted((prev) => !prev);
-  }}
-  className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
->
-  <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl">
-    {isMuted ? (
-      <i className="ph-fill ph-speaker-slash text-[24px] text-white" />
-    ) : (
-      <i className="ph-fill ph-speaker-high text-[24px] text-white" />
-    )}
-  </div>
-
-  <span className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase">
-    {isMuted ? 'Mute' : 'Sound'}
-  </span>
-</button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMuted((prev) => !prev);
+                  }}
+                  className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
+                >
+                  <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl">
+                    {isMuted ? (
+                      <i className="ph-fill ph-speaker-slash text-[24px] text-white" />
+                    ) : (
+                      <i className="ph-fill ph-speaker-high text-[24px] text-white" />
+                    )}
+                  </div>
+                  <span className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase">
+                    {isMuted ? 'Mute' : 'Sound'}
+                  </span>
+                </button>
 
                 {/* Like */}
                 <button
@@ -629,7 +692,7 @@ function ReelsContent() {
                 currentReelComments.map((comment) => (
                   <div key={comment.id} className="flex gap-3">
                     <button
-                      onClick={() => router.push(`/farmer-profile?id=${comment.user_id}`)}
+                      onClick={() => saveStateAndNavigateToProfile(comment.user_id)}
                       className="flex-shrink-0"
                     >
                       <img
@@ -640,7 +703,7 @@ function ReelsContent() {
                     </button>
                     <div className="flex-1 min-w-0">
                       <button
-                        onClick={() => router.push(`/farmer-profile?id=${comment.user_id}`)}
+                        onClick={() => saveStateAndNavigateToProfile(comment.user_id)}
                         className="font-bold text-sm text-gray-900 hover:text-green-700 transition-colors"
                       >
                         {comment.name}

@@ -1,11 +1,14 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
 
 import { MessageCircle, Search } from 'lucide-react';
+
+const SCROLL_KEY = 'chatList_scrollY';
+const SEARCH_KEY = 'chatList_searchQuery';
 
 interface Conversation {
   other_user_id: string;
@@ -30,12 +33,36 @@ function ChatContent() {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
 
+  // Refs for scroll restoration
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const pendingScrollRef = useRef<number | null>(null);
+  const isRestoringRef = useRef(false);
+
   useEffect(() => {
     if (!loading && user && isAuthenticated) {
       fetchConversations();
       fetchAllUsers();
     }
   }, [user?.id, isAuthenticated, loading]);
+
+  // Restore scroll position after conversations load
+  useEffect(() => {
+    if (loadingConversations) return;
+    if (pendingScrollRef.current === null) return;
+
+    const target = pendingScrollRef.current;
+    pendingScrollRef.current = null;
+    isRestoringRef.current = false;
+
+    // Multiple attempts to handle image paint time
+    [50, 150, 350, 600].forEach(delay => {
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = target;
+        }
+      }, delay);
+    });
+  }, [loadingConversations, conversations]);
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -65,6 +92,22 @@ function ChatContent() {
   const fetchConversations = async () => {
     try {
       setLoadingConversations(true);
+      
+      // Check for saved state first
+      const savedScroll = sessionStorage.getItem(SCROLL_KEY);
+      const savedSearch = sessionStorage.getItem(SEARCH_KEY);
+      
+      sessionStorage.removeItem(SCROLL_KEY);
+      sessionStorage.removeItem(SEARCH_KEY);
+      
+      if (savedSearch) {
+        setSearchQuery(savedSearch);
+      }
+      if (savedScroll) {
+        isRestoringRef.current = true;
+        pendingScrollRef.current = parseInt(savedScroll);
+      }
+      
       const response = await fetch(
         getApiUrl(`/api/messages/conversations?userId=${user?.id}`)
       );
@@ -78,6 +121,15 @@ function ChatContent() {
     } finally {
       setLoadingConversations(false);
     }
+  };
+
+  // ✅ SAVE state before navigating to a chat
+  const saveStateAndNavigate = (url: string) => {
+    if (scrollContainerRef.current) {
+      sessionStorage.setItem(SCROLL_KEY, scrollContainerRef.current.scrollTop.toString());
+    }
+    sessionStorage.setItem(SEARCH_KEY, searchQuery);
+    router.push(url);
   };
 
   const formatTime = (date: string) => {
@@ -113,11 +165,12 @@ function ChatContent() {
   return (
     <>
       <div
-  className="flex flex-col bg-white"
-  style={{ height: 'calc(100dvh - 55px)' }}
->
+        ref={scrollContainerRef}
+        className="flex flex-col bg-white overflow-y-auto"
+        style={{ height: 'calc(100dvh - 55px)' }}
+      >
         {/* Header */}
-        <header className="w-full px-6 pb-4 pt-4 sticky top-[55px] bg-white z-40">
+        <header className="w-full px-6 pb-4 pt-4 sticky top-0 bg-white z-40">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-3xl font-black text-gray-900">Messages</h1>
           </div>
@@ -161,7 +214,7 @@ function ChatContent() {
                   .map((u: any) => (
                     <button
                       key={u.id}
-                      onClick={() => router.push(`/messages?ownerId=${u.id}&ownerName=${encodeURIComponent(u.name)}`)}
+                      onClick={() => saveStateAndNavigate(`/messages?ownerId=${u.id}&ownerName=${encodeURIComponent(u.name)}`)}
                       className="w-full px-6 py-4 flex items-center gap-4 active:bg-gray-50 hover:bg-gray-50 transition-colors"
                     >
                       <img
@@ -191,7 +244,7 @@ function ChatContent() {
                 key={`${conversation.other_user_id}-${conversation.machinery_id || 'general'}`}
                 onClick={() => {
                   const url = `/messages?ownerId=${conversation.other_user_id}&ownerName=${encodeURIComponent(conversation.name)}${conversation.machinery_id ? `&machineryId=${conversation.machinery_id}` : ''}`;
-                  router.push(url);
+                  saveStateAndNavigate(url);
                 }}
                 className="w-full px-6 py-4 flex items-center gap-4 active:bg-gray-50 transition-colors hover:bg-gray-50"
               >
@@ -282,7 +335,7 @@ function ChatContent() {
                       key={u.id}
                       onClick={() => {
                         setShowNewChat(false);
-                        router.push(`/messages?ownerId=${u.id}&ownerName=${encodeURIComponent(u.name)}`);
+                        saveStateAndNavigate(`/messages?ownerId=${u.id}&ownerName=${encodeURIComponent(u.name)}`);
                       }}
                       className="w-full flex items-center gap-3 py-3 px-2 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
                     >
