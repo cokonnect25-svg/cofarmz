@@ -506,7 +506,12 @@ setsupplierResults(
                             <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers Interest For Your Crops Wastage</h2>
                             <p className="text-amber-600 text-xs font-bold uppercase tracking-wider">Interested in your agricultural waste</p>
                           </div>
-                          <button onClick={() => router.push('/nearby-farmers?type=buyers')}
+<button onClick={() => {
+  const wasteCropParams = userWasteCropNames.length > 0 
+    ? '&crops=' + encodeURIComponent(userWasteCropNames.join(',')) 
+    : '';
+  router.push(`/nearby-farmers?type=wastage${wasteCropParams}`);
+}}
                             className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 hover:bg-amber-600 hover:text-white transition-all shadow-sm">
                             <i className="ph-bold ph-arrow-right"></i>
                           </button>
@@ -528,7 +533,12 @@ setsupplierResults(
                             {matchedBuyers.some((b: any) => b.isExactMatch) ? 'Buyers interested in your crops' : 'Nearby buyers'}
                           </p>
                         </div>
-                        <button onClick={() => router.push('/nearby-farmers?type=buyers')}
+                        <button onClick={() => {
+  const cropParams = userCropNames.length > 0 
+    ? '&crops=' + encodeURIComponent(userCropNames.join(',')) 
+    : '';
+  router.push(`/nearby-farmers?type=buyers${cropParams}`);
+}}
                           className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
                           <i className="ph-bold ph-arrow-right"></i>
                         </button>
@@ -549,7 +559,12 @@ setsupplierResults(
                             {matchedFarmers.some((f: any) => f.isExactMatch) ? 'Farmers growing your crops' : 'Nearby farmers'}
                           </p>
                         </div>
-                        <button onClick={() => router.push('/nearby-farmers?type=farmers')}
+                        <button onClick={() => {
+  const cropParams = userCropNames.length > 0 
+    ? '&crops=' + encodeURIComponent(userCropNames.join(',')) 
+    : '';
+  router.push(`/nearby-farmers?type=farmers${cropParams}`);
+}}
                           className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
                           <i className="ph-bold ph-arrow-right"></i>
                         </button>
