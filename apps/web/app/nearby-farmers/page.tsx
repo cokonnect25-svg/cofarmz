@@ -99,8 +99,6 @@ function NearbyFarmersContent() {
 });
   const [locationError, setLocationError] = useState<string | null>(null);
 
-
-
 const rawType = searchParams.get('type');
 
 // Check if we're returning from a profile view
@@ -108,16 +106,18 @@ const savedType = typeof window !== 'undefined'
   ? sessionStorage.getItem(TYPE_KEY) 
   : null;
 
+// PRIORITY: URL param > sessionStorage > default
 const initialType =
+  rawType === 'buyers'     ? 'buyers'   :
+  rawType === 'wastage'    ? 'wastage'  :
+  rawType === 'supplier'   ? 'supplier' :
+  rawType === 'fpo'        ? 'fpo'      :
+  rawType === 'farmers'    ? 'farmers'  :
   savedType === 'farmers'  ? 'farmers'  :
   savedType === 'buyers'   ? 'buyers'   :
   savedType === 'wastage'  ? 'wastage'  :
   savedType === 'supplier' ? 'supplier' :
   savedType === 'fpo'      ? 'fpo'      :
-  rawType === 'buyers'     ? 'buyers'   :
-  rawType === 'wastage'    ? 'wastage'  :
-  rawType === 'supplier'   ? 'supplier' :
-  rawType === 'fpo'        ? 'fpo'      :
   'farmers';
 
 const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 'supplier' | 'fpo'>(initialType);
@@ -178,10 +178,13 @@ useEffect(() => {
   const savedScroll  = sessionStorage.getItem(SCROLL_KEY);
   const savedType    = sessionStorage.getItem(TYPE_KEY);
   
-  // Don't remove LOCATION_KEY here — keep it for the state initializer above
   sessionStorage.removeItem(VISIBLE_KEY);
   sessionStorage.removeItem(SCROLL_KEY);
-  sessionStorage.removeItem(TYPE_KEY);
+  
+  // Only remove TYPE_KEY if URL doesn't have one (so we preserve back-nav)
+  if (!rawType) {
+    sessionStorage.removeItem(TYPE_KEY);
+  }
 
   if (savedVisible) {
     isRestoringRef.current = true;
@@ -190,7 +193,7 @@ useEffect(() => {
   if (savedScroll) {
     pendingScrollRef.current = parseInt(savedScroll);
   }
-}, [mounted]);
+}, [mounted, rawType]); // <-- add rawType dependency
 
   useEffect(() => {
     if (mounted && !loading && !isAuthenticated) router.push('/login');
@@ -549,7 +552,10 @@ onClick={() => {
   setSortBy('nearby');
   sessionStorage.removeItem(SCROLL_KEY);
   sessionStorage.removeItem(VISIBLE_KEY);
-  sessionStorage.removeItem(TYPE_KEY);   // ← ADD THIS
+  // Only remove TYPE_KEY if we're switching tabs manually (not from URL)
+  if (!rawType) {
+    sessionStorage.removeItem(TYPE_KEY);
+  }
 }}
       className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap flex-shrink-0
         ${searchType === tab.key
