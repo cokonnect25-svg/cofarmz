@@ -100,6 +100,12 @@ function NearbyFarmersContent() {
   const [locationError, setLocationError] = useState<string | null>(null);
 
 const rawType = searchParams.get('type');
+const rawCrops = searchParams.get('crops');
+
+// Parse crops from URL query param
+const urlCropFilters = rawCrops 
+  ? rawCrops.split(',').map(c => c.trim()).filter(Boolean) 
+  : [];
 
 // Check if we're returning from a profile view
 const savedType = typeof window !== 'undefined' 
@@ -125,18 +131,18 @@ const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 
   const [sortBy, setSortBy]           = useState('nearby');
   const [showSortMenu, setShowSortMenu] = useState(false);
 
-  const defaultFilters = {
-    distance:        50,
-    minRating:       0,
-    crops:           [] as string[],
-    equipment:       [] as string[],
-    enableDistance:  false,
-    yieldDateFrom:   '',
-    yieldDateTo:     '',
-    wasteOnly:       false,
-    grades:          [] as string[],
-    certTypes:       [] as string[],
-  };
+const defaultFilters = {
+  distance:        50,
+  minRating:       0,
+  crops:           urlCropFilters,
+  equipment:       [] as string[],
+  enableDistance:  false,
+  yieldDateFrom:   '',
+  yieldDateTo:     '',
+  wasteOnly:       initialType === 'wastage', // <-- AUTO-SET FOR WASTAGE
+  grades:          [] as string[],
+  certTypes:       [] as string[],
+};
 
   const [filters, setFilters] = useState(defaultFilters);
   const [visibleCount, setVisibleCount] = useState(50);
@@ -171,6 +177,23 @@ const pendingScrollRef = useRef<number | null>(null);
   // Restore scroll position when returning to this page
 // REPLACE the existing restore useEffect with this:
 // Restore scroll position when returning to this page
+
+// Auto-apply URL crop filters when location is ready
+useEffect(() => {
+  if (!mounted || !isAuthenticated || !userLocation) return;
+  
+  // If crops came from URL, ensure fetch uses them
+  if (urlCropFilters.length > 0) {
+    fetchNearbyFarmers(
+      userLocation.latitude, 
+      userLocation.longitude, 
+      searchType, 
+      { ...filtersRef.current, crops: urlCropFilters }
+    );
+  }
+}, [mounted, isAuthenticated, userLocation, searchType]);
+
+
 useEffect(() => {
   if (!mounted) return;
 
