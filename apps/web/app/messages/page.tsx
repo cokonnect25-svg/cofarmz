@@ -146,32 +146,28 @@ function MessagesContent() {
   }, [messages]);
 
   // Fetch messages
-  useEffect(() => {
-    const fetchMessages = async () => {
-      if (!user?.id || !ownerId) return;
-      try {
-        setLoading(true);
-        const response = await fetch(
-          getApiUrl(`/api/messages?userId=${user.id}&otherUserId=${ownerId}`)
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setMessages(data);
-          markAsRead();
-        }
-      } catch (error) {
-        console.error('Failed to fetch messages:', error);
-      } finally {
-        setLoading(false);
+  const fetchMessages = useCallback(async () => {
+    if (!user?.id || !ownerId) return;
+    try {
+      const response = await fetch(
+        getApiUrl(`/api/messages?userId=${user.id}&otherUserId=${ownerId}`)
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(data);
+        markAsRead();
       }
-    };
-
-    fetchMessages();
-    const interval = setInterval(() => {
-      fetchMessages();
-    }, 3000);
-    return () => clearInterval(interval);
+    } catch (error) {
+      console.error('Failed to fetch messages:', error);
+    }
   }, [user?.id, ownerId, markAsRead]);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchMessages().then(() => setLoading(false));
+    const interval = setInterval(fetchMessages, 3000);
+    return () => clearInterval(interval);
+  }, [fetchMessages]);
 
   // Close options menu on outside click
   useEffect(() => {
@@ -210,26 +206,35 @@ function MessagesContent() {
     }
   };
 
-  // Delete a single message
+  // ✅ FIXED: Delete a single message with proper error handling
   const handleDeleteMessage = async (msgId: number) => {
     if (!user?.id) return;
     setDeletingMsg(true);
     try {
+      console.log('Deleting message:', msgId, 'user:', user.id);
+
       const res = await fetch(getApiUrl(`/api/messages/${msgId}`), {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
       });
+
+      const data = await res.json();
+      console.log('Delete response:', res.status, data);
+
       if (res.ok) {
+        // Remove from local state AND trigger immediate re-fetch
         setMessages(prev => prev.filter(m => m.id !== msgId));
         setShowDeleteConfirm(null);
         setSelectedMessageId(null);
+        // Force re-fetch to sync with server
+        await fetchMessages();
       } else {
-        alert('Failed to delete message');
+        alert(`Failed to delete: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error deleting message:', error);
-      alert('Error deleting message');
+      alert('Network error deleting message');
     } finally {
       setDeletingMsg(false);
     }
@@ -251,7 +256,8 @@ function MessagesContent() {
         setShowOptionsMenu(false);
         window.location.href = '/chat';
       } else {
-        alert('Failed to delete conversation');
+        const data = await res.json();
+        alert(`Failed to delete conversation: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error deleting conversation:', error);
@@ -375,11 +381,12 @@ function MessagesContent() {
                     : 'bg-gray-100 text-gray-900 rounded-bl-sm'
                 } ${isSelected ? 'ring-2 ring-blue-400' : ''}`}
               >
-                {/* Delete button on hover/selection */}
+                {/* Delete button - visible on hover for own messages */}
                 {isOwn && (
                   <button
                     onClick={() => setShowDeleteConfirm(msg.id)}
-                    className={`absolute -top-2 -left-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md`}
+                    className="absolute -top-2 -left-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md"
+                    title="Delete message"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
