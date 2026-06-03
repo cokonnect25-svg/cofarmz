@@ -1,27 +1,32 @@
 export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get("userId");
-  const otherUserId = searchParams.get("otherUserId");
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId');
+    const otherUserId = searchParams.get('otherUserId');
 
-  if (!userId || !otherUserId) {
-    return NextResponse.json(
-      { error: "Missing userId or otherUserId" },
-      { status: 400 }
-    );
+    if (!userId || !otherUserId) {
+      return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
+    }
+
+    const messages = await sql`
+      SELECT * FROM messages
+      WHERE (
+        (sender_id = ${userId} AND receiver_id = ${otherUserId} AND deleted_by_sender = false)
+        OR
+        (sender_id = ${otherUserId} AND receiver_id = ${userId} AND deleted_by_receiver = false)
+      )
+      ORDER BY created_at ASC
+    `;
+
+    return NextResponse.json(messages);
+  } catch (error: any) {
+    console.error('Error fetching messages:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  const messages = await sql`
-    SELECT * FROM messages 
-    WHERE (sender_id = ${userId} AND receiver_id = ${otherUserId})
-       OR (sender_id = ${otherUserId} AND receiver_id = ${userId})
-    ORDER BY created_at ASC
-  `;
-
-  return NextResponse.json(messages);
 }
 
 export async function POST(request: Request) {

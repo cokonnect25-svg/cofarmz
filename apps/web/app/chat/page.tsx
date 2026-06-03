@@ -4,8 +4,7 @@ import { useEffect, useState, Suspense, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
-
-import { MessageCircle, Search } from 'lucide-react';
+import { MessageCircle, Search, Trash2, X, CheckCheck } from 'lucide-react';
 
 const SCROLL_KEY = 'chatList_scrollY';
 const SEARCH_KEY = 'chatList_searchQuery';
@@ -19,6 +18,73 @@ interface Conversation {
   machinery_id: string;
   machinery_name: string;
   machinery_image: string;
+  unread_count: number;
+  is_online: boolean;
+  last_seen: string | null;
+}
+
+// ── Online Status Hook (batch check) ───────────────────────
+function useOnlineStatuses(userIds: string[]) {
+  const [statuses, setStatuses] = useState<Record<string, { isOnline: boolean; lastSeen: string | null }>>({});
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (userIds.length === 0) return;
+
+    const connect = () => {
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const ws = new WebSocket(`${protocol}//${window.location.host}/api/socket`);
+
+        ws.onopen = () => {
+          ws.send(JSON.stringify({ type: 'subscribe_batch', userIds }));
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'presence_batch') {
+              setStatuses(data.statuses);
+            } else if (data.type === 'presence') {
+              setStatuses(prev => ({
+                ...prev,
+                [data.userId]: { isOnline: data.isOnline, lastSeen: data.lastSeen }
+              }));
+            }
+          } catch (e) {}
+        };
+
+        ws.onclose = () => {
+          if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = setTimeout(connect, 5000);
+        };
+
+        wsRef.current = ws;
+      } catch (e) {}
+    };
+
+    connect();
+
+    // Fallback polling
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(getApiUrl(`/api/users/online-batch?userIds=${userIds.join(',')}`));
+        if (res.ok) {
+          const data = await res.json();
+          setStatuses(data.statuses || {});
+        }
+      } catch {}
+    }, 15000);
+
+    return () => {
+      wsRef.current?.close();
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      clearInterval(pollInterval);
+    };
+  }, [userIds.join(',')]);
+
+  return statuses;
 }
 
 function ChatContent() {
@@ -33,10 +99,21 @@ function ChatContent() {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
 
+  // Delete conversation state
+  const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
+  const [deletingConv, setDeletingConv] = useState(false);
+  const [swipedConvId, setSwipedConvId] = useState<string | null>(null);
+  const touchStartX = useRef<number>(0);
+  const touchCurrentX = useRef<number>(0);
+
   // Refs for scroll restoration
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const pendingScrollRef = useRef<number | null>(null);
   const isRestoringRef = useRef(false);
+
+  // Get online statuses for all conversation partners
+  const userIds = conversations.map(c => c.other_user_id);
+  const onlineStatuses = useOnlineStatuses(userIds);
 
   useEffect(() => {
     if (!loading && user && isAuthenticated) {
@@ -54,7 +131,6 @@ function ChatContent() {
     pendingScrollRef.current = null;
     isRestoringRef.current = false;
 
-    // Multiple attempts to handle image paint time
     [50, 150, 350, 600].forEach(delay => {
       setTimeout(() => {
         if (scrollContainerRef.current) {
@@ -92,22 +168,19 @@ function ChatContent() {
   const fetchConversations = async () => {
     try {
       setLoadingConversations(true);
-      
-      // Check for saved state first
+
       const savedScroll = sessionStorage.getItem(SCROLL_KEY);
       const savedSearch = sessionStorage.getItem(SEARCH_KEY);
-      
+
       sessionStorage.removeItem(SCROLL_KEY);
       sessionStorage.removeItem(SEARCH_KEY);
-      
-      if (savedSearch) {
-        setSearchQuery(savedSearch);
-      }
+
+      if (savedSearch) setSearchQuery(savedSearch);
       if (savedScroll) {
         isRestoringRef.current = true;
         pendingScrollRef.current = parseInt(savedScroll);
       }
-      
+
       const response = await fetch(
         getApiUrl(`/api/messages/conversations?userId=${user?.id}`)
       );
@@ -123,13 +196,61 @@ function ChatContent() {
     }
   };
 
-  // ✅ SAVE state before navigating to a chat
   const saveStateAndNavigate = (url: string) => {
     if (scrollContainerRef.current) {
       sessionStorage.setItem(SCROLL_KEY, scrollContainerRef.current.scrollTop.toString());
     }
     sessionStorage.setItem(SEARCH_KEY, searchQuery);
     router.push(url);
+  };
+
+  const handleDeleteConversation = async () => {
+    if (!deleteTarget || !user?.id) return;
+    setDeletingConv(true);
+    try {
+      const res = await fetch(getApiUrl(`/api/messages/conversation`), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId: user.id, 
+          otherUserId: deleteTarget.other_user_id 
+        }),
+      });
+      if (res.ok) {
+        setConversations(prev => prev.filter(c => c.other_user_id !== deleteTarget.other_user_id));
+        setFilteredConversations(prev => prev.filter(c => c.other_user_id !== deleteTarget.other_user_id));
+        setDeleteTarget(null);
+        setSwipedConvId(null);
+      } else {
+        alert('Failed to delete conversation');
+      }
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      alert('Error deleting conversation');
+    } finally {
+      setDeletingConv(false);
+    }
+  };
+
+  // Swipe handlers for mobile delete
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchCurrentX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent, convId: string) => {
+    touchCurrentX.current = e.touches[0].clientX;
+    const diff = touchStartX.current - touchCurrentX.current;
+    if (diff > 50) {
+      setSwipedConvId(convId);
+    } else if (diff < -30) {
+      setSwipedConvId(null);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchStartX.current = 0;
+    touchCurrentX.current = 0;
   };
 
   const formatTime = (date: string) => {
@@ -153,9 +274,9 @@ function ChatContent() {
 
   if (loading || !isAuthenticated) {
     return (
-      <div className="w-full min-h-[100dvh] bg-brand-50 flex items-center justify-center">
+      <div className="w-full min-h-[100dvh] bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-full border-4 border-brand-600 border-t-transparent animate-spin"></div>
+          <div className="w-12 h-12 rounded-full border-4 border-green-600 border-t-transparent animate-spin"></div>
           <p className="text-gray-600 text-sm font-medium">Loading...</p>
         </div>
       </div>
@@ -173,6 +294,11 @@ function ChatContent() {
         <header className="w-full px-6 pb-4 pt-4 sticky top-0 bg-white z-40">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-3xl font-black text-gray-900">Messages</h1>
+            {conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0) > 0 && (
+              <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full">
+                {conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0)}
+              </span>
+            )}
           </div>
 
           {/* Search Bar */}
@@ -183,7 +309,7 @@ function ChatContent() {
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-gray-100 rounded-full pl-12 pr-4 py-3 text-sm font-medium text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+              className="w-full bg-gray-100 rounded-full pl-12 pr-4 py-3 text-sm font-medium text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500/30"
             />
           </div>
         </header>
@@ -193,12 +319,11 @@ function ChatContent() {
           {loadingConversations ? (
             <div className="flex items-center justify-center py-12">
               <div className="flex flex-col items-center gap-3">
-                <div className="w-8 h-8 rounded-full border-2 border-brand-600 border-t-transparent animate-spin"></div>
+                <div className="w-8 h-8 rounded-full border-2 border-green-600 border-t-transparent animate-spin"></div>
                 <p className="text-gray-500 text-sm">Loading conversations...</p>
               </div>
             </div>
           ) : searchQuery.trim() && filteredConversations.length === 0 ? (
-            // Search mode: show matching users from all users
             <div>
               <p className="px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Users</p>
               {allUsers.filter(u => u.name?.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
@@ -206,7 +331,7 @@ function ChatContent() {
                   <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
                     <MessageCircle className="w-8 h-8 text-gray-400" />
                   </div>
-                  <p className="text-sm text-gray-500 text-center">No users found for "{searchQuery}"</p>
+                  <p className="text-sm text-gray-500 text-center">No users found for &quot;{searchQuery}&quot;</p>
                 </div>
               ) : (
                 allUsers
@@ -217,11 +342,16 @@ function ChatContent() {
                       onClick={() => saveStateAndNavigate(`/messages?ownerId=${u.id}&ownerName=${encodeURIComponent(u.name)}`)}
                       className="w-full px-6 py-4 flex items-center gap-4 active:bg-gray-50 hover:bg-gray-50 transition-colors"
                     >
-                      <img
-                        src={u.image }
-                        alt={u.name}
-                        className="w-14 h-14 rounded-full object-cover flex-shrink-0"
-                      />
+                      <div className="relative">
+                        <img
+                          src={u.image || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 150 150%22%3E%3Crect fill=%22%23e5e7eb%22 width=%22150%22 height=%22150%22/%3E%3Ccircle cx=%2275%22 cy=%2250%22 r=%2220%22 fill=%22%239ca3af%22/%3E%3Cpath d=%22M 50 85 Q 75 75 100 85 L 100 150 L 50 150 Z%22 fill=%22%239ca3af%22/%3E%3C/svg%3E'}
+                          alt={u.name}
+                          className="w-14 h-14 rounded-full object-cover flex-shrink-0"
+                        />
+                        <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${
+                          onlineStatuses[u.id]?.isOnline ? 'bg-green-500' : 'bg-gray-400'
+                        }`} />
+                      </div>
                       <div className="text-left">
                         <p className="font-bold text-gray-900">{u.name}</p>
                         <p className="text-xs text-gray-500 capitalize">{u.role || 'farmer'}</p>
@@ -239,69 +369,148 @@ function ChatContent() {
               <p className="text-sm text-gray-500 text-center">Tap + to start a conversation</p>
             </div>
           ) : (
-            filteredConversations.map((conversation) => (
-              <button
-                key={`${conversation.other_user_id}-${conversation.machinery_id || 'general'}`}
-                onClick={() => {
-                  const url = `/messages?ownerId=${conversation.other_user_id}&ownerName=${encodeURIComponent(conversation.name)}${conversation.machinery_id ? `&machineryId=${conversation.machinery_id}` : ''}`;
-                  saveStateAndNavigate(url);
-                }}
-                className="w-full px-6 py-4 flex items-center gap-4 active:bg-gray-50 transition-colors hover:bg-gray-50"
-              >
-                {/* User Avatar */}
-                <div className="relative flex-shrink-0">
-                  <img
-                    src={
-                      conversation.image ||
-                      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150"%3E%3Crect fill="%23e5e7eb" width="150" height="150"/%3E%3Ccircle cx="75" cy="50" r="20" fill="%239ca3af"/%3E%3Cpath d="M 50 85 Q 75 75 100 85 L 100 150 L 50 150 Z" fill="%239ca3af"/%3E%3C/svg%3E'
-                    }
-                    alt={conversation.name}
-                    className="w-14 h-14 rounded-full object-cover"
-                  />
-                  <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-                </div>
+            filteredConversations.map((conversation) => {
+              const status = onlineStatuses[conversation.other_user_id];
+              const isOnline = status?.isOnline ?? conversation.is_online;
+              const hasUnread = (conversation.unread_count || 0) > 0;
 
-                {/* Conversation Info */}
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="flex items-baseline justify-between mb-1">
-                    <h3 className="font-bold text-gray-900 truncate">{conversation.name}</h3>
-                    <span className="text-xs text-gray-500 font-medium ml-2 flex-shrink-0">
-                      {formatTime(conversation.last_message_time)}
-                    </span>
-                  </div>
-
-                  {/* Machinery Name or Farmer Chat */}
-                  {conversation.machinery_name ? (
-                    <p className="text-xs text-gray-500 font-medium mb-1 truncate">
-                      {conversation.machinery_name}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-gray-400 font-medium mb-1 truncate italic">
-                      Farmer chat
-                    </p>
+              return (
+                <div 
+                  key={`${conversation.other_user_id}-${conversation.machinery_id || 'general'}`}
+                  className="relative overflow-hidden"
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={(e) => handleTouchMove(e, conversation.other_user_id)}
+                  onTouchEnd={handleTouchEnd}
+                >
+                  {/* Swipe-to-delete background */}
+                  {swipedConvId === conversation.other_user_id && (
+                    <div className="absolute right-0 top-0 bottom-0 w-24 bg-red-500 flex items-center justify-center z-10">
+                      <button 
+                        onClick={() => setDeleteTarget(conversation)}
+                        className="flex flex-col items-center text-white"
+                      >
+                        <Trash2 className="w-6 h-6" />
+                        <span className="text-xs font-bold mt-1">Delete</span>
+                      </button>
+                    </div>
                   )}
 
-                  {/* Last Message Preview */}
-                  <p className="text-sm text-gray-600 truncate">
-                    {truncateMessage(conversation.last_message)}
-                  </p>
-                </div>
+                  <button
+                    onClick={() => {
+                      const url = `/messages?ownerId=${conversation.other_user_id}&ownerName=${encodeURIComponent(conversation.name)}${conversation.machinery_id ? `&machineryId=${conversation.machinery_id}` : ''}`;
+                      saveStateAndNavigate(url);
+                    }}
+                    className={`w-full px-6 py-4 flex items-center gap-4 active:bg-gray-50 transition-colors hover:bg-gray-50 ${
+                      swipedConvId === conversation.other_user_id ? 'transform -translate-x-24' : ''
+                    } transition-transform duration-200`}
+                  >
+                    {/* User Avatar with Online Indicator */}
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={conversation.image || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 150 150%22%3E%3Crect fill=%22%23e5e7eb%22 width=%22150%22 height=%22150%22/%3E%3Ccircle cx=%2275%22 cy=%2250%22 r=%2220%22 fill=%22%239ca3af%22/%3E%3Cpath d=%22M 50 85 Q 75 75 100 85 L 100 150 L 50 150 Z%22 fill=%22%239ca3af%22/%3E%3C/svg%3E'}
+                        alt={conversation.name}
+                        className="w-14 h-14 rounded-full object-cover"
+                      />
+                      <div className={`absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${
+                        isOnline ? 'bg-green-500' : 'bg-gray-400'
+                      }`} />
+                    </div>
 
-                {/* Machinery Thumbnail */}
-                {conversation.machinery_image && (
-                  <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                    <img
-                      src={conversation.machinery_image}
-                      alt={conversation.machinery_name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-              </button>
-            ))
+                    {/* Conversation Info */}
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="flex items-baseline justify-between mb-1">
+                        <h3 className={`truncate ${hasUnread ? 'font-black text-gray-900' : 'font-bold text-gray-900'}`}>
+                          {conversation.name}
+                        </h3>
+                        <span className={`text-xs font-medium ml-2 flex-shrink-0 ${
+                          hasUnread ? 'text-green-600 font-bold' : 'text-gray-500'
+                        }`}>
+                          {formatTime(conversation.last_message_time)}
+                        </span>
+                      </div>
+
+                      {conversation.machinery_name ? (
+                        <p className="text-xs text-gray-500 font-medium mb-1 truncate">
+                          {conversation.machinery_name}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-400 font-medium mb-1 truncate italic">
+                          Farmer chat
+                        </p>
+                      )}
+
+                      <div className="flex items-center gap-1">
+                        {conversation.last_message && (
+                          <>
+                            <span className="flex-shrink-0">
+                              {conversation.unread_count === 0 ? (
+                                <CheckCheck className="w-3 h-3 text-green-500" />
+                              ) : (
+                                <CheckCheck className="w-3 h-3 text-gray-300" />
+                              )}
+                            </span>
+                            <p className={`text-sm truncate ${
+                              hasUnread ? 'text-gray-900 font-semibold' : 'text-gray-600'
+                            }`}>
+                              {truncateMessage(conversation.last_message)}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right side: Unread badge + machinery thumbnail */}
+                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                      {hasUnread && (
+                        <span className="bg-green-500 text-white text-xs font-bold min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center">
+                          {conversation.unread_count}
+                        </span>
+                      )}
+
+                      {conversation.machinery_image && (
+                        <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                          <img
+                            src={conversation.machinery_image}
+                            alt={conversation.machinery_name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                </div>
+              );
+            })
           )}
         </div>
       </div>
+
+      {/* Delete Conversation Confirmation */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            <h3 className="text-lg font-black text-gray-900 mb-2">Delete Conversation?</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              All messages with <span className="font-bold text-gray-700">{deleteTarget.name}</span> will be permanently deleted.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => { setDeleteTarget(null); setSwipedConvId(null); }} 
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDeleteConversation} 
+                disabled={deletingConv}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition disabled:opacity-50"
+              >
+                {deletingConv ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New Chat Modal */}
       {showNewChat && (
@@ -310,17 +519,17 @@ function ChatContent() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-black text-gray-900">New Message</h2>
               <button onClick={() => { setShowNewChat(false); setUserSearchQuery(''); }} className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
-                <i className="ph-bold ph-x text-lg text-gray-600"></i>
+                <X className="w-5 h-5 text-gray-600" />
               </button>
             </div>
             <div className="relative mb-4">
-              <i className="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search by name..."
                 value={userSearchQuery}
                 onChange={(e) => setUserSearchQuery(e.target.value)}
-                className="w-full bg-gray-100 rounded-full pl-11 pr-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                className="w-full bg-gray-100 rounded-full pl-11 pr-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-green-500/30"
                 autoFocus
               />
             </div>
@@ -330,26 +539,34 @@ function ChatContent() {
               ) : (
                 allUsers
                   .filter((u: any) => u.name?.toLowerCase().includes(userSearchQuery.toLowerCase()))
-                  .map((u: any) => (
-                    <button
-                      key={u.id}
-                      onClick={() => {
-                        setShowNewChat(false);
-                        saveStateAndNavigate(`/messages?ownerId=${u.id}&ownerName=${encodeURIComponent(u.name)}`);
-                      }}
-                      className="w-full flex items-center gap-3 py-3 px-2 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
-                    >
-                      <img
-                        src={u.image }
-                        alt={u.name}
-                        className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                      />
-                      <div className="text-left">
-                        <p className="font-bold text-gray-900">{u.name}</p>
-                        <p className="text-xs text-gray-500 capitalize">{u.role || 'farmer'}</p>
-                      </div>
-                    </button>
-                  ))
+                  .map((u: any) => {
+                    const status = onlineStatuses[u.id];
+                    return (
+                      <button
+                        key={u.id}
+                        onClick={() => {
+                          setShowNewChat(false);
+                          saveStateAndNavigate(`/messages?ownerId=${u.id}&ownerName=${encodeURIComponent(u.name)}`);
+                        }}
+                        className="w-full flex items-center gap-3 py-3 px-2 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                      >
+                        <div className="relative">
+                          <img
+                            src={u.image || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 150 150%22%3E%3Crect fill=%22%23e5e7eb%22 width=%22150%22 height=%22150%22/%3E%3Ccircle cx=%2275%22 cy=%2250%22 r=%2220%22 fill=%22%239ca3af%22/%3E%3Cpath d=%22M 50 85 Q 75 75 100 85 L 100 150 L 50 150 Z%22 fill=%22%239ca3af%22/%3E%3C/svg%3E'}
+                            alt={u.name}
+                            className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                          />
+                          <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                            status?.isOnline ? 'bg-green-500' : 'bg-gray-400'
+                          }`} />
+                        </div>
+                        <div className="text-left">
+                          <p className="font-bold text-gray-900">{u.name}</p>
+                          <p className="text-xs text-gray-500 capitalize">{u.role || 'farmer'}</p>
+                        </div>
+                      </button>
+                    );
+                  })
               )}
             </div>
           </div>
@@ -361,7 +578,14 @@ function ChatContent() {
 
 export default function ChatPage() {
   return (
-    <Suspense>
+    <Suspense fallback={
+      <div className="w-full min-h-[100dvh] bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-full border-4 border-green-600 border-t-transparent animate-spin"></div>
+          <p className="text-gray-600 text-sm font-medium">Loading...</p>
+        </div>
+      </div>
+    }>
       <ChatContent />
     </Suspense>
   );

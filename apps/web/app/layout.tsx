@@ -16,6 +16,7 @@ import { authClient } from "@/lib/auth-client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePathname } from "next/navigation";
 import AdSplash from "./components/AdSplash";
+import { useHeartbeat } from '@/hooks/useHeartbeat';
 
 const TOP_NAV_H = 64;
 const BOTTOM_NAV_H = 60;
@@ -32,6 +33,8 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       setShowSplash(true);
     }
   }, []);
+
+   useHeartbeat(user?.id);
 
   const hideBottomNav = pathname?.startsWith("/chat");
   const showBottomNav = !!user && !hideBottomNav;
