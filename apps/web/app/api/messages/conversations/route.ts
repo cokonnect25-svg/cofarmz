@@ -9,42 +9,79 @@ import { NextRequest, NextResponse } from "next/server";
 
 const ONLINE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { userId, otherUserId } = await req.json();
+    const { id } = await params;
+    const messageId = parseInt(id);
 
-    if (!userId || !otherUserId) {
-      return NextResponse.json({ error: 'Missing userId or otherUserId' }, { status: 400 });
+    // ✅ FIXED: Get userId from query params instead of body
+    // DELETE requests often have issues with body parsing in Next.js
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId');
+
+    if (isNaN(messageId) || !userId) {
+      return NextResponse.json({ 
+        error: 'Missing messageId or userId',
+        messageId: id,
+        userId: userId || 'undefined'
+      }, { status: 400 });
     }
 
-    // Mark messages where user is sender as deleted_by_sender
-    await sql`
-      UPDATE messages 
-      SET deleted_by_sender = true
-      WHERE sender_id = ${userId} AND receiver_id = ${otherUserId}
+    // Get the message
+    const [message] = await sql`
+      SELECT sender_id, receiver_id, deleted_by_sender, deleted_by_receiver 
+      FROM messages 
+      WHERE id = ${messageId}
     `;
 
-    // Mark messages where user is receiver as deleted_by_receiver
-    await sql`
-      UPDATE messages 
-      SET deleted_by_receiver = true
-      WHERE sender_id = ${otherUserId} AND receiver_id = ${userId}
-    `;
+    if (!message) {
+      return NextResponse.json({ error: 'Message not found' }, { status: 404 });
+    }
 
-    // Hard delete messages where both have deleted
-    await sql`
-      DELETE FROM messages 
-      WHERE (
-        (sender_id = ${userId} AND receiver_id = ${otherUserId} AND deleted_by_sender = true AND deleted_by_receiver = true)
-        OR
-        (sender_id = ${otherUserId} AND receiver_id = ${userId} AND deleted_by_sender = true AND deleted_by_receiver = true)
-      )
-    `;
+    // Determine who is deleting
+    let updateField: string;
+    if (message.sender_id === userId) {
+      updateField = 'deleted_by_sender';
+    } else if (message.receiver_id === userId) {
+      updateField = 'deleted_by_receiver';
+    } else {
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        yourId: userId,
+        senderId: message.sender_id,
+        receiverId: message.receiver_id
+      }, { status: 403 });
+    }
 
-    return NextResponse.json({ success: true });
+    // Check if other side already deleted
+    const otherDeleted = updateField === 'deleted_by_sender' 
+      ? message.deleted_by_receiver 
+      : message.deleted_by_sender;
+
+    if (otherDeleted) {
+      // Hard delete if both sides deleted
+      await sql`DELETE FROM messages WHERE id = ${messageId}`;
+    } else {
+      // ✅ FIXED: Use sql.unsafe for dynamic column names
+      await sql.unsafe(
+        `UPDATE messages SET ${updateField} = true WHERE id = ${messageId}`
+      );
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      hardDelete: !!otherDeleted,
+      deletedBy: updateField
+    });
   } catch (error: any) {
-    console.error('Error deleting conversation:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Error deleting message:', error);
+    return NextResponse.json({ 
+      error: error.message, 
+      stack: error.stack 
+    }, { status: 500 });
   }
 }
 

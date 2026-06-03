@@ -207,28 +207,29 @@ function MessagesContent() {
   };
 
   // ✅ FIXED: Delete a single message with proper error handling
+  // ✅ FIXED: Delete message with userId in URL query params
   const handleDeleteMessage = async (msgId: number) => {
     if (!user?.id) return;
     setDeletingMsg(true);
     try {
       console.log('Deleting message:', msgId, 'user:', user.id);
 
-      const res = await fetch(getApiUrl(`/api/messages/${msgId}`), {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
-      });
+      // ✅ Send userId as query param instead of body
+      const res = await fetch(
+        getApiUrl(`/api/messages/${msgId}?userId=${user.id}`), 
+        {
+          method: 'DELETE',
+          // No body needed — userId is in URL
+        }
+      );
 
       const data = await res.json();
       console.log('Delete response:', res.status, data);
 
       if (res.ok) {
-        // Remove from local state AND trigger immediate re-fetch
         setMessages(prev => prev.filter(m => m.id !== msgId));
         setShowDeleteConfirm(null);
         setSelectedMessageId(null);
-        // Force re-fetch to sync with server
-        await fetchMessages();
       } else {
         alert(`Failed to delete: ${data.error || 'Unknown error'}`);
       }
