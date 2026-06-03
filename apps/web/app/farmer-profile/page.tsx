@@ -783,7 +783,7 @@ const handleFollow = async () => {
                           {displayReels.length > 0 && (
                             <div className="bg-gray-900/[0.04] px-3 py-3 border-t border-dashed border-gray-200">
                               <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-                                <PlayCircle className="w-3 h-3" /> Reels for this crop
+                                <PlayCircle className="w-3 h-3" /> Farm Tales for this crop
                               </p>
                               <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                                 {displayReels.map((reel) => (
@@ -960,7 +960,7 @@ const handleFollow = async () => {
         <div className="mt-2 bg-white border-y p-4">
           <div className="flex items-center gap-2 mb-3">
             <PlayCircle className="w-5 h-5 text-red-500" />
-            <h3 className="text-base font-bold text-gray-900">Reels ({reels.length})</h3>
+            <h3 className="text-base font-bold text-gray-900">Tales ({reels.length})</h3>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {reels.map((reel) => (

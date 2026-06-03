@@ -433,7 +433,7 @@ function ReelsContent() {
         <button onClick={() => router.back()} className="text-white hover:text-gray-300">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-lg font-bold text-white">Reels</h1>
+        <h1 className="text-lg font-bold text-white">Farm Tales</h1>
       </div>
 
       {/* Reels Container */}

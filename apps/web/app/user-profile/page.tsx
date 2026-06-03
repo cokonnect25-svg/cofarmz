@@ -1050,10 +1050,12 @@ const fetchFollowersCounts = async () => {
               <p className="text-xs text-gray-600">Following</p>
             </button>
            {userRole !== 'supplier' && (
-              <button onClick={() => { if (expandedSection === 'crops') { setExpandedSection(null); } else { setExpandedSection('crops'); fetchUserCrops(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
-                <p className="font-bold text-lg text-gray-900">{farmerCrops.length}</p>
-                <p className="text-xs text-gray-600">Crops/Commodities</p>
-              </button>
+<button onClick={() => { if (expandedSection === 'crops') { setExpandedSection(null); } else { setExpandedSection('crops'); fetchUserCrops(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
+  <p className="font-bold text-lg text-gray-900">{farmerCrops.length}</p>
+  <p className="text-xs text-gray-600 leading-tight">
+    Crops/<br />Commodities
+  </p>
+</button>
             )}
             <button onClick={() => { if (expandedSection === 'equipment') { setExpandedSection(null); } else { setExpandedSection('equipment'); fetchUserEquipment(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
               <p className="font-bold text-lg text-gray-900">{myEquipment.length}</p>
@@ -1067,12 +1069,17 @@ const fetchFollowersCounts = async () => {
         {expandedSection && (
         <div className="bg-white border-b">
           <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
-            <h3 className="font-bold text-gray-900 text-sm uppercase">
-              {expandedSection === 'followers' && 'Followers'}
-              {expandedSection === 'following' && 'Following'}
-              {expandedSection === 'crops' && 'Crops/Commodities'}
-              {expandedSection === 'equipment' && 'My Equipment'}
-            </h3>
+<h3 className="font-bold text-gray-900 text-sm uppercase leading-tight">
+  {expandedSection === 'followers' && 'Followers'}
+  {expandedSection === 'following' && 'Following'}
+  {expandedSection === 'crops' && (
+    <>
+      Crops
+      <span className="block text-[10px] normal-case text-gray-500">Commodities</span>
+    </>
+  )}
+  {expandedSection === 'equipment' && 'My Equipment'}
+</h3>
             <button onClick={() => setExpandedSection(null)} className="p-1 hover:bg-gray-200 rounded transition">
               <X className="w-4 h-4 text-gray-600" />
             </button>
@@ -1205,7 +1212,7 @@ const fetchFollowersCounts = async () => {
           {(['bookings', 'rentals', 'favourites', 'reels'] as const).map(tab => (
             <button key={tab} onClick={() => { setActiveTab(tab); if (tab === 'bookings') fetchBookings(); else if (tab === 'rentals') fetchRentals(); else if (tab === 'favourites') fetchFavoriteEquipment(); else if (tab === 'reels') fetchMyReels(); }}
               className={`flex-1 py-3 text-sm font-semibold border-b-2 transition capitalize ${activeTab === tab ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-              {tab === 'bookings' ? 'My Bookings' : tab === 'rentals' ? 'Booking Requests' : tab === 'favourites' ? 'Favourites' : 'My Reels'}
+              {tab === 'bookings' ? 'My Bookings' : tab === 'rentals' ? 'Booking Requests' : tab === 'favourites' ? 'Favourites' : 'My Tales'}
             </button>
           ))}
         </div>
@@ -1342,11 +1349,11 @@ const fetchFollowersCounts = async () => {
         {activeTab === 'reels' && (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-gray-900">My Reels</h3>
-              <button onClick={() => router.push('/my-reels')} className="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition active:scale-95">Create New Reel</button>
+              <h3 className="text-sm font-bold text-gray-900">My Tales</h3>
+              <button onClick={() => router.push('/my-reels')} className="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition active:scale-95">Create New Tale</button>
             </div>
             {loadingReels ? (<div className="flex justify-center py-12"><div className="w-10 h-10 rounded-full border-4 border-green-600 border-t-transparent animate-spin"></div></div>)
-              : myReels.length === 0 ? (<div className="text-center py-12"><p className="text-gray-500 text-sm mb-3">No reels yet</p><button onClick={() => router.push('/my-reels')} className="text-green-600 text-sm font-semibold hover:underline">Create your first reel</button></div>)
+              : myReels.length === 0 ? (<div className="text-center py-12"><p className="text-gray-500 text-sm mb-3">No tales yet</p><button onClick={() => router.push('/my-reels')} className="text-green-600 text-sm font-semibold hover:underline">Create your first tale</button></div>)
               : (<div className="grid grid-cols-3 gap-2">{myReels.map(reel => (
                 <div key={reel.id} className="relative aspect-[9/16] bg-gray-200 rounded-lg overflow-hidden cursor-pointer" onClick={() => router.push(`/reels?reelId=${reel.id}`)}>
                   <video src={reel.video_url} className="w-full h-full object-cover" muted playsInline />

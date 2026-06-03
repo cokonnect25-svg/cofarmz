@@ -685,7 +685,7 @@ setsupplierResults(
               <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded-[22px] flex items-center justify-center mb-5 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
                 <i className="ph-fill ph-video text-white text-3xl"></i>
               </div>
-              <h3 className="text-gray-900 font-extrabold text-xl leading-tight mb-1">Farm Reels</h3>
+              <h3 className="text-gray-900 font-extrabold text-xl leading-tight mb-1">Farm Tales</h3>
               <p className="text-gray-400 text-[10px] leading-relaxed mb-4 uppercase font-bold tracking-wider">Showcase Your Work</p>
               <div className="flex items-center gap-1 text-purple-600 font-black text-xs opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
                 Watch <i className="ph-bold ph-arrow-right"></i>

@@ -27,7 +27,7 @@ export default function Footer() {
       href: '/nearby-farmers?type=farmers',
     },
     {
-      label: 'Reels',
+      label: 'Farm Tales',
       icon: (active: boolean) => (
         <svg viewBox="0 0 24 24" className="w-6 h-6" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={active ? 0 : 2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />

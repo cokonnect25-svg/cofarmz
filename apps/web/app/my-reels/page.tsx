@@ -366,7 +366,7 @@ if (!user) {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-xl font-black text-gray-900 tracking-tight">My Reels</h1>
+            <h1 className="text-xl font-black text-gray-900 tracking-tight">My Tales</h1>
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{reels.length} Videos shared</p>
           </div>
         </div>
