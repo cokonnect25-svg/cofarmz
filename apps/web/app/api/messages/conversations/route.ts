@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
           CASE WHEN sender_id = ${userId} THEN receiver_id ELSE sender_id END as other_user_id,
           MAX(created_at) as last_message_time,
           COUNT(*) FILTER (WHERE read_at IS NULL AND receiver_id = ${userId}) as unread_count,
-          (ARRAY_AGG(content ORDER BY created_at DESC))[1] as last_message,
+          (ARRAY_AGG(message ORDER BY created_at DESC))[1] as last_message,
           (ARRAY_AGG(machinery_id ORDER BY created_at DESC))[1] as machinery_id,
           (ARRAY_AGG(machinery_name ORDER BY created_at DESC))[1] as machinery_name,
           (ARRAY_AGG(machinery_image ORDER BY created_at DESC))[1] as machinery_image
