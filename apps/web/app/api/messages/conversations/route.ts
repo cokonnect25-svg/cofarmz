@@ -39,41 +39,49 @@ export async function GET(req: NextRequest) {
     const userId = searchParams.get('userId');
     if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
-    const conversations = await sql`
+  const conversations = await sql`
+  SELECT 
+    conv.other_user_id,
+    u.name,
+    u.image,
+    conv.last_message,
+    conv.last_message_time,
+    conv.machinery_id,
+    conv.unread_count,
+    p.is_online,
+    p.last_seen
+  FROM (
+    SELECT 
+      other_user_id,
+      MAX(created_at) as last_message_time,
+      COUNT(*) FILTER (WHERE read_at IS NULL AND receiver_id = ${userId}) as unread_count,
+      (ARRAY_AGG(message ORDER BY created_at DESC))[1] as last_message,
+      (ARRAY_AGG(machinery_id ORDER BY created_at DESC))[1] as machinery_id
+    FROM (
       SELECT 
-        conv.other_user_id,
-        u.name,
-        u.image,
-        conv.last_message,
-        conv.last_message_time,
-        conv.machinery_id,
-        conv.unread_count,
-        p.is_online,
-        p.last_seen
-      FROM (
-        SELECT 
-          CASE WHEN sender_id = ${userId} THEN receiver_id ELSE sender_id END as other_user_id,
-          MAX(created_at) as last_message_time,
-          COUNT(*) FILTER (WHERE read_at IS NULL AND receiver_id = ${userId}) as unread_count,
-          (ARRAY_AGG(message ORDER BY created_at DESC))[1] as last_message,
-          (ARRAY_AGG(machinery_id ORDER BY created_at DESC))[1] as machinery_id
-        FROM messages
-        WHERE (sender_id = ${userId} OR receiver_id = ${userId})
-          AND (
-            (sender_id = ${userId} AND deleted_by_sender = false) OR
-            (receiver_id = ${userId} AND deleted_by_receiver = false)
-          )
-        GROUP BY CASE WHEN sender_id = ${userId} THEN receiver_id ELSE sender_id END
-      ) conv
-      JOIN users u ON u.id = conv.other_user_id
-      LEFT JOIN LATERAL (
-        SELECT is_online, last_seen 
-        FROM user_presence 
-        WHERE user_id = conv.other_user_id
-      ) p ON true
-      ORDER BY conv.last_message_time DESC
-    `;
-
+        CASE WHEN sender_id = ${userId} THEN receiver_id ELSE sender_id END as other_user_id,
+        receiver_id,
+        created_at,
+        message,
+        machinery_id,
+        read_at
+      FROM messages
+      WHERE (sender_id = ${userId} OR receiver_id = ${userId})
+        AND (
+          (sender_id = ${userId} AND deleted_by_sender = false) OR
+          (receiver_id = ${userId} AND deleted_by_receiver = false)
+        )
+    ) m
+    GROUP BY other_user_id
+  ) conv
+  JOIN users u ON u.id = conv.other_user_id
+  LEFT JOIN LATERAL (
+    SELECT is_online, last_seen 
+    FROM user_presence 
+    WHERE user_id = conv.other_user_id
+  ) p ON true
+  ORDER BY conv.last_message_time DESC
+`;
     const machineryIds = conversations
       .map((c: any) => c.machinery_id)
       .filter(Boolean);
