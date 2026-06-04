@@ -48,8 +48,7 @@ export async function GET(req: NextRequest) {
     conv.last_message_time,
     conv.machinery_id,
     conv.unread_count,
-    p.is_online,
-    p.last_seen
+    u.last_seen
   FROM (
     SELECT 
       other_user_id,
@@ -74,12 +73,7 @@ export async function GET(req: NextRequest) {
     ) m
     GROUP BY other_user_id
   ) conv
-  JOIN user u ON u.id = conv.other_user_id
-  LEFT JOIN LATERAL (
-    SELECT is_online, last_seen 
-    FROM user_presence 
-    WHERE user_id = conv.other_user_id
-  ) p ON true
+  JOIN "user" u ON u.id = conv.other_user_id
   ORDER BY conv.last_message_time DESC
 `;
     const machineryIds = conversations
@@ -99,17 +93,17 @@ export async function GET(req: NextRequest) {
     }
 
     const now = new Date().getTime();
-    const result = conversations.map((conv: any) => {
-      const machinery = conv.machinery_id ? machineryMap[conv.machinery_id] : null;
-      return {
-        ...conv,
-        machinery_name: machinery?.name || '',
-        machinery_image: machinery?.image_url || '',
-        is_online: conv.last_seen 
-          ? (now - new Date(conv.last_seen).getTime()) < ONLINE_THRESHOLD_MS 
-          : false,
-      };
-    });
+const result = conversations.map((conv: any) => {
+  const machinery = conv.machinery_id ? machineryMap[conv.machinery_id] : null;
+  return {
+    ...conv,
+    machinery_name: machinery?.name || '',      // from machinery table
+    machinery_image: machinery?.image_url || '',   // from machinery table
+    is_online: conv.last_seen 
+      ? (now - new Date(conv.last_seen).getTime()) < ONLINE_THRESHOLD_MS 
+      : false,
+  };
+});
 
     return NextResponse.json(result);
   } catch (error: any) {
