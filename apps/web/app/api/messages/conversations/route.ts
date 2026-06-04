@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const ONLINE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
 
+
 export async function DELETE(req: NextRequest) {
   try {
     const body = await req.json();
@@ -47,41 +48,43 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
   const conversations = await sql`
+  SELECT 
+    conv.other_user_id,
+    u.name,
+    u.image,
+    conv.last_message,
+    conv.last_message_time,
+    conv.machinery_id,
+    conv.machinery_name,
+    conv.machinery_image,
+    conv.unread_count,
+    p.is_online,
+    p.last_seen
+  FROM (
     SELECT 
-      other_user_id,
-      u.name,
-      u.image,
-      last_message,
-      last_message_time,
-      machinery_id,
-      machinery_name,
-      machinery_image,
-      unread_count,
-      is_online,
-      last_seen
-    FROM (
-      SELECT 
-        CASE WHEN sender_id = ${userId} THEN receiver_id ELSE sender_id END as other_user_id,
-        MAX(created_at) as last_message_time,
-        COUNT(*) FILTER (WHERE read_at IS NULL AND receiver_id = ${userId}) as unread_count,
-        (ARRAY_AGG(content ORDER BY created_at DESC))[1] as last_message,
-        (ARRAY_AGG(machinery_id ORDER BY created_at DESC))[1] as machinery_id,
-        (ARRAY_AGG(machinery_name ORDER BY created_at DESC))[1] as machinery_name,
-        (ARRAY_AGG(machinery_image ORDER BY created_at DESC))[1] as machinery_image
-      FROM messages
-      WHERE (sender_id = ${userId} OR receiver_id = ${userId})
-        AND (
-          (sender_id = ${userId} AND deleted_by_sender = false) OR
-          (receiver_id = ${userId} AND deleted_by_receiver = false)
-        )
-      GROUP BY other_user_id
-    ) conv
-    JOIN users u ON u.id = conv.other_user_id
-    LEFT JOIN LATERAL (
-      SELECT is_online, last_seen FROM user_presence WHERE user_id = conv.other_user_id
-    ) p ON true
-    ORDER BY last_message_time DESC
-  `;
+      CASE WHEN sender_id = ${userId} THEN receiver_id ELSE sender_id END as other_user_id,
+      MAX(created_at) as last_message_time,
+      COUNT(*) FILTER (WHERE read_at IS NULL AND receiver_id = ${userId}) as unread_count,
+      (ARRAY_AGG(content ORDER BY created_at DESC))[1] as last_message,
+      (ARRAY_AGG(machinery_id ORDER BY created_at DESC))[1] as machinery_id,
+      (ARRAY_AGG(machinery_name ORDER BY created_at DESC))[1] as machinery_name,
+      (ARRAY_AGG(machinery_image ORDER BY created_at DESC))[1] as machinery_image
+    FROM messages
+    WHERE (sender_id = ${userId} OR receiver_id = ${userId})
+      AND (
+        (sender_id = ${userId} AND deleted_by_sender = false) OR
+        (receiver_id = ${userId} AND deleted_by_receiver = false)
+      )
+    GROUP BY CASE WHEN sender_id = ${userId} THEN receiver_id ELSE sender_id END
+  ) conv
+  JOIN users u ON u.id = conv.other_user_id
+  LEFT JOIN LATERAL (
+    SELECT is_online, last_seen 
+    FROM user_presence 
+    WHERE user_id = conv.other_user_id
+  ) p ON true
+  ORDER BY conv.last_message_time DESC
+`;
 
     // Get machinery details
     const machineryIds = conversations
@@ -102,14 +105,17 @@ export async function GET(req: NextRequest) {
 
     // Calculate online status
     const now = new Date().getTime();
-    const result = conversations.map((conv: any) => ({
-      ...conv,
-      machinery_name: machineryMap[conv.machinery_id]?.name || '',
-      machinery_image: machineryMap[conv.machinery_id]?.image_url || '',
-      is_online: conv.last_seen 
-        ? (now - new Date(conv.last_seen).getTime()) < ONLINE_THRESHOLD_MS 
-        : false,
-    }));
+const result = conversations.map((conv: any) => {
+  const machinery = conv.machinery_id ? machineryMap[conv.machinery_id] : null;
+  return {
+    ...conv,
+    machinery_name: machinery?.name || conv.machinery_name || '',
+    machinery_image: machinery?.image_url || conv.machinery_image || '',
+    is_online: conv.last_seen 
+      ? (now - new Date(conv.last_seen).getTime()) < ONLINE_THRESHOLD_MS 
+      : false,
+  };
+});
 
     return NextResponse.json(result);
   } 
