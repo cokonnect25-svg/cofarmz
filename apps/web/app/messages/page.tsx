@@ -292,56 +292,60 @@ function MessagesContent() {
     >
       {/* HEADER */}
       <div className="flex-shrink-0 bg-green-600 text-white px-4 py-3 flex items-center gap-3">
-        <Link href={`/chat`}>
-          <ArrowLeft className="w-6 h-6 cursor-pointer" />
-        </Link>
+  <Link href={`/chat`}>
+    <ArrowLeft className="w-6 h-6 cursor-pointer" />
+  </Link>
 
-        {/* Avatar with online indicator */}
-        <div className="relative">
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">
-            {ownerName ? ownerName.charAt(0).toUpperCase() : '?'}
-          </div>
-          <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-green-600 ${
-            isOnline ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
-          }`} />
-        </div>
+  {/* Avatar with online indicator */}
+  <Link href={`/farmers-profile`} className="relative">
+    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">
+      {ownerName ? ownerName.charAt(0).toUpperCase() : '?'}
+    </div>
+    <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-green-600 ${
+      isOnline ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
+    }`} />
+  </Link>
 
-        <div className="flex-1 min-w-0">
-          <h1 className="font-bold text-lg truncate">{ownerName || 'Chat'}</h1>
-          <p className="text-xs text-green-100">
-            {isOnline ? (
-              <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-                Online
-              </span>
-            ) : (
-              <span>Last seen {formatLastSeen(lastSeen)}</span>
-            )}
-          </p>
-        </div>
+  <div className="flex-1 min-w-0">
+    <Link href={`/farmers-profile`}>
+      <h1 className="font-bold text-lg truncate hover:underline cursor-pointer">
+        {ownerName || 'Chat'}
+      </h1>
+    </Link>
+    <p className="text-xs text-green-100">
+      {isOnline ? (
+        <span className="flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+          Online
+        </span>
+      ) : (
+        <span>Last seen {formatLastSeen(lastSeen)}</span>
+      )}
+    </p>
+  </div>
 
-        {/* Options menu */}
-        <div className="relative" ref={optionsRef}>
-          <button 
-            onClick={() => setShowOptionsMenu(!showOptionsMenu)}
-            className="p-2 hover:bg-white/10 rounded-full transition"
-          >
-            <MoreVertical className="w-5 h-5" />
-          </button>
+  {/* Options menu */}
+  <div className="relative" ref={optionsRef}>
+    <button 
+      onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+      className="p-2 hover:bg-white/10 rounded-full transition"
+    >
+      <MoreVertical className="w-5 h-5" />
+    </button>
 
-          {showOptionsMenu && (
-            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-100 py-2 min-w-[180px] z-50">
-              <button 
-                onClick={() => { setShowConvDeleteConfirm(true); setShowOptionsMenu(false); }}
-                className="w-full px-4 py-2.5 text-left text-red-600 text-sm font-semibold hover:bg-red-50 transition flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Conversation
-              </button>
-            </div>
-          )}
-        </div>
+    {showOptionsMenu && (
+      <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-100 py-2 min-w-[180px] z-50">
+        <button 
+          onClick={() => { setShowConvDeleteConfirm(true); setShowOptionsMenu(false); }}
+          className="w-full px-4 py-2.5 text-left text-red-600 text-sm font-semibold hover:bg-red-50 transition flex items-center gap-2"
+        >
+          <Trash2 className="w-4 h-4" />
+          Delete Conversation
+        </button>
       </div>
+    )}
+  </div>
+</div>
 
       {/* SCROLLABLE MESSAGE AREA */}
       <div
