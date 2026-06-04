@@ -66,9 +66,12 @@ export async function DELETE(
       await sql`DELETE FROM messages WHERE id = ${messageId}`;
     } else {
       // ✅ FIXED: Use sql.unsafe for dynamic column names
-      await sql.unsafe(
-        `UPDATE messages SET ${updateField} = true WHERE id = ${messageId}`
-      );
+// ✅ BEST: Use sql() helper for the column identifier
+await sql`
+  UPDATE messages 
+  SET ${sql(updateField)} = true 
+  WHERE id = ${messageId}
+`;
     }
 
     return NextResponse.json({ 

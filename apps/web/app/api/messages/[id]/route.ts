@@ -54,9 +54,12 @@ export async function DELETE(
     } else {
       // ✅ FIXED: Use sql.unsafe for dynamic column names
       // sql`` template literal CANNOT have dynamic column names
-      await sql.unsafe(
-        `UPDATE messages SET ${updateField} = true WHERE id = ${messageId}`
-      );
+// ✅ BEST: Use sql() helper for the column identifier
+await sql`
+  UPDATE messages 
+  SET ${sql(updateField)} = true 
+  WHERE id = ${messageId}
+`;
     }
 
     return NextResponse.json({ success: true, hardDelete: !!otherDeleted });
