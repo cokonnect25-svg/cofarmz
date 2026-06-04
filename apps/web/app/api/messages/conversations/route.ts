@@ -9,144 +9,79 @@ import { NextRequest, NextResponse } from "next/server";
 
 const ONLINE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(req: NextRequest) {
   try {
-    const { id } = await params;
-    const messageId = parseInt(id);
+    const body = await req.json();
+    const { userId, otherUserId } = body;
 
-    // ✅ FIXED: Get userId from query params instead of body
-    // DELETE requests often have issues with body parsing in Next.js
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
-
-    if (isNaN(messageId) || !userId) {
-      return NextResponse.json({ 
-        error: 'Missing messageId or userId',
-        messageId: id,
-        userId: userId || 'undefined'
-      }, { status: 400 });
+    if (!userId || !otherUserId) {
+      return NextResponse.json({ error: 'Missing userId or otherUserId' }, { status: 400 });
     }
 
-    // Get the message
-    const [message] = await sql`
-      SELECT sender_id, receiver_id, deleted_by_sender, deleted_by_receiver 
-      FROM messages 
-      WHERE id = ${messageId}
+    // Soft-delete all messages where user is sender or receiver
+    await sql`
+      UPDATE messages 
+      SET deleted_by_sender = CASE WHEN sender_id = ${userId} THEN true ELSE deleted_by_sender END,
+          deleted_by_receiver = CASE WHEN receiver_id = ${userId} THEN true ELSE deleted_by_receiver END
+      WHERE (sender_id = ${userId} AND receiver_id = ${otherUserId})
+         OR (sender_id = ${otherUserId} AND receiver_id = ${userId})
     `;
 
-    if (!message) {
-      return NextResponse.json({ error: 'Message not found' }, { status: 404 });
-    }
+    // Hard delete messages where both sides deleted
+    await sql`
+      DELETE FROM messages 
+      WHERE deleted_by_sender = true AND deleted_by_receiver = true
+    `;
 
-    // Determine who is deleting
-    let updateField: string;
-    if (message.sender_id === userId) {
-      updateField = 'deleted_by_sender';
-    } else if (message.receiver_id === userId) {
-      updateField = 'deleted_by_receiver';
-    } else {
-      return NextResponse.json({ 
-        error: 'Unauthorized',
-        yourId: userId,
-        senderId: message.sender_id,
-        receiverId: message.receiver_id
-      }, { status: 403 });
-    }
-
-    // Check if other side already deleted
-    const otherDeleted = updateField === 'deleted_by_sender' 
-      ? message.deleted_by_receiver 
-      : message.deleted_by_sender;
-
-    if (otherDeleted) {
-      // Hard delete if both sides deleted
-      await sql`DELETE FROM messages WHERE id = ${messageId}`;
-    } else {
-      // ✅ FIXED: Use sql.unsafe for dynamic column names
-// ✅ BEST: Use sql() helper for the column identifier
-await sql`
-  UPDATE messages 
-  SET ${sql(updateField)} = true 
-  WHERE id = ${messageId}
-`;
-    }
-
-    return NextResponse.json({ 
-      success: true, 
-      hardDelete: !!otherDeleted,
-      deletedBy: updateField
-    });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Error deleting message:', error);
-    return NextResponse.json({ 
-      error: error.message, 
-      stack: error.stack 
-    }, { status: 500 });
+    console.error('Error deleting conversation:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 
 export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
+  const { searchParams } = new URL(req.url);
+  const userId = searchParams.get('userId');
+  if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
-    }
-
-    // Get latest message per conversation partner with unread count
-    const conversations = await sql`
-      WITH latest_messages AS (
-        SELECT 
-          CASE 
-            WHEN sender_id = ${userId} THEN receiver_id
-            ELSE sender_id
-          END as other_user_id,
-          message as last_message,
-          created_at as last_message_time,
-          machinery_id,
-          read_at,
-          ROW_NUMBER() OVER (
-            PARTITION BY 
-              CASE 
-                WHEN sender_id = ${userId} THEN receiver_id
-                ELSE sender_id
-              END
-            ORDER BY created_at DESC
-          ) as rn
-        FROM messages
-        WHERE (sender_id = ${userId} AND deleted_by_sender = false)
-           OR (receiver_id = ${userId} AND deleted_by_receiver = false)
-      ),
-      unread_counts AS (
-        SELECT 
-          sender_id as other_user_id,
-          COUNT(*) as unread_count
-        FROM messages
-        WHERE receiver_id = ${userId} 
-          AND read_at IS NULL 
-          AND deleted_by_receiver = false
-        GROUP BY sender_id
-      )
+  const conversations = await sql`
+    SELECT 
+      other_user_id,
+      u.name,
+      u.image,
+      last_message,
+      last_message_time,
+      machinery_id,
+      machinery_name,
+      machinery_image,
+      unread_count,
+      is_online,
+      last_seen
+    FROM (
       SELECT 
-        lm.other_user_id,
-        u.name,
-        u.image,
-        u.last_seen,
-        lm.last_message,
-        lm.last_message_time,
-        lm.machinery_id,
-        COALESCE(uc.unread_count, 0) as unread_count
-      FROM latest_messages lm
-      JOIN "user" u ON u.id = lm.other_user_id
-      LEFT JOIN unread_counts uc ON uc.other_user_id = lm.other_user_id
-      WHERE lm.rn = 1
-      ORDER BY lm.last_message_time DESC
-    `;
+        CASE WHEN sender_id = ${userId} THEN receiver_id ELSE sender_id END as other_user_id,
+        MAX(created_at) as last_message_time,
+        COUNT(*) FILTER (WHERE read_at IS NULL AND receiver_id = ${userId}) as unread_count,
+        (ARRAY_AGG(content ORDER BY created_at DESC))[1] as last_message,
+        (ARRAY_AGG(machinery_id ORDER BY created_at DESC))[1] as machinery_id,
+        (ARRAY_AGG(machinery_name ORDER BY created_at DESC))[1] as machinery_name,
+        (ARRAY_AGG(machinery_image ORDER BY created_at DESC))[1] as machinery_image
+      FROM messages
+      WHERE (sender_id = ${userId} OR receiver_id = ${userId})
+        AND (
+          (sender_id = ${userId} AND deleted_by_sender = false) OR
+          (receiver_id = ${userId} AND deleted_by_receiver = false)
+        )
+      GROUP BY other_user_id
+    ) conv
+    JOIN users u ON u.id = conv.other_user_id
+    LEFT JOIN LATERAL (
+      SELECT is_online, last_seen FROM user_presence WHERE user_id = conv.other_user_id
+    ) p ON true
+    ORDER BY last_message_time DESC
+  `;
 
     // Get machinery details
     const machineryIds = conversations
@@ -177,8 +112,4 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Error fetching conversations:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
+  } 
