@@ -208,14 +208,14 @@ function ChatContent() {
     if (!deleteTarget || !user?.id) return;
     setDeletingConv(true);
     try {
-      const res = await fetch(getApiUrl(`/api/messages/conversation`), {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userId: user.id, 
-          otherUserId: deleteTarget.other_user_id 
-        }),
-      });
+const res = await fetch(getApiUrl(`/api/messages/conversations`), {
+  method: 'DELETE',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ 
+    userId: user.id, 
+    otherUserId: deleteTarget.other_user_id 
+  }),
+});
       if (res.ok) {
         setConversations(prev => prev.filter(c => c.other_user_id !== deleteTarget.other_user_id));
         setFilteredConversations(prev => prev.filter(c => c.other_user_id !== deleteTarget.other_user_id));

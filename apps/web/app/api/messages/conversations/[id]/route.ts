@@ -1,8 +1,8 @@
-// app/api/messages/conversation/[id]/route.ts
 export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextRequest, NextResponse } from "next/server";
 
+// DELETE a single message by its ID
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -45,6 +45,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, hardDelete: !!otherDeleted });
   } catch (error: any) {
+    console.error('Error deleting message:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
