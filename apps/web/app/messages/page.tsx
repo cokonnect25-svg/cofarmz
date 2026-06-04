@@ -1047,7 +1047,7 @@ function MessagesContent() {
         <div className="flex items-center gap-2 relative">
           {/* Attachment button */}
           <div className="relative">
-            <button
+            {/* <button
               onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
               disabled={isUploading}
               className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition disabled:opacity-50"
@@ -1057,7 +1057,7 @@ function MessagesContent() {
                   showAttachmentMenu ? 'text-green-600' : 'text-gray-500'
                 }`}
               />
-            </button>
+            </button> */}
 
             {showAttachmentMenu && (
               <AttachmentMenu
