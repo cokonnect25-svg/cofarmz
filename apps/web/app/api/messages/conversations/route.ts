@@ -1,14 +1,9 @@
-// ============================================================
-// 3. DELETE /api/messages/conversation/route.ts
-// Delete entire conversation
-// ============================================================
 export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextRequest, NextResponse } from "next/server";
 
 const ONLINE_THRESHOLD_MS = 2 * 60 * 1000;
 
-// DELETE entire conversation between two users
 export async function DELETE(req: NextRequest) {
   try {
     const body = await req.json();
@@ -38,7 +33,6 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-// GET all conversations for a user
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -62,7 +56,7 @@ export async function GET(req: NextRequest) {
           MAX(created_at) as last_message_time,
           COUNT(*) FILTER (WHERE read_at IS NULL AND receiver_id = ${userId}) as unread_count,
           (ARRAY_AGG(message ORDER BY created_at DESC))[1] as last_message,
-          (ARRAY_AGG(machinery_id ORDER BY created_at DESC))[1] as machinery_id,
+          (ARRAY_AGG(machinery_id ORDER BY created_at DESC))[1] as machinery_id
         FROM messages
         WHERE (sender_id = ${userId} OR receiver_id = ${userId})
           AND (
@@ -101,6 +95,8 @@ export async function GET(req: NextRequest) {
       const machinery = conv.machinery_id ? machineryMap[conv.machinery_id] : null;
       return {
         ...conv,
+        machinery_name: machinery?.name || '',
+        machinery_image: machinery?.image_url || '',
         is_online: conv.last_seen 
           ? (now - new Date(conv.last_seen).getTime()) < ONLINE_THRESHOLD_MS 
           : false,
@@ -113,5 +109,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-
-
