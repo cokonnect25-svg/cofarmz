@@ -14,34 +14,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
     }
 
-    const messages = await sql`
-      SELECT 
-        id,
-        sender_id,
-        receiver_id,
-        machinery_id,
-        message,
-        message_type,
-        media_url,
-        media_thumbnail,
-        file_name,
-        file_size,
-        latitude,
-        longitude,
-        location_name,
-        duration,
-        created_at,
-        read_at,
-        deleted_by_sender,
-        deleted_by_receiver
-      FROM messages
-      WHERE (
-        (sender_id = ${userId} AND receiver_id = ${otherUserId} AND deleted_by_sender = false)
-        OR
-        (sender_id = ${otherUserId} AND receiver_id = ${userId} AND deleted_by_receiver = false)
-      )
-      ORDER BY created_at ASC
-    `;
+const messages = await sql`
+  SELECT 
+    id, sender_id, receiver_id, machinery_id, message,
+    message_type, media_url, media_thumbnail, file_name,
+    file_size, latitude, longitude, location_name, duration,
+    created_at, read_at
+  FROM messages
+  WHERE (
+    (sender_id = ${userId} AND receiver_id = ${otherUserId} AND deleted_by_sender IS NOT TRUE)
+    OR
+    (sender_id = ${otherUserId} AND receiver_id = ${userId} AND deleted_by_receiver IS NOT TRUE)
+  )
+  ORDER BY created_at ASC
+`;
 
     return NextResponse.json(messages);
   } catch (error: any) {
@@ -112,11 +98,13 @@ export async function POST(request: Request) {
       );
     }
 
-    if (finalMessageType === 'location' && (latitude == null || longitude == null)) {
-      return NextResponse.json(
-        { error: `latitude and longitude required for location messages. Got lat=${latitude}, lng=${longitude}` },
-        { status: 400 }
-      );
+    if (finalMessageType === 'location') {
+      if (latitude == null || longitude == null) {
+        return NextResponse.json(
+          { error: `latitude and longitude required for location messages` },
+          { status: 400 }
+        );
+      }
     }
 
     const result = await sql`

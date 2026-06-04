@@ -170,18 +170,15 @@ function MediaPreviewModal({
 }
 
 // ── Location Preview ─────────────────────────────────────────
-function LocationPreview({
-  lat,
-  lng,
-  name,
-}: {
-  lat?: number;
-  lng?: string | number;
-  name?: string;
-}) {
+function LocationPreview({ lat, lng, name }: { lat?: number; lng?: string | number; name?: string }) {
   const latitude = lat ?? 0;
-  const longitude = typeof lng === 'string' ? parseFloat(lng) : (lng ?? 0);
-  const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+  const longitude = typeof lng === 'string' ? parseFloat(lng) : (typeof lng === 'number' ? lng : 0);
+  
+  // Guard against NaN
+  const safeLat = isNaN(latitude) ? 0 : latitude;
+  const safeLng = isNaN(longitude) ? 0 : longitude;
+  
+  const mapsUrl = `https://www.google.com/maps?q=${safeLat},${safeLng}`;
 
   return (
     <a
@@ -203,7 +200,7 @@ function LocationPreview({
           {name || 'Shared Location'}
         </p>
         <p className="text-[10px] text-blue-600 mt-0.5">
-          {latitude.toFixed(5)}, {longitude.toFixed(5)}
+          {safeLat.toFixed(5)}, {safeLng.toFixed(5)}
         </p>
       </div>
     </a>
@@ -594,7 +591,7 @@ function MessagesContent() {
   }, [messages]);
 
   // Fetch messages
-  const fetchMessages = useCallback(async () => {
+const fetchMessages = useCallback(async () => {
     if (!user?.id || !ownerId) return;
     try {
       const response = await fetch(
@@ -602,11 +599,15 @@ function MessagesContent() {
       );
       if (response.ok) {
         const data = await response.json();
-        setMessages(data);
+        setMessages(Array.isArray(data) ? data : []);  // ← ADD Array.isArray guard
         markAsRead();
+      } else {
+        console.error('Messages API error:', await response.text());
+        setMessages([]);
       }
     } catch (error) {
       console.error('Failed to fetch messages:', error);
+      setMessages([]);
     }
   }, [user?.id, ownerId, markAsRead]);
 
@@ -920,14 +921,14 @@ function MessagesContent() {
           </a>
         );
 
-      case 'location':
-        return (
-          <LocationPreview
-            lat={msg.latitude}
-            lng={msg.longitude}
-            name={msg.location_name}
-          />
-        );
+        case 'location':
+          return (
+            <LocationPreview
+              lat={msg.latitude}
+              lng={msg.longitude}
+              name={msg.location_name}
+            />
+          );
 
       default:
         return <p className="text-sm">{msg.message}</p>;
