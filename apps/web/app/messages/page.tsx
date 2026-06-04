@@ -7,7 +7,7 @@ import Link from 'next/link';
 import {
   Send, ArrowLeft, Trash2, Check, CheckCheck, MoreVertical,
   Image, Video, MapPin, Paperclip, X, FileText,
-  Download, Play, Pause, Mic, StopCircle, Camera, MapPinned, Files
+  Download, Play, Pause, Camera, MapPinned, Files
 } from 'lucide-react';
 import { getApiUrl } from '@/lib/api';
 
@@ -40,7 +40,7 @@ function useOnlineStatus(userId: string | null) {
   const [isOnline, setIsOnline] = useState(false);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<<ReturnType<<typeof setTimeout> | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -212,7 +212,7 @@ function LocationPreview({
 
 // ── Audio Player ───────────────────────────────────────────
 function AudioPlayer({ url, duration }: { url: string; duration?: number }) {
-  const audioRef = useRef<<HTMLAudioElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
 
@@ -292,7 +292,7 @@ function AttachmentMenu({
   onLocation: () => void;
   onClose: () => void;
 }) {
-  const menuRef = useRef<<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -300,7 +300,6 @@ function AttachmentMenu({
         onClose();
       }
     };
-    // Small delay to prevent immediate close on the same click that opened it
     const timer = setTimeout(() => {
       document.addEventListener('mousedown', handleClick);
     }, 50);
@@ -544,15 +543,15 @@ function MessagesContent() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const messagesContainerRef = useRef<<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [selectedMessageId, setSelectedMessageId] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
   const [deletingMsg, setDeletingMsg] = useState(false);
   const [showConvDeleteConfirm, setShowConvDeleteConfirm] = useState(false);
   const [deletingConv, setDeletingConv] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
-  const optionsRef = useRef<<HTMLDivElement>(null);
-  const longPressTimer = useRef<<ReturnType<<typeof setTimeout> | null>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Media sharing state
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
@@ -560,9 +559,9 @@ function MessagesContent() {
   const [isUploading, setIsUploading] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: MessageType } | null>(null);
-  const photoInputRef = useRef<<HTMLInputElement>(null);
-  const videoInputRef = useRef<<HTMLInputElement>(null);
-  const fileInputRef = useRef<<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Online status
   const { isOnline, lastSeen } = useOnlineStatus(ownerId);
@@ -683,11 +682,8 @@ function MessagesContent() {
     setUploadProgress(0);
 
     try {
-      // Step 1: Upload to R2
       const uploadResult = await uploadToR2(file);
 
-      // Step 2: Create message with media URL
-      // FIX: Use snake_case field names matching the Message interface
       await sendMessage({
         message_type: type,
         media_url: uploadResult.url,
@@ -711,14 +707,13 @@ function MessagesContent() {
     await sendMessage({
       message_type: 'location',
       latitude: lat,
-      longitude: lng,
+      longitude: String(lng),
       location_name: name,
       message: `📍 ${name}`,
     });
   };
 
   // ── Generic send message helper ──────────────────────────
-  // FIX: Use Partial<Message> so all field names match the interface (snake_case)
   const sendMessage = async (payload: Partial<Message>) => {
     if (!user?.id || !ownerId) return;
 
@@ -757,7 +752,7 @@ function MessagesContent() {
     else fileInputRef.current?.click();
   };
 
-  const onFileChange = (e: React.ChangeEvent<<HTMLInputElement>, type: MessageType) => {
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: MessageType) => {
     const file = e.target.files?.[0];
     if (!file) return;
     handleSendMedia(file, type);
@@ -794,11 +789,10 @@ function MessagesContent() {
     if (!user?.id || !ownerId) return;
     setDeletingConv(true);
     try {
-      const res = await fetch(getApiUrl(`/api/messages/conversation`), {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, otherUserId: ownerId }),
-      });
+      const res = await fetch(
+        getApiUrl(`/api/messages?userId=${user.id}&otherUserId=${ownerId}`),
+        { method: 'DELETE' }
+      );
       if (res.ok) {
         setMessages([]);
         setShowConvDeleteConfirm(false);

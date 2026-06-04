@@ -52,26 +52,44 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ── POST: Send a new message (text, location, or media with pre-uploaded URL) ─
+// ── POST: Send a new message ─────────────────────────────────
 export async function POST(request: Request) {
   try {
     const body = await request.json();
 
+    // FIX: Accept both snake_case and camelCase field names from frontend
     const {
       senderId,
       receiverId,
       machineryId,
       message,
-      messageType = 'text',
+      // messageType can be camelCase or snake_case
+      messageType,
+      message_type,
+      // media fields can be camelCase or snake_case
       mediaUrl,
+      media_url,
       mediaThumbnail,
+      media_thumbnail,
       fileName,
+      file_name,
       fileSize,
+      file_size,
       latitude,
       longitude,
+      // location name can be camelCase or snake_case
       locationName,
+      location_name,
       duration,
     } = body;
+
+    // Use snake_case if camelCase not provided (frontend sends snake_case)
+    const finalMessageType: MessageType = (messageType || message_type || 'text') as MessageType;
+    const finalMediaUrl = mediaUrl || media_url || null;
+    const finalMediaThumbnail = mediaThumbnail || media_thumbnail || null;
+    const finalFileName = fileName || file_name || null;
+    const finalFileSize = fileSize || file_size || null;
+    const finalLocationName = locationName || location_name || null;
 
     if (!senderId || !receiverId) {
       return NextResponse.json(
@@ -82,7 +100,7 @@ export async function POST(request: Request) {
 
     // Validate message type
     const validTypes: MessageType[] = ['text', 'image', 'video', 'audio', 'file', 'location'];
-    if (!validTypes.includes(messageType)) {
+    if (!validTypes.includes(finalMessageType)) {
       return NextResponse.json(
         { error: `Invalid message type. Must be one of: ${validTypes.join(', ')}` },
         { status: 400 }
@@ -90,15 +108,15 @@ export async function POST(request: Request) {
     }
 
     // Text messages require content
-    if (messageType === 'text' && !message) {
+    if (finalMessageType === 'text' && !message) {
       return NextResponse.json(
         { error: "Message content required for text type" },
         { status: 400 }
       );
     }
 
-    // Media messages require media_url (pre-uploaded to R2 via /api/upload)
-    if (['image', 'video', 'audio', 'file'].includes(messageType) && !mediaUrl) {
+    // Media messages require media_url
+    if (['image', 'video', 'audio', 'file'].includes(finalMessageType) && !finalMediaUrl) {
       return NextResponse.json(
         { error: "mediaUrl required. Upload file to /api/upload first" },
         { status: 400 }
@@ -106,7 +124,7 @@ export async function POST(request: Request) {
     }
 
     // Location messages require coordinates
-    if (messageType === 'location' && (latitude == null || longitude == null)) {
+    if (finalMessageType === 'location' && (latitude == null || longitude == null)) {
       return NextResponse.json(
         { error: "latitude and longitude required for location messages" },
         { status: 400 }
@@ -133,14 +151,14 @@ export async function POST(request: Request) {
         ${receiverId},
         ${machineryId || null},
         ${message || null},
-        ${messageType},
-        ${mediaUrl || null},
-        ${mediaThumbnail || null},
-        ${fileName || null},
-        ${fileSize || null},
+        ${finalMessageType},
+        ${finalMediaUrl},
+        ${finalMediaThumbnail},
+        ${finalFileName},
+        ${finalFileSize},
         ${latitude != null ? latitude : null},
         ${longitude != null ? longitude : null},
-        ${locationName || null},
+        ${finalLocationName},
         ${duration || null}
       )
       RETURNING *
@@ -160,7 +178,7 @@ export async function DELETE(req: NextRequest) {
     const messageId = searchParams.get('id');
     const userId = searchParams.get('userId');
 
-    // ── CASE 1: Delete entire conversation (when no messageId provided) ─
+    // ── CASE 1: Delete entire conversation ─
     if (!messageId && userId) {
       const body = await req.json().catch(() => ({}));
       const { otherUserId } = body;
