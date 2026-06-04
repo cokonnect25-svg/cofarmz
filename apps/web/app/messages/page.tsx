@@ -297,7 +297,7 @@ function MessagesContent() {
   </Link>
 
   {/* Avatar with online indicator */}
-  <Link href={`/farmers-profile`} className="relative">
+  <Link href={`/farmer-profile`} className="relative">
     <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">
       {ownerName ? ownerName.charAt(0).toUpperCase() : '?'}
     </div>
