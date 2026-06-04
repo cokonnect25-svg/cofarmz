@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
     ) m
     GROUP BY other_user_id
   ) conv
-  JOIN users u ON u.id = conv.other_user_id
+  JOIN user u ON u.id = conv.other_user_id
   LEFT JOIN LATERAL (
     SELECT is_online, last_seen 
     FROM user_presence 
