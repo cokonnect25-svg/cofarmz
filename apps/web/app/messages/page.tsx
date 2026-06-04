@@ -4,11 +4,36 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState, Suspense, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
-import { Send, ArrowLeft, Trash2, Check, CheckCheck, MoreVertical } from 'lucide-react';
+import {
+  Send, ArrowLeft, Trash2, Check, CheckCheck, MoreVertical,
+  Image, Video, MapPin, Paperclip, X, FileText, Music,
+  Download, Play, Pause, Mic, StopCircle, ChevronRight
+} from 'lucide-react';
 import { getApiUrl } from '@/lib/api';
 
 const TOP_NAV_H = 64;
 const BOTTOM_NAV_H = 60;
+
+// ── Message Types ────────────────────────────────────────────
+type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'location';
+
+interface Message {
+  id: number;
+  sender_id: string;
+  receiver_id: string;
+  message?: string;
+  message_type: MessageType;
+  media_url?: string;
+  media_thumbnail?: string;
+  file_name?: string;
+  file_size?: number;
+  latitude?: number;
+  longitude?: string;
+  location_name?: string;
+  duration?: number; // for audio/video
+  created_at: string;
+  read_at?: string | null;
+}
 
 // ── Online Status Hook ───────────────────────────────────────
 function useOnlineStatus(userId: string | null) {
@@ -55,7 +80,6 @@ function useOnlineStatus(userId: string | null) {
 
     connect();
 
-    // Fallback: poll online status every 10s
     const pollInterval = setInterval(async () => {
       try {
         const res = await fetch(getApiUrl(`/api/users/online?userId=${userId}`));
@@ -94,6 +118,388 @@ function formatLastSeen(lastSeen: string | null): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+// ── Format file size ─────────────────────────────────────────
+function formatFileSize(bytes?: number): string {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// ── Media Preview Modal ──────────────────────────────────────
+function MediaPreviewModal({
+  url,
+  type,
+  onClose,
+}: {
+  url: string;
+  type: MessageType;
+  onClose: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 p-2 bg-white/10 rounded-full hover:bg-white/20 transition"
+      >
+        <X className="w-6 h-6 text-white" />
+      </button>
+
+      <div onClick={(e) => e.stopPropagation()} className="max-w-full max-h-full">
+        {type === 'image' && (
+          <img
+            src={url}
+            alt="Preview"
+            className="max-w-full max-h-[85vh] rounded-lg object-contain"
+          />
+        )}
+        {type === 'video' && (
+          <div className="relative">
+            <video
+              ref={videoRef}
+              src={url}
+              className="max-w-full max-h-[85vh] rounded-lg"
+              controls
+              autoPlay
+              playsInline
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Location Preview ─────────────────────────────────────────
+function LocationPreview({
+  lat,
+  lng,
+  name,
+}: {
+  lat?: number;
+  lng?: string | number;
+  name?: string;
+}) {
+  const latitude = lat ?? 0;
+  const longitude = typeof lng === 'string' ? parseFloat(lng) : (lng ?? 0);
+  const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+
+  return (
+    <a
+      href={mapsUrl}
+      target="_blank"
+      rel="noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className="block bg-blue-50 rounded-xl overflow-hidden border border-blue-200 hover:bg-blue-100 transition min-w-[200px]"
+    >
+      <div className="h-24 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center relative">
+        <MapPin className="w-8 h-8 text-white drop-shadow-lg" />
+        <div className="absolute bottom-1 right-2">
+          <span className="text-[10px] text-white/80 font-medium">Open in Maps</span>
+        </div>
+      </div>
+      <div className="p-2.5">
+        <p className="text-xs font-bold text-blue-900 flex items-center gap-1">
+          <MapPin className="w-3 h-3" />
+          {name || 'Shared Location'}
+        </p>
+        <p className="text-[10px] text-blue-600 mt-0.5">
+          {latitude.toFixed(5)}, {longitude.toFixed(5)}
+        </p>
+      </div>
+    </a>
+  );
+}
+
+// ── Audio Player ───────────────────────────────────────────
+function AudioPlayer({ url, duration }: { url: string; duration?: number }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+
+  const togglePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!audioRef.current) return;
+    if (playing) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setPlaying(!playing);
+  };
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onEnded = () => setPlaying(false);
+    const onTimeUpdate = () => setCurrentTime(audio.currentTime);
+    audio.addEventListener('ended', onEnded);
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    return () => {
+      audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+    };
+  }, []);
+
+  const progress = duration && duration > 0 ? (currentTime / duration) * 100 : 0;
+  const formatTime = (s: number) => {
+    const mins = Math.floor(s / 60);
+    const secs = Math.floor(s % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="flex items-center gap-2 min-w-[180px]">
+      <audio ref={audioRef} src={url} preload="metadata" />
+      <button
+        onClick={togglePlay}
+        className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0"
+      >
+        {playing ? (
+          <Pause className="w-4 h-4 text-white" />
+        ) : (
+          <Play className="w-4 h-4 text-white ml-0.5" />
+        )}
+      </button>
+      <div className="flex-1">
+        <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-white/80 rounded-full transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="flex justify-between mt-1">
+          <span className="text-[10px] text-white/70">
+            {formatTime(currentTime)}
+          </span>
+          <span className="text-[10px] text-white/70">
+            {duration ? formatTime(duration) : '--:--'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Attachment Menu ────────────────────────────────────────
+function AttachmentMenu({
+  onPhoto,
+  onVideo,
+  onFile,
+  onLocation,
+  onClose,
+}: {
+  onPhoto: () => void;
+  onVideo: () => void;
+  onFile: () => void;
+  onLocation: () => void;
+  onClose: () => void;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [onClose]);
+
+  const items = [
+    { icon: Image, label: 'Photo', color: 'text-purple-600', bg: 'bg-purple-50', onClick: onPhoto },
+    { icon: Video, label: 'Video', color: 'text-red-600', bg: 'bg-red-50', onClick: onVideo },
+    { icon: MapPin, label: 'Location', color: 'text-blue-600', bg: 'bg-blue-50', onClick: onLocation },
+    { icon: FileText, label: 'Document', color: 'text-orange-600', bg: 'bg-orange-50', onClick: onFile },
+  ];
+
+  return (
+    <div
+      ref={menuRef}
+      className="absolute left-0 bottom-full mb-2 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 grid grid-cols-4 gap-2 z-50"
+    >
+      {items.map(({ icon: Icon, label, color, bg, onClick }) => (
+        <button
+          key={label}
+          onClick={() => {
+            onClick();
+            onClose();
+          }}
+          className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-gray-50 transition"
+        >
+          <div className={`w-12 h-12 rounded-full ${bg} flex items-center justify-center`}>
+            <Icon className={`w-5 h-5 ${color}`} />
+          </div>
+          <span className="text-[10px] font-semibold text-gray-600">{label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Location Picker Modal ──────────────────────────────────
+function LocationPickerModal({
+  onSelect,
+  onClose,
+}: {
+  onSelect: (lat: number, lng: number, name: string) => void;
+  onClose: () => void;
+}) {
+  const [lat, setLat] = useState('');
+  const [lng, setLng] = useState('');
+  const [name, setName] = useState('');
+  const [gettingLocation, setGettingLocation] = useState(false);
+
+  const getCurrentLocation = () => {
+    setGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLat(pos.coords.latitude.toString());
+        setLng(pos.coords.longitude.toString());
+        setName('Current Location');
+        setGettingLocation(false);
+      },
+      () => {
+        alert('Unable to get location. Please enter manually.');
+        setGettingLocation(false);
+      }
+    );
+  };
+
+  const handleSubmit = () => {
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lng);
+    if (isNaN(latitude) || isNaN(longitude)) {
+      alert('Please enter valid coordinates');
+      return;
+    }
+    onSelect(latitude, longitude, name || 'Shared Location');
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
+      <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+        <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
+          <MapPin className="w-5 h-5 text-blue-600" />
+          Share Location
+        </h3>
+
+        <button
+          onClick={getCurrentLocation}
+          disabled={gettingLocation}
+          className="w-full py-3 rounded-xl bg-blue-50 text-blue-700 font-bold text-sm mb-4 hover:bg-blue-100 transition flex items-center justify-center gap-2"
+        >
+          <MapPin className="w-4 h-4" />
+          {gettingLocation ? 'Getting location...' : 'Use Current Location'}
+        </button>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-bold text-gray-500 mb-1 block">Location Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. My Farm, Warehouse..."
+              className="w-full px-3 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs font-bold text-gray-500 mb-1 block">Latitude</label>
+              <input
+                type="text"
+                value={lat}
+                onChange={(e) => setLat(e.target.value)}
+                placeholder="12.9716"
+                className="w-full px-3 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-500 mb-1 block">Longitude</label>
+              <input
+                type="text"
+                value={lng}
+                onChange={(e) => setLng(e.target.value)}
+                placeholder="77.5946"
+                className="w-full px-3 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-5">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition"
+          >
+            Share
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── File Upload Preview ────────────────────────────────────
+function FileUploadPreview({
+  file,
+  onRemove,
+}: {
+  file: File;
+  onRemove: () => void;
+}) {
+  const isImage = file.type.startsWith('image/');
+  const isVideo = file.type.startsWith('video/');
+  const [preview, setPreview] = useState<string>('');
+
+  useEffect(() => {
+    if (isImage || isVideo) {
+      const url = URL.createObjectURL(file);
+      setPreview(url);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [file, isImage, isVideo]);
+
+  return (
+    <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2 mb-2">
+      {isImage && preview ? (
+        <img src={preview} alt="" className="w-10 h-10 rounded-lg object-cover" />
+      ) : isVideo && preview ? (
+        <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+          <Video className="w-5 h-5 text-red-500" />
+        </div>
+      ) : (
+        <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+          <FileText className="w-5 h-5 text-orange-500" />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-bold text-gray-900 truncate">{file.name}</p>
+        <p className="text-[10px] text-gray-500">{formatFileSize(file.size)}</p>
+      </div>
+      <button onClick={onRemove} className="p-1 hover:bg-gray-200 rounded-full transition">
+        <X className="w-4 h-4 text-gray-500" />
+      </button>
+    </div>
+  );
+}
+
+// ── Main Component ───────────────────────────────────────────
 function MessagesContent() {
   const searchParams = useSearchParams();
   const ownerId = searchParams.get('ownerId');
@@ -101,7 +507,7 @@ function MessagesContent() {
   const ownerName = searchParams.get('ownerName');
 
   const { user } = useAuth();
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -114,6 +520,16 @@ function MessagesContent() {
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const optionsRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Media sharing state
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingFileType, setPendingFileType] = useState<MessageType>('file');
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [previewMedia, setPreviewMedia] = useState<{ url: string; type: MessageType } | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Online status
   const { isOnline, lastSeen } = useOnlineStatus(ownerId);
@@ -180,10 +596,41 @@ function MessagesContent() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  // ── Send Message (text or media) ─────────────────────────
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !user?.id || !ownerId) return;
+    if ((!newMessage.trim() && !pendingFile) || !user?.id || !ownerId) return;
+
     try {
       setSending(true);
+
+      // If there's a file, upload it first
+      if (pendingFile) {
+        const formData = new FormData();
+        formData.append('file', pendingFile);
+        formData.append('senderId', user.id);
+        formData.append('receiverId', ownerId);
+        formData.append('messageType', pendingFileType);
+        if (newMessage.trim()) formData.append('message', newMessage.trim());
+        if (machineryId) formData.append('machineryId', machineryId);
+
+        const uploadRes = await fetch(getApiUrl('/api/messages/upload'), {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (uploadRes.ok) {
+          const newMsg = await uploadRes.json();
+          setMessages((prev) => [...prev, newMsg]);
+          setNewMessage('');
+          setPendingFile(null);
+        } else {
+          const err = await uploadRes.json();
+          alert(`Upload failed: ${err.error || 'Unknown error'}`);
+        }
+        return;
+      }
+
+      // Text-only message
       const response = await fetch(getApiUrl(`/api/messages`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -192,6 +639,7 @@ function MessagesContent() {
           receiverId: ownerId,
           machineryId: machineryId,
           message: newMessage,
+          messageType: 'text',
         }),
       });
       if (response.ok) {
@@ -206,28 +654,63 @@ function MessagesContent() {
     }
   };
 
-  // ✅ FIXED: Delete a single message with proper error handling
-  // ✅ FIXED: Delete message with userId in URL query params
+  // ── Send Location ────────────────────────────────────────
+  const handleSendLocation = async (lat: number, lng: number, name: string) => {
+    if (!user?.id || !ownerId) return;
+    try {
+      setSending(true);
+      const response = await fetch(getApiUrl(`/api/messages`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          senderId: user.id,
+          receiverId: ownerId,
+          messageType: 'location',
+          latitude: lat,
+          longitude: lng,
+          locationName: name,
+          message: `📍 ${name}`,
+        }),
+      });
+      if (response.ok) {
+        const newMsg = await response.json();
+        setMessages((prev) => [...prev, newMsg]);
+      }
+    } catch (error) {
+      console.error('Failed to send location:', error);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // ── File selection handlers ──────────────────────────────
+  const handleFileSelect = (type: MessageType, accept: string) => {
+    setPendingFileType(type);
+    if (type === 'image') photoInputRef.current?.click();
+    else if (type === 'video') videoInputRef.current?.click();
+    else fileInputRef.current?.click();
+  };
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: MessageType) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPendingFileType(type);
+    setPendingFile(file);
+    e.target.value = ''; // reset
+  };
+
+  // ── Delete a single message ──────────────────────────────
   const handleDeleteMessage = async (msgId: number) => {
     if (!user?.id) return;
     setDeletingMsg(true);
     try {
-      console.log('Deleting message:', msgId, 'user:', user.id);
-
-      // ✅ Send userId as query param instead of body
       const res = await fetch(
-        getApiUrl(`/api/messages/${msgId}?userId=${user.id}`), 
-        {
-          method: 'DELETE',
-          // No body needed — userId is in URL
-        }
+        getApiUrl(`/api/messages/${msgId}?userId=${user.id}`),
+        { method: 'DELETE' }
       );
-
       const data = await res.json();
-      console.log('Delete response:', res.status, data);
-
       if (res.ok) {
-        setMessages(prev => prev.filter(m => m.id !== msgId));
+        setMessages((prev) => prev.filter((m) => m.id !== msgId));
         setShowDeleteConfirm(null);
         setSelectedMessageId(null);
       } else {
@@ -241,7 +724,7 @@ function MessagesContent() {
     }
   };
 
-  // Delete entire conversation
+  // ── Delete entire conversation ─────────────────────────────
   const handleDeleteConversation = async () => {
     if (!user?.id || !ownerId) return;
     setDeletingConv(true);
@@ -282,6 +765,116 @@ function MessagesContent() {
     }
   };
 
+  // ── Render message bubble content ────────────────────────
+  const renderMessageContent = (msg: Message, isOwn: boolean) => {
+    switch (msg.message_type) {
+      case 'image':
+        return (
+          <div
+            className="cursor-pointer"
+            onClick={() => msg.media_url && setPreviewMedia({ url: msg.media_url, type: 'image' })}
+          >
+            <img
+              src={msg.media_url}
+              alt="Shared image"
+              className="max-w-[240px] rounded-lg object-cover"
+              loading="lazy"
+            />
+            {msg.message && msg.message !== '📷 Photo' && (
+              <p className={`text-sm mt-1 ${isOwn ? 'text-white' : 'text-gray-900'}`}>
+                {msg.message}
+              </p>
+            )}
+          </div>
+        );
+
+      case 'video':
+        return (
+          <div
+            className="cursor-pointer relative"
+            onClick={() => msg.media_url && setPreviewMedia({ url: msg.media_url, type: 'video' })}
+          >
+            {msg.media_thumbnail ? (
+              <img
+                src={msg.media_thumbnail}
+                alt="Video thumbnail"
+                className="max-w-[240px] rounded-lg object-cover"
+              />
+            ) : (
+              <div className="w-[240px] h-[160px] bg-gray-800 rounded-lg flex items-center justify-center">
+                <Play className="w-10 h-10 text-white/80" />
+              </div>
+            )}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                <Play className="w-5 h-5 text-white ml-0.5" />
+              </div>
+            </div>
+            {msg.duration && (
+              <span className="absolute bottom-2 right-2 text-[10px] font-bold text-white bg-black/50 px-1.5 py-0.5 rounded">
+                {Math.floor(msg.duration / 60)}:{(msg.duration % 60).toString().padStart(2, '0')}
+              </span>
+            )}
+            {msg.message && msg.message !== '🎥 Video' && (
+              <p className={`text-sm mt-1 ${isOwn ? 'text-white' : 'text-gray-900'}`}>
+                {msg.message}
+              </p>
+            )}
+          </div>
+        );
+
+      case 'audio':
+        return (
+          <div className="min-w-[200px]">
+            <AudioPlayer url={msg.media_url || ''} duration={msg.duration} />
+            {msg.message && (
+              <p className={`text-xs mt-1 ${isOwn ? 'text-green-100' : 'text-gray-500'}`}>
+                {msg.message}
+              </p>
+            )}
+          </div>
+        );
+
+      case 'file':
+        return (
+          <a
+            href={msg.media_url}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className={`flex items-center gap-3 p-2 rounded-xl min-w-[200px] ${
+              isOwn ? 'bg-white/10' : 'bg-gray-50'
+            }`}
+          >
+            <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
+              <FileText className="w-5 h-5 text-orange-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-xs font-bold truncate ${isOwn ? 'text-white' : 'text-gray-900'}`}>
+                {msg.file_name || 'Document'}
+              </p>
+              <p className={`text-[10px] ${isOwn ? 'text-green-200' : 'text-gray-500'}`}>
+                {formatFileSize(msg.file_size)}
+              </p>
+            </div>
+            <Download className={`w-4 h-4 flex-shrink-0 ${isOwn ? 'text-green-200' : 'text-gray-400'}`} />
+          </a>
+        );
+
+      case 'location':
+        return (
+          <LocationPreview
+            lat={msg.latitude}
+            lng={msg.longitude}
+            name={msg.location_name}
+          />
+        );
+
+      default:
+        return <p className="text-sm">{msg.message}</p>;
+    }
+  };
+
   return (
     <div
       className="fixed left-0 right-0 flex flex-col bg-white"
@@ -291,62 +884,66 @@ function MessagesContent() {
       }}
     >
       {/* HEADER */}
-{/* HEADER */}
-<div className="flex-shrink-0 bg-green-600 text-white px-4 py-3 flex items-center gap-3">
-  <Link href={`/chat`}>
-    <ArrowLeft className="w-6 h-6 cursor-pointer" />
-  </Link>
+      <div className="flex-shrink-0 bg-green-600 text-white px-4 py-3 flex items-center gap-3">
+        <Link href={`/chat`}>
+          <ArrowLeft className="w-6 h-6 cursor-pointer" />
+        </Link>
 
-  {/* Avatar with online indicator */}
-  <Link href={`/farmer-profile?id=${ownerId}`} className="relative">
-    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">
-      {ownerName ? ownerName.charAt(0).toUpperCase() : '?'}
-    </div>
-    <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-green-600 ${
-      isOnline ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
-    }`} />
-  </Link>
+        {/* Avatar with online indicator */}
+        <Link href={`/farmer-profile?id=${ownerId}`} className="relative">
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">
+            {ownerName ? ownerName.charAt(0).toUpperCase() : '?'}
+          </div>
+          <div
+            className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-green-600 ${
+              isOnline ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
+            }`}
+          />
+        </Link>
 
-  <div className="flex-1 min-w-0">
-    <Link href={`/farmer-profile?id=${ownerId}`}>
-      <h1 className="font-bold text-lg truncate hover:underline cursor-pointer">
-        {ownerName || 'Chat'}
-      </h1>
-    </Link>
-    <p className="text-xs text-green-100">
-      {isOnline ? (
-        <span className="flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-          Online
-        </span>
-      ) : (
-        <span>Last seen {formatLastSeen(lastSeen)}</span>
-      )}
-    </p>
-  </div>
+        <div className="flex-1 min-w-0">
+          <Link href={`/farmer-profile?id=${ownerId}`}>
+            <h1 className="font-bold text-lg truncate hover:underline cursor-pointer">
+              {ownerName || 'Chat'}
+            </h1>
+          </Link>
+          <p className="text-xs text-green-100">
+            {isOnline ? (
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+                Online
+              </span>
+            ) : (
+              <span>Last seen {formatLastSeen(lastSeen)}</span>
+            )}
+          </p>
+        </div>
 
-  {/* Options menu */}
-  <div className="relative" ref={optionsRef}>
-    <button 
-      onClick={() => setShowOptionsMenu(!showOptionsMenu)}
-      className="p-2 hover:bg-white/10 rounded-full transition"
-    >
-      <MoreVertical className="w-5 h-5" />
-    </button>
+        {/* Options menu */}
+        <div className="relative" ref={optionsRef}>
+          <button
+            onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+            className="p-2 hover:bg-white/10 rounded-full transition"
+          >
+            <MoreVertical className="w-5 h-5" />
+          </button>
 
-    {showOptionsMenu && (
-      <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-100 py-2 min-w-[180px] z-50">
-        <button 
-          onClick={() => { setShowConvDeleteConfirm(true); setShowOptionsMenu(false); }}
-          className="w-full px-4 py-2.5 text-left text-red-600 text-sm font-semibold hover:bg-red-50 transition flex items-center gap-2"
-        >
-          <Trash2 className="w-4 h-4" />
-          Delete Conversation
-        </button>
+          {showOptionsMenu && (
+            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-100 py-2 min-w-[180px] z-50">
+              <button
+                onClick={() => {
+                  setShowConvDeleteConfirm(true);
+                  setShowOptionsMenu(false);
+                }}
+                className="w-full px-4 py-2.5 text-left text-red-600 text-sm font-semibold hover:bg-red-50 transition flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Conversation
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    )}
-  </div>
-</div>
 
       {/* SCROLLABLE MESSAGE AREA */}
       <div
@@ -360,7 +957,9 @@ function MessagesContent() {
         {!loading && messages.length === 0 && (
           <div className="h-full flex items-center justify-center">
             <p className="text-gray-400 text-sm text-center">
-              No messages yet.<br />Start the conversation!
+              No messages yet.
+              <br />
+              Start the conversation!
             </p>
           </div>
         )}
@@ -378,91 +977,188 @@ function MessagesContent() {
               onMouseDown={() => handleTouchStart(msg.id)}
               onMouseUp={handleTouchEnd}
               onMouseLeave={handleTouchEnd}
-              onContextMenu={(e) => { e.preventDefault(); setSelectedMessageId(msg.id); }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setSelectedMessageId(msg.id);
+              }}
             >
               <div
-                className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm relative group ${
+                className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm relative group ${
                   isOwn
-                    ? 'bg-green-500 text-white rounded-br-sm'
-                    : 'bg-gray-100 text-gray-900 rounded-bl-sm'
+                    ? msg.message_type === 'location'
+                      ? 'bg-transparent p-0'
+                      : 'bg-green-500 text-white rounded-br-sm'
+                    : msg.message_type === 'location'
+                      ? 'bg-transparent p-0'
+                      : 'bg-gray-100 text-gray-900 rounded-bl-sm'
                 } ${isSelected ? 'ring-2 ring-blue-400' : ''}`}
               >
                 {/* Delete button - visible on hover for own messages */}
-                {isOwn && (
+                {isOwn && msg.message_type !== 'location' && (
                   <button
                     onClick={() => setShowDeleteConfirm(msg.id)}
-                    className="absolute -top-2 -left-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md"
+                    className="absolute -top-2 -left-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md z-10"
                     title="Delete message"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
                 )}
 
-                <p>{msg.message}</p>
-                <div
-                  className={`flex items-center gap-1 mt-1 ${
-                    isOwn ? 'justify-end' : 'justify-start'
-                  }`}
-                >
-                  <p className={`text-xs ${isOwn ? 'text-green-100' : 'text-gray-400'}`}>
-                    {new Date(msg.created_at).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </p>
+                {renderMessageContent(msg, isOwn)}
 
-                  {/* Read/Unread status - only for own messages */}
-                  {isOwn && (
-                    <span className="ml-1">
-                      {msg.read_at ? (
-                        <CheckCheck className="w-3.5 h-3.5 text-blue-300" />
-                      ) : (
-                        <Check className="w-3.5 h-3.5 text-green-200" />
-                      )}
-                    </span>
-                  )}
-                </div>
+                {/* Timestamp & read status */}
+                {msg.message_type !== 'location' && (
+                  <div
+                    className={`flex items-center gap-1 mt-1 ${
+                      isOwn ? 'justify-end' : 'justify-start'
+                    }`}
+                  >
+                    <p
+                      className={`text-xs ${
+                        isOwn ? 'text-green-100' : 'text-gray-400'
+                      }`}
+                    >
+                      {new Date(msg.created_at).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+
+                    {/* Read/Unread status - only for own messages */}
+                    {isOwn && (
+                      <span className="ml-1">
+                        {msg.read_at ? (
+                          <CheckCheck className="w-3.5 h-3.5 text-blue-300" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5 text-green-200" />
+                        )}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* INPUT */}
-      <div className="flex-shrink-0 border-t bg-white px-4 py-3 flex items-center gap-2">
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-          placeholder="Type a message..."
-          className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30"
-          disabled={sending}
-        />
-        <button
-          onClick={handleSendMessage}
-          disabled={sending || !newMessage.trim()}
-          className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center disabled:opacity-40"
-        >
-          <Send className="w-4 h-4 text-white" />
-        </button>
+      {/* INPUT AREA */}
+      <div className="flex-shrink-0 border-t bg-white px-4 py-3">
+        {/* Pending file preview */}
+        {pendingFile && (
+          <FileUploadPreview
+            file={pendingFile}
+            onRemove={() => setPendingFile(null)}
+          />
+        )}
+
+        <div className="flex items-center gap-2 relative">
+          {/* Attachment button */}
+          <div className="relative">
+            <button
+              onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition"
+            >
+              <Paperclip
+                className={`w-5 h-5 ${
+                  showAttachmentMenu ? 'text-green-600' : 'text-gray-500'
+                }`}
+              />
+            </button>
+
+            {showAttachmentMenu && (
+              <AttachmentMenu
+                onPhoto={() => handleFileSelect('image', 'image/*')}
+                onVideo={() => handleFileSelect('video', 'video/*')}
+                onFile={() => handleFileSelect('file', '*/*')}
+                onLocation={() => {
+                  setShowLocationPicker(true);
+                  setShowAttachmentMenu(false);
+                }}
+                onClose={() => setShowAttachmentMenu(false)}
+              />
+            )}
+          </div>
+
+          {/* Hidden file inputs */}
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => onFileChange(e, 'image')}
+          />
+          <input
+            ref={videoInputRef}
+            type="file"
+            accept="video/*"
+            className="hidden"
+            onChange={(e) => onFileChange(e, 'video')}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+            className="hidden"
+            onChange={(e) => onFileChange(e, 'file')}
+          />
+
+          {/* Text input */}
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+            placeholder={pendingFile ? 'Add a caption...' : 'Type a message...'}
+            className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30"
+            disabled={sending}
+          />
+
+          {/* Send button */}
+          <button
+            onClick={handleSendMessage}
+            disabled={sending || (!newMessage.trim() && !pendingFile)}
+            className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center disabled:opacity-40 transition hover:bg-green-700"
+          >
+            <Send className="w-4 h-4 text-white" />
+          </button>
+        </div>
       </div>
+
+      {/* Media Preview Modal */}
+      {previewMedia && (
+        <MediaPreviewModal
+          url={previewMedia.url}
+          type={previewMedia.type}
+          onClose={() => setPreviewMedia(null)}
+        />
+      )}
+
+      {/* Location Picker Modal */}
+      {showLocationPicker && (
+        <LocationPickerModal
+          onSelect={handleSendLocation}
+          onClose={() => setShowLocationPicker(false)}
+        />
+      )}
 
       {/* Delete Message Confirmation Modal */}
       {showDeleteConfirm !== null && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-lg font-black text-gray-900 mb-2">Delete Message?</h3>
-            <p className="text-sm text-gray-500 mb-5">This message will be removed for you. Others may still see it.</p>
+            <p className="text-sm text-gray-500 mb-5">
+              This message will be removed for you. Others may still see it.
+            </p>
             <div className="flex gap-3">
-              <button 
-                onClick={() => setShowDeleteConfirm(null)} 
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition"
               >
                 Cancel
               </button>
-              <button 
-                onClick={() => handleDeleteMessage(showDeleteConfirm)} 
+              <button
+                onClick={() => handleDeleteMessage(showDeleteConfirm)}
                 disabled={deletingMsg}
                 className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition disabled:opacity-50"
               >
@@ -478,16 +1174,18 @@ function MessagesContent() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-lg font-black text-gray-900 mb-2">Delete Conversation?</h3>
-            <p className="text-sm text-gray-500 mb-5">All messages with {ownerName} will be permanently deleted. This cannot be undone.</p>
+            <p className="text-sm text-gray-500 mb-5">
+              All messages with {ownerName} will be permanently deleted. This cannot be undone.
+            </p>
             <div className="flex gap-3">
-              <button 
-                onClick={() => setShowConvDeleteConfirm(false)} 
+              <button
+                onClick={() => setShowConvDeleteConfirm(false)}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition"
               >
                 Keep
               </button>
-              <button 
-                onClick={handleDeleteConversation} 
+              <button
+                onClick={handleDeleteConversation}
                 disabled={deletingConv}
                 className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition disabled:opacity-50"
               >
