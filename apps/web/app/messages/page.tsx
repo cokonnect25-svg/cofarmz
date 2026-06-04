@@ -291,13 +291,14 @@ function MessagesContent() {
       }}
     >
       {/* HEADER */}
-      <div className="flex-shrink-0 bg-green-600 text-white px-4 py-3 flex items-center gap-3">
+{/* HEADER */}
+<div className="flex-shrink-0 bg-green-600 text-white px-4 py-3 flex items-center gap-3">
   <Link href={`/chat`}>
     <ArrowLeft className="w-6 h-6 cursor-pointer" />
   </Link>
 
   {/* Avatar with online indicator */}
-  <Link href={`/farmer-profile`} className="relative">
+  <Link href={`/farmer-profile?id=${ownerId}`} className="relative">
     <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">
       {ownerName ? ownerName.charAt(0).toUpperCase() : '?'}
     </div>
@@ -307,7 +308,7 @@ function MessagesContent() {
   </Link>
 
   <div className="flex-1 min-w-0">
-    <Link href={`/farmer-profile`}>
+    <Link href={`/farmer-profile?id=${ownerId}`}>
       <h1 className="font-bold text-lg truncate hover:underline cursor-pointer">
         {ownerName || 'Chat'}
       </h1>
