@@ -735,36 +735,52 @@ function MessagesContent() {
         })}
       </div>
 
-      {/* INPUT AREA */}
-      <div className="flex-shrink-0 border-t bg-white px-4 py-3">
-        {isUploading && <UploadProgress progress={uploadProgress} />}
-        <div className="flex items-center gap-2 relative">
-          <div className="relative">
-            <button onClick={() => setShowAttachmentMenu(!showAttachmentMenu)} disabled={isUploading}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition disabled:opacity-50 ${showAttachmentMenu ? 'bg-green-100 text-green-600 rotate-45' : 'hover:bg-gray-100 text-gray-500'}`}
-              style={{ transition: 'all 0.2s ease' }}>
-              <Paperclip className="w-5 h-5" />
-            </button>
+{/* INPUT AREA */}
+<div className="flex-shrink-0 border-t bg-white px-4 py-3">
+  {isUploading && <UploadProgress progress={uploadProgress} />}
+  
+  <div className="flex items-center gap-2">
+    {/* Attachment button */}
+    <div className="relative flex-shrink-0">
+      <button
+        onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+        disabled={isUploading}
+        className={`w-10 h-10 rounded-full flex items-center justify-center transition disabled:opacity-50 ${
+          showAttachmentMenu ? 'bg-green-100 text-green-600 rotate-45' : 'hover:bg-gray-100 text-gray-500'
+        }`}
+        style={{ transition: 'all 0.2s ease' }}
+      >
+        <Paperclip className="w-5 h-5" />
+      </button>
+      
             {showAttachmentMenu && (
               <AttachmentMenu onPhoto={() => handleFileSelect('image')} onVideo={() => handleFileSelect('video')}
                 onFile={() => handleFileSelect('file')} onLocation={() => { setShowLocationPicker(true); setShowAttachmentMenu(false); }}
                 onClose={() => setShowAttachmentMenu(false)} />
             )}
-          </div>
-          <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => onFileChange(e, 'image')} />
-          <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={(e) => onFileChange(e, 'video')} />
-          <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" className="hidden" onChange={(e) => onFileChange(e, 'file')} />
-          <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !isUploading && handleSendMessage()}
-            placeholder={isUploading ? 'Uploading...' : 'Type a message...'}
-            className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30"
-            disabled={isUploading} />
-          <button onClick={handleSendMessage} disabled={sending || isUploading || !newMessage.trim()}
-            className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center disabled:opacity-40 transition hover:bg-green-700">
-            <Send className="w-4 h-4 text-white" />
-          </button>
-        </div>
-      </div>
+    </div>
+
+    {/* Text input */}
+    <input
+      type="text"
+      value={newMessage}
+      onChange={(e) => setNewMessage(e.target.value)}
+      onKeyDown={(e) => e.key === 'Enter' && !isUploading && handleSendMessage()}
+      placeholder={isUploading ? 'Uploading...' : 'Type a message...'}
+      className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30"
+      disabled={isUploading}
+    />
+
+    {/* Send button */}
+    <button
+      onClick={handleSendMessage}
+      disabled={sending || isUploading || !newMessage.trim()}
+      className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center disabled:opacity-40 transition hover:bg-green-700 flex-shrink-0"
+    >
+      <Send className="w-4 h-4 text-white" />
+    </button>
+  </div>
+</div>
 
       {previewMedia && <MediaPreviewModal url={previewMedia.url} type={previewMedia.type} onClose={() => setPreviewMedia(null)} />}
       {showLocationPicker && <LocationPickerModal onSelect={handleSendLocation} onClose={() => setShowLocationPicker(false)} />}
