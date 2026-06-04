@@ -307,7 +307,7 @@ function MessagesContent() {
   </Link>
 
   <div className="flex-1 min-w-0">
-    <Link href={`/farmers-profile`}>
+    <Link href={`/farmer-profile`}>
       <h1 className="font-bold text-lg truncate hover:underline cursor-pointer">
         {ownerName || 'Chat'}
       </h1>
