@@ -53,8 +53,6 @@ export async function GET(req: NextRequest) {
         conv.last_message,
         conv.last_message_time,
         conv.machinery_id,
-        conv.machinery_name,
-        conv.machinery_image,
         conv.unread_count,
         p.is_online,
         p.last_seen
@@ -65,8 +63,6 @@ export async function GET(req: NextRequest) {
           COUNT(*) FILTER (WHERE read_at IS NULL AND receiver_id = ${userId}) as unread_count,
           (ARRAY_AGG(message ORDER BY created_at DESC))[1] as last_message,
           (ARRAY_AGG(machinery_id ORDER BY created_at DESC))[1] as machinery_id,
-          (ARRAY_AGG(machinery_name ORDER BY created_at DESC))[1] as machinery_name,
-          (ARRAY_AGG(machinery_image ORDER BY created_at DESC))[1] as machinery_image
         FROM messages
         WHERE (sender_id = ${userId} OR receiver_id = ${userId})
           AND (
@@ -105,8 +101,6 @@ export async function GET(req: NextRequest) {
       const machinery = conv.machinery_id ? machineryMap[conv.machinery_id] : null;
       return {
         ...conv,
-        machinery_name: machinery?.name || conv.machinery_name || '',
-        machinery_image: machinery?.image_url || conv.machinery_image || '',
         is_online: conv.last_seen 
           ? (now - new Date(conv.last_seen).getTime()) < ONLINE_THRESHOLD_MS 
           : false,
