@@ -6,15 +6,15 @@ import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
 import {
   Send, ArrowLeft, Trash2, Check, CheckCheck, MoreVertical,
-  Image, Video, MapPin, Paperclip, X, FileText, Music,
-  Download, Play, Pause, Mic, StopCircle, ChevronRight
+  Image, Video, MapPin, Paperclip, X, FileText,
+  Download, Play, Pause, Mic, StopCircle
 } from 'lucide-react';
 import { getApiUrl } from '@/lib/api';
 
 const TOP_NAV_H = 64;
 const BOTTOM_NAV_H = 60;
 
-// ── Message Types ────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────
 type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'location';
 
 interface Message {
@@ -30,7 +30,7 @@ interface Message {
   latitude?: number;
   longitude?: string;
   location_name?: string;
-  duration?: number; // for audio/video
+  duration?: number;
   created_at: string;
   read_at?: string | null;
 }
@@ -101,7 +101,7 @@ function useOnlineStatus(userId: string | null) {
   return { isOnline, lastSeen };
 }
 
-// ── Format last seen ─────────────────────────────────────────
+// ── Format helpers ───────────────────────────────────────────
 function formatLastSeen(lastSeen: string | null): string {
   if (!lastSeen) return 'offline';
   const date = new Date(lastSeen);
@@ -118,7 +118,6 @@ function formatLastSeen(lastSeen: string | null): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-// ── Format file size ─────────────────────────────────────────
 function formatFileSize(bytes?: number): string {
   if (!bytes) return '';
   if (bytes < 1024) return `${bytes} B`;
@@ -136,9 +135,6 @@ function MediaPreviewModal({
   type: MessageType;
   onClose: () => void;
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-
   return (
     <div
       className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4"
@@ -160,16 +156,13 @@ function MediaPreviewModal({
           />
         )}
         {type === 'video' && (
-          <div className="relative">
-            <video
-              ref={videoRef}
-              src={url}
-              className="max-w-full max-h-[85vh] rounded-lg"
-              controls
-              autoPlay
-              playsInline
-            />
-          </div>
+          <video
+            src={url}
+            className="max-w-full max-h-[85vh] rounded-lg"
+            controls
+            autoPlay
+            playsInline
+          />
         )}
       </div>
     </div>
@@ -275,9 +268,7 @@ function AudioPlayer({ url, duration }: { url: string; duration?: number }) {
           />
         </div>
         <div className="flex justify-between mt-1">
-          <span className="text-[10px] text-white/70">
-            {formatTime(currentTime)}
-          </span>
+          <span className="text-[10px] text-white/70">{formatTime(currentTime)}</span>
           <span className="text-[10px] text-white/70">
             {duration ? formatTime(duration) : '--:--'}
           </span>
@@ -455,46 +446,23 @@ function LocationPickerModal({
   );
 }
 
-// ── File Upload Preview ────────────────────────────────────
-function FileUploadPreview({
-  file,
-  onRemove,
-}: {
-  file: File;
-  onRemove: () => void;
-}) {
-  const isImage = file.type.startsWith('image/');
-  const isVideo = file.type.startsWith('video/');
-  const [preview, setPreview] = useState<string>('');
-
-  useEffect(() => {
-    if (isImage || isVideo) {
-      const url = URL.createObjectURL(file);
-      setPreview(url);
-      return () => URL.revokeObjectURL(url);
-    }
-  }, [file, isImage, isVideo]);
-
+// ── Upload Progress Component ───────────────────────────────
+function UploadProgress({ progress }: { progress: number }) {
   return (
     <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-3 py-2 mb-2">
-      {isImage && preview ? (
-        <img src={preview} alt="" className="w-10 h-10 rounded-lg object-cover" />
-      ) : isVideo && preview ? (
-        <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-          <Video className="w-5 h-5 text-red-500" />
-        </div>
-      ) : (
-        <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
-          <FileText className="w-5 h-5 text-orange-500" />
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-bold text-gray-900 truncate">{file.name}</p>
-        <p className="text-[10px] text-gray-500">{formatFileSize(file.size)}</p>
+      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center animate-pulse">
+        <Send className="w-4 h-4 text-green-600" />
       </div>
-      <button onClick={onRemove} className="p-1 hover:bg-gray-200 rounded-full transition">
-        <X className="w-4 h-4 text-gray-500" />
-      </button>
+      <div className="flex-1">
+        <p className="text-xs font-bold text-gray-700">Uploading...</p>
+        <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden mt-1">
+          <div
+            className="h-full bg-green-500 rounded-full transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+      <span className="text-xs font-bold text-gray-500">{progress}%</span>
     </div>
   );
 }
@@ -523,8 +491,8 @@ function MessagesContent() {
 
   // Media sharing state
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [pendingFileType, setPendingFileType] = useState<MessageType>('file');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: MessageType } | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -596,41 +564,99 @@ function MessagesContent() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  // ── Send Message (text or media) ─────────────────────────
+  // ── Upload file to R2 via /api/upload ────────────────────
+  const uploadToR2 = async (file: File): Promise<{ url: string; fileName: string; fileSize: number; isVideo: boolean }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          setUploadProgress(percent);
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status === 200) {
+          const data = JSON.parse(xhr.responseText);
+          resolve({
+            url: data.url,
+            fileName: data.filename,
+            fileSize: file.size,
+            isVideo: data.isVideo,
+          });
+        } else {
+          reject(new Error('Upload failed'));
+        }
+      });
+
+      xhr.addEventListener('error', () => reject(new Error('Upload error')));
+      xhr.addEventListener('abort', () => reject(new Error('Upload aborted')));
+
+      xhr.open('POST', getApiUrl('/api/upload'));
+      xhr.send(formData);
+    });
+  };
+
+  // ── Send text message ────────────────────────────────────
   const handleSendMessage = async () => {
-    if ((!newMessage.trim() && !pendingFile) || !user?.id || !ownerId) return;
+    if (!newMessage.trim() || !user?.id || !ownerId) return;
+    await sendMessage({
+      messageType: 'text',
+      message: newMessage.trim(),
+    });
+  };
+
+  // ── Send media message (photo/video/file) ────────────────
+  const handleSendMedia = async (file: File, type: MessageType) => {
+    if (!user?.id || !ownerId) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      // Step 1: Upload to R2
+      const uploadResult = await uploadToR2(file);
+
+      // Step 2: Create message with media URL
+      await sendMessage({
+        messageType: type,
+        mediaUrl: uploadResult.url,
+        fileName: uploadResult.fileName,
+        fileSize: uploadResult.fileSize,
+        message: newMessage.trim() || undefined,
+      });
+
+      setNewMessage('');
+    } catch (error) {
+      console.error('Upload failed:', error);
+      alert('Failed to upload file. Please try again.');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  // ── Send location message ────────────────────────────────
+  const handleSendLocation = async (lat: number, lng: number, name: string) => {
+    await sendMessage({
+      messageType: 'location',
+      latitude: lat,
+      longitude: lng,
+      locationName: name,
+      message: `📍 ${name}`,
+    });
+  };
+
+  // ── Generic send message helper ──────────────────────────
+  const sendMessage = async (payload: Partial<Message> & { messageType: MessageType }) => {
+    if (!user?.id || !ownerId) return;
 
     try {
       setSending(true);
-
-      // If there's a file, upload it first
-      if (pendingFile) {
-        const formData = new FormData();
-        formData.append('file', pendingFile);
-        formData.append('senderId', user.id);
-        formData.append('receiverId', ownerId);
-        formData.append('messageType', pendingFileType);
-        if (newMessage.trim()) formData.append('message', newMessage.trim());
-        if (machineryId) formData.append('machineryId', machineryId);
-
-        const uploadRes = await fetch(getApiUrl('/api/messages/upload'), {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (uploadRes.ok) {
-          const newMsg = await uploadRes.json();
-          setMessages((prev) => [...prev, newMsg]);
-          setNewMessage('');
-          setPendingFile(null);
-        } else {
-          const err = await uploadRes.json();
-          alert(`Upload failed: ${err.error || 'Unknown error'}`);
-        }
-        return;
-      }
-
-      // Text-only message
       const response = await fetch(getApiUrl(`/api/messages`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -638,14 +664,17 @@ function MessagesContent() {
           senderId: user.id,
           receiverId: ownerId,
           machineryId: machineryId,
-          message: newMessage,
-          messageType: 'text',
+          ...payload,
         }),
       });
+
       if (response.ok) {
         const newMsg = await response.json();
         setMessages((prev) => [...prev, newMsg]);
-        setNewMessage('');
+        if (payload.messageType === 'text') setNewMessage('');
+      } else {
+        const err = await response.json();
+        alert(`Failed to send: ${err.error}`);
       }
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -654,38 +683,8 @@ function MessagesContent() {
     }
   };
 
-  // ── Send Location ────────────────────────────────────────
-  const handleSendLocation = async (lat: number, lng: number, name: string) => {
-    if (!user?.id || !ownerId) return;
-    try {
-      setSending(true);
-      const response = await fetch(getApiUrl(`/api/messages`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          senderId: user.id,
-          receiverId: ownerId,
-          messageType: 'location',
-          latitude: lat,
-          longitude: lng,
-          locationName: name,
-          message: `📍 ${name}`,
-        }),
-      });
-      if (response.ok) {
-        const newMsg = await response.json();
-        setMessages((prev) => [...prev, newMsg]);
-      }
-    } catch (error) {
-      console.error('Failed to send location:', error);
-    } finally {
-      setSending(false);
-    }
-  };
-
   // ── File selection handlers ──────────────────────────────
   const handleFileSelect = (type: MessageType, accept: string) => {
-    setPendingFileType(type);
     if (type === 'image') photoInputRef.current?.click();
     else if (type === 'video') videoInputRef.current?.click();
     else fileInputRef.current?.click();
@@ -694,9 +693,8 @@ function MessagesContent() {
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: MessageType) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPendingFileType(type);
-    setPendingFile(file);
-    e.target.value = ''; // reset
+    handleSendMedia(file, type);
+    e.target.value = '';
   };
 
   // ── Delete a single message ──────────────────────────────
@@ -993,7 +991,7 @@ function MessagesContent() {
                       : 'bg-gray-100 text-gray-900 rounded-bl-sm'
                 } ${isSelected ? 'ring-2 ring-blue-400' : ''}`}
               >
-                {/* Delete button - visible on hover for own messages */}
+                {/* Delete button */}
                 {isOwn && msg.message_type !== 'location' && (
                   <button
                     onClick={() => setShowDeleteConfirm(msg.id)}
@@ -1024,7 +1022,6 @@ function MessagesContent() {
                       })}
                     </p>
 
-                    {/* Read/Unread status - only for own messages */}
                     {isOwn && (
                       <span className="ml-1">
                         {msg.read_at ? (
@@ -1044,20 +1041,16 @@ function MessagesContent() {
 
       {/* INPUT AREA */}
       <div className="flex-shrink-0 border-t bg-white px-4 py-3">
-        {/* Pending file preview */}
-        {pendingFile && (
-          <FileUploadPreview
-            file={pendingFile}
-            onRemove={() => setPendingFile(null)}
-          />
-        )}
+        {/* Upload progress */}
+        {isUploading && <UploadProgress progress={uploadProgress} />}
 
         <div className="flex items-center gap-2 relative">
           {/* Attachment button */}
           <div className="relative">
             <button
               onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition"
+              disabled={isUploading}
+              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition disabled:opacity-50"
             >
               <Paperclip
                 className={`w-5 h-5 ${
@@ -1108,16 +1101,16 @@ function MessagesContent() {
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder={pendingFile ? 'Add a caption...' : 'Type a message...'}
+            onKeyDown={(e) => e.key === 'Enter' && !isUploading && handleSendMessage()}
+            placeholder={isUploading ? 'Uploading...' : 'Type a message...'}
             className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30"
-            disabled={sending}
+            disabled={isUploading}
           />
 
           {/* Send button */}
           <button
             onClick={handleSendMessage}
-            disabled={sending || (!newMessage.trim() && !pendingFile)}
+            disabled={sending || isUploading || !newMessage.trim()}
             className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center disabled:opacity-40 transition hover:bg-green-700"
           >
             <Send className="w-4 h-4 text-white" />
