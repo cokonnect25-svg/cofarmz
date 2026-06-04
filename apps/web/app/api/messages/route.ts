@@ -153,13 +153,44 @@ export async function POST(request: Request) {
   }
 }
 
-// ── DELETE: Delete a single message ───────────────────────────
+// ── DELETE: Handles BOTH single message delete AND conversation delete ─
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const messageId = searchParams.get('id');
     const userId = searchParams.get('userId');
 
+    // ── CASE 1: Delete entire conversation (when no messageId provided) ─
+    if (!messageId && userId) {
+      const body = await req.json().catch(() => ({}));
+      const { otherUserId } = body;
+
+      if (!otherUserId) {
+        return NextResponse.json(
+          { error: 'Missing otherUserId for conversation delete' },
+          { status: 400 }
+        );
+      }
+
+      // Soft delete for user's side
+      await sql`
+        UPDATE messages
+        SET deleted_by_sender = CASE WHEN sender_id = ${userId} THEN true ELSE deleted_by_sender END,
+            deleted_by_receiver = CASE WHEN receiver_id = ${userId} THEN true ELSE deleted_by_receiver END
+        WHERE (sender_id = ${userId} AND receiver_id = ${otherUserId})
+           OR (sender_id = ${otherUserId} AND receiver_id = ${userId})
+      `;
+
+      // Hard delete messages deleted by both
+      await sql`
+        DELETE FROM messages
+        WHERE deleted_by_sender = true AND deleted_by_receiver = true
+      `;
+
+      return NextResponse.json({ success: true, deleted: 'conversation' });
+    }
+
+    // ── CASE 2: Delete single message ─
     if (!messageId || !userId) {
       return NextResponse.json(
         { error: 'Missing message id or userId' },
@@ -206,14 +237,12 @@ export async function DELETE(req: NextRequest) {
     `;
 
     if (bothDeleted[0]?.deleted_by_sender && bothDeleted[0]?.deleted_by_receiver) {
-      // Optional: delete from R2 here if you want to clean up storage
-      // await deleteFromR2(message.media_url);
       await sql`DELETE FROM messages WHERE id = ${messageId}`;
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, deleted: 'message' });
   } catch (error: any) {
-    console.error('Error deleting message:', error);
+    console.error('Error deleting:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -242,41 +271,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Error marking as read:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-// ── DELETE conversation: Delete all messages between two users ─
-export async function deleteConversation(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { userId, otherUserId } = body;
-
-    if (!userId || !otherUserId) {
-      return NextResponse.json(
-        { error: 'Missing userId or otherUserId' },
-        { status: 400 }
-      );
-    }
-
-    // Soft delete for user's side
-    await sql`
-      UPDATE messages
-      SET deleted_by_sender = CASE WHEN sender_id = ${userId} THEN true ELSE deleted_by_sender END,
-          deleted_by_receiver = CASE WHEN receiver_id = ${userId} THEN true ELSE deleted_by_receiver END
-      WHERE (sender_id = ${userId} AND receiver_id = ${otherUserId})
-         OR (sender_id = ${otherUserId} AND receiver_id = ${userId})
-    `;
-
-    // Hard delete messages deleted by both
-    await sql`
-      DELETE FROM messages
-      WHERE deleted_by_sender = true AND deleted_by_receiver = true
-    `;
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('Error deleting conversation:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -7,7 +7,7 @@ import Link from 'next/link';
 import {
   Send, ArrowLeft, Trash2, Check, CheckCheck, MoreVertical,
   Image, Video, MapPin, Paperclip, X, FileText,
-  Download, Play, Pause, Mic, StopCircle
+  Download, Play, Pause, Mic, StopCircle, Camera, MapPinned, Files
 } from 'lucide-react';
 import { getApiUrl } from '@/lib/api';
 
@@ -40,7 +40,7 @@ function useOnlineStatus(userId: string | null) {
   const [isOnline, setIsOnline] = useState(false);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectTimeoutRef = useRef<<ReturnType<<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -212,7 +212,7 @@ function LocationPreview({
 
 // ── Audio Player ───────────────────────────────────────────
 function AudioPlayer({ url, duration }: { url: string; duration?: number }) {
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const audioRef = useRef<<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
 
@@ -278,7 +278,7 @@ function AudioPlayer({ url, duration }: { url: string; duration?: number }) {
   );
 }
 
-// ── Attachment Menu ────────────────────────────────────────
+// ── Professional Attachment Menu ───────────────────────────
 function AttachmentMenu({
   onPhoto,
   onVideo,
@@ -292,7 +292,7 @@ function AttachmentMenu({
   onLocation: () => void;
   onClose: () => void;
 }) {
-  const menuRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -300,37 +300,102 @@ function AttachmentMenu({
         onClose();
       }
     };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    // Small delay to prevent immediate close on the same click that opened it
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClick);
+    }, 50);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClick);
+    };
   }, [onClose]);
 
   const items = [
-    { icon: Image, label: 'Photo', color: 'text-purple-600', bg: 'bg-purple-50', onClick: onPhoto },
-    { icon: Video, label: 'Video', color: 'text-red-600', bg: 'bg-red-50', onClick: onVideo },
-    { icon: MapPin, label: 'Location', color: 'text-blue-600', bg: 'bg-blue-50', onClick: onLocation },
-    { icon: FileText, label: 'Document', color: 'text-orange-600', bg: 'bg-orange-50', onClick: onFile },
+    { 
+      icon: Camera, 
+      label: 'Camera', 
+      sublabel: 'Take a photo',
+      color: 'text-purple-600', 
+      bg: 'bg-purple-50', 
+      hoverBg: 'hover:bg-purple-100',
+      border: 'border-purple-200',
+      onClick: onPhoto 
+    },
+    { 
+      icon: Video, 
+      label: 'Video', 
+      sublabel: 'Share a clip',
+      color: 'text-red-600', 
+      bg: 'bg-red-50', 
+      hoverBg: 'hover:bg-red-100',
+      border: 'border-red-200',
+      onClick: onVideo 
+    },
+    { 
+      icon: MapPinned, 
+      label: 'Location', 
+      sublabel: 'Share where you are',
+      color: 'text-blue-600', 
+      bg: 'bg-blue-50', 
+      hoverBg: 'hover:bg-blue-100',
+      border: 'border-blue-200',
+      onClick: onLocation 
+    },
+    { 
+      icon: Files, 
+      label: 'Document', 
+      sublabel: 'PDF, Word, etc.',
+      color: 'text-orange-600', 
+      bg: 'bg-orange-50', 
+      hoverBg: 'hover:bg-orange-100',
+      border: 'border-orange-200',
+      onClick: onFile 
+    },
   ];
 
   return (
     <div
       ref={menuRef}
-      className="absolute left-0 bottom-full mb-2 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 grid grid-cols-4 gap-2 z-50"
+      className="absolute left-2 bottom-[calc(100%+12px)] bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 z-[70] min-w-[280px]"
+      style={{
+        filter: 'drop-shadow(0 10px 40px rgba(0,0,0,0.15))',
+      }}
     >
-      {items.map(({ icon: Icon, label, color, bg, onClick }) => (
-        <button
-          key={label}
-          onClick={() => {
-            onClick();
-            onClose();
-          }}
-          className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-gray-50 transition"
+      {/* Header */}
+      <div className="flex items-center justify-between px-2 pb-3 mb-2 border-b border-gray-100">
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Share</p>
+        <button 
+          onClick={onClose}
+          className="p-1 hover:bg-gray-100 rounded-full transition"
         >
-          <div className={`w-12 h-12 rounded-full ${bg} flex items-center justify-center`}>
-            <Icon className={`w-5 h-5 ${color}`} />
-          </div>
-          <span className="text-[10px] font-semibold text-gray-600">{label}</span>
+          <X className="w-4 h-4 text-gray-400" />
         </button>
-      ))}
+      </div>
+
+      {/* Grid */}
+      <div className="grid grid-cols-2 gap-2">
+        {items.map(({ icon: Icon, label, sublabel, color, bg, hoverBg, border, onClick }) => (
+          <button
+            key={label}
+            onClick={() => {
+              onClick();
+              onClose();
+            }}
+            className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 ${hoverBg} group`}
+          >
+            <div className={`w-12 h-12 rounded-xl ${bg} border ${border} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200 shadow-sm`}>
+              <Icon className={`w-5 h-5 ${color}`} />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-bold text-gray-800">{label}</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">{sublabel}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Bottom arrow indicator */}
+      <div className="absolute left-6 -bottom-2 w-4 h-4 bg-white border-b border-r border-gray-100 rotate-45" />
     </div>
   );
 }
@@ -376,7 +441,7 @@ function LocationPickerModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
+    <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
         <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
           <MapPin className="w-5 h-5 text-blue-600" />
@@ -479,15 +544,15 @@ function MessagesContent() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<<HTMLDivElement>(null);
   const [selectedMessageId, setSelectedMessageId] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
   const [deletingMsg, setDeletingMsg] = useState(false);
   const [showConvDeleteConfirm, setShowConvDeleteConfirm] = useState(false);
   const [deletingConv, setDeletingConv] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
-  const optionsRef = useRef<HTMLDivElement>(null);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const optionsRef = useRef<<HTMLDivElement>(null);
+  const longPressTimer = useRef<<ReturnType<<typeof setTimeout> | null>(null);
 
   // Media sharing state
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
@@ -495,9 +560,9 @@ function MessagesContent() {
   const [isUploading, setIsUploading] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: MessageType } | null>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<<HTMLInputElement>(null);
+  const videoInputRef = useRef<<HTMLInputElement>(null);
+  const fileInputRef = useRef<<HTMLInputElement>(null);
 
   // Online status
   const { isOnline, lastSeen } = useOnlineStatus(ownerId);
@@ -605,7 +670,7 @@ function MessagesContent() {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !user?.id || !ownerId) return;
     await sendMessage({
-      messageType: 'text',
+      message_type: 'text',
       message: newMessage.trim(),
     });
   };
@@ -622,11 +687,12 @@ function MessagesContent() {
       const uploadResult = await uploadToR2(file);
 
       // Step 2: Create message with media URL
+      // FIX: Use snake_case field names matching the Message interface
       await sendMessage({
-        messageType: type,
-        mediaUrl: uploadResult.url,
-        fileName: uploadResult.fileName,
-        fileSize: uploadResult.fileSize,
+        message_type: type,
+        media_url: uploadResult.url,
+        file_name: uploadResult.fileName,
+        file_size: uploadResult.fileSize,
         message: newMessage.trim() || undefined,
       });
 
@@ -643,16 +709,17 @@ function MessagesContent() {
   // ── Send location message ────────────────────────────────
   const handleSendLocation = async (lat: number, lng: number, name: string) => {
     await sendMessage({
-      messageType: 'location',
+      message_type: 'location',
       latitude: lat,
       longitude: lng,
-      locationName: name,
+      location_name: name,
       message: `📍 ${name}`,
     });
   };
 
   // ── Generic send message helper ──────────────────────────
-  const sendMessage = async (payload: Partial<Message> & { messageType: MessageType }) => {
+  // FIX: Use Partial<Message> so all field names match the interface (snake_case)
+  const sendMessage = async (payload: Partial<Message>) => {
     if (!user?.id || !ownerId) return;
 
     try {
@@ -671,7 +738,7 @@ function MessagesContent() {
       if (response.ok) {
         const newMsg = await response.json();
         setMessages((prev) => [...prev, newMsg]);
-        if (payload.messageType === 'text') setNewMessage('');
+        if (payload.message_type === 'text') setNewMessage('');
       } else {
         const err = await response.json();
         alert(`Failed to send: ${err.error}`);
@@ -690,7 +757,7 @@ function MessagesContent() {
     else fileInputRef.current?.click();
   };
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: MessageType) => {
+  const onFileChange = (e: React.ChangeEvent<<HTMLInputElement>, type: MessageType) => {
     const file = e.target.files?.[0];
     if (!file) return;
     handleSendMedia(file, type);
@@ -1045,19 +1112,20 @@ function MessagesContent() {
         {isUploading && <UploadProgress progress={uploadProgress} />}
 
         <div className="flex items-center gap-2 relative">
-          {/* Attachment button */}
+          {/* Attachment button with professional menu */}
           <div className="relative">
-            {/* <button
+            <button
               onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
               disabled={isUploading}
-              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition disabled:opacity-50"
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition disabled:opacity-50 ${
+                showAttachmentMenu 
+                  ? 'bg-green-100 text-green-600 rotate-45' 
+                  : 'hover:bg-gray-100 text-gray-500'
+              }`}
+              style={{ transition: 'all 0.2s ease' }}
             >
-              <Paperclip
-                className={`w-5 h-5 ${
-                  showAttachmentMenu ? 'text-green-600' : 'text-gray-500'
-                }`}
-              />
-            </button> */}
+              <Paperclip className="w-5 h-5" />
+            </button>
 
             {showAttachmentMenu && (
               <AttachmentMenu
@@ -1137,7 +1205,7 @@ function MessagesContent() {
 
       {/* Delete Message Confirmation Modal */}
       {showDeleteConfirm !== null && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
+        <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-lg font-black text-gray-900 mb-2">Delete Message?</h3>
             <p className="text-sm text-gray-500 mb-5">
@@ -1164,7 +1232,7 @@ function MessagesContent() {
 
       {/* Delete Conversation Confirmation Modal */}
       {showConvDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
+        <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-lg font-black text-gray-900 mb-2">Delete Conversation?</h3>
             <p className="text-sm text-gray-500 mb-5">
