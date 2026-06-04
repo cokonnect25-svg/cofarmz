@@ -2,10 +2,8 @@ export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextRequest, NextResponse } from "next/server";
 
-// ── Supported message types ─────────────────────────────────
 type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'location';
 
-// ── GET: Fetch messages between two users ───────────────────
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -52,21 +50,17 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ── POST: Send a new message ─────────────────────────────────
 export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    // FIX: Accept both snake_case and camelCase field names from frontend
     const {
       senderId,
       receiverId,
       machineryId,
       message,
-      // messageType can be camelCase or snake_case
       messageType,
       message_type,
-      // media fields can be camelCase or snake_case
       mediaUrl,
       media_url,
       mediaThumbnail,
@@ -77,13 +71,11 @@ export async function POST(request: Request) {
       file_size,
       latitude,
       longitude,
-      // location name can be camelCase or snake_case
       locationName,
       location_name,
       duration,
     } = body;
 
-    // Use snake_case if camelCase not provided (frontend sends snake_case)
     const finalMessageType: MessageType = (messageType || message_type || 'text') as MessageType;
     const finalMediaUrl = mediaUrl || media_url || null;
     const finalMediaThumbnail = mediaThumbnail || media_thumbnail || null;
@@ -98,7 +90,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate message type
     const validTypes: MessageType[] = ['text', 'image', 'video', 'audio', 'file', 'location'];
     if (!validTypes.includes(finalMessageType)) {
       return NextResponse.json(
@@ -107,7 +98,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Text messages require content
     if (finalMessageType === 'text' && !message) {
       return NextResponse.json(
         { error: "Message content required for text type" },
@@ -115,7 +105,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Media messages require media_url
     if (['image', 'video', 'audio', 'file'].includes(finalMessageType) && !finalMediaUrl) {
       return NextResponse.json(
         { error: "mediaUrl required. Upload file to /api/upload first" },
@@ -123,10 +112,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Location messages require coordinates
     if (finalMessageType === 'location' && (latitude == null || longitude == null)) {
       return NextResponse.json(
-        { error: "latitude and longitude required for location messages" },
+        { error: `latitude and longitude required for location messages. Got lat=${latitude}, lng=${longitude}` },
         { status: 400 }
       );
     }
@@ -171,26 +159,15 @@ export async function POST(request: Request) {
   }
 }
 
-// ── DELETE: Handles BOTH single message delete AND conversation delete ─
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const messageId = searchParams.get('id');
     const userId = searchParams.get('userId');
+    const otherUserId = searchParams.get('otherUserId');
 
-    // ── CASE 1: Delete entire conversation ─
-    if (!messageId && userId) {
-      const body = await req.json().catch(() => ({}));
-      const { otherUserId } = body;
-
-      if (!otherUserId) {
-        return NextResponse.json(
-          { error: 'Missing otherUserId for conversation delete' },
-          { status: 400 }
-        );
-      }
-
-      // Soft delete for user's side
+    // ── CASE 1: Delete entire conversation (no messageId, has otherUserId) ─
+    if (!messageId && userId && otherUserId) {
       await sql`
         UPDATE messages
         SET deleted_by_sender = CASE WHEN sender_id = ${userId} THEN true ELSE deleted_by_sender END,
@@ -199,7 +176,6 @@ export async function DELETE(req: NextRequest) {
            OR (sender_id = ${otherUserId} AND receiver_id = ${userId})
       `;
 
-      // Hard delete messages deleted by both
       await sql`
         DELETE FROM messages
         WHERE deleted_by_sender = true AND deleted_by_receiver = true
@@ -233,7 +209,6 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Soft delete
     if (isSender) {
       await sql`
         UPDATE messages 
@@ -248,7 +223,6 @@ export async function DELETE(req: NextRequest) {
       `;
     }
 
-    // Hard delete if both sides deleted
     const bothDeleted = await sql`
       SELECT deleted_by_sender, deleted_by_receiver 
       FROM messages WHERE id = ${messageId}
@@ -265,7 +239,6 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-// ── PATCH: Mark messages as read ──────────────────────────────
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
