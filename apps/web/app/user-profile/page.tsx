@@ -419,8 +419,8 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
   }, [mounted, user?.id]);
 
 useEffect(() => {
-  if (userRole === 'supplier') setExpandedSection('equipment');
-  else if (userRole === 'fpo') setExpandedSection('crops'); // FPO defaults to crops
+  if (userRole === 'supplier') setExpandedSection('equipment'); 
+  else setExpandedSection('crops'); // Default to crops for everyone else
 }, [userRole]);
 
 
@@ -679,7 +679,6 @@ const fetchFollowersCounts = async () => {
 
   const handleAddCrop = async () => {
     if (!user?.id || !newCrop.crop_name.trim()) { alert('Please enter a crop name'); return; }
-    if (userRole === 'supplier') { alert('Suppliers cannot add crops'); return; }
 
     const name = newCrop.crop_name.trim();
     const qty = newCrop.expected_yield_quantity;
@@ -1040,28 +1039,25 @@ const fetchFollowersCounts = async () => {
               ? <span className="text-gray-700 font-medium">{profileData.location}</span>
               : <span className="text-green-600 font-medium underline underline-offset-2">+ Add your location</span>}
           </button>
-          <div className="grid grid-cols-4 gap-2 mt-4 text-center text-xs">
-            <button onClick={() => { if (expandedSection === 'followers') { setExpandedSection(null); } else { setExpandedSection('followers'); fetchFollowers(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
-              <p className="font-bold text-lg text-gray-900">{followersCount}</p>
-              <p className="text-xs text-gray-600">Followers</p>
-            </button>
-            <button onClick={() => { if (expandedSection === 'following') { setExpandedSection(null); } else { setExpandedSection('following'); fetchFollowing(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
-              <p className="font-bold text-lg text-gray-900">{followingCount}</p>
-              <p className="text-xs text-gray-600">Following</p>
-            </button>
-           {userRole !== 'supplier' && (
-<button onClick={() => { if (expandedSection === 'crops') { setExpandedSection(null); } else { setExpandedSection('crops'); fetchUserCrops(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
-  <p className="font-bold text-lg text-gray-900">{farmerCrops.length}</p>
-  <p className="text-xs text-gray-600 leading-tight">
-    Crops/<br />Commodities
-  </p>
-</button>
-            )}
-            <button onClick={() => { if (expandedSection === 'equipment') { setExpandedSection(null); } else { setExpandedSection('equipment'); fetchUserEquipment(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
-              <p className="font-bold text-lg text-gray-900">{myEquipment.length}</p>
-              <p className="text-xs text-gray-600">Equipment</p>
-            </button>
-          </div>
+<div className="grid grid-cols-4 gap-2 mt-4 text-center text-xs">
+  <button onClick={() => { if (expandedSection === 'followers') { setExpandedSection(null); } else { setExpandedSection('followers'); fetchFollowers(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
+    <p className="font-bold text-lg text-gray-900">{followersCount}</p>
+    <p className="text-xs text-gray-600">Followers</p>
+  </button>
+  <button onClick={() => { if (expandedSection === 'following') { setExpandedSection(null); } else { setExpandedSection('following'); fetchFollowing(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
+    <p className="font-bold text-lg text-gray-900">{followingCount}</p>
+    <p className="text-xs text-gray-600">Following</p>
+  </button>
+  {/* Show crops for ALL roles including supplier */}
+  <button onClick={() => { if (expandedSection === 'crops') { setExpandedSection(null); } else { setExpandedSection('crops'); fetchUserCrops(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
+    <p className="font-bold text-lg text-gray-900">{farmerCrops.length}</p>
+    <p className="text-xs text-gray-600 leading-tight">Crops/<br />Commodities</p>
+  </button>
+  <button onClick={() => { if (expandedSection === 'equipment') { setExpandedSection(null); } else { setExpandedSection('equipment'); fetchUserEquipment(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
+    <p className="font-bold text-lg text-gray-900">{myEquipment.length}</p>
+    <p className="text-xs text-gray-600">Equipment</p>
+  </button>
+</div>
         </div>
        </div>
 
@@ -1154,12 +1150,10 @@ const fetchFollowersCounts = async () => {
                     </div>
                   ))}</div>
                 }
-               {userRole !== 'supplier' &&  (
-
-                  <button onClick={() => setShowAddCropForm(true)} className="w-full mt-4 text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2">
-                    <i className="ph-bold ph-plus text-sm"></i>Add Crop
-                  </button>
-                )}
+{/* Add Crop button - available for all roles */}
+<button onClick={() => setShowAddCropForm(true)} className="w-full mt-4 text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2">
+  <i className="ph-bold ph-plus text-sm"></i>Add Crop
+</button>
               </>
             )}
 
