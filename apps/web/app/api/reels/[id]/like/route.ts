@@ -8,9 +8,19 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    console.log("Fetching likers for reel:", id);
     
+    // First check if reel exists
+    const reelCheck = await sql`SELECT id FROM reels WHERE id = ${id}`;
+    console.log("Reel exists:", reelCheck.length > 0);
+    
+    // Check likes count (no join)
+    const rawLikes = await sql`SELECT user_id FROM reel_likes WHERE reel_id = ${id}`;
+    console.log("Raw likes found:", rawLikes.length, rawLikes);
+    
+    // Now do the join
     const likers = await sql`
-      SELECT u.id, u.name, u.image, u.role, u.location, l.created_at as liked_at
+      SELECT u.id, u.name, u.image, l.created_at as liked_at
       FROM reel_likes l
       JOIN users u ON u.id = l.user_id
       WHERE l.reel_id = ${id}
@@ -18,10 +28,12 @@ export async function GET(
       LIMIT 50
     `;
     
-    return NextResponse.json({ likers });
+    console.log("Likers after join:", likers.length, likers);
+    
+    return NextResponse.json({ likers, debug: { rawCount: rawLikes.length } });
   } catch (error: any) {
     console.error("Error fetching likers:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message, stack: error.stack }, { status: 500 });
   }
 }
 
