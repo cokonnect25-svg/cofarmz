@@ -9,28 +9,49 @@ export async function GET(
   try {
     const { id } = await params;
     console.log("Fetching likers for reel:", id);
-    
-    // First check if reel exists
-    const reelCheck = await sql`SELECT id FROM reels WHERE id = ${id}`;
-    console.log("Reel exists:", reelCheck.length > 0);
-    
-    // Check likes count (no join)
-    const rawLikes = await sql`SELECT user_id FROM reel_likes WHERE reel_id = ${id}`;
-    console.log("Raw likes found:", rawLikes.length, rawLikes);
-    
-    // Now do the join
-    const likers = await sql`
-      SELECT u.id, u.name, u.image, l.created_at as liked_at
-      FROM reel_likes l
-      JOIN user u ON u.id = l.user_id
-      WHERE l.reel_id = ${id}
-      ORDER BY l.created_at DESC
+
+    // Step 1: Get likes from reel_likes
+    const likes = await sql`
+      SELECT user_id, created_at as liked_at
+      FROM reel_likes
+      WHERE reel_id = ${id}
+      ORDER BY created_at DESC
       LIMIT 50
     `;
-    
-    console.log("Likers after join:", likers.length, likers);
-    
-    return NextResponse.json({ likers, debug: { rawCount: rawLikes.length } });
+
+    console.log("Raw likes found:", likes.length);
+
+    if (likes.length === 0) {
+      return NextResponse.json({ likers: [] });
+    }
+
+    // Step 2: Get user IDs
+    const userIds = likes.map((l: any) => l.user_id);
+    console.log("User IDs:", userIds);
+
+    // Step 3: Fetch users separately (no JOIN, no alias issue)
+    const users = await sql`
+      SELECT id, name, image, role, location
+      FROM users
+      WHERE id = ANY(${sql.array(userIds)})
+    `;
+
+    console.log("Users found:", users.length);
+
+    // Step 4: Merge manually
+    const likers = likes.map((like: any) => {
+      const user = users.find((u: any) => u.id === like.user_id);
+      return {
+        id: like.user_id,
+        name: user?.name || 'Unknown User',
+        image: user?.image || null,
+        role: user?.role || null,
+        location: user?.location || null,
+        liked_at: like.liked_at
+      };
+    });
+
+    return NextResponse.json({ likers });
   } catch (error: any) {
     console.error("Error fetching likers:", error);
     return NextResponse.json({ error: error.message, stack: error.stack }, { status: 500 });
