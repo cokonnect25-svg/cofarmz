@@ -784,6 +784,27 @@ function MessagesContent() {
 
       {previewMedia && <MediaPreviewModal url={previewMedia.url} type={previewMedia.type} onClose={() => setPreviewMedia(null)} />}
       {showLocationPicker && <LocationPickerModal onSelect={handleSendLocation} onClose={() => setShowLocationPicker(false)} />}
+      <input
+          type="file"
+          accept="image/*"
+          ref={photoInputRef}
+          className="hidden"
+          onChange={(e) => onFileChange(e, 'image')}
+        />
+        <input
+          type="file"
+          accept="video/*"
+          ref={videoInputRef}
+          className="hidden"
+          onChange={(e) => onFileChange(e, 'video')}
+        />
+        <input
+          type="file"
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+          ref={fileInputRef}
+          className="hidden"
+          onChange={(e) => onFileChange(e, 'file')}
+        />
       {showDeleteConfirm !== null && (
         <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
@@ -810,6 +831,8 @@ function MessagesContent() {
           </div>
         </div>
       )}
+      {/* Hidden file inputs for attachment menu */}
+
     </div>
   );
 }
