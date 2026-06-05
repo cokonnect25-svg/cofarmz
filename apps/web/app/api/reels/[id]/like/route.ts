@@ -29,12 +29,13 @@ export async function GET(
     const userIds = likes.map((l: any) => l.user_id);
     console.log("User IDs:", userIds);
 
-    // Step 3: Fetch users separately (no JOIN, no alias issue)
-    const users = await sql`
+    // Step 3: Fetch users - MUST quote "user" table name and use sql.unsafe for dynamic identifiers
+    // The "user" table is in public schema and must be quoted because "user" is a reserved keyword
+    const users = await sql.unsafe(`
       SELECT id, name, image, role, location
-      FROM user
-      WHERE id = ANY(${sql.array(userIds)})
-    `;
+      FROM "public"."user"
+      WHERE id = ANY($1)
+    `, [userIds]);
 
     console.log("Users found:", users.length);
 
