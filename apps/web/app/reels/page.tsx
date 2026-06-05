@@ -639,30 +639,32 @@ const handleShowLikers = (reelId: string) => {
                   </span>
                 </button>
 
-                {/* Like */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleLike(reel.id);
-                  }}
-                  className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
-                >
-                  <div className={`w-12 h-12 rounded-full backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl transition-all group-hover:scale-110 active:scale-90 ${likedReels.has(reel.id) ? 'bg-red-500/20' : 'bg-black/40'}`}>
-                    <Heart
-                      className={`w-6 h-6 transition-colors duration-300 ${likedReels.has(reel.id) ? 'fill-red-500 text-red-500' : 'text-white'}`}
-                      strokeWidth={2.5}
-                    />
-                  </div>
-<button
-  onClick={(e) => {
-    e.stopPropagation();
-    handleShowLikers(reel.id);
-  }}
-  className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase hover:text-green-400 transition-colors"
->
-  {reel.likes > 999 ? `${(reel.likes / 1000).toFixed(1)}k` : reel.likes} {reel.likes === 1 ? 'like' : 'likes'}
-</button>
-                </button>
+<div className="flex flex-col items-center gap-1">
+  {/* Heart */}
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      handleLike(reel.id);
+    }}
+    className="w-12 h-12 rounded-full backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-90 group"
+  >
+    <Heart
+      className={`w-6 h-6 transition-colors duration-300 ${likedReels.has(reel.id) ? 'fill-red-500 text-red-500' : 'text-white'}`}
+      strokeWidth={2.5}
+    />
+  </button>
+  
+  {/* Count */}
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      handleShowLikers(reel.id);
+    }}
+    className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase hover:text-green-400 transition-colors"
+  >
+    {reel.likes > 999 ? `${(reel.likes / 1000).toFixed(1)}k` : reel.likes} {reel.likes === 1 ? 'like' : 'likes'}
+  </button>
+</div>
 
                 {/* Comments */}
                 <button
