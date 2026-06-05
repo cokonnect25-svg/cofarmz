@@ -32,7 +32,7 @@ export async function GET(
     // Step 3: Fetch users separately (no JOIN, no alias issue)
     const users = await sql`
       SELECT id, name, image, role, location
-      FROM users
+      FROM user
       WHERE id = ANY(${sql.array(userIds)})
     `;
 
