@@ -61,6 +61,10 @@ function ReelsContent() {
   const [videoReady, setVideoReady] = useState<Set<string>>(new Set());
   const [shareToast, setShareToast] = useState<string | null>(null);
   const likingRef = useRef(new Set<string>());
+  const viewedReelsRef = useRef<Set<string>>(new Set());
+  const [showLikers, setShowLikers] = useState(false);
+const [likers, setLikers] = useState<Array<{id: string, name: string, image: string, role?: string, location?: string, liked_at?: string}>>([]);
+const [likersLoading, setLikersLoading] = useState(false);
   
   // Refs for scroll restoration
   const pendingScrollRef = useRef<number | null>(null);
@@ -141,6 +145,7 @@ function ReelsContent() {
     fetchReels();
   }, [user, authLoading, router, searchParams]);
 
+
   // Apply scroll restoration after reels load and videos are ready
   useEffect(() => {
     if (reels.length === 0) return;
@@ -169,17 +174,49 @@ function ReelsContent() {
     }, 1200);
   }, [reels, videoReady]);
 
-  useEffect(() => {
-    videosRef.current.forEach((video, idx) => {
-      if (!video) return;
-      video.muted = isMuted;
-      if (idx === currentReelIndex && videoReady.has(reels[idx]?.id)) {
-        video.play().catch(() => {});
-      } else {
-        video.pause();
-      }
-    });
-  }, [currentReelIndex, videoReady, isMuted]);
+  const trackView = useCallback(async (reelId: string) => {
+  if (viewedReelsRef.current.has(reelId)) return; // Don't count twice
+  viewedReelsRef.current.add(reelId);
+  
+  try {
+    await fetch(getApiUrl(`/api/reels/${reelId}/view`), { method: 'POST' });
+  } catch (err) {
+    console.error('Failed to track view:', err);
+  }
+}, []);
+
+useEffect(() => {
+  videosRef.current.forEach((video, idx) => {
+    if (!video) return;
+    video.muted = isMuted;
+    if (idx === currentReelIndex && videoReady.has(reels[idx]?.id)) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  });
+}, [currentReelIndex, videoReady, isMuted]);
+
+
+const fetchLikers = async (reelId: string) => {
+  setLikersLoading(true);
+  try {
+    const res = await fetch(getApiUrl(`/api/reels/${reelId}/likes`));
+    if (res.ok) {
+      const data = await res.json();
+      setLikers(data.likers || []);
+    }
+  } catch (err) {
+    console.error('Error fetching likers:', err);
+  } finally {
+    setLikersLoading(false);
+  }
+};
+
+const handleShowLikers = (reelId: string) => {
+  setShowLikers(true);
+  fetchLikers(reelId);
+};
 
   const handleLike = async (reelId: string) => {
     if (!user) return;
@@ -481,14 +518,17 @@ function ReelsContent() {
                         video.currentTime = 0.05;
                       }
                     }}
-                    onSeeked={(e) => {
-                      const video = e.currentTarget;
-                      video.pause();
-                      setVideoReady((prev) => new Set(prev).add(reel.id));
-                      if (idx === currentReelIndex) {
-                        video.play().catch(() => {});
-                      }
-                    }}
+                      onSeeked={(e) => {
+                        const video = e.currentTarget;
+                        video.pause();
+                        setVideoReady((prev) => new Set(prev).add(reel.id));
+                        if (idx === currentReelIndex) {
+                          video.play().catch(() => {});
+                        }
+                      }}
+                      onPlay={() => {
+                        trackView(reel.id);
+                      }}
                     onError={() => {
                       setVideoErrors((prev) => new Set(prev).add(reel.id));
                     }}
@@ -613,9 +653,15 @@ function ReelsContent() {
                       strokeWidth={2.5}
                     />
                   </div>
-                  <span className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase">
-                    {reel.likes > 999 ? `${(reel.likes / 1000).toFixed(1)}k` : reel.likes}
-                  </span>
+<button
+  onClick={(e) => {
+    e.stopPropagation();
+    handleShowLikers(reel.id);
+  }}
+  className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase hover:text-green-400 transition-colors"
+>
+  {reel.likes > 999 ? `${(reel.likes / 1000).toFixed(1)}k` : reel.likes} {reel.likes === 1 ? 'like' : 'likes'}
+</button>
                 </button>
 
                 {/* Comments */}
@@ -755,6 +801,92 @@ function ReelsContent() {
           </div>
         </div>
       )}
+      {/* Liked By Modal */}
+{showLikers && (
+  <div
+    className="fixed inset-0 z-[999] flex flex-col"
+    style={{ paddingBottom: 'calc(60px + env(safe-area-inset-bottom))' }}
+  >
+    <div
+      className="flex-1 bg-black/50"
+      onClick={() => setShowLikers(false)}
+    />
+    <div
+      className="bg-white rounded-t-3xl flex flex-col overflow-hidden"
+      style={{ maxHeight: '70vh' }}
+    >
+      <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 flex-shrink-0" />
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+        <h2 className="text-lg font-bold text-gray-900">
+          Liked by
+        </h2>
+        <button
+          onClick={() => setShowLikers(false)}
+          className="p-1 hover:bg-gray-100 rounded-full transition"
+        >
+          <X className="w-5 h-5 text-gray-600" />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
+        {likersLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
+          </div>
+        ) : likers.length === 0 ? (
+          <p className="text-center text-gray-400 py-8 text-sm">
+            No likes yet. Be the first!
+          </p>
+        ) : (
+          likers.map((liker) => (
+            <div key={liker.id} className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setShowLikers(false);
+                  saveStateAndNavigateToProfile(liker.id);
+                }}
+                className="flex-shrink-0"
+              >
+                <img
+                  src={liker.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(liker.name || 'U')}&backgroundColor=166534&textColor=ffffff`}
+                  alt={liker.name}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              </button>
+              <div className="flex-1 min-w-0">
+                <button
+                  onClick={() => {
+                    setShowLikers(false);
+                    saveStateAndNavigateToProfile(liker.id);
+                  }}
+                  className="font-bold text-sm text-gray-900 hover:text-green-700 transition-colors block"
+                >
+                  {liker.name}
+                </button>
+                {liker.role && (
+                  <p className="text-xs text-gray-500">{liker.role}</p>
+                )}
+                {liker.location && (
+                  <p className="text-xs text-gray-400">{liker.location}</p>
+                )}
+              </div>
+              {liker.id !== user?.id && (
+                <button
+                  onClick={() => {
+                    setShowLikers(false);
+                    router.push(`/farmer-profile?id=${liker.id}`);
+                  }}
+                  className="px-4 py-1.5 rounded-full bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition"
+                >
+                  View
+                </button>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

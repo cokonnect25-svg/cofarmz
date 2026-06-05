@@ -1,6 +1,29 @@
 export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    
+    const likers = await sql`
+      SELECT u.id, u.name, u.image, u.role, u.location, l.created_at as liked_at
+      FROM reel_likes l
+      JOIN users u ON u.id = l.user_id
+      WHERE l.reel_id = ${id}
+      ORDER BY l.created_at DESC
+      LIMIT 50
+    `;
+    
+    return NextResponse.json({ likers });
+  } catch (error: any) {
+    console.error("Error fetching likers:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
 
 export async function POST(
   request: Request,
