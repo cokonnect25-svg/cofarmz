@@ -201,7 +201,7 @@ useEffect(() => {
 const fetchLikers = async (reelId: string) => {
   setLikersLoading(true);
   try {
-    const res = await fetch(getApiUrl(`/api/reels/${reelId}/likes`));
+    const res = await fetch(getApiUrl(`/api/reels/${reelId}/like`));
     if (res.ok) {
       const data = await res.json();
       setLikers(data.likers || []);
