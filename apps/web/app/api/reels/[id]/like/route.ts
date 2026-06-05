@@ -22,7 +22,7 @@ export async function GET(
     const likers = await sql`
       SELECT u.id, u.name, u.image, l.created_at as liked_at
       FROM reel_likes l
-      JOIN users u ON u.id = l.user_id
+      JOIN user u ON u.id = l.user_id
       WHERE l.reel_id = ${id}
       ORDER BY l.created_at DESC
       LIMIT 50
