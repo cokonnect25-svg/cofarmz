@@ -12,7 +12,6 @@ import {
 import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
 import UserAvatar from '@/app/components/UserAvatar';
-import { trackPageView } from '@/lib/firebase';
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────
 
@@ -24,8 +23,8 @@ interface Certificate {
   expiry_date?: string;
   certificate_url?: string;
   verified?: boolean;
-  grade?: string;
-  crop_names?: string[];
+  grade?: string;           // e.g. "A+", "Grade 1", "Premium"
+  crop_names?: string[];    // crops this certificate is linked to
 }
 
 interface FarmerProfile {
@@ -57,7 +56,7 @@ interface Reel {
   likes: number;
   comments: number;
   is_liked: boolean;
-  crop_tags?: string[];
+  crop_tags?: string[];   // crop names this reel is tagged with
 }
 
 interface Follower {
@@ -77,6 +76,7 @@ interface Crop {
   certificate_url?: string | null;
   grade?: string | null;
   certification_type?: string | null;
+  // linked data — populated client-side by matching crop_name
   certificates?: Certificate[];
   reels?: Reel[];
 }
@@ -167,6 +167,8 @@ function EmptyState({ text }: { text: string }) {
 }
 
 // ─── VideoThumb ───────────────────────────────────────────────────────────────
+// Auto-generates a thumbnail by seeking the video to 0.5s and drawing to canvas.
+// Falls back gracefully if the video is cross-origin or metadata can't load.
 
 function VideoThumb({
   reel,
@@ -183,7 +185,7 @@ function VideoThumb({
   const [captured, setCaptured] = useState(!!reel.thumbnail_url);
 
   useEffect(() => {
-    if (reel.thumbnail_url) return;
+    if (reel.thumbnail_url) return; // already stored — nothing to do
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
@@ -197,7 +199,7 @@ function VideoThumb({
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         setPoster(canvas.toDataURL('image/jpeg', 0.75));
       } catch {
-        /* cross-origin skip */
+        /* cross-origin — skip capture, video element will show */
       } finally {
         setCaptured(true);
       }
@@ -222,7 +224,10 @@ function VideoThumb({
       onClick={onClick}
       className={`relative ${sizeClass} aspect-[9/16] rounded-xl overflow-hidden bg-gray-900 cursor-pointer active:scale-95 transition-transform flex-shrink-0`}
     >
+      {/* Hidden canvas for frame extraction */}
       <canvas ref={canvasRef} className="hidden" />
+
+      {/* Hidden video for metadata + seek (only when no stored thumbnail) */}
       {!reel.thumbnail_url && (
         <video
           ref={videoRef}
@@ -234,9 +239,13 @@ function VideoThumb({
           crossOrigin="anonymous"
         />
       )}
+
+      {/* Captured / stored poster */}
       {poster && (
         <img src={poster} alt="reel" className="absolute inset-0 w-full h-full object-cover" />
       )}
+
+      {/* Overlays */}
       <div className="absolute inset-0 bg-black/25" />
       <div className="absolute inset-0 flex items-center justify-center">
         <div className={`${iconSize} rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30`}>
@@ -273,11 +282,14 @@ function ExpertiseBadge({ level }: { level: string }) {
   );
 }
 
-// ─── Main Content Component (receives params as props, no useSearchParams) ─────
+// ─── Main Component ───────────────────────────────────────────────────────────
 
-function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null; tabParam: string | null }) {
+function FarmerProfileContent() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const farmerId = searchParams.get('id') || searchParams.get('userId');
+  const tabParam = searchParams.get('tab') || searchParams.get('expandSection');
 
   const [profile, setProfile] = useState<FarmerProfile | null>(null);
   const [reels, setReels] = useState<Reel[]>([]);
@@ -295,39 +307,16 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
   const [expandedCropIdx, setExpandedCropIdx] = useState<number | null>(null);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [followStatus, setFollowStatus] = useState<'none' | 'pending' | 'accepted'>('none');
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const SCROLL_KEY = 'nearbyFarmers_scrollY';
+  const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
 
+  // Manage which sections are open (multi-expand)
   const [openSections, setOpenSections] = useState<Set<string>>(() => {
     const initial = new Set<string>();
     if (tabParam) initial.add(tabParam);
     return initial;
   });
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted || !user?.id || !farmerId || !profile) return;
-    if (user.id === farmerId) return;
-
-    trackPageView({
-      viewerId: user.id,
-      viewerName: user.name,
-      viewerEmail: user.email,
-      viewerRole: user.role || 'buyer',
-      pageType: 'farmer_profile',
-      targetId: farmerId,
-      targetName: profile.name,
-      metadata: {
-        farmerRole: profile.role,
-        farmerLocation: profile.location,
-        cropsCount: crops.length,
-        equipmentCount: equipment.length,
-        followersCount: profile.followers_count,
-        isFollowing: isFollowing,
-      },
-    });
-  }, [mounted, user?.id, farmerId, profile?.name, isFollowing, crops.length, equipment.length, profile?.role, profile?.location, profile?.followers_count]);
 
   const toggleSection = (section: string) => {
     setOpenSections(prev => {
@@ -339,7 +328,7 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
   };
 
   const fetchProfile = useCallback(async () => {
-    if (!farmerId || !user?.id) return;
+    if (!farmerId || !user) return;
     try {
       const url = getApiUrl(`/api/farmers/profile?farmerId=${encodeURIComponent(farmerId)}`);
       const res = await fetch(url, { headers: { 'x-user-id': user.id } });
@@ -357,17 +346,21 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
 
       setProfile(data);
       setIsFollowing(data.isFollowing || false);
-
-      if (data.isFollowing) {
-        setFollowStatus('accepted');
-      } else {
-        setFollowStatus('none');
-      }
+      // Check follow status
+if (data.isFollowing) {
+  setFollowStatus('accepted');
+} else {
+  // Check if pending
+  const pendingRes = await fetch(getApiUrl(`/api/follows?user_id=${user.id}&following_id=${farmerId}&type=status`));
+  // Simpler: just track in profile API, for now default to none
+  setFollowStatus(data.isFollowing ? 'accepted' : 'none');
+}
 
       const rawCrops: Crop[] = Array.isArray(data.crops) ? data.crops : [];
       const rawCerts: Certificate[] = Array.isArray(data.certificates) ? data.certificates : [];
       const rawReels: Reel[] = Array.isArray(data.reels) ? data.reels : [];
 
+      // Enrich each crop with matching certificates and reels
       const enrichedCrops = rawCrops.map(crop => {
         const cropLower = crop.crop_name.toLowerCase();
         const linkedCerts = rawCerts.filter(c =>
@@ -396,42 +389,43 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
     }
   }, [farmerId, user]);
 
-  useEffect(() => {
-    if (mounted && farmerId && user?.id) fetchProfile();
-  }, [mounted, farmerId, user, fetchProfile]);
+  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { if (mounted && farmerId && user) fetchProfile(); }, [mounted, farmerId, user, fetchProfile]);
 
-  const handleFollow = async () => {
-    if (!farmerId || !user?.id) return;
+const handleFollow = async () => {
+  if (!farmerId || !user) return;
 
-    if (followStatus === 'accepted' || isFollowing) {
-      try {
-        const res = await fetch(getApiUrl('/api/follows'), {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', 'x-user-id': user.id },
-          body: JSON.stringify({ followingId: farmerId }),
-        });
-        if (res.ok) {
-          setFollowStatus('none');
-          setIsFollowing(false);
-          setProfile(p => p ? { ...p, followers_count: p.followers_count - 1 } : p);
-        }
-      } catch (e) { console.error(e); }
-      return;
-    }
-
-    if (followStatus === 'pending') return;
-
+  if (followStatus === 'accepted' || isFollowing) {
+    // Unfollow
     try {
       const res = await fetch(getApiUrl('/api/follows'), {
-        method: 'POST',
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json', 'x-user-id': user.id },
         body: JSON.stringify({ followingId: farmerId }),
       });
       if (res.ok) {
-        setFollowStatus('pending');
+        setFollowStatus('none');
+        setIsFollowing(false);
+        setProfile(p => p ? { ...p, followers_count: p.followers_count - 1 } : p);
       }
     } catch (e) { console.error(e); }
-  };
+    return;
+  }
+
+  if (followStatus === 'pending') return; // already requested
+
+  // Send follow request
+  try {
+    const res = await fetch(getApiUrl('/api/follows'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': user.id },
+      body: JSON.stringify({ followingId: farmerId }),
+    });
+    if (res.ok) {
+      setFollowStatus('pending');
+    }
+  } catch (e) { console.error(e); }
+};
 
   // ── Loading / Error States ──────────────────────────────────────────────────
 
@@ -455,6 +449,7 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
   const rc = ROLE_CONFIG[role] || ROLE_CONFIG.farmer;
   const RoleIcon = rc.icon;
 
+  // Sections to show: only if data exists OR always show crops/equipment if counts > 0
   const hasCrops = crops.length > 0;
   const hasEquipment = equipment.length > 0;
   const hasCertificates = certificates.length > 0;
@@ -476,12 +471,14 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
 
       {/* ── Cover + Avatar + Info ─────────────────────────────────────────────── */}
       <div className="bg-white border-b">
+        {/* Cover */}
         <div className={`h-28 bg-gradient-to-r ${rc.gradient} relative overflow-hidden`}>
           <div className="absolute inset-0 opacity-20"
             style={{ backgroundImage: 'repeating-linear-gradient(45deg,transparent,transparent 20px,rgba(255,255,255,.15) 20px,rgba(255,255,255,.15) 40px)' }} />
         </div>
 
         <div className="px-4 pb-5">
+          {/* Avatar row */}
           <div className="flex justify-between items-end -mt-10 mb-3">
             <div className="relative">
               <button
@@ -494,6 +491,7 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
                   size={80}
                   className="rounded-full border-4 border-white shadow-md"
                 />
+                {/* view hint ring on hover */}
                 <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
                   <span className="text-white text-[10px] font-bold">View</span>
                 </div>
@@ -502,26 +500,27 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
                 <BadgeCheck className="absolute bottom-0 right-0 w-5 h-5 text-blue-500 bg-white rounded-full" />
               )}
             </div>
-            {!isOwnProfile && (
-              <button
-                onClick={handleFollow}
-                className={`px-5 py-2 rounded-full font-bold text-sm transition ${
-                  followStatus === 'accepted' || isFollowing
-                    ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                    : followStatus === 'pending'
-                    ? 'bg-yellow-100 text-yellow-700 border border-yellow-300 cursor-default'
-                    : `${rc.accentBg} text-white hover:opacity-90`
-                }`}
-              >
-                {followStatus === 'accepted' || isFollowing
-                  ? 'Following'
-                  : followStatus === 'pending'
-                  ? 'Requested'
-                  : 'Follow'}
-              </button>
-            )}
+{!isOwnProfile && (
+  <button
+    onClick={handleFollow}
+    className={`px-5 py-2 rounded-full font-bold text-sm transition ${
+      followStatus === 'accepted' || isFollowing
+        ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+        : followStatus === 'pending'
+        ? 'bg-yellow-100 text-yellow-700 border border-yellow-300 cursor-default'
+        : `${rc.accentBg} text-white hover:opacity-90`
+    }`}
+  >
+    {followStatus === 'accepted' || isFollowing
+      ? 'Following'
+      : followStatus === 'pending'
+      ? 'Requested'
+      : 'Follow'}
+  </button>
+)}
           </div>
 
+          {/* Name + role */}
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <h2 className="text-xl font-black text-gray-900">{profile.name}</h2>
             <span className={`flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full ${rc.badge}`}>
@@ -530,6 +529,7 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
             </span>
           </div>
 
+          {/* Location */}
           {profile.location && (
             <p className="text-sm text-gray-500 flex items-center gap-1 mb-1">
               <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
@@ -537,10 +537,12 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
             </p>
           )}
 
+          {/* Bio */}
           {profile.bio && (
             <p className="text-sm text-gray-600 mt-2 leading-relaxed">{profile.bio}</p>
           )}
 
+          {/* Rating */}
           {profile.rating !== undefined && profile.rating > 0 && (
             <div className="flex items-center gap-1 mt-2">
               {[1, 2, 3, 4, 5].map(s => (
@@ -552,6 +554,7 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
             </div>
           )}
 
+          {/* Member since */}
           {profile.member_since && (
             <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
               <Calendar className="w-3 h-3" />
@@ -564,7 +567,7 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
             {[
               { key: 'followers', label: 'Followers', count: profile.followers_count, icon: Users, show: true },
               { key: 'following', label: 'Following', count: profile.following_count, icon: UserCheck, show: true },
-              { key: 'crops', label: role === 'buyer' ? 'Commodities' : 'Crops', count: profile.crops_count, icon: Wheat, show: true },
+              { key: 'crops', label: role === 'buyer' ? 'Crops' : 'Crops', count: profile.crops_count, icon: Wheat, show: true },
               { key: 'equipment', label: 'Equipment', count: profile.equipments_count, icon: Tractor, show: true },
             ].map(({ key, label, count, icon: Icon }) => (
               <button
@@ -623,14 +626,18 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
                 {crops.map((crop, idx) => {
                   const isOpen = expandedCropIdx === idx;
                   const isWaste = crop.is_crop_waste;
+
+                  // Cert data lives directly on the crop row
                   const hasCert = !!(crop.certificate_url || crop.grade || crop.certification_type);
 
+                  // Reels: match by crop_tags, fall back to caption keyword
                   const displayReels = reels.filter(r =>
                     Array.isArray(r.crop_tags) && r.crop_tags.length > 0
                       ? r.crop_tags.some((t: string) => t.toLowerCase() === crop.crop_name.toLowerCase())
                       : (r.caption || '').toLowerCase().includes(crop.crop_name.toLowerCase())
                   );
 
+                  // Find certification label
                   const CERT_TYPES: Record<string, { label: string; icon: string }> = {
                     organic:        { label: 'Organic Certified',                  icon: '🌿' },
                     ipm:            { label: 'IPM (Low Pesticide)',                 icon: '🛡️' },
@@ -650,6 +657,7 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
                         isWaste ? 'border-amber-200 bg-amber-50' : 'border-gray-100 bg-gray-50'
                       } ${isOpen ? 'shadow-md border-green-200' : ''}`}
                     >
+                      {/* ── Crop Header — always tap to expand ── */}
                       <button
                         className="w-full text-left p-3"
                         onClick={() => setExpandedCropIdx(isOpen ? null : idx)}
@@ -683,6 +691,7 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
                           }
                         </div>
 
+                        {/* Meta row — always visible */}
                         <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
                           {crop.years_of_experience > 0 && (
                             <span className="text-xs text-gray-500">
@@ -703,15 +712,19 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
                         </div>
                       </button>
 
+                      {/* ── Expanded Panel ── */}
                       {isOpen && (
                         <div className="border-t border-dashed border-gray-200">
 
+                          {/* ── Cert / Grade Panel ── */}
                           {hasCert ? (
                             <div className="bg-yellow-50/70 px-3 py-3">
                               <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-2 flex items-center gap-1">
                                 <Award className="w-3 h-3" /> Certificate &amp; Grade
                               </p>
                               <div className="bg-white rounded-xl p-3 border border-yellow-100 shadow-sm space-y-2">
+
+                                {/* Grade */}
                                 {crop.grade && (
                                   <div className="flex items-center justify-between">
                                     <span className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
@@ -723,6 +736,8 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
                                     </span>
                                   </div>
                                 )}
+
+                                {/* Certification type */}
                                 {certType && (
                                   <div className="flex items-center justify-between">
                                     <span className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
@@ -734,6 +749,8 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
                                     </span>
                                   </div>
                                 )}
+
+                                {/* Certificate document link */}
                                 {crop.certificate_url && (
                                   <div className="flex items-center justify-between pt-1 border-t border-yellow-100">
                                     <span className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
@@ -762,6 +779,7 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
                             </div>
                           )}
 
+                          {/* Reels for this crop */}
                           {displayReels.length > 0 && (
                             <div className="bg-gray-900/[0.04] px-3 py-3 border-t border-dashed border-gray-200">
                               <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-2 flex items-center gap-1">
@@ -786,6 +804,7 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
                             </div>
                           )}
 
+                          {/* View nearby farmers — now inside the panel, not the only action */}
                           {role === 'farmer' && !isWaste && (
                             <div className="px-3 py-2.5 border-t border-gray-100 bg-white">
                               <button
@@ -897,7 +916,7 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
                     onClick={() => router.push(f.id === user.id ? '/user-profile' : `/farmer-profile?id=${f.id}`)}
                     className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition text-left"
                   >
-                    <img src={f.image}
+                    <img src={f.image }
                       alt={f.name} className="w-10 h-10 rounded-full object-cover" />
                     <p className="font-semibold text-gray-900 text-sm">{f.name}</p>
                   </button>
@@ -926,7 +945,7 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
                     onClick={() => router.push(f.id === user.id ? '/user-profile' : `/farmer-profile?id=${f.id}`)}
                     className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition text-left"
                   >
-                    <img src={f.image}
+                    <img src={f.image }
                       alt={f.name} className="w-10 h-10 rounded-full object-cover" />
                     <p className="font-semibold text-gray-900 text-sm">{f.name}</p>
                   </button>
@@ -971,6 +990,7 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
           onClick={() => setShowPhotoModal(false)}
         >
           <div className="relative max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            {/* Close button */}
             <button
               onClick={() => setShowPhotoModal(false)}
               className="absolute -top-10 right-0 p-2 text-white/80 hover:text-white transition"
@@ -978,6 +998,7 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
               <X className="w-6 h-6" />
             </button>
 
+            {/* Full-size photo */}
             <UserAvatar
               image={profile.image}
               name={profile.name}
@@ -986,6 +1007,7 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
               style={{ width: '100%', aspectRatio: '1', border: '4px solid rgba(255,255,255,0.1)' }}
             />
 
+            {/* Name + role bar */}
             <div className="mt-3 flex items-center gap-2 justify-center">
               <p className="text-white font-bold text-lg">{profile.name}</p>
               <span className={`flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${rc.badge}`}>
@@ -1019,17 +1041,6 @@ function FarmerProfileContent({ farmerId, tabParam }: { farmerId: string | null;
   );
 }
 
-// ─── SearchParams Wrapper (isolates useSearchParams for Suspense) ─────────────
-
-function SearchParamsWrapper({ children }: { children: (params: { farmerId: string | null; tabParam: string | null }) => React.ReactNode }) {
-  const searchParams = useSearchParams();
-  const farmerId = searchParams.get('id') || searchParams.get('userId');
-  const tabParam = searchParams.get('tab') || searchParams.get('expandSection');
-  return <>{children({ farmerId, tabParam })}</>;
-}
-
-// ─── Page Export (properly wrapped in Suspense) ────────────────────────────────
-
 export default function FarmerProfilePage() {
   return (
     <Suspense fallback={
@@ -1037,11 +1048,7 @@ export default function FarmerProfilePage() {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600" />
       </div>
     }>
-      <SearchParamsWrapper>
-        {({ farmerId, tabParam }) => (
-          <FarmerProfileContent farmerId={farmerId} tabParam={tabParam} />
-        )}
-      </SearchParamsWrapper>
+      <FarmerProfileContent />
     </Suspense>
   );
 }
