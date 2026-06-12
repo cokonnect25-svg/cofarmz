@@ -7,7 +7,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
 
 import InAppCall from '@/app/components/InAppCall';
-import { trackPageView, trackUserAction } from '@/lib/firebase';
 
 interface BookedDateRange {
   start_date: string;
@@ -105,27 +104,6 @@ function MachineryDetailsContent() {
       checkIfBookingExists();
     }
   }, [mounted, user, machineryId]);
-
-
-  useEffect(() => {
-  if (!mounted || !user?.id || !machineryId || !machinery) return;
-  
-  trackPageView({
-    viewerId: user.id,
-    viewerName: user.name,
-    viewerEmail: user.email,
-    pageType: 'machinery_details',
-    targetId: machineryId,
-    targetName: machinery.name,
-    metadata: {
-      machineryModel: machinery.model,
-      dailyRate: machinery.daily_rate,
-      ownerId: machinery.owner_id,
-      ownerName: ownerName,
-      location: machinery.location,
-    },
-  });
-}, [mounted, user?.id, machineryId, machinery?.name, ownerName]);
 
   // Check if user has a completed booking for this machinery
   const checkIfBookingExists = async () => {
@@ -420,24 +398,10 @@ function MachineryDetailsContent() {
       });
 
       if (response.ok) {
-                    trackUserAction(user.id, 'make_reservation', {
-      pageType: 'machinery_details',
-      targetId: machineryId_,
-      metadata: {
-        machineryName: machineryName,
-        ownerId: ownerId,
-        startDate: startDate,
-        endDate: endDate,
-        totalDays: totalDays,
-        totalPrice: totalPrice,
-        renterPhone: renterPhone,
-      },
-    });
         setShowDatePicker(false);
         await fetchBookedDates();
         setBookingDetails({ totalDays, totalPrice, startDate, endDate });
         setShowBookingSuccess(true);
-
       } else {
         alert('Failed to send booking request. Please try again.');
       }

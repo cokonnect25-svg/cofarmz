@@ -6,7 +6,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { getApiUrl } from '@/lib/api';
-import { trackPageView } from '@/lib/firebase';
 
 const SCROLL_KEY = 'machinery_scrollY';
 const FILTERS_KEY = 'machinery_filters';
@@ -306,29 +305,7 @@ export default function MachineryListPage() {
     }));
   };
 
-  useEffect(() => {
-  if (!mounted || !user?.id) return;
   
-  trackPageView({
-    viewerId: user.id,
-    viewerName: user?.name,
-    viewerEmail: user?.email,
-    pageType: 'machinery_list',
-    targetId: 'list',
-    metadata: {
-      searchQuery: searchQuery || null,
-      activeFilters: {
-        equipmentTypes: filters.equipmentTypes,
-        priceRange: [filters.priceMin, filters.priceMax],
-        distance: filters.distance,
-        startDate: filters.startDate || null,
-        endDate: filters.endDate || null,
-      },
-      sortBy: sortBy,
-      resultCount: sortedMachinery.length,
-    },
-  });
-}, [mounted, user?.id, searchQuery, filters, sortBy, sortedMachinery.length]);
 
   const fetchMachinery = async () => {
     try {
