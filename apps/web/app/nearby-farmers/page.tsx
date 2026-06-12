@@ -8,6 +8,7 @@ import { getApiUrl } from '@/lib/api';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import UserAvatar from '@/app/components/UserAvatar';
+import { trackPageView } from '@/lib/firebase';
 
   const SCROLL_KEY = 'nearbyFarmers_scrollY';
 const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
@@ -144,8 +145,8 @@ const defaultFilters = {
   certTypes:       [] as string[],
 };
 
-  const [filters, setFilters] = useState(defaultFilters);
-  const [visibleCount, setVisibleCount] = useState(50);
+const [filters, setFilters] = useState(defaultFilters);
+const [visibleCount, setVisibleCount] = useState(50);
 const isRestoringRef = useRef(false); 
 const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -398,6 +399,33 @@ const saveStateAndNavigate = (url: string) => {
     }
   }
 };
+
+useEffect(() => {
+  if (!mounted || !user?.id) return;
+  
+  trackPageView({
+    viewerId: user.id,
+    viewerName: user?.name,
+    viewerEmail: user?.email,
+    pageType: 'nearby_farmers',
+    targetId: searchType,
+    metadata: {
+      searchType: searchType,
+      searchQuery: searchQuery || null,
+      filters: {
+        distance: filters.distance,
+        minRating: filters.minRating,
+        crops: filters.crops,
+        equipment: filters.equipment,
+        grades: filters.grades,
+        certTypes: filters.certTypes,
+        wasteOnly: filters.wasteOnly,
+      },
+      resultCount: farmers.length,
+      userLocation: userLocation,
+    },
+  });
+}, [mounted, user?.id, searchType, searchQuery, filters, farmers.length, userLocation]);
 
   const useStoredLocation = async () => {
   // First check if we already have a saved location from session

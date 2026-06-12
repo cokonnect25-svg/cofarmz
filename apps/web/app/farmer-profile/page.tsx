@@ -12,6 +12,7 @@ import {
 import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
 import UserAvatar from '@/app/components/UserAvatar';
+import { trackPageView } from '@/lib/firebase';
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────
 
@@ -317,6 +318,31 @@ function FarmerProfileContent() {
     if (tabParam) initial.add(tabParam);
     return initial;
   });
+
+  useEffect(() => {
+  if (!mounted || !user?.id || !farmerId || !profile) return;
+  
+  // Don't track self-views
+  if (user.id === farmerId) return;
+  
+  trackPageView({
+    viewerId: user.id,
+    viewerName: user.name,
+    viewerEmail: user.email,
+    viewerRole: user.role || 'buyer',
+    pageType: 'farmer_profile',
+    targetId: farmerId,
+    targetName: profile.name,
+    metadata: {
+      farmerRole: profile.role,
+      farmerLocation: profile.location,
+      cropsCount: crops.length,
+      equipmentCount: equipment.length,
+      followersCount: profile.followers_count,
+      isFollowing: isFollowing,
+    },
+  });
+}, [mounted, user?.id, farmerId, profile?.name, isFollowing]);
 
   const toggleSection = (section: string) => {
     setOpenSections(prev => {

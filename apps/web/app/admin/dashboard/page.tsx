@@ -9,11 +9,19 @@ import {
   Tooltip, ResponsiveContainer, BarChart, Bar, Cell,
 } from "recharts";
 
+
+// ── INTERFACES ──
 interface DailyGrowth { date: string; new_users: number; }
 interface RoleCount { role: string; count: number; }
-interface Stats { dailyGrowth: DailyGrowth[]; byRole: RoleCount[]; }
+interface Stats {
+  dailyGrowth: DailyGrowth[];
+  byRole: RoleCount[];
+  cropCount: number;      
+  commodityCount: number;
+}
 interface Announcement { id: string; title: string; body: string; created_at: string; expires_at?: string; }
 
+// ── CHART COMPONENTS (unchanged) ──
 function DailyGrowthChart({ data }: { data: DailyGrowth[] }) {
   if (!data || data.length === 0) {
     return (
@@ -77,12 +85,19 @@ function RoleBreakdownChart({ data }: { data: RoleCount[] }) {
   );
 }
 
+// ── MAIN COMPONENT ──
 export default function AdminDashboard() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
   const [verified, setVerified] = useState<"pending" | "ok" | "denied">("pending");
+
+  // ── NEW: LIVE USER ACTIVITY STATE ──
+  const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [userActivities, setUserActivities] = useState<any[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
 
   // Announcement state
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -92,7 +107,9 @@ export default function AdminDashboard() {
   const [annExpiry, setAnnExpiry] = useState("");
   const [posting, setPosting] = useState(false);
   const [annSuccess, setAnnSuccess] = useState("");
+  
 
+  // ── VERIFY ADMIN ACCESS ──
   useEffect(() => {
     if (loading) return;
     if (!user?.id) { router.replace("/login"); return; }
@@ -109,6 +126,7 @@ export default function AdminDashboard() {
       .catch(() => { setVerified("denied"); router.replace("/home"); });
   }, [user?.id, loading]);
 
+  // ── FETCH STATS & ANNOUNCEMENTS ──
   useEffect(() => {
     if (verified !== "ok") return;
     fetch(getApiUrl(`/api/admin/stats`))
@@ -118,6 +136,29 @@ export default function AdminDashboard() {
       .finally(() => setLoadingStats(false));
     fetchAnnouncements();
   }, [verified]);
+
+  // ── NEW: SUBSCRIBE TO ONLINE USERS ──
+  useEffect(() => {
+    if (verified !== "ok") return;
+    const unsubscribe = getOnlineUsers((users) => {
+      setOnlineUsers(users);
+    });
+    return () => unsubscribe();
+  }, [verified]);
+
+  // ── NEW: FETCH SELECTED USER ACTIVITY ──
+  useEffect(() => {
+    if (!selectedUser) {
+      setUserActivities([]);
+      return;
+    }
+    setActivityLoading(true);
+    const unsubscribe = getUserActivity(selectedUser, (activities) => {
+      setUserActivities(activities);
+      setActivityLoading(false);
+    });
+    return () => unsubscribe();
+  }, [selectedUser]);
 
   const fetchAnnouncements = () => {
     setLoadingAnn(true);
@@ -258,7 +299,6 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          {/* Existing announcements */}
           {announcements.length > 0 && (
             <div className="mt-6 space-y-3">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Active Announcements</p>
@@ -285,12 +325,12 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stat Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {/* Row 1 */}
           {[
             { label: "Total Users", value: totalUsers, icon: "👥", color: "bg-blue-50 text-blue-700" },
             { label: "New Today", value: todayGrowth, icon: "🌱", color: "bg-green-50 text-green-700", delta: growthDelta },
             { label: "Farmers", value: stats?.byRole?.find((r) => r.role === "farmer")?.count ?? 0, icon: "🌾", color: "bg-amber-50 text-amber-700" },
-            { label: "Buyers", value: stats?.byRole?.find((r) => r.role === "buyer")?.count ?? 0, icon: "🛒", color: "bg-purple-50 text-purple-700" },
           ].map((card) => (
             <div key={card.label} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
               <div className="flex items-center justify-between mb-3">
@@ -303,6 +343,21 @@ export default function AdminDashboard() {
                   {card.delta >= 0 ? "▲" : "▼"} {Math.abs(card.delta)} vs yesterday
                 </p>
               )}
+            </div>
+          ))}
+
+          {/* Row 2 */}
+          {[
+            { label: "Buyers", value: stats?.byRole?.find((r) => r.role === "buyer")?.count ?? 0, icon: "🛒", color: "bg-purple-50 text-purple-700" },
+            { label: "Crops", value: stats?.cropCount ?? 0, icon: "🌿", color: "bg-emerald-50 text-emerald-700" },
+            { label: "Commodities", value: stats?.commodityCount ?? 0, icon: "📦", color: "bg-rose-50 text-rose-700" },
+          ].map((card) => (
+            <div key={card.label} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <span className={`text-xs font-black uppercase tracking-wider ${card.color.split(" ")[1]}`}>{card.label}</span>
+                <span className="text-xl">{card.icon}</span>
+              </div>
+              <p className="text-3xl font-black text-gray-900">{loadingStats ? "—" : card.value.toLocaleString()}</p>
             </div>
           ))}
         </div>
@@ -334,6 +389,119 @@ export default function AdminDashboard() {
                 ))}
               </div>
             </>
+          )}
+        </div>
+
+        {/* ── LIVE USER ACTIVITY ── */}
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-lg font-black text-gray-900">👥 Live User Activity</h2>
+              <p className="text-xs text-gray-400 font-semibold mt-0.5">
+                {onlineUsers.length} user{onlineUsers.length !== 1 ? 's' : ''} currently online
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+              </span>
+              <span className="text-xs font-bold text-green-600">LIVE</span>
+            </div>
+          </div>
+
+          {onlineUsers.length === 0 ? (
+            <div className="flex items-center justify-center h-32 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+              <p className="text-gray-400 text-sm font-semibold">No users currently online</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {onlineUsers.map((u) => (
+                <div
+                  key={u.uid}
+                  onClick={() => setSelectedUser(u.uid === selectedUser ? null : u.uid)}
+                  className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all ${
+                    selectedUser === u.uid
+                      ? 'border-green-500 bg-green-50'
+                      : 'border-gray-100 bg-gray-50 hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                    {u.displayName?.[0] || u.email?.[0] || '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-900 truncate">{u.displayName || u.email || 'Unknown'}</p>
+                    <p className="text-xs text-gray-500">{u.email}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-bold px-2 py-0.5 bg-green-100 text-green-700 rounded-full">
+                        ● Online
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        on {u.currentPage || 'unknown page'}
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        via {u.platform || 'web'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-400">
+                      {new Date(u.lastSeen).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">
+                      {u.uid.slice(0, 8)}...
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Selected User Activity Timeline */}
+          {selectedUser && (
+            <div className="mt-6 border-t border-gray-100 pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-black text-gray-900">
+                  Activity Timeline — {onlineUsers.find(u => u.uid === selectedUser)?.displayName || selectedUser.slice(0, 8)}
+                </h3>
+                <button
+                  onClick={() => setSelectedUser(null)}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  ✕ Close
+                </button>
+              </div>
+
+              {activityLoading ? (
+                <div className="h-32 bg-gray-50 rounded-xl animate-pulse" />
+              ) : userActivities.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-8">No activity recorded yet</p>
+              ) : (
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {userActivities.map((activity) => (
+                    <div key={activity.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-gray-900">{activity.action}</p>
+                        {activity.details && Object.keys(activity.details).length > 0 && (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {JSON.stringify(activity.details)}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] text-gray-400">
+                            {new Date(activity.timestamp).toLocaleString('en-IN')}
+                          </span>
+                          <span className="text-[10px] text-gray-400">
+                            on {activity.page}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
 

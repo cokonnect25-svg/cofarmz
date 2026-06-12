@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
 import UserAvatar from '@/app/components/UserAvatar';
+import { trackPageView, trackUserAction } from '@/lib/firebase';
 
 const MapPicker = dynamic(() => import('@/app/components/MapPicker'), { ssr: false });
 
@@ -369,6 +370,7 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
     name: '', email: '', phone: '', location: '', gender: '', age: '',
     latitude: null as number | null, longitude: null as number | null,
   });
+  
   const [profileLocationSuggestions, setProfileLocationSuggestions] = useState<any[]>([]);
   const [profileLocationSearching, setProfileLocationSearching] = useState(false);
   const [profileDetectingLocation, setProfileDetectingLocation] = useState(false);
@@ -401,6 +403,27 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
       setShowAddCropForm(true);
     }
   }, []);
+
+  useEffect(() => {
+  if (!mounted || !user?.id) return;
+  
+  // Track that this user viewed their OWN profile
+  trackPageView({
+    viewerId: user.id,
+    viewerName: user.name,
+    viewerEmail: user.email,
+    viewerRole: userRole,
+    pageType: 'user_profile',
+    targetId: user.id,
+    targetName: user.name,
+    metadata: {
+      page: 'self_profile',
+      cropsCount: farmerCrops.length,
+      equipmentCount: myEquipment.length,
+      bookingsCount: bookings.length,
+    },
+  });
+}, [mounted, user?.id, userRole, farmerCrops.length, myEquipment.length, bookings.length]);
 
   useEffect(() => {
     if (mounted && user?.id) {
