@@ -8,6 +8,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, BarChart, Bar, Cell,
 } from "recharts";
+import { getDatabase, ref, onValue, off } from "firebase/database";
 
 
 // ── INTERFACES ──
@@ -21,7 +22,34 @@ interface Stats {
 }
 interface Announcement { id: string; title: string; body: string; created_at: string; expires_at?: string; }
 
-// ── CHART COMPONENTS (unchanged) ──
+// ── FIREBASE REALTIME HELPERS (moved outside component) ──
+function getOnlineUsers(callback: (users: any[]) => void): () => void {
+  const db = getDatabase();
+  const presenceRef = ref(db, 'presence');
+  const unsubscribe = onValue(presenceRef, (snapshot) => {
+    const users: any[] = [];
+    snapshot.forEach((child) => {
+      users.push({ uid: child.key, ...child.val() });
+    });
+    callback(users);
+  });
+  return () => off(presenceRef, 'value', unsubscribe);
+}
+
+function getUserActivity(userId: string, callback: (activities: any[]) => void): () => void {
+  const db = getDatabase();
+  const activityRef = ref(db, `activity/${userId}`);
+  const unsubscribe = onValue(activityRef, (snapshot) => {
+    const activities: any[] = [];
+    snapshot.forEach((child) => {
+      activities.push({ id: child.key, ...child.val() });
+    });
+    callback(activities.reverse());
+  });
+  return () => off(activityRef, 'value', unsubscribe);
+}
+
+// ── CHART COMPONENTS ──
 function DailyGrowthChart({ data }: { data: DailyGrowth[] }) {
   if (!data || data.length === 0) {
     return (
@@ -93,7 +121,7 @@ export default function AdminDashboard() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [verified, setVerified] = useState<"pending" | "ok" | "denied">("pending");
 
-  // ── NEW: LIVE USER ACTIVITY STATE ──
+  // ── LIVE USER ACTIVITY STATE ──
   const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [userActivities, setUserActivities] = useState<any[]>([]);
@@ -107,7 +135,7 @@ export default function AdminDashboard() {
   const [annExpiry, setAnnExpiry] = useState("");
   const [posting, setPosting] = useState(false);
   const [annSuccess, setAnnSuccess] = useState("");
-  
+
 
   // ── VERIFY ADMIN ACCESS ──
   useEffect(() => {
@@ -137,7 +165,7 @@ export default function AdminDashboard() {
     fetchAnnouncements();
   }, [verified]);
 
-  // ── NEW: SUBSCRIBE TO ONLINE USERS ──
+  // ── SUBSCRIBE TO ONLINE USERS ──
   useEffect(() => {
     if (verified !== "ok") return;
     const unsubscribe = getOnlineUsers((users) => {
@@ -146,7 +174,7 @@ export default function AdminDashboard() {
     return () => unsubscribe();
   }, [verified]);
 
-  // ── NEW: FETCH SELECTED USER ACTIVITY ──
+  // ── FETCH SELECTED USER ACTIVITY ──
   useEffect(() => {
     if (!selectedUser) {
       setUserActivities([]);
@@ -398,7 +426,7 @@ export default function AdminDashboard() {
             <div>
               <h2 className="text-lg font-black text-gray-900">👥 Live User Activity</h2>
               <p className="text-xs text-gray-400 font-semibold mt-0.5">
-                {onlineUsers.length} user{onlineUsers.length !== 1 ? 's' : ''} currently online
+                {onlineUsers.length} user{onlineUsers.length !== 1 ? "s" : ""} currently online
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -422,31 +450,31 @@ export default function AdminDashboard() {
                   onClick={() => setSelectedUser(u.uid === selectedUser ? null : u.uid)}
                   className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all ${
                     selectedUser === u.uid
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-100 bg-gray-50 hover:bg-gray-100'
+                      ? "border-green-500 bg-green-50"
+                      : "border-gray-100 bg-gray-50 hover:bg-gray-100"
                   }`}
                 >
                   <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                    {u.displayName?.[0] || u.email?.[0] || '?'}
+                    {u.displayName?.[0] || u.email?.[0] || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 truncate">{u.displayName || u.email || 'Unknown'}</p>
+                    <p className="text-sm font-bold text-gray-900 truncate">{u.displayName || u.email || "Unknown"}</p>
                     <p className="text-xs text-gray-500">{u.email}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-[10px] font-bold px-2 py-0.5 bg-green-100 text-green-700 rounded-full">
                         ● Online
                       </span>
                       <span className="text-[10px] text-gray-400">
-                        on {u.currentPage || 'unknown page'}
+                        on {u.currentPage || "unknown page"}
                       </span>
                       <span className="text-[10px] text-gray-400">
-                        via {u.platform || 'web'}
+                        via {u.platform || "web"}
                       </span>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-400">
-                      {new Date(u.lastSeen).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(u.lastSeen).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
                     </p>
                     <p className="text-[10px] text-gray-400 mt-0.5">
                       {u.uid.slice(0, 8)}...
@@ -490,7 +518,7 @@ export default function AdminDashboard() {
                         )}
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[10px] text-gray-400">
-                            {new Date(activity.timestamp).toLocaleString('en-IN')}
+                            {new Date(activity.timestamp).toLocaleString("en-IN")}
                           </span>
                           <span className="text-[10px] text-gray-400">
                             on {activity.page}
