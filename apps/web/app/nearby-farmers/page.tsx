@@ -10,9 +10,20 @@ import { Geolocation } from '@capacitor/geolocation';
 import UserAvatar from '@/app/components/UserAvatar';
 import { trackPageView } from '@/lib/firebase';
 
-  const SCROLL_KEY = 'nearbyFarmers_scrollY';
+// ─── SearchParams Wrapper (isolates useSearchParams for Suspense) ────────────
+
+function SearchParamsWrapper({ children }: { children: (params: { rawType: string | null; rawCrops: string | null }) => React.ReactNode }) {
+  const searchParams = useSearchParams();
+  const rawType = searchParams.get('type');
+  const rawCrops = searchParams.get('crops');
+  return <>{children({ rawType, rawCrops })}</>;
+}
+
+// ─── Constants ──────────────────────────────────────────────────────────────────
+
+const SCROLL_KEY = 'nearbyFarmers_scrollY';
 const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
-const TYPE_KEY = 'nearbyFarmers_searchType'; 
+const TYPE_KEY = 'nearbyFarmers_searchType';
 const LOCATION_KEY = 'nearbyFarmers_userLocation';
 
 interface FarmerCrop {
@@ -76,83 +87,76 @@ const CERTIFICATION_TYPES = [
   { value: 'other',          label: 'Other',                                icon: '📜' },
 ];
 
+// ─── Main Content Component (no useSearchParams) ──────────────────────────────
 
-function NearbyFarmersContent() {
+function NearbyFarmersContent({ rawType, rawCrops }: { rawType: string | null; rawCrops: string | null }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { isAuthenticated, loading, user } = useAuth();
-  const [mounted, setMounted]         = useState(false);
-  const [farmers, setFarmers]         = useState<Farmer[]>([]);
+  const [mounted, setMounted] = useState(false);
+  const [farmers, setFarmers] = useState<Farmer[]>([]);
   const [loadingFarmers, setLoadingFarmers] = useState(false);
-  const [showFilter, setShowFilter]   = useState(false);
- const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(() => {
-  // Try to restore from sessionStorage first (instant, no async wait)
-  if (typeof window !== 'undefined') {
-    const saved = sessionStorage.getItem(LOCATION_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.latitude && parsed.longitude) return parsed;
-      } catch {}
+  const [showFilter, setShowFilter] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem(LOCATION_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.latitude && parsed.longitude) return parsed;
+        } catch {}
+      }
     }
-  }
-  return null;
-});
+    return null;
+  });
   const [locationError, setLocationError] = useState<string | null>(null);
 
-const rawType = searchParams.get('type');
-const rawCrops = searchParams.get('crops');
+  // Parse crops from URL query param
+  const urlCropFilters = rawCrops
+    ? rawCrops.split(',').map(c => c.trim()).filter(Boolean)
+    : [];
 
-// Parse crops from URL query param
-const urlCropFilters = rawCrops 
-  ? rawCrops.split(',').map(c => c.trim()).filter(Boolean) 
-  : [];
+  // Check if we're returning from a profile view
+  const savedType = typeof window !== 'undefined'
+    ? sessionStorage.getItem(TYPE_KEY)
+    : null;
 
-// Check if we're returning from a profile view
-const savedType = typeof window !== 'undefined' 
-  ? sessionStorage.getItem(TYPE_KEY) 
-  : null;
+  // PRIORITY: URL param > sessionStorage > default
+  const initialType =
+    rawType === 'buyers'     ? 'buyers'   :
+    rawType === 'wastage'    ? 'wastage'  :
+    rawType === 'supplier'   ? 'supplier' :
+    rawType === 'fpo'        ? 'fpo'      :
+    rawType === 'farmers'    ? 'farmers'  :
+    savedType === 'farmers'  ? 'farmers'  :
+    savedType === 'buyers'   ? 'buyers'   :
+    savedType === 'wastage'  ? 'wastage'  :
+    savedType === 'supplier' ? 'supplier' :
+    savedType === 'fpo'      ? 'fpo'      :
+    'farmers';
 
-// PRIORITY: URL param > sessionStorage > default
-const initialType =
-  rawType === 'buyers'     ? 'buyers'   :
-  rawType === 'wastage'    ? 'wastage'  :
-  rawType === 'supplier'   ? 'supplier' :
-  rawType === 'fpo'        ? 'fpo'      :
-  rawType === 'farmers'    ? 'farmers'  :
-  savedType === 'farmers'  ? 'farmers'  :
-  savedType === 'buyers'   ? 'buyers'   :
-  savedType === 'wastage'  ? 'wastage'  :
-  savedType === 'supplier' ? 'supplier' :
-  savedType === 'fpo'      ? 'fpo'      :
-  'farmers';
-
-const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 'supplier' | 'fpo'>(initialType);
+  const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 'supplier' | 'fpo'>(initialType);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy]           = useState('nearby');
+  const [sortBy, setSortBy] = useState('nearby');
   const [showSortMenu, setShowSortMenu] = useState(false);
 
-const defaultFilters = {
-  distance:        50,
-  minRating:       0,
-  crops:           urlCropFilters,
-  equipment:       [] as string[],
-  enableDistance:  false,
-  yieldDateFrom:   '',
-  yieldDateTo:     '',
-  wasteOnly:       initialType === 'wastage', // <-- AUTO-SET FOR WASTAGE
-  grades:          [] as string[],
-  certTypes:       [] as string[],
-};
+  const defaultFilters = {
+    distance:        50,
+    minRating:       0,
+    crops:           urlCropFilters,
+    equipment:       [] as string[],
+    enableDistance:  false,
+    yieldDateFrom:   '',
+    yieldDateTo:     '',
+    wasteOnly:       initialType === 'wastage',
+    grades:          [] as string[],
+    certTypes:       [] as string[],
+  };
 
-const [filters, setFilters] = useState(defaultFilters);
-const [visibleCount, setVisibleCount] = useState(50);
-const isRestoringRef = useRef(false); 
-const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-const pendingScrollRef = useRef<number | null>(null);
-
-
+  const [filters, setFilters] = useState(defaultFilters);
+  const [visibleCount, setVisibleCount] = useState(50);
+  const isRestoringRef = useRef(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const pendingScrollRef = useRef<number | null>(null);
 
   // Always-current ref so fetch closures never use stale filters
   const filtersRef = useRef(filters);
@@ -161,63 +165,43 @@ const pendingScrollRef = useRef<number | null>(null);
   const today = new Date().toISOString().split('T')[0];
 
   const availableCrops = useMemo(() => {
-  const seen = new Set<string>();
-  farmers.forEach(f => f.crops?.forEach(c => {
-    if (c.crop_name) seen.add(c.crop_name);
-  }));
-  return Array.from(seen).sort();
-}, [farmers]);
+    const seen = new Set<string>();
+    farmers.forEach(f => f.crops?.forEach(c => {
+      if (c.crop_name) seen.add(c.crop_name);
+    }));
+    return Array.from(seen).sort();
+  }, [farmers]);
 
   useEffect(() => {
-  if (isRestoringRef.current) return; // don't reset while restoring
-  setVisibleCount(50);
-}, [searchType, filters, searchQuery]);
+    if (isRestoringRef.current) return;
+    setVisibleCount(50);
+  }, [searchType, filters, searchQuery]);
 
   useEffect(() => { setMounted(true); }, []);
 
   // Restore scroll position when returning to this page
-// REPLACE the existing restore useEffect with this:
-// Restore scroll position when returning to this page
+  useEffect(() => {
+    if (!mounted) return;
 
-// Auto-apply URL crop filters when location is ready
-useEffect(() => {
-  if (!mounted || !isAuthenticated || !userLocation) return;
-  
-  // If crops came from URL, ensure fetch uses them
-  if (urlCropFilters.length > 0) {
-    fetchNearbyFarmers(
-      userLocation.latitude, 
-      userLocation.longitude, 
-      searchType, 
-      { ...filtersRef.current, crops: urlCropFilters }
-    );
-  }
-}, [mounted, isAuthenticated, userLocation, searchType]);
+    const savedVisible = sessionStorage.getItem(VISIBLE_KEY);
+    const savedScroll  = sessionStorage.getItem(SCROLL_KEY);
 
+    sessionStorage.removeItem(VISIBLE_KEY);
+    sessionStorage.removeItem(SCROLL_KEY);
 
-useEffect(() => {
-  if (!mounted) return;
+    // Only remove TYPE_KEY if URL doesn't have one (so we preserve back-nav)
+    if (!rawType) {
+      sessionStorage.removeItem(TYPE_KEY);
+    }
 
-  const savedVisible = sessionStorage.getItem(VISIBLE_KEY);
-  const savedScroll  = sessionStorage.getItem(SCROLL_KEY);
-  const savedType    = sessionStorage.getItem(TYPE_KEY);
-  
-  sessionStorage.removeItem(VISIBLE_KEY);
-  sessionStorage.removeItem(SCROLL_KEY);
-  
-  // Only remove TYPE_KEY if URL doesn't have one (so we preserve back-nav)
-  if (!rawType) {
-    sessionStorage.removeItem(TYPE_KEY);
-  }
-
-  if (savedVisible) {
-    isRestoringRef.current = true;
-    setVisibleCount(parseInt(savedVisible));
-  }
-  if (savedScroll) {
-    pendingScrollRef.current = parseInt(savedScroll);
-  }
-}, [mounted, rawType]); // <-- add rawType dependency
+    if (savedVisible) {
+      isRestoringRef.current = true;
+      setVisibleCount(parseInt(savedVisible));
+    }
+    if (savedScroll) {
+      pendingScrollRef.current = parseInt(savedScroll);
+    }
+  }, [mounted, rawType]);
 
   useEffect(() => {
     if (mounted && !loading && !isAuthenticated) router.push('/login');
@@ -226,6 +210,20 @@ useEffect(() => {
   useEffect(() => {
     if (mounted && isAuthenticated) getUserLocation();
   }, [mounted, isAuthenticated]);
+
+  // Auto-apply URL crop filters when location is ready
+  useEffect(() => {
+    if (!mounted || !isAuthenticated || !userLocation) return;
+
+    if (urlCropFilters.length > 0) {
+      fetchNearbyFarmers(
+        userLocation.latitude,
+        userLocation.longitude,
+        searchType,
+        { ...filtersRef.current, crops: urlCropFilters }
+      );
+    }
+  }, [mounted, isAuthenticated, userLocation, searchType]);
 
   useEffect(() => {
     if (!mounted || !isAuthenticated) return;
@@ -244,30 +242,204 @@ useEffect(() => {
     return () => window.removeEventListener('userLocationUpdated', handler);
   }, [searchType]);
 
+  useEffect(() => {
+    if (userLocation) {
+      sessionStorage.setItem(LOCATION_KEY, JSON.stringify(userLocation));
+    }
+  }, [userLocation]);
+
+  // Restore scroll after farmers load
+  useEffect(() => {
+    if (loadingFarmers) return;
+    if (pendingScrollRef.current === null) return;
+
+    const target = pendingScrollRef.current;
+    pendingScrollRef.current = null;
+    isRestoringRef.current = false;
+
+    const attempts = [50, 150, 350, 600];
+    attempts.forEach(delay => {
+      setTimeout(() => {
+        window.scrollTo({ top: target, behavior: 'instant' });
+      }, delay);
+    });
+  }, [loadingFarmers]);
 
   useEffect(() => {
-  if (userLocation) {
-    sessionStorage.setItem(LOCATION_KEY, JSON.stringify(userLocation));
-  }
-}, [userLocation]);
+    if (!mounted || !user?.id) return;
 
-// ── IN YOUR NAVIGATION (before going to profile) ───────────────────────────
-// Save ALL state including current location
-const saveStateAndNavigate = (url: string) => {
-  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
-  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-  sessionStorage.setItem(TYPE_KEY, searchType);
-  if (userLocation) {
-    sessionStorage.setItem(LOCATION_KEY, JSON.stringify(userLocation));
-  }
-  router.push(url);
-};
+    trackPageView({
+      viewerId: user.id,
+      viewerName: user?.name,
+      viewerEmail: user?.email,
+      pageType: 'nearby_farmers',
+      targetId: searchType,
+      metadata: {
+        searchType: searchType,
+        searchQuery: searchQuery || null,
+        filters: {
+          distance: filters.distance,
+          minRating: filters.minRating,
+          crops: filters.crops,
+          equipment: filters.equipment,
+          grades: filters.grades,
+          certTypes: filters.certTypes,
+          wasteOnly: filters.wasteOnly,
+        },
+        resultCount: farmers.length,
+        userLocation: userLocation,
+      },
+    });
+  }, [mounted, user?.id, searchType, searchQuery, filters, farmers.length, userLocation]);
 
-  
+  // ── location helpers ────────────────────────────────────────────────────────
+  const getUserLocation = async () => {
+    try {
+      setLocationError(null);
+      let position: any;
+      let hasLocation = false;
+
+      if (Capacitor.isNativePlatform()) {
+        try {
+          position = await Geolocation.getCurrentPosition();
+          hasLocation = true;
+        } catch (e) {
+          console.warn('Native geolocation failed:', e instanceof Error ? e.message : e);
+        }
+      } else {
+        try {
+          position = await Promise.race([
+            new Promise((resolve, reject) =>
+              navigator.geolocation.getCurrentPosition(
+                pos => resolve({ coords: { latitude: pos.coords.latitude, longitude: pos.coords.longitude } }),
+                reject,
+                { timeout: 5000, enableHighAccuracy: false }
+              )
+            ),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 6000)),
+          ]);
+          hasLocation = true;
+        } catch (e) {
+          console.warn('Web geolocation failed:', e instanceof Error ? e.message : e);
+        }
+      }
+
+      if (hasLocation && position) {
+        const lat = (position as any).coords?.latitude  ?? (position as any).latitude;
+        const lon = (position as any).coords?.longitude ?? (position as any).longitude;
+        const newLoc = { latitude: lat, longitude: lon };
+        setUserLocation(newLoc);
+        sessionStorage.setItem(LOCATION_KEY, JSON.stringify(newLoc));
+        fetchNearbyFarmers(lat, lon, searchType);
+      } else {
+        const savedLoc = sessionStorage.getItem(LOCATION_KEY);
+        if (!savedLoc) {
+          await useStoredLocation();
+        } else if (userLocation) {
+          fetchNearbyFarmers(userLocation.latitude, userLocation.longitude, searchType);
+        } else {
+          await useStoredLocation();
+        }
+      }
+    } catch {
+      const savedLoc = sessionStorage.getItem(LOCATION_KEY);
+      if (!savedLoc) {
+        await useStoredLocation();
+      } else if (userLocation) {
+        fetchNearbyFarmers(userLocation.latitude, userLocation.longitude, searchType);
+      } else {
+        await useStoredLocation();
+      }
+    }
+  };
+
+  const useStoredLocation = async () => {
+    const savedLoc = sessionStorage.getItem(LOCATION_KEY);
+    if (savedLoc) {
+      try {
+        const parsed = JSON.parse(savedLoc);
+        if (parsed.latitude && parsed.longitude && (parsed.latitude !== 0 || parsed.longitude !== 0)) {
+          setUserLocation(parsed);
+          fetchNearbyFarmers(parsed.latitude, parsed.longitude, searchType);
+          return;
+        }
+      } catch {}
+    }
+
+    if (!user?.id) {
+      fetchNearbyFarmers(0, 0, searchType);
+      return;
+    }
+    try {
+      const res = await fetch(getApiUrl(`/api/farmers/profile?farmerId=${user.id}`), {
+        headers: { 'x-user-id': user.id },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.latitude && data.longitude) {
+          const lat = parseFloat(data.latitude);
+          const lon = parseFloat(data.longitude);
+          if (lat !== 0 || lon !== 0) {
+            const loc = { latitude: lat, longitude: lon };
+            setUserLocation(loc);
+            sessionStorage.setItem(LOCATION_KEY, JSON.stringify(loc));
+            fetchNearbyFarmers(lat, lon, searchType);
+            return;
+          }
+        }
+      }
+    } catch {}
+
+    setUserLocation(null);
+    fetchNearbyFarmers(0, 0, searchType);
+  };
+
+  // ── core fetch ──────────────────────────────────────────────────────────────
+  const fetchNearbyFarmers = async (
+    latitude: number,
+    longitude: number,
+    type: 'farmers' | 'buyers' | 'wastage' | 'supplier' | 'fpo' = 'farmers',
+    overrideFilters?: typeof filters,
+  ) => {
+    const f = overrideFilters ?? filtersRef.current;
+    setLoadingFarmers(true);
+    try {
+      const params = new URLSearchParams();
+      params.append('latitude',  latitude.toString());
+      params.append('longitude', longitude.toString());
+      params.append('type', type);
+      if (user?.id) params.append('currentUserId', user.id);
+      if (f.enableDistance) params.append('distance', f.distance.toString());
+      params.append('minRating', f.minRating.toString());
+      if (f.crops.length     > 0) params.append('crops',     f.crops.join(','));
+      if (f.equipment.length > 0) params.append('equipment', f.equipment.join(','));
+      if (f.yieldDateFrom)        params.append('yieldDateFrom', f.yieldDateFrom);
+      if (f.yieldDateTo)          params.append('yieldDateTo',   f.yieldDateTo);
+      if (f.grades.length    > 0) params.append('grades',    f.grades.join(','));
+      if (f.certTypes.length > 0) params.append('certTypes', f.certTypes.join(','));
+      if (type === 'wastage' || (type === 'buyers' && f.wasteOnly)) {
+        params.append('wasteOnly', 'true');
+      }
+
+      const url = getApiUrl(`/api/nearby-farmers?${params.toString()}`);
+      console.log('Fetching', type, 'from:', url);
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        const txt = await response.text();
+        throw new Error(`HTTP ${response.status}: ${txt}`);
+      }
+      const data = await response.json();
+      setFarmers(Array.isArray(data) ? data : data.farmers || []);
+    } catch (error) {
+      console.error('Error fetching', type + ':', error instanceof Error ? error.message : error);
+      setFarmers([]);
+    } finally {
+      setLoadingFarmers(false);
+    }
+  };
 
   // ── filter helpers ──────────────────────────────────────────────────────────
-  // BUG FIX E: after toggling a chip OFF from the active-filters bar,
-  // immediately re-fetch so results update without requiring a manual Apply.
   const toggleCropFilter = (crop: string, refetch = false) => {
     setFilters(prev => {
       const next = {
@@ -336,214 +508,26 @@ const saveStateAndNavigate = (url: string) => {
     });
   };
 
-  // ── location helpers ────────────────────────────────────────────────────────
- const getUserLocation = async () => {
-  try {
-    setLocationError(null);
-    let position: any;
-    let hasLocation = false;
-
-    if (Capacitor.isNativePlatform()) {
-      try {
-        position = await Geolocation.getCurrentPosition();
-        hasLocation = true;
-      } catch (e) {
-        console.warn('Native geolocation failed:', e instanceof Error ? e.message : e);
-      }
-    } else {
-      try {
-        position = await Promise.race([
-          new Promise((resolve, reject) =>
-            navigator.geolocation.getCurrentPosition(
-              pos => resolve({ coords: { latitude: pos.coords.latitude, longitude: pos.coords.longitude } }),
-              reject,
-              { timeout: 5000, enableHighAccuracy: false }
-            )
-          ),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 6000)),
-        ]);
-        hasLocation = true;
-      } catch (e) {
-        console.warn('Web geolocation failed:', e instanceof Error ? e.message : e);
-      }
-    }
-
-    if (hasLocation && position) {
-      const lat = (position as any).coords?.latitude  ?? (position as any).latitude;
-      const lon = (position as any).coords?.longitude ?? (position as any).longitude;
-      const newLoc = { latitude: lat, longitude: lon };
-      setUserLocation(newLoc);
-      sessionStorage.setItem(LOCATION_KEY, JSON.stringify(newLoc)); // ← persist immediately
-      fetchNearbyFarmers(lat, lon, searchType);
-    } else {
-      // Only fall back to stored profile location if we have NO saved location
-      const savedLoc = sessionStorage.getItem(LOCATION_KEY);
-      if (!savedLoc) {
-        await useStoredLocation();
-      }
-      // If savedLoc exists, state initializer already set it — just fetch with it
-      else if (userLocation) {
-        fetchNearbyFarmers(userLocation.latitude, userLocation.longitude, searchType);
-      } else {
-        await useStoredLocation();
-      }
-    }
-  } catch {
-    const savedLoc = sessionStorage.getItem(LOCATION_KEY);
-    if (!savedLoc) {
-      await useStoredLocation();
-    } else if (userLocation) {
-      fetchNearbyFarmers(userLocation.latitude, userLocation.longitude, searchType);
-    } else {
-      await useStoredLocation();
-    }
-  }
-};
-
-useEffect(() => {
-  if (!mounted || !user?.id) return;
-  
-  trackPageView({
-    viewerId: user.id,
-    viewerName: user?.name,
-    viewerEmail: user?.email,
-    pageType: 'nearby_farmers',
-    targetId: searchType,
-    metadata: {
-      searchType: searchType,
-      searchQuery: searchQuery || null,
-      filters: {
-        distance: filters.distance,
-        minRating: filters.minRating,
-        crops: filters.crops,
-        equipment: filters.equipment,
-        grades: filters.grades,
-        certTypes: filters.certTypes,
-        wasteOnly: filters.wasteOnly,
-      },
-      resultCount: farmers.length,
-      userLocation: userLocation,
-    },
-  });
-}, [mounted, user?.id, searchType, searchQuery, filters, farmers.length, userLocation]);
-
-  const useStoredLocation = async () => {
-  // First check if we already have a saved location from session
-  const savedLoc = sessionStorage.getItem(LOCATION_KEY);
-  if (savedLoc) {
-    try {
-      const parsed = JSON.parse(savedLoc);
-      if (parsed.latitude && parsed.longitude && (parsed.latitude !== 0 || parsed.longitude !== 0)) {
-        setUserLocation(parsed);
-        fetchNearbyFarmers(parsed.latitude, parsed.longitude, searchType);
-        return;
-      }
-    } catch {}
-  }
-
-  // Fall back to profile location from API
-  if (!user?.id) { 
-    fetchNearbyFarmers(0, 0, searchType); 
-    return; 
-  }
-  try {
-    const res = await fetch(getApiUrl(`/api/farmers/profile?farmerId=${user.id}`), {
-      headers: { 'x-user-id': user.id },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.latitude && data.longitude) {
-        const lat = parseFloat(data.latitude);
-        const lon = parseFloat(data.longitude);
-        if (lat !== 0 || lon !== 0) {
-          const loc = { latitude: lat, longitude: lon };
-          setUserLocation(loc);
-          sessionStorage.setItem(LOCATION_KEY, JSON.stringify(loc));
-          fetchNearbyFarmers(lat, lon, searchType);
-          return;
-        }
-      }
-    }
-  } catch {}
-  
-  setUserLocation(null);
-  fetchNearbyFarmers(0, 0, searchType);
-};
-  // ── core fetch ──────────────────────────────────────────────────────────────
-const fetchNearbyFarmers = async (
-  latitude: number,
-  longitude: number,
-  type: 'farmers' | 'buyers' | 'wastage' | 'supplier' | 'fpo' = 'farmers',
-  overrideFilters?: typeof filters,
-) => {
-    // Use explicitly-passed filters first, then the always-current ref
-    const f = overrideFilters ?? filtersRef.current;
-    setLoadingFarmers(true);
-    try {
-      const params = new URLSearchParams();
-      params.append('latitude',  latitude.toString());
-      params.append('longitude', longitude.toString());
-      params.append('type', type);
-      if (user?.id) params.append('currentUserId', user.id);
-      if (f.enableDistance) params.append('distance', f.distance.toString());
-      params.append('minRating', f.minRating.toString());
-      if (f.crops.length     > 0) params.append('crops',     f.crops.join(','));
-      if (f.equipment.length > 0) params.append('equipment', f.equipment.join(','));
-      if (f.yieldDateFrom)        params.append('yieldDateFrom', f.yieldDateFrom);
-      if (f.yieldDateTo)          params.append('yieldDateTo',   f.yieldDateTo);
-      if (f.grades.length    > 0) params.append('grades',    f.grades.join(','));
-      if (f.certTypes.length > 0) params.append('certTypes', f.certTypes.join(','));
-      if (type === 'wastage' || (type === 'buyers' && f.wasteOnly)) {
-        params.append('wasteOnly', 'true');
-      }
-
-      const url = getApiUrl(`/api/nearby-farmers?${params.toString()}`);
-      console.log('Fetching', type, 'from:', url);
-
-      const response = await fetch(url);
-      if (!response.ok) {
-        const txt = await response.text();
-        throw new Error(`HTTP ${response.status}: ${txt}`);
-      }
-      const data = await response.json();
-      setFarmers(Array.isArray(data) ? data : data.farmers || []);
-    } catch (error) {
-      console.error('Error fetching', type + ':', error instanceof Error ? error.message : error);
-      setFarmers([]);
-    } finally {
-      setLoadingFarmers(false);
-    }
+  const handleApplyFilters = () => {
+    sessionStorage.removeItem(SCROLL_KEY);
+    sessionStorage.removeItem(VISIBLE_KEY);
+    sessionStorage.removeItem(TYPE_KEY);
+    const lat = userLocation?.latitude ?? 0;
+    const lon = userLocation?.longitude ?? 0;
+    fetchNearbyFarmers(lat, lon, searchType, filters);
+    setShowFilter(false);
   };
 
-  // Add this NEW useEffect after the farmers state is populated:
-useEffect(() => {
-  if (loadingFarmers) return;                    // still fetching
-  if (pendingScrollRef.current === null) return; // nothing to restore
-
-  const target = pendingScrollRef.current;
-  pendingScrollRef.current = null;
-  isRestoringRef.current = false;
-
-  // Use increasing delays to handle avatar/image paint time
-  const attempts = [50, 150, 350, 600];
-  attempts.forEach(delay => {
-    setTimeout(() => {
-      window.scrollTo({ top: target, behavior: 'instant' });
-    }, delay);
-  });
-}, [loadingFarmers]);
-
-  // BUG FIX F: pass current `filters` state directly so the Apply button
-  // never sends stale values even if filtersRef hasn't flushed yet
-const handleApplyFilters = () => {
-  sessionStorage.removeItem(SCROLL_KEY);
-  sessionStorage.removeItem(VISIBLE_KEY);
-  sessionStorage.removeItem(TYPE_KEY);   // ← ADD THIS
-  const lat = userLocation?.latitude ?? 0;
-  const lon = userLocation?.longitude ?? 0;
-  fetchNearbyFarmers(lat, lon, searchType, filters);
-  setShowFilter(false);
-};
+  // ── Save state before navigation ─────────────────────────────────────────────
+  const saveStateAndNavigate = (url: string) => {
+    sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+    sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+    sessionStorage.setItem(TYPE_KEY, searchType);
+    if (userLocation) {
+      sessionStorage.setItem(LOCATION_KEY, JSON.stringify(userLocation));
+    }
+    router.push(url);
+  };
 
   if (!mounted || loading || !isAuthenticated) {
     return (
@@ -558,7 +542,7 @@ const handleApplyFilters = () => {
 
   return (
     <>
-      <div className="pt-4 text-gray-800 relative min-min-h-[100dvh]" suppressHydrationWarning>
+      <div className="pt-4 text-gray-800 relative min-h-[100dvh]" suppressHydrationWarning>
         <div className="ambient-glow"></div>
 
         {/* Header */}
@@ -572,11 +556,11 @@ const handleApplyFilters = () => {
                 <i className="ph-bold ph-arrow-left text-lg"></i>
               </button>
               <h1 className="text-2xl font-bold text-gray-900">
-{searchType === 'farmers'  ? 'Nearby Farmers'    :
- searchType === 'buyers'   ? 'Nearby Buyers'     :
- searchType === 'wastage'  ? 'Crop Waste Buyers' :
- searchType === 'supplier' ? 'Nearby Suppliers'  :
- searchType === 'fpo'      ? 'Nearby FPOs'       : 'Nearby'}
+                {searchType === 'farmers'  ? 'Nearby Farmers'    :
+                 searchType === 'buyers'   ? 'Nearby Buyers'     :
+                 searchType === 'wastage'  ? 'Crop Waste Buyers' :
+                 searchType === 'supplier' ? 'Nearby Suppliers'  :
+                 searchType === 'fpo'      ? 'Nearby FPOs'       : 'Nearby'}
               </h1>
             </div>
             <button
@@ -588,37 +572,36 @@ const handleApplyFilters = () => {
           </div>
 
           {/* Tab toggle */}
-<div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar pb-1">
-  {([
-    { key: 'farmers',  label: 'Farmers',   emoji: '🌾', active: 'bg-brand-700'  },
-    { key: 'buyers',   label: 'Buyers',    emoji: '🛒', active: 'bg-brand-700'  },
-    { key: 'wastage',  label: 'Wastage',   emoji: '♻️', active: 'bg-amber-600'  },
-    { key: 'supplier', label: 'Suppliers', emoji: '🏭', active: 'bg-purple-600' },
-    { key: 'fpo',      label: 'FPOs',      emoji: '🏢', active: 'bg-teal-600'   },
-  ] as const).map(tab => (
-    <button
-      key={tab.key}
-onClick={() => {
-  setSearchType(tab.key as any);
-  setSortBy('nearby');
-  sessionStorage.removeItem(SCROLL_KEY);
-  sessionStorage.removeItem(VISIBLE_KEY);
-  // Only remove TYPE_KEY if we're switching tabs manually (not from URL)
-  if (!rawType) {
-    sessionStorage.removeItem(TYPE_KEY);
-  }
-}}
-      className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap flex-shrink-0
-        ${searchType === tab.key
-          ? `${tab.active} text-white shadow-md`
-          : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'
-        }`}
-    >
-      <span>{tab.emoji}</span>
-      {tab.label}
-    </button>
-  ))}
-</div>
+          <div className="flex gap-2 mb-4 overflow-x-auto hide-scrollbar pb-1">
+            {([
+              { key: 'farmers',  label: 'Farmers',   emoji: '🌾', active: 'bg-brand-700'  },
+              { key: 'buyers',   label: 'Buyers',    emoji: '🛒', active: 'bg-brand-700'  },
+              { key: 'wastage',  label: 'Wastage',   emoji: '♻️', active: 'bg-amber-600'  },
+              { key: 'supplier', label: 'Suppliers', emoji: '🏭', active: 'bg-purple-600' },
+              { key: 'fpo',      label: 'FPOs',      emoji: '🏢', active: 'bg-teal-600'   },
+            ] as const).map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => {
+                  setSearchType(tab.key as any);
+                  setSortBy('nearby');
+                  sessionStorage.removeItem(SCROLL_KEY);
+                  sessionStorage.removeItem(VISIBLE_KEY);
+                  if (!rawType) {
+                    sessionStorage.removeItem(TYPE_KEY);
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap flex-shrink-0
+                  ${searchType === tab.key
+                    ? `${tab.active} text-white shadow-md`
+                    : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'
+                  }`}
+              >
+                <span>{tab.emoji}</span>
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
           {/* Search */}
           <div className="relative mb-4">
@@ -699,42 +682,41 @@ onClick={() => {
               )}
 
               {/* Crops */}
-// REPLACE in the filter modal crops section:
-<div className="mb-8">
-  <label className="block text-sm font-bold text-gray-900 mb-3">
-    Crops (select any)
-    {availableCrops.length > 0 && (
-      <span className="ml-2 text-xs font-normal text-gray-400">
-        {availableCrops.length} available
-      </span>
-    )}
-  </label>
+              <div className="mb-8">
+                <label className="block text-sm font-bold text-gray-900 mb-3">
+                  Crops (select any)
+                  {availableCrops.length > 0 && (
+                    <span className="ml-2 text-xs font-normal text-gray-400">
+                      {availableCrops.length} available
+                    </span>
+                  )}
+                </label>
 
-  {availableCrops.length === 0 ? (
-    <p className="text-xs text-gray-400 italic">
-      No crops found — load farmers first
-    </p>
-  ) : (
-    <div className="flex flex-wrap gap-2">
-      {availableCrops.map(crop => (
-        <button
-          key={crop}
-          onClick={() => toggleCropFilter(crop)}
-          className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-            filters.crops.includes(crop)
-              ? 'bg-brand-700 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          {crop}
-        </button>
-      ))}
-    </div>
-  )}
-</div>
+                {availableCrops.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">
+                    No crops found — load farmers first
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {availableCrops.map(crop => (
+                      <button
+                        key={crop}
+                        onClick={() => toggleCropFilter(crop)}
+                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                          filters.crops.includes(crop)
+                            ? 'bg-brand-700 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {crop}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Grade */}
-              {(searchType === 'farmers' || searchType === 'buyers'|| searchType === 'fpo') && (
+              {(searchType === 'farmers' || searchType === 'buyers' || searchType === 'fpo') && (
                 <div className="mb-8">
                   <label className="block text-sm font-bold text-gray-900 mb-3">
                     Crop Grade <span className="text-xs text-gray-400 font-normal">(select any)</span>
@@ -750,7 +732,7 @@ onClick={() => {
               )}
 
               {/* Certification */}
-              {searchType === 'farmers' || searchType === 'buyers'|| searchType === 'fpo' && (
+              {(searchType === 'farmers' || searchType === 'buyers' || searchType === 'fpo') && (
                 <div className="mb-8">
                   <label className="block text-sm font-bold text-gray-900 mb-3">
                     Certification Type <span className="text-xs text-gray-400 font-normal">(select any)</span>
@@ -784,7 +766,7 @@ onClick={() => {
           </div>
         )}
 
-        {/* Active filter chips — BUG FIX E: pass refetch=true so removing a chip immediately re-fetches */}
+        {/* Active filter chips */}
         {(filters.crops.length > 0 || filters.equipment.length > 0 || filters.grades.length > 0 || filters.certTypes.length > 0) && (
           <section className="px-6 mb-4 relative z-10">
             <div className="flex flex-wrap gap-2">
@@ -847,12 +829,12 @@ onClick={() => {
         {/* Results header */}
         <section className="px-6 mb-4 relative z-10 flex items-center justify-between">
           <p className="text-sm font-medium text-gray-500">
-{loadingFarmers ? 'Searching...' : `Found ${farmers.length} ${
-  searchType === 'farmers'  ? 'farmer'       :
-  searchType === 'wastage'  ? 'wastage buyer':
-  searchType === 'supplier' ? 'supplier'     :
-  searchType === 'fpo'      ? 'FPO'          : 'buyer'
-}${farmers.length !== 1 ? 's' : ''}`}
+            {loadingFarmers ? 'Searching...' : `Found ${farmers.length} ${
+              searchType === 'farmers'  ? 'farmer'       :
+              searchType === 'wastage'  ? 'wastage buyer':
+              searchType === 'supplier' ? 'supplier'     :
+              searchType === 'fpo'      ? 'FPO'          : 'buyer'
+            }${farmers.length !== 1 ? 's' : ''}`}
           </p>
           <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-900 shadow-soft font-medium text-sm" onClick={() => setShowSortMenu(true)}>
             <i className="ph-bold ph-funnel text-base"></i>
@@ -869,22 +851,18 @@ onClick={() => {
             </div>
           ) : (() => {
             const filteredFarmers = farmers
-                .filter(farmer => {
-                  if (!searchQuery.trim()) return true;
-
-                  // Split by comma, trim, drop empty parts
-                  const terms = searchQuery
-                    .split(',')
-                    .map(t => t.trim().toLowerCase())
-                    .filter(Boolean);
-
-                  // Every term must match at least one field (AND logic across terms)
-                  return terms.every(term =>
-                    farmer.name?.toLowerCase().includes(term) ||
-                    farmer.location?.toLowerCase().includes(term) ||
-                    farmer.crops?.some(c => c.crop_name?.toLowerCase().includes(term))
-                  );
-                })
+              .filter(farmer => {
+                if (!searchQuery.trim()) return true;
+                const terms = searchQuery
+                  .split(',')
+                  .map(t => t.trim().toLowerCase())
+                  .filter(Boolean);
+                return terms.every(term =>
+                  farmer.name?.toLowerCase().includes(term) ||
+                  farmer.location?.toLowerCase().includes(term) ||
+                  farmer.crops?.some(c => c.crop_name?.toLowerCase().includes(term))
+                );
+              })
               .sort((a, b) => {
                 if (sortBy === 'nearby') {
                   const ad = (!a.distance || a.distance >= 9999) ? 999999 : a.distance;
@@ -905,42 +883,37 @@ onClick={() => {
                 <i className="ph-bold ph-magnifying-glass text-4xl text-gray-300 mb-3 block"></i>
                 <p className="text-gray-500 font-medium">
                   {(() => {
-  const label =
-    searchType === 'farmers'  ? 'farmers'       :
-    searchType === 'wastage'  ? 'wastage buyers' :
-    searchType === 'supplier' ? 'suppliers'      :
-    searchType === 'fpo'      ? 'FPOs'           : 'buyers';
-  return searchQuery
-    ? `No ${label} found matching "${searchQuery}"`
-    : `No ${label} found with selected filters`;
-})()}
+                    const label =
+                      searchType === 'farmers'  ? 'farmers'       :
+                      searchType === 'wastage'  ? 'wastage buyers' :
+                      searchType === 'supplier' ? 'suppliers'      :
+                      searchType === 'fpo'      ? 'FPOs'           : 'buyers';
+                    return searchQuery
+                      ? `No ${label} found matching "${searchQuery}"`
+                      : `No ${label} found with selected filters`;
+                  })()}
                 </p>
               </div>
             ) : (
               <>
                 {filteredFarmers.slice(0, visibleCount).map(farmer => (
-                  <div key={farmer.id} className="bg-white rounded-[24px] p-5 shadow-soft hover:shadow-lg transition-shadow cursor-pointer active:scale-[0.98]" onClick={() => {
-sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
-sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-sessionStorage.setItem(TYPE_KEY, searchType);   // ← ADD THIS
-router.push(`/farmer-profile?id=${farmer.id}`);
-}}>
+                  <div key={farmer.id} className="bg-white rounded-[24px] p-5 shadow-soft hover:shadow-lg transition-shadow cursor-pointer active:scale-[0.98]" onClick={() => saveStateAndNavigate(`/farmer-profile?id=${farmer.id}`)}>
 
                     {/* Header row */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3 flex-1">
                         <UserAvatar image={farmer.image} name={farmer.name} size={48} className="rounded-full" />
-<div className="flex-1 min-w-0 overflow-hidden">
-  <h3
-    className="font-bold text-gray-900 leading-snug break-words overflow-hidden"
-    style={{
-      display: '-webkit-box',
-      WebkitLineClamp: 2,
-      WebkitBoxOrient: 'vertical',
-    }}
-  >
-    {farmer.name}
-  </h3>
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <h3
+                            className="font-bold text-gray-900 leading-snug break-words overflow-hidden"
+                            style={{
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                            }}
+                          >
+                            {farmer.name}
+                          </h3>
                           <p className="text-xs text-gray-500 flex items-center gap-1">
                             <i className="ph-fill ph-map-pin text-brand-600"></i>
                             {farmer.distance >= 9999
@@ -953,17 +926,17 @@ router.push(`/farmer-profile?id=${farmer.id}`);
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-  searchType === 'farmers'  ? 'bg-green-100 text-green-700'  :
-  searchType === 'wastage'  ? 'bg-amber-100 text-amber-700'  :
-  searchType === 'supplier' ? 'bg-purple-100 text-purple-700':
-  searchType === 'fpo'      ? 'bg-teal-100 text-teal-700'    :
-  'bg-blue-100 text-blue-700'}`}>
-  {searchType === 'farmers'  ? '🌾 Farmer'        :
-   searchType === 'wastage'  ? '♻️ Wastage Buyer' :
-   searchType === 'supplier' ? '🏭 Supplier'      :
-   searchType === 'fpo'      ? '🏢 FPO'           :
-   '🛒 Buyer'}
-</span>
+                          searchType === 'farmers'  ? 'bg-green-100 text-green-700'  :
+                          searchType === 'wastage'  ? 'bg-amber-100 text-amber-700'  :
+                          searchType === 'supplier' ? 'bg-purple-100 text-purple-700':
+                          searchType === 'fpo'      ? 'bg-teal-100 text-teal-700'    :
+                          'bg-blue-100 text-blue-700'}`}>
+                          {searchType === 'farmers'  ? '🌾 Farmer'        :
+                           searchType === 'wastage'  ? '♻️ Wastage Buyer' :
+                           searchType === 'supplier' ? '🏭 Supplier'      :
+                           searchType === 'fpo'      ? '🏢 FPO'           :
+                           '🛒 Buyer'}
+                        </span>
                         {farmer.rating && (
                           <div className="flex items-center gap-1 bg-amber-50 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
                             <i className="ph-fill ph-star text-amber-500 text-sm"></i>
@@ -975,25 +948,23 @@ router.push(`/farmer-profile?id=${farmer.id}`);
 
                     {/* Followers */}
                     <div className="flex gap-3 mb-4">
-                      <button // e.g. Crops button
-onClick={e => {
-  e.stopPropagation();
-  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
-  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-  sessionStorage.setItem(TYPE_KEY, searchType);  
-  router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
-}} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=followers`);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95"
+                      >
                         <i className="ph-bold ph-user-circle text-brand-600 text-sm"></i>
                         <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
                       </button>
-                      <button // e.g. Crops button
-onClick={e => {
-  e.stopPropagation();
-  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
-  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-  sessionStorage.setItem(TYPE_KEY, searchType);  
-  router.push(`/farmer-profile?id=${farmer.id}&tab=following`);
-}} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=following`);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95"
+                      >
                         <i className="ph-bold ph-user-check text-blue-600 text-sm"></i>
                         <span className="text-xs font-bold text-gray-900">{farmer.following_count || 0} Following</span>
                       </button>
@@ -1008,11 +979,11 @@ onClick={e => {
                         <div className="flex flex-wrap gap-1.5 mb-3">
                           {displayCrops.slice(0, 5).map((crop, i) => (
                             <span key={i} className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-  searchType === 'farmers'  ? 'bg-green-100 text-green-800'  :
-  searchType === 'wastage'  ? 'bg-amber-100 text-amber-800'  :
-  searchType === 'supplier' ? 'bg-purple-100 text-purple-800':
-  searchType === 'fpo'      ? 'bg-teal-100 text-teal-800'    :
-  'bg-orange-100 text-orange-800'}`}>
+                              searchType === 'farmers'  ? 'bg-green-100 text-green-800'  :
+                              searchType === 'wastage'  ? 'bg-amber-100 text-amber-800'  :
+                              searchType === 'supplier' ? 'bg-purple-100 text-purple-800':
+                              searchType === 'fpo'      ? 'bg-teal-100 text-teal-800'    :
+                              'bg-orange-100 text-orange-800'}`}>
                               {searchType === 'farmers'  ? '🌾' :
                                searchType === 'wastage'  ? '♻️' :
                                searchType === 'supplier' ? '🏭' : '🛒'} {crop.crop_name}
@@ -1034,101 +1005,92 @@ onClick={e => {
                     <div className="flex gap-3 mb-4">
                       {searchType === 'farmers' ? (
                         <>
-                          <button // e.g. Crops button
-onClick={e => {
-  e.stopPropagation();
-  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
-  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-  sessionStorage.setItem(TYPE_KEY, searchType);
-  router.push(`/farmer-profile?id=${farmer.id}&tab=crops`);
-}} className="flex items-center gap-1.5 px-3 py-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors active:scale-95">
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=crops`);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors active:scale-95"
+                          >
                             <i className="ph-bold ph-plant text-green-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.crops_count || 0} Crops</span>
                           </button>
-                          <button // e.g. Crops button
-onClick={e => {
-  e.stopPropagation();
-  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
-  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-  sessionStorage.setItem(TYPE_KEY, searchType);
-  router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`);
-}} className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors active:scale-95">
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=equipment`);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors active:scale-95"
+                          >
                             <i className="ph-bold ph-wrench text-blue-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Equipment</span>
                           </button>
                         </>
                       ) : searchType === 'supplier' ? (
                         <>
-                          <button // e.g. Crops button
-onClick={e => {
-  e.stopPropagation();
-  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
-  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-  sessionStorage.setItem(TYPE_KEY, searchType);
-  router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`);
-}} className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95">
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=equipment`);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95"
+                          >
                             <i className="ph-bold ph-package text-purple-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Products</span>
                           </button>
-                          <button // e.g. Crops button
-onClick={e => {
-  e.stopPropagation();
-  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
-  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-  sessionStorage.setItem(TYPE_KEY, searchType);
-  router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
-}} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=followers`);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95"
+                          >
                             <i className="ph-bold ph-users text-gray-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
                           </button>
                         </>
-                      ) :  searchType === 'fpo' ? (
-  <>
-    <button // e.g. Crops button
-onClick={e => {
-  e.stopPropagation();
-  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
-  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-  sessionStorage.setItem(TYPE_KEY, searchType);  
-  router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`);
-}}
-      className="flex items-center gap-1.5 px-3 py-2 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors active:scale-95">
-      <i className="ph-bold ph-package text-teal-600 text-sm"></i>
-      <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Equipment</span>
-    </button>
-    <button // e.g. Crops button
-onClick={e => {
-  e.stopPropagation();
-  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
-  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-  sessionStorage.setItem(TYPE_KEY, searchType);  
-  router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
-}}
-      className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
-      <i className="ph-bold ph-users text-gray-600 text-sm"></i>
-      <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
-    </button>
-  </>) :(
+                      ) : searchType === 'fpo' ? (
                         <>
-                          <button // e.g. Crops button
-onClick={e => {
-  e.stopPropagation();
-  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
-  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-  sessionStorage.setItem(TYPE_KEY, searchType);  
-  router.push(`/farmer-profile?id=${farmer.id}&tab=crops`);
-}} className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors active:scale-95">
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=equipment`);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors active:scale-95"
+                          >
+                            <i className="ph-bold ph-package text-teal-600 text-sm"></i>
+                            <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Equipment</span>
+                          </button>
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=followers`);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95"
+                          >
+                            <i className="ph-bold ph-users text-gray-600 text-sm"></i>
+                            <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=crops`);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors active:scale-95"
+                          >
                             <i className="ph-bold ph-shopping-bag text-orange-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.crops_count || 0} Buying Interests</span>
                           </button>
-                          <button // e.g. Crops button
-onClick={e => {
-  e.stopPropagation();
-  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
-  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-  sessionStorage.setItem(TYPE_KEY, searchType);  
-  router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
-}} className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95">
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=followers`);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95"
+                          >
                             <i className="ph-bold ph-users text-purple-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
                           </button>
@@ -1177,6 +1139,8 @@ onClick={e => {
   );
 }
 
+// ─── Page Export (properly wrapped in Suspense) ────────────────────────────────
+
 export default function NearbyFarmersPage() {
   return (
     <Suspense fallback={
@@ -1187,7 +1151,11 @@ export default function NearbyFarmersPage() {
         </div>
       </div>
     }>
-      <NearbyFarmersContent />
+      <SearchParamsWrapper>
+        {({ rawType, rawCrops }) => (
+          <NearbyFarmersContent rawType={rawType} rawCrops={rawCrops} />
+        )}
+      </SearchParamsWrapper>
     </Suspense>
   );
 }
