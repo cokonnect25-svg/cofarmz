@@ -123,7 +123,141 @@ interface Reservation {
   machinery_location?: string;
 }
 
+function getRealThumbnail(url?: string | null) {
+  if (!url) return '';
+  return url.includes('via.placeholder.com') ? '' : url;
+}
+
 // ── Certificate uploader sub-component ───────────────────────
+function isMostlyDarkFrame(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext('2d');
+  if (!ctx || !canvas.width || !canvas.height) return true;
+
+  const width = Math.min(canvas.width, 80);
+  const height = Math.min(canvas.height, 120);
+  const sample = ctx.getImageData(0, 0, width, height).data;
+  let totalBrightness = 0;
+
+  for (let i = 0; i < sample.length; i += 4) {
+    totalBrightness += (sample[i] + sample[i + 1] + sample[i + 2]) / 3;
+  }
+
+  return totalBrightness / (sample.length / 4) < 18;
+}
+
+function ReelThumbnail({
+  reel,
+  onClick,
+}: {
+  reel: { id: string; video_url: string; thumbnail_url?: string | null; caption?: string };
+  onClick: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const storedThumbnail = getRealThumbnail(reel.thumbnail_url);
+  const [poster, setPoster] = useState(storedThumbnail);
+  const [showVideoFallback, setShowVideoFallback] = useState(true);
+
+  useEffect(() => {
+    setPoster(getRealThumbnail(reel.thumbnail_url));
+    setShowVideoFallback(true);
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    let captured = false;
+    let seekIndex = 0;
+    const seekPoints = [1.2, 0.5, 2.2, 0.1];
+
+    const captureFrame = () => {
+      if (captured || !video.videoWidth || !video.videoHeight) return;
+
+      try {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        if (isMostlyDarkFrame(canvas) && seekIndex < seekPoints.length - 1) {
+          seekIndex += 1;
+          video.currentTime = Math.min(seekPoints[seekIndex], Math.max(video.duration - 0.1, 0.1));
+          return;
+        }
+
+        captured = true;
+        setPoster(canvas.toDataURL('image/jpeg', 0.78));
+        setShowVideoFallback(false);
+      } catch {
+        setPoster('');
+        setShowVideoFallback(true);
+      }
+    };
+
+    const seekForPreview = () => {
+      try {
+        const preferredTime = Number.isFinite(video.duration) && video.duration > 1 ? seekPoints[0] : 0.1;
+        const seekTime = Math.min(preferredTime, Math.max(video.duration - 0.1, 0.1));
+        video.currentTime = seekTime;
+      } catch {
+        captureFrame();
+      }
+    };
+
+    video.addEventListener('loadedmetadata', seekForPreview);
+    video.addEventListener('seeked', captureFrame);
+    video.load();
+
+    if (video.readyState >= 1) {
+      seekForPreview();
+    }
+
+    return () => {
+      video.removeEventListener('loadedmetadata', seekForPreview);
+      video.removeEventListener('seeked', captureFrame);
+    };
+  }, [reel.id, reel.video_url, reel.thumbnail_url]);
+
+  return (
+    <div
+      className="relative aspect-[9/16] bg-gray-200 rounded-lg overflow-hidden cursor-pointer group"
+      onClick={onClick}
+    >
+      <canvas ref={canvasRef} className="hidden" />
+      <video
+        ref={videoRef}
+        src={reel.video_url}
+        className={showVideoFallback ? 'w-full h-full object-cover' : 'hidden'}
+        muted
+        playsInline
+        preload="auto"
+      />
+      {poster ? (
+        <img
+          src={poster}
+          alt={reel.caption || 'Farm tale'}
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={() => {
+            setPoster('');
+            setShowVideoFallback(true);
+          }}
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-300 flex items-center justify-center">
+          <i className="ph-fill ph-video-camera text-3xl text-gray-400"></i>
+        </div>
+      )}
+      <div className="absolute inset-0 bg-black/10"></div>
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="w-9 h-9 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
+          <i className="ph-fill ph-play text-white text-lg ml-0.5"></i>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface CertUploaderProps {
   value: string;
   onChange: (url: string) => void;
@@ -1349,9 +1483,26 @@ const fetchFollowersCounts = async () => {
             {loadingReels ? (<div className="flex justify-center py-12"><div className="w-10 h-10 rounded-full border-4 border-green-600 border-t-transparent animate-spin"></div></div>)
               : myReels.length === 0 ? (<div className="text-center py-12"><p className="text-gray-500 text-sm mb-3">No tales yet</p><button onClick={() => router.push('/my-reels')} className="text-green-600 text-sm font-semibold hover:underline">Create your first tale</button></div>)
               : (<div className="grid grid-cols-3 gap-2">{myReels.map(reel => (
-                <div key={reel.id} className="relative aspect-[9/16] bg-gray-200 rounded-lg overflow-hidden cursor-pointer" onClick={() => router.push(`/reels?reelId=${reel.id}`)}>
-                  <video src={reel.video_url} className="w-full h-full object-cover" muted playsInline />
-                  <div className="absolute inset-0 bg-black/10"></div>
+                <div key={reel.id} className="relative group">
+                  <ReelThumbnail
+                    reel={reel}
+                    onClick={() => router.push(`/reels?reelId=${reel.id}&userId=${user.id}`)}
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteReel(reel.id);
+                    }}
+                    disabled={deletingReelId === reel.id}
+                    className="absolute top-2 right-2 w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition disabled:opacity-50"
+                    title="Delete tale"
+                  >
+                    {deletingReelId === reel.id ? (
+                      <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               ))}</div>)}
           </div>

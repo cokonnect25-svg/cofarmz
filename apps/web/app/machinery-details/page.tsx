@@ -372,6 +372,28 @@ function MachineryDetailsContent() {
   const totalDays = calculateDays(startDate, endDate);
   const totalPrice = totalDays * dailyRate;
 
+  const trackOwnerCall = (sourceName: string) => {
+    fetch(getApiUrl('/api/analytics'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventType: 'call_contact',
+        userId: user?.id || null,
+        userName: user?.name || null,
+        userEmail: user?.email || null,
+        pagePath: `/machinery-details?id=${machineryId_}`,
+        entityType: 'user',
+        entityId: ownerId,
+        entityName: ownerProfile?.name || ownerName,
+        metadata: {
+          source: sourceName,
+          machinery_id: machineryId_,
+          machinery_name: machineryName,
+        },
+      }),
+    }).catch(() => {});
+  };
+
   const handleReserve = async () => {
     if (!user) return;
 
@@ -853,6 +875,7 @@ function MachineryDetailsContent() {
                     e.stopPropagation();
                     const phone = machinery?.contact_phone || ownerProfile?.phone;
                     if (phone) {
+                      trackOwnerCall('machinery_details');
                       window.location.href = `tel:${phone}`;
                     } else {
                       alert('Phone number not available for this equipment.');
@@ -1564,6 +1587,7 @@ onClick={() => {
                   {ownerProfile?.phone && (
                     <a
                       href={`tel:${ownerProfile.phone}`}
+                      onClick={() => trackOwnerCall('booking_success')}
                       className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center shadow-md"
                     >
                       <i className="ph-bold ph-phone text-white text-lg"></i>

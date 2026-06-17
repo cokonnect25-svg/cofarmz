@@ -6,8 +6,15 @@ const ONLINE_THRESHOLD_MS = 2 * 60 * 1000;
 
 export async function DELETE(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { userId, otherUserId } = body;
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+
+    const userId = req.nextUrl.searchParams.get('userId') || req.headers.get('x-user-id') || body.userId;
+    const otherUserId = req.nextUrl.searchParams.get('otherUserId') || body.otherUserId;
 
     if (!userId || !otherUserId) {
       return NextResponse.json({ error: 'Missing userId or otherUserId' }, { status: 400 });

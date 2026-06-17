@@ -4,6 +4,61 @@ import { NextRequest, NextResponse } from "next/server";
 
 type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'location';
 
+async function recordMessageContact(message: any) {
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS app_events (
+        id BIGSERIAL PRIMARY KEY,
+        event_type TEXT NOT NULL,
+        user_id TEXT,
+        user_name TEXT,
+        user_email TEXT,
+        page_path TEXT,
+        entity_type TEXT,
+        entity_id TEXT,
+        entity_name TEXT,
+        metadata JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+
+    const users = await sql`
+      SELECT id, name, email
+      FROM "user"
+      WHERE id IN (${message.sender_id}, ${message.receiver_id})
+    `;
+    const sender = users.find((u: any) => u.id === message.sender_id);
+    const receiver = users.find((u: any) => u.id === message.receiver_id);
+
+    await sql`
+      INSERT INTO app_events (
+        event_type, user_id, user_name, user_email, page_path,
+        entity_type, entity_id, entity_name, metadata
+      )
+      VALUES (
+        'message_contact',
+        ${message.sender_id},
+        ${sender?.name || null},
+        ${sender?.email || null},
+        '/messages',
+        'user',
+        ${message.receiver_id},
+        ${receiver?.name || null},
+        ${sql.json({
+          receiver_id: message.receiver_id,
+          receiver_name: receiver?.name || null,
+          receiver_email: receiver?.email || null,
+          machinery_id: message.machinery_id || null,
+          message_id: message.id,
+          message_type: message.message_type,
+        })}
+      )
+    `;
+  } catch (error) {
+    console.error("Failed to record message contact analytics:", error);
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -85,6 +140,7 @@ export async function POST(request: Request) {
       )
       RETURNING *
     `;
+    await recordMessageContact(result[0]);
     return NextResponse.json(result[0]);
   } catch (error: any) {
     console.error('Error creating message:', error);
@@ -96,8 +152,15 @@ export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const messageId = searchParams.get('id');
-    const userId = searchParams.get('userId');
-    const otherUserId = searchParams.get('otherUserId');
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+
+    const userId = searchParams.get('userId') || req.headers.get('x-user-id') || body.userId;
+    const otherUserId = searchParams.get('otherUserId') || body.otherUserId;
 
     if (!messageId && userId && otherUserId) {
       await sql`

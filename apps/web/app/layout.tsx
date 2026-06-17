@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePathname } from "next/navigation";
 import AdSplash from "./components/AdSplash";
 import { useHeartbeat } from '@/hooks/useHeartbeat';
+import { getApiUrl } from "@/lib/api";
 
 const TOP_NAV_H = 64;
 const BOTTOM_NAV_H = 60;
@@ -35,6 +36,35 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   }, []);
 
    useHeartbeat(user?.id);
+
+  useEffect(() => {
+    if (!pathname) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const pagePath = `${pathname}${window.location.search}`;
+    const isMachineryView = pathname === "/machinery-details";
+    const isNearbyView = pathname === "/nearby-farmers";
+    const isProfileView = pathname === "/farmer-profile" || pathname === "/user-profile";
+
+    fetch(getApiUrl("/api/analytics"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        eventType: isMachineryView ? "machinery_view" : isNearbyView ? "nearby_view" : isProfileView ? "profile_view" : "page_view",
+        userId: user?.id || null,
+        userName: user?.name || null,
+        userEmail: user?.email || null,
+        pagePath,
+        entityType: isMachineryView ? "machinery" : isProfileView ? "profile" : isNearbyView ? "nearby" : null,
+        entityId: params.get("id") || (pathname === "/user-profile" ? user?.id : null),
+        metadata: {
+          source: params.get("source"),
+          type: params.get("type"),
+          title: document.title,
+        },
+      }),
+    }).catch(() => {});
+  }, [pathname, user?.id]);
 
   const hideBottomNav = pathname?.startsWith("/chat");
   const showBottomNav = !!user && !hideBottomNav;

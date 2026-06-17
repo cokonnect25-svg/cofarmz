@@ -197,6 +197,7 @@ CREATE TABLE IF NOT EXISTS reels (
   video_url TEXT NOT NULL,
   caption TEXT,
   thumbnail_url TEXT,
+  views INTEGER DEFAULT 0,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -218,6 +219,14 @@ CREATE TABLE IF NOT EXISTS reel_comments (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Reel Views table (unique logged-in profile views)
+CREATE TABLE IF NOT EXISTS reel_views (
+  id BIGSERIAL PRIMARY KEY,
+  reel_id TEXT NOT NULL REFERENCES reels(id) ON DELETE CASCADE,
+  user_id TEXT REFERENCES "user"(id) ON DELETE CASCADE,
+  viewed_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_user_email ON "user"(email);
 CREATE INDEX IF NOT EXISTS idx_user_role_id ON "user"(role_id);
@@ -228,6 +237,8 @@ CREATE INDEX IF NOT EXISTS idx_reservations_machinery ON reservations(machinery_
 CREATE INDEX IF NOT EXISTS idx_reservations_dates ON reservations(start_date, end_date);
 CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
 CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
+CREATE INDEX IF NOT EXISTS idx_reel_views_reel_id ON reel_views(reel_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reel_views_unique_user ON reel_views(reel_id, user_id) WHERE user_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_follows_user ON follows(user_id);
 CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id);
 CREATE INDEX IF NOT EXISTS idx_crops_user ON crops(user_id);

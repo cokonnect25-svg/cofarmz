@@ -13,6 +13,7 @@ import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
 import UserAvatar from '@/app/components/UserAvatar';
 
+
 // ─── Interfaces ──────────────────────────────────────────────────────────────
 
 interface Certificate {
@@ -57,6 +58,11 @@ interface Reel {
   comments: number;
   is_liked: boolean;
   crop_tags?: string[];   // crop names this reel is tagged with
+}
+
+function getRealThumbnail(url?: string | null) {
+  if (!url) return '';
+  return url.includes('via.placeholder.com') ? '' : url;
 }
 
 interface Follower {
@@ -181,11 +187,17 @@ function VideoThumb({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [poster, setPoster] = useState<string>(reel.thumbnail_url || '');
-  const [captured, setCaptured] = useState(!!reel.thumbnail_url);
+  const thumbnail = getRealThumbnail(reel.thumbnail_url);
+  const [poster, setPoster] = useState<string>(thumbnail);
+  const [captured, setCaptured] = useState(!!thumbnail);
 
   useEffect(() => {
-    if (reel.thumbnail_url) return; // already stored — nothing to do
+    const thumbnail = getRealThumbnail(reel.thumbnail_url);
+    if (thumbnail) {
+      setPoster(thumbnail);
+      setCaptured(true);
+      return;
+    }
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
@@ -228,7 +240,7 @@ function VideoThumb({
       <canvas ref={canvasRef} className="hidden" />
 
       {/* Hidden video for metadata + seek (only when no stored thumbnail) */}
-      {!reel.thumbnail_url && (
+      {!thumbnail && (
         <video
           ref={videoRef}
           src={reel.video_url}
@@ -445,6 +457,26 @@ const handleFollow = async () => {
   );
 
   const isOwnProfile = user?.id === farmerId;
+  const trackProfileCall = () => {
+    fetch(getApiUrl('/api/analytics'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventType: 'call_contact',
+        userId: user.id,
+        userName: user.name,
+        userEmail: user.email,
+        pagePath: `/farmer-profile?id=${profile.id}`,
+        entityType: 'user',
+        entityId: profile.id,
+        entityName: profile.name,
+        metadata: {
+          source: 'farmer_profile',
+          phone_available: Boolean(profile.phone),
+        },
+      }),
+    }).catch(() => {});
+  };
   const role = (profile.role as keyof typeof ROLE_CONFIG) || 'farmer';
   const rc = ROLE_CONFIG[role] || ROLE_CONFIG.farmer;
   const RoleIcon = rc.icon;
@@ -594,7 +626,10 @@ const handleFollow = async () => {
               </button>
               <button
                 onClick={() => {
-                  if (profile.phone) window.location.href = `tel:${profile.phone}`;
+                  if (profile.phone) {
+                    trackProfileCall();
+                    window.location.href = `tel:${profile.phone}`;
+                  }
                   else alert('Phone number not available');
                 }}
                 className="flex-1 bg-gray-100 text-gray-800 py-2.5 rounded-xl font-bold hover:bg-gray-200 transition flex items-center justify-center gap-2"

@@ -169,6 +169,68 @@ const followRequests = await sql`
   LIMIT 10
 `.catch(() => []);
 
+// New content from farmers/buyers the current user follows
+const followedCrops = await sql`
+  SELECT
+    c.id,
+    c.crop_name,
+    c.crop_type,
+    c.is_crop_waste,
+    c.created_at,
+    u.id AS creator_id,
+    u.name AS creator_name,
+    u.image AS creator_image
+  FROM crops c
+  JOIN follows f ON f.following_id = c.user_id
+  JOIN "user" u ON u.id = c.user_id
+  WHERE f.user_id = ${userId}
+    AND f.status = 'accepted'
+    AND c.user_id != ${userId}
+    AND c.created_at > ${sinceDate}
+  ORDER BY c.created_at DESC
+  LIMIT 10
+`.catch(() => []);
+
+const followedEquipment = await sql`
+  SELECT
+    m.id,
+    m.name,
+    m.image_url,
+    m.created_at,
+    u.id AS creator_id,
+    u.name AS creator_name,
+    u.image AS creator_image
+  FROM machinery m
+  JOIN follows f ON f.following_id = m.owner_id
+  JOIN "user" u ON u.id = m.owner_id
+  WHERE f.user_id = ${userId}
+    AND f.status = 'accepted'
+    AND m.owner_id != ${userId}
+    AND m.created_at > ${sinceDate}
+  ORDER BY m.created_at DESC
+  LIMIT 10
+`.catch(() => []);
+
+const followedReels = await sql`
+  SELECT
+    r.id,
+    r.caption,
+    r.thumbnail_url,
+    r.created_at,
+    u.id AS creator_id,
+    u.name AS creator_name,
+    u.image AS creator_image
+  FROM reels r
+  JOIN follows f ON f.following_id = r.user_id
+  JOIN "user" u ON u.id = r.user_id
+  WHERE f.user_id = ${userId}
+    AND f.status = 'accepted'
+    AND r.user_id != ${userId}
+    AND r.created_at > ${sinceDate}
+  ORDER BY r.created_at DESC
+  LIMIT 10
+`.catch(() => []);
+
     const notifications: any[] = [];
 
     newMessages.forEach((msg: any) => {
@@ -290,6 +352,47 @@ followRequests.forEach((req: any) => {
     time: req.created_at,
     link: `/user-profile`,
     followerId: req.user_id,
+  });
+});
+
+followedCrops.forEach((crop: any) => {
+  const label = crop.is_crop_waste ? 'crop waste' : 'crop';
+  notifications.push({
+    id: `followed-crop-${crop.id}`,
+    type: 'followed_crop',
+    title: `New ${label} from ${crop.creator_name}`,
+    body: `${crop.creator_name} added ${crop.crop_name}`,
+    image: crop.creator_image,
+    time: crop.created_at,
+    link: `/farmer-profile?id=${crop.creator_id}`,
+  });
+});
+
+followedEquipment.forEach((equipment: any) => {
+  notifications.push({
+    id: `followed-equipment-${equipment.id}`,
+    type: 'followed_equipment',
+    title: `New equipment from ${equipment.creator_name}`,
+    body: `${equipment.creator_name} added ${equipment.name}`,
+    image: equipment.image_url ?? equipment.creator_image,
+    time: equipment.created_at,
+    link: `/machinery-details?id=${equipment.id}`,
+  });
+});
+
+followedReels.forEach((reel: any) => {
+  notifications.push({
+    id: `followed-reel-${reel.id}`,
+    type: 'followed_reel',
+    title: `New reel from ${reel.creator_name}`,
+    body: reel.caption
+      ? reel.caption.length > 60
+        ? reel.caption.substring(0, 60) + '...'
+        : reel.caption
+      : 'Check out the latest reel',
+    image: reel.thumbnail_url ?? reel.creator_image,
+    time: reel.created_at,
+    link: `/reels?reelId=${reel.id}&userId=${reel.creator_id}`,
   });
 });
 

@@ -53,6 +53,11 @@ export async function DELETE(
       DELETE FROM reel_comments WHERE reel_id = ${id}
     `;
 
+    // Delete view records for this reel
+    await sql`
+      DELETE FROM reel_views WHERE reel_id = ${id}
+    `.catch(() => {});
+
     // Delete the reel itself
     await sql`
       DELETE FROM reels WHERE id = ${id}

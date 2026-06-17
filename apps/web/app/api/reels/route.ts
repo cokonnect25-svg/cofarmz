@@ -119,7 +119,17 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { videoUrl, caption, thumbnailUrl } = await request.json();
+    let body: any = {};
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
+
+    const { videoUrl, caption, thumbnailUrl } = body;
     const userId = request.headers.get("x-user-id");
 
     if (!userId || !videoUrl) {
@@ -128,6 +138,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    await sql`ALTER TABLE reels ADD COLUMN IF NOT EXISTS thumbnail_url TEXT`.catch(() => {});
+    await sql`ALTER TABLE reels ADD COLUMN IF NOT EXISTS views INTEGER DEFAULT 0`.catch(() => {});
 
     const reelId = `reel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -141,7 +154,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Create reel error:", error);
     return NextResponse.json(
-      { error: "Failed to create reel" },
+      { error: error instanceof Error ? error.message : "Failed to create reel" },
       { status: 500 }
     );
   }

@@ -12,6 +12,7 @@ import { Share } from '@capacitor/share';
 const SCROLL_KEY = 'reels_scrollY';
 const INDEX_KEY = 'reels_currentIndex';
 const REEL_ID_KEY = 'reels_currentReelId';
+const CAPTION_PREVIEW_LIMIT = 120;
 
 interface Reel {
   id: string;
@@ -35,6 +36,16 @@ interface Comment {
   created_at: string;
   name: string;
   image: string;
+}
+
+interface ProfileListItem {
+  id: string;
+  name: string;
+  image: string;
+  role?: string;
+  location?: string;
+  liked_at?: string;
+  viewed_at?: string;
 }
 
 function ReelsContent() {
@@ -63,8 +74,12 @@ function ReelsContent() {
   const likingRef = useRef(new Set<string>());
   const viewedReelsRef = useRef<Set<string>>(new Set());
   const [showLikers, setShowLikers] = useState(false);
-const [likers, setLikers] = useState<Array<{id: string, name: string, image: string, role?: string, location?: string, liked_at?: string}>>([]);
-const [likersLoading, setLikersLoading] = useState(false);
+  const [likers, setLikers] = useState<ProfileListItem[]>([]);
+  const [likersLoading, setLikersLoading] = useState(false);
+  const [showViewers, setShowViewers] = useState(false);
+  const [viewers, setViewers] = useState<ProfileListItem[]>([]);
+  const [viewersLoading, setViewersLoading] = useState(false);
+  const [expandedCaptions, setExpandedCaptions] = useState<Set<string>>(new Set());
   
   // Refs for scroll restoration
   const pendingScrollRef = useRef<number | null>(null);
@@ -175,15 +190,33 @@ const [likersLoading, setLikersLoading] = useState(false);
   }, [reels, videoReady]);
 
   const trackView = useCallback(async (reelId: string) => {
-  if (viewedReelsRef.current.has(reelId)) return; // Don't count twice
-  viewedReelsRef.current.add(reelId);
-  
-  try {
-    await fetch(getApiUrl(`/api/reels/${reelId}/view`), { method: 'POST' });
-  } catch (err) {
-    console.error('Failed to track view:', err);
-  }
-}, []);
+    if (viewedReelsRef.current.has(reelId)) return;
+    viewedReelsRef.current.add(reelId);
+
+    try {
+      const res = await fetch(getApiUrl(`/api/reels/${reelId}/view`), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user?.id || '',
+        },
+        body: JSON.stringify({ userId: user?.id }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.views === 'number') {
+          setReels((prev) =>
+            prev.map((reel) =>
+              reel.id === reelId ? { ...reel, views: data.views } : reel
+            )
+          );
+        }
+      }
+    } catch (err) {
+      console.error('Failed to track view:', err);
+    }
+  }, [user?.id]);
 
 useEffect(() => {
   videosRef.current.forEach((video, idx) => {
@@ -216,6 +249,48 @@ const fetchLikers = async (reelId: string) => {
 const handleShowLikers = (reelId: string) => {
   setShowLikers(true);
   fetchLikers(reelId);
+};
+
+const fetchViewers = async (reelId: string) => {
+  setViewersLoading(true);
+  try {
+    const res = await fetch(getApiUrl(`/api/reels/${reelId}/view`));
+    if (res.ok) {
+      const data = await res.json();
+      setViewers(data.viewers || []);
+      if (typeof data.count === 'number') {
+        setReels((prev) =>
+          prev.map((reel) =>
+            reel.id === reelId ? { ...reel, views: data.count } : reel
+          )
+        );
+      }
+    } else {
+      setViewers([]);
+    }
+  } catch (err) {
+    console.error('Error fetching viewers:', err);
+    setViewers([]);
+  } finally {
+    setViewersLoading(false);
+  }
+};
+
+const handleShowViewers = (reelId: string) => {
+  setShowViewers(true);
+  fetchViewers(reelId);
+};
+
+const toggleCaption = (reelId: string) => {
+  setExpandedCaptions((prev) => {
+    const next = new Set(prev);
+    if (next.has(reelId)) {
+      next.delete(reelId);
+    } else {
+      next.add(reelId);
+    }
+    return next;
+  });
 };
 
   const handleLike = async (reelId: string) => {
@@ -587,8 +662,22 @@ const handleShowLikers = (reelId: string) => {
 
                   {reel.caption && (
                     <div className="max-w-[85%]">
-                      <p className="text-[15px] font-bold leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,1)] text-white/95">
-                        {reel.caption}
+                      <p className="text-[15px] font-bold leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,1)] text-white/95 whitespace-pre-wrap break-words">
+                        {expandedCaptions.has(reel.id) || reel.caption.length <= CAPTION_PREVIEW_LIMIT
+                          ? reel.caption
+                          : `${reel.caption.slice(0, CAPTION_PREVIEW_LIMIT).trim()}...`}
+                        {reel.caption.length > CAPTION_PREVIEW_LIMIT && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleCaption(reel.id);
+                            }}
+                            className="ml-1 text-white font-black underline underline-offset-2 hover:text-green-300"
+                          >
+                            {expandedCaptions.has(reel.id) ? 'less' : 'more'}
+                          </button>
+                        )}
                       </p>
                     </div>
                   )}
@@ -610,14 +699,20 @@ const handleShowLikers = (reelId: string) => {
                 style={{ bottom: 'calc(env(safe-area-inset-bottom) + 88px)' }}
               >
                 {/* Views */}
-                <div className="flex flex-col items-center gap-1 group">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleShowViewers(reel.id);
+                  }}
+                  className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
+                >
                   <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl transition-all group-hover:scale-110">
                     <i className="ph-fill ph-eye text-[24px] drop-shadow-xl"></i>
                   </div>
                   <span className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase">
                     {reel.views > 999 ? `${(reel.views / 1000).toFixed(1)}k` : reel.views || 0}
                   </span>
-                </div>
+                </button>
                 
                 {/* Mute / Unmute */}
                 <button
@@ -803,6 +898,101 @@ const handleShowLikers = (reelId: string) => {
           </div>
         </div>
       )}
+      {/* Viewed By Modal */}
+{showViewers && (
+  <div
+    className="fixed inset-0 z-[999] flex flex-col"
+    style={{ paddingBottom: 'calc(60px + env(safe-area-inset-bottom))' }}
+  >
+    <div
+      className="flex-1 bg-black/50"
+      onClick={() => setShowViewers(false)}
+    />
+    <div
+      className="bg-white rounded-t-3xl flex flex-col overflow-hidden"
+      style={{ maxHeight: '70vh' }}
+    >
+      <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 flex-shrink-0" />
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+        <h2 className="text-lg font-bold text-gray-900">
+          Viewed by {viewers.length > 0 ? `(${viewers.length})` : ''}
+        </h2>
+        <button
+          onClick={() => setShowViewers(false)}
+          className="p-1 hover:bg-gray-100 rounded-full transition"
+        >
+          <X className="w-5 h-5 text-gray-600" />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
+        {viewersLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
+          </div>
+        ) : viewers.length === 0 ? (
+          <p className="text-center text-gray-400 py-8 text-sm">
+            No profile views recorded yet.
+          </p>
+        ) : (
+          viewers.map((viewer) => (
+            <div key={viewer.id} className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setShowViewers(false);
+                  saveStateAndNavigateToProfile(viewer.id);
+                }}
+                className="flex-shrink-0"
+              >
+                <img
+                  src={viewer.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(viewer.name || 'U')}&backgroundColor=166534&textColor=ffffff`}
+                  alt={viewer.name}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              </button>
+              <div className="flex-1 min-w-0">
+                <button
+                  onClick={() => {
+                    setShowViewers(false);
+                    saveStateAndNavigateToProfile(viewer.id);
+                  }}
+                  className="font-bold text-sm text-gray-900 hover:text-green-700 transition-colors block truncate"
+                >
+                  {viewer.name}
+                </button>
+                {viewer.role && (
+                  <p className="text-xs text-gray-500">{viewer.role}</p>
+                )}
+                {viewer.location && (
+                  <p className="text-xs text-gray-400 truncate">{viewer.location}</p>
+                )}
+                {viewer.viewed_at && (
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    Viewed {new Date(viewer.viewed_at).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  setShowViewers(false);
+                  saveStateAndNavigateToProfile(viewer.id);
+                }}
+                className="px-4 py-1.5 rounded-full bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition"
+              >
+                View
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  </div>
+)}
+
       {/* Liked By Modal */}
 {showLikers && (
   <div

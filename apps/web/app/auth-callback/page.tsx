@@ -16,6 +16,23 @@ export default function AuthCallbackPage() {
         // Clean up any leftover pendingGoogleRole from older flow
         localStorage.removeItem('pendingGoogleRole');
 
+        const loginKey = `google_login_logged_${user.id}`;
+        if (!sessionStorage.getItem(loginKey)) {
+          sessionStorage.setItem(loginKey, '1');
+          await fetch(getApiUrl('/api/analytics'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              eventType: 'login',
+              userId: user.id,
+              userName: user.name || null,
+              userEmail: user.email || null,
+              pagePath: '/auth-callback',
+              metadata: { method: 'google_web' },
+            }),
+          }).catch(() => {});
+        }
+
         // Check if this user has already selected a role
         try {
           const res = await fetch(getApiUrl(`/api/users/profile?userId=${user.id}`));

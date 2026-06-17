@@ -336,6 +336,17 @@ CREATE TABLE reel_comments (
 
 CREATE INDEX idx_reel_comments_reel ON reel_comments(reel_id);
 
+-- Reel views
+CREATE TABLE reel_views (
+  id BIGSERIAL PRIMARY KEY,
+  reel_id TEXT NOT NULL REFERENCES reels(id) ON DELETE CASCADE,
+  user_id TEXT REFERENCES "user"(id) ON DELETE CASCADE,
+  viewed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_reel_views_reel_id ON reel_views(reel_id);
+CREATE UNIQUE INDEX idx_reel_views_unique_user ON reel_views(reel_id, user_id) WHERE user_id IS NOT NULL;
+
 -- ============================================================================
 -- SAMPLE DATA (For Testing)
 -- ============================================================================

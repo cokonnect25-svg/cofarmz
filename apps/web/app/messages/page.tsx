@@ -532,7 +532,10 @@ function MessagesContent() {
     if (!user?.id) return;
     setDeletingMsg(true);
     try {
-      const res = await fetch(getApiUrl(`/api/messages/${msgId}?userId=${user.id}`), { method: 'DELETE' });
+      const res = await fetch(getApiUrl(`/api/messages/${msgId}?userId=${encodeURIComponent(user.id)}`), {
+        method: 'DELETE',
+        headers: { 'x-user-id': user.id },
+      });
       if (res.ok) {
         setMessages((prev) => prev.filter((m) => m.id !== msgId));
         setShowDeleteConfirm(null);
@@ -552,7 +555,19 @@ function MessagesContent() {
     if (!user?.id || !ownerId) return;
     setDeletingConv(true);
     try {
-      const res = await fetch(getApiUrl(`/api/messages?userId=${user.id}&otherUserId=${ownerId}`), { method: 'DELETE' });
+      let res = await fetch(getApiUrl(`/api/messages/conversations`), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': user.id },
+        body: JSON.stringify({ userId: user.id, otherUserId: ownerId }),
+      });
+
+      if (!res.ok && res.status === 404) {
+        res = await fetch(getApiUrl(`/api/messages?userId=${encodeURIComponent(user.id)}&otherUserId=${encodeURIComponent(ownerId)}`), {
+          method: 'DELETE',
+          headers: { 'x-user-id': user.id },
+        });
+      }
+
       if (res.ok) {
         setMessages([]);
         setShowConvDeleteConfirm(false);
@@ -712,9 +727,10 @@ function MessagesContent() {
                   ? msg.message_type === 'location' ? 'bg-transparent p-0' : 'bg-green-500 text-white rounded-br-sm'
                   : msg.message_type === 'location' ? 'bg-transparent p-0' : 'bg-gray-100 text-gray-900 rounded-bl-sm'
               } ${isSelected ? 'ring-2 ring-blue-400' : ''}`}>
-                {isOwn && msg.message_type !== 'location' && (
+                {msg.message_type !== 'location' && (
                   <button onClick={() => setShowDeleteConfirm(msg.id)}
-                    className="absolute -top-2 -left-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-md z-10" title="Delete message">
+                    className={`absolute -top-2 ${isOwn ? '-left-2' : '-right-2'} w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center transition shadow-md z-10 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                    title="Delete message">
                     <Trash2 className="w-3 h-3" />
                   </button>
                 )}

@@ -16,6 +16,85 @@ interface Reel {
   created_at: string;
 }
 
+function getRealThumbnail(url?: string | null) {
+  if (!url) return '';
+  return url.includes('via.placeholder.com') ? '' : url;
+}
+
+function isMostlyDarkFrame(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext('2d');
+  if (!ctx || !canvas.width || !canvas.height) return true;
+
+  const width = Math.min(canvas.width, 80);
+  const height = Math.min(canvas.height, 120);
+  const sample = ctx.getImageData(0, 0, width, height).data;
+  let totalBrightness = 0;
+
+  for (let i = 0; i < sample.length; i += 4) {
+    totalBrightness += (sample[i] + sample[i + 1] + sample[i + 2]) / 3;
+  }
+
+  return totalBrightness / (sample.length / 4) < 18;
+}
+
+function createVideoThumbnail(file: File): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    const canvas = document.createElement('canvas');
+    const seekPoints = [1.2, 0.5, 2.2, 0.1];
+    let seekIndex = 0;
+
+    const cleanup = () => {
+      URL.revokeObjectURL(objectUrl);
+      video.removeAttribute('src');
+      video.load();
+    };
+
+    const finish = (blob: Blob | null) => {
+      cleanup();
+      resolve(blob);
+    };
+
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+
+    video.onloadedmetadata = () => {
+      try {
+        const preferredTime = Number.isFinite(video.duration) && video.duration > 1 ? seekPoints[0] : 0.1;
+        video.currentTime = Math.min(preferredTime, Math.max(video.duration - 0.1, 0.1));
+      } catch {
+        finish(null);
+      }
+    };
+
+    video.onseeked = () => {
+      try {
+        canvas.width = video.videoWidth || 320;
+        canvas.height = video.videoHeight || 568;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return finish(null);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        if (isMostlyDarkFrame(canvas) && seekIndex < seekPoints.length - 1) {
+          seekIndex += 1;
+          video.currentTime = Math.min(seekPoints[seekIndex], Math.max(video.duration - 0.1, 0.1));
+          return;
+        }
+
+        canvas.toBlob((blob) => finish(blob), 'image/jpeg', 0.78);
+      } catch {
+        finish(null);
+      }
+    };
+
+    video.onerror = () => finish(null);
+    video.src = objectUrl;
+    video.load();
+  });
+}
+
 function MyReelsContent() {
 const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -31,6 +110,8 @@ const { user, loading: authLoading } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [deletingReelId, setDeletingReelId] = useState<string | null>(null);
+  const [fileCapture, setFileCapture] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const action = searchParams.get('action');
@@ -67,32 +148,13 @@ const { user, loading: authLoading } = useAuth();
   }, [user]);
 
   const handleRecordVideo = async () => {
-    const { Capacitor } = await import('@capacitor/core');
-    if (!Capacitor.isNativePlatform()) {
-      fileInputRef.current?.click();
-      return;
-    }
-
-    try {
-      const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
-      const video = await Camera.getPhoto({
-        quality: 90,
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Camera,
-      });
-
-      if (video.webPath) {
-        setVideoPreview(video.webPath);
-        setVideoUrl(video.webPath);
-        setStep('edit');
-      }
-    } catch (error) {
-      console.error('Error recording video:', error);
-    }
+    setFileCapture('environment');
+    setTimeout(() => fileInputRef.current?.click(), 0);
   };
 
   const handleUploadVideo = () => {
-    fileInputRef.current?.click();
+    setFileCapture(undefined);
+    setTimeout(() => fileInputRef.current?.click(), 0);
   };
 
   const handleVideoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,6 +188,8 @@ const { user, loading: authLoading } = useAuth();
     setUploading(true);
     try {
       let finalVideoUrl = videoUrl;
+      let thumbnailUrl: string | null = null;
+      const thumbnailBlob = videoFile ? await createVideoThumbnail(videoFile) : null;
 
       if (videoFile) {
         const formData = new FormData();
@@ -140,22 +204,44 @@ const { user, loading: authLoading } = useAuth();
         );
 
         if (!uploadRes.ok) {
-          throw new Error('Failed to upload video file');
+          const errorData = await uploadRes.json().catch(() => ({}));
+          throw new Error(errorData.error || `Failed to upload video file (${uploadRes.status})`);
         }
 
         const uploadData = await uploadRes.json();
+        if (!uploadData.url) {
+          throw new Error('Upload completed but no video URL was returned');
+        }
         finalVideoUrl = uploadData.url;
+      }
+
+      if (thumbnailBlob) {
+        const thumbnailFormData = new FormData();
+        thumbnailFormData.append(
+          'file',
+          new File([thumbnailBlob], 'reel-thumbnail.jpg', { type: 'image/jpeg' })
+        );
+
+        const thumbnailRes = await fetch(getApiUrl(`/api/upload`), {
+          method: 'POST',
+          body: thumbnailFormData,
+        });
+
+        if (thumbnailRes.ok) {
+          const thumbnailData = await thumbnailRes.json();
+          thumbnailUrl = thumbnailData.url || null;
+        }
       }
 
       const res = await fetch(
         getApiUrl(`/api/reels`),
         {
           method: 'POST',
-          headers: { 'x-user-id': user.id },
+          headers: { 'Content-Type': 'application/json', 'x-user-id': user.id },
           body: JSON.stringify({
             videoUrl: finalVideoUrl,
             caption,
-            thumbnailUrl: 'https://via.placeholder.com/270x480'
+            thumbnailUrl
           })
         }
       );
@@ -166,13 +252,39 @@ const { user, loading: authLoading } = useAuth();
         resetForm();
         alert('Reel uploaded successfully!');
       } else {
-        throw new Error('Failed to create reel');
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to create reel (${res.status})`);
       }
     } catch (error) {
       console.error('Error uploading reel:', error);
       alert('Failed to upload reel. Please try again.');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDeleteReel = async (reelId: string) => {
+    if (!user?.id) return;
+    if (!confirm('Are you sure you want to delete this reel?')) return;
+
+    setDeletingReelId(reelId);
+    try {
+      const res = await fetch(getApiUrl(`/api/reels/${reelId}`), {
+        method: 'DELETE',
+        headers: { 'x-user-id': user.id },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to delete reel (${res.status})`);
+      }
+
+      setReels((prev) => prev.filter((reel) => reel.id !== reelId));
+    } catch (error) {
+      console.error('Error deleting reel:', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete reel');
+    } finally {
+      setDeletingReelId(null);
     }
   };
 
@@ -259,6 +371,7 @@ if (!user) {
           ref={fileInputRef}
           type="file"
           accept="video/*"
+          capture={fileCapture as any}
           onChange={handleVideoFileSelect}
           className="hidden"
         />
@@ -415,12 +528,22 @@ if (!user) {
               <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
                 <Video className="w-8 h-8 text-gray-300 opacity-40" />
               </div>
-              <img
-                src={reel.thumbnail_url || `https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&h=700&fit=crop&q=80`}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
+              {getRealThumbnail(reel.thumbnail_url) ? (
+                <img
+                  src={getRealThumbnail(reel.thumbnail_url)}
+                  alt={reel.caption || 'Farm tale'}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              ) : (
+                <video
+                  src={reel.video_url}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  muted
+                  playsInline
+                  preload="metadata"
+                />
+              )}
 
               {/* Interaction Overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 opacity-90 transition-opacity">
@@ -443,10 +566,15 @@ if (!user) {
               {/* Delete Button */}
               <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-[-10px] group-hover:translate-y-0">
                 <button 
-                  onClick={(e) => { e.stopPropagation(); /* show delete logic */ }}
-                  className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 active:scale-95 border border-red-400"
+                  onClick={(e) => { e.stopPropagation(); handleDeleteReel(reel.id); }}
+                  disabled={deletingReelId === reel.id}
+                  className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 active:scale-95 border border-red-400 disabled:opacity-60"
                 >
-                  <Trash2 className="w-5 h-5" />
+                  {deletingReelId === reel.id ? (
+                    <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  ) : (
+                    <Trash2 className="w-5 h-5" />
+                  )}
                 </button>
               </div>
 

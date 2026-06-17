@@ -13,6 +13,7 @@ import UserAvatar from '@/app/components/UserAvatar';
 const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
 const TYPE_KEY = 'nearbyFarmers_searchType'; 
 const LOCATION_KEY = 'nearbyFarmers_userLocation';
+const FILTERS_KEY = 'nearbyFarmers_filters';
 
 interface FarmerCrop {
   crop_name: string;
@@ -180,33 +181,29 @@ const pendingScrollRef = useRef<number | null>(null);
 
 // Auto-apply URL crop filters when location is ready
 useEffect(() => {
-  if (!mounted || !isAuthenticated || !userLocation) return;
-  
-  // If crops came from URL, ensure fetch uses them
-  if (urlCropFilters.length > 0) {
-    fetchNearbyFarmers(
-      userLocation.latitude, 
-      userLocation.longitude, 
-      searchType, 
-      { ...filtersRef.current, crops: urlCropFilters }
-    );
-  }
-}, [mounted, isAuthenticated, userLocation, searchType]);
-
-
-useEffect(() => {
   if (!mounted) return;
 
   const savedVisible = sessionStorage.getItem(VISIBLE_KEY);
   const savedScroll  = sessionStorage.getItem(SCROLL_KEY);
   const savedType    = sessionStorage.getItem(TYPE_KEY);
+  const savedFilters = sessionStorage.getItem(FILTERS_KEY); // ← READ FILTERS
   
+  // Remove them so they don't persist across unrelated visits
   sessionStorage.removeItem(VISIBLE_KEY);
   sessionStorage.removeItem(SCROLL_KEY);
-  
   // Only remove TYPE_KEY if URL doesn't have one (so we preserve back-nav)
   if (!rawType) {
     sessionStorage.removeItem(TYPE_KEY);
+  }
+  sessionStorage.removeItem(FILTERS_KEY); // ← REMOVE FILTERS
+
+  // Restore filters FIRST (before any fetch triggers)
+  if (savedFilters) {
+    try {
+      const parsed = JSON.parse(savedFilters);
+      setFilters(parsed);
+      filtersRef.current = parsed; // keep ref in sync
+    } catch {}
   }
 
   if (savedVisible) {
@@ -216,7 +213,7 @@ useEffect(() => {
   if (savedScroll) {
     pendingScrollRef.current = parseInt(savedScroll);
   }
-}, [mounted, rawType]); // <-- add rawType dependency
+}, [mounted, rawType]);
 
   useEffect(() => {
     if (mounted && !loading && !isAuthenticated) router.push('/login');
@@ -256,6 +253,7 @@ const saveStateAndNavigate = (url: string) => {
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
   sessionStorage.setItem(TYPE_KEY, searchType);
+  sessionStorage.setItem(FILTERS_KEY, JSON.stringify(filters)); // ← SAVE FILTERS
   if (userLocation) {
     sessionStorage.setItem(LOCATION_KEY, JSON.stringify(userLocation));
   }
@@ -511,11 +509,34 @@ const handleApplyFilters = () => {
   sessionStorage.removeItem(SCROLL_KEY);
   sessionStorage.removeItem(VISIBLE_KEY);
   sessionStorage.removeItem(TYPE_KEY);   // ← ADD THIS
-  const lat = userLocation?.latitude ?? 0;
+
+    const lat = userLocation?.latitude ?? 0;
   const lon = userLocation?.longitude ?? 0;
   fetchNearbyFarmers(lat, lon, searchType, filters);
   setShowFilter(false);
 };
+
+  const trackNearbyCall = (farmer: any) => {
+    fetch(getApiUrl('/api/analytics'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventType: 'call_contact',
+        userId: user?.id || null,
+        userName: user?.name || null,
+        userEmail: user?.email || null,
+        pagePath: `/nearby-farmers?type=${searchType}`,
+        entityType: 'user',
+        entityId: farmer.id,
+        entityName: farmer.name,
+        metadata: {
+          source: 'nearby_farmers',
+          type: searchType,
+          distance: farmer.distance ?? null,
+        },
+      }),
+    }).catch(() => {});
+  };
 
   if (!mounted || loading || !isAuthenticated) {
     return (
@@ -895,7 +916,7 @@ onClick={() => {
 sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
 sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
 sessionStorage.setItem(TYPE_KEY, searchType);   // ← ADD THIS
-router.push(`/farmer-profile?id=${farmer.id}`);
+saveStateAndNavigate(`/farmer-profile?id=${farmer.id}`);
 }}>
 
                     {/* Header row */}
@@ -1012,7 +1033,7 @@ onClick={e => {
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
   sessionStorage.setItem(TYPE_KEY, searchType);
-  router.push(`/farmer-profile?id=${farmer.id}&tab=crops`);
+  saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=crops`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-plant text-green-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.crops_count || 0} Crops</span>
@@ -1023,7 +1044,7 @@ onClick={e => {
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
   sessionStorage.setItem(TYPE_KEY, searchType);
-  router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`);
+  saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=equipment`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-wrench text-blue-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Equipment</span>
@@ -1037,7 +1058,7 @@ onClick={e => {
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
   sessionStorage.setItem(TYPE_KEY, searchType);
-  router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`);
+  saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=equipment`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-package text-purple-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Products</span>
@@ -1048,7 +1069,7 @@ onClick={e => {
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
   sessionStorage.setItem(TYPE_KEY, searchType);
-  router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
+  saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=followers`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-users text-gray-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
@@ -1062,7 +1083,7 @@ onClick={e => {
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
   sessionStorage.setItem(TYPE_KEY, searchType);  
-  router.push(`/farmer-profile?id=${farmer.id}&tab=equipment`);
+  saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=equipment`);
 }}
       className="flex items-center gap-1.5 px-3 py-2 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors active:scale-95">
       <i className="ph-bold ph-package text-teal-600 text-sm"></i>
@@ -1074,7 +1095,7 @@ onClick={e => {
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
   sessionStorage.setItem(TYPE_KEY, searchType);  
-  router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
+  saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=followers`);
 }}
       className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
       <i className="ph-bold ph-users text-gray-600 text-sm"></i>
@@ -1088,7 +1109,7 @@ onClick={e => {
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
   sessionStorage.setItem(TYPE_KEY, searchType);  
-  router.push(`/farmer-profile?id=${farmer.id}&tab=crops`);
+  saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=crops`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-shopping-bag text-orange-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.crops_count || 0} Buying Interests</span>
@@ -1099,7 +1120,7 @@ onClick={e => {
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
   sessionStorage.setItem(TYPE_KEY, searchType);  
-  router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
+  saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=followers`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-users text-purple-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.followers_count || 0} Followers</span>
@@ -1110,11 +1131,15 @@ onClick={e => {
 
                     {/* Action buttons */}
                     <div className="flex gap-3" onClick={e => e.stopPropagation()}>
-                      <button onClick={e => { e.preventDefault(); e.stopPropagation(); const p = (farmer as any).phone; if (p) window.location.href = `tel:${p}`; else alert('Phone number not available.'); }}
+                      <button onClick={e => { e.preventDefault(); e.stopPropagation(); const p = (farmer as any).phone; if (p) { trackNearbyCall(farmer); window.location.href = `tel:${p}`; } else alert('Phone number not available.'); }}
                         className="flex-1 py-3 bg-green-50 text-green-700 rounded-xl font-bold text-sm active:scale-[0.98] transition-transform hover:bg-green-100 flex items-center justify-center gap-2">
                         <i className="ph-bold ph-phone"></i>Call
                       </button>
-                      <button onClick={e => { e.preventDefault(); e.stopPropagation(); router.push(`/messages?ownerId=${farmer.id}&ownerName=${encodeURIComponent(farmer.name)}`); }}
+                      <button onClick={e => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        saveStateAndNavigate(`/messages?ownerId=${farmer.id}&ownerName=${encodeURIComponent(farmer.name)}`);
+                      }}
                         className="flex-1 py-3 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm active:scale-[0.98] transition-transform hover:bg-blue-100 flex items-center justify-center gap-2">
                         <i className="ph-bold ph-chat-circle"></i>Chat
                       </button>

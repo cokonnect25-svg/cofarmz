@@ -2,6 +2,51 @@ export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextResponse, NextRequest } from "next/server";
 
+async function recordReservationEvent(reservation: any) {
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS app_events (
+        id BIGSERIAL PRIMARY KEY,
+        event_type TEXT NOT NULL,
+        user_id TEXT,
+        user_name TEXT,
+        user_email TEXT,
+        page_path TEXT,
+        entity_type TEXT,
+        entity_id TEXT,
+        entity_name TEXT,
+        metadata JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+
+    await sql`
+      INSERT INTO app_events (
+        event_type, user_id, page_path, entity_type, entity_id, entity_name, metadata
+      )
+      VALUES (
+        'reservation_created',
+        ${reservation.user_id || null},
+        '/machinery-details',
+        'reservation',
+        ${String(reservation.id)},
+        ${reservation.machinery_name || null},
+        ${sql.json({
+          machinery_id: reservation.machinery_id,
+          owner_id: reservation.owner_id,
+          start_date: reservation.start_date,
+          end_date: reservation.end_date,
+          total_days: reservation.total_days,
+          total_price: reservation.total_price,
+          status: reservation.status,
+        })}
+      )
+    `;
+  } catch (error) {
+    console.error("Failed to record reservation analytics:", error);
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const userId = request.nextUrl.searchParams.get('user_id');
@@ -70,6 +115,8 @@ export async function POST(request: Request) {
       )
       RETURNING *
     `;
+
+    await recordReservationEvent(result[0]);
 
     return NextResponse.json(result[0], { status: 201 });
   } catch (error) {

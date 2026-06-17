@@ -53,7 +53,20 @@ useEffect(() => {
     setIsLoading(true);
     try {
       console.log('Attempting login for:', email);
-      await signIn(email, password);
+      const result = await signIn(email, password);
+      const signedInUser = result.data?.user;
+      await fetch(getApiUrl('/api/analytics'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'login',
+          userId: signedInUser?.id || null,
+          userName: signedInUser?.name || null,
+          userEmail: signedInUser?.email || email,
+          pagePath: '/login',
+          metadata: { method: 'email' },
+        }),
+      }).catch(() => {});
       console.log('Login successful, redirecting home...');
 
       console.log('Login successful, redirecting home...');
@@ -106,6 +119,18 @@ const handleGoogleSignIn = async () => {
 
       if (data.user) {
         storeMobileSession(data.user);
+        await fetch(getApiUrl('/api/analytics'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventType: 'login',
+            userId: data.user.id || null,
+            userName: data.user.name || null,
+            userEmail: data.user.email || null,
+            pagePath: '/login',
+            metadata: { method: 'google_mobile' },
+          }),
+        }).catch(() => {});
       }
 
       if (data.signedToken) {

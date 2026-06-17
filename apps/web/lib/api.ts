@@ -5,14 +5,9 @@ export const getApiUrl = (path: string) => {
   const isMobile = (window as any).Capacitor?.isNativePlatform?.();
 
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://cofarmz-backend-866114557322.asia-south1.run.app";
 
   if (isMobile) {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-    
-    if (!backendUrl) {
-      throw new Error("NEXT_PUBLIC_BACKEND_URL is not set");
-    }
-
     const baseUrl = backendUrl.endsWith('/')
       ? backendUrl.slice(0, -1)
       : backendUrl;
@@ -20,5 +15,9 @@ export const getApiUrl = (path: string) => {
     return `${baseUrl}${cleanPath}`;
   }
 
- return `${process.env.NEXT_PUBLIC_BACKEND_URL}${cleanPath}`;
+  const baseUrl = backendUrl.endsWith('/')
+    ? backendUrl.slice(0, -1)
+    : backendUrl;
+
+  return `${baseUrl}${cleanPath}`;
 };

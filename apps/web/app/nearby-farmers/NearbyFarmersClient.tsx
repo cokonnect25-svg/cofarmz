@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 
 import { Capacitor } from '@capacitor/core';
@@ -52,6 +52,18 @@ const EQUIPMENT_OPTIONS = [
   'Cultivator', 'Planter', 'Combine', 'Irrigation Equipment'
 ];
 
+const NEARBY_STATE_KEY = 'cofarmz_nearby_farmers_state';
+
+function getSavedNearbyState() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(NEARBY_STATE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function NearbyFarmersClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -64,20 +76,26 @@ export default function NearbyFarmersClient() {
   const [locationError, setLocationError] = useState<string | null>(null);
 
   const initialType = (searchParams.get('type') === 'buyers' ? 'buyers' : 'farmers');
-  const [searchType, setSearchType] = useState<'farmers' | 'buyers'>(initialType);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('nearby');
+  const savedState = getSavedNearbyState();
+  const [searchType, setSearchType] = useState<'farmers' | 'buyers'>(
+    savedState?.searchType === 'buyers' || savedState?.searchType === 'farmers'
+      ? savedState.searchType
+      : initialType
+  );
+  const [searchQuery, setSearchQuery] = useState(savedState?.searchQuery || '');
+  const [sortBy, setSortBy] = useState(savedState?.sortBy || 'nearby');
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [filters, setFilters] = useState({
-    distance: 50,
-    minRating: 0,
-    crops: [] as string[],
-    equipment: [] as string[],
-    enableDistance: false,
-    yieldDateFrom: '',
-    yieldDateTo: '',
-    wasteOnly: false
+    distance: savedState?.filters?.distance ?? 50,
+    minRating: savedState?.filters?.minRating ?? 0,
+    crops: Array.isArray(savedState?.filters?.crops) ? savedState.filters.crops : [] as string[],
+    equipment: Array.isArray(savedState?.filters?.equipment) ? savedState.filters.equipment : [] as string[],
+    enableDistance: savedState?.filters?.enableDistance ?? false,
+    yieldDateFrom: savedState?.filters?.yieldDateFrom ?? '',
+    yieldDateTo: savedState?.filters?.yieldDateTo ?? '',
+    wasteOnly: savedState?.filters?.wasteOnly ?? false
   });
+  const restoredScrollRef = useRef(false);
   
   useEffect(() => {
     setMounted(true);
@@ -100,6 +118,63 @@ export default function NearbyFarmersClient() {
       fetchNearbyFarmers(userLocation.latitude, userLocation.longitude, searchType);
     }
   }, [searchType, userLocation]);
+
+  useEffect(() => {
+    const saveOnLeave = () => saveNearbyState();
+    window.addEventListener('pagehide', saveOnLeave);
+    return () => {
+      saveNearbyState();
+      window.removeEventListener('pagehide', saveOnLeave);
+    };
+  }, [searchType, searchQuery, sortBy, filters]);
+
+  const filteredFarmers = farmers
+    .filter((farmer) => {
+      const matchesSearch = searchQuery === '' ||
+        (farmer.name && farmer.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (farmer.location && farmer.location.toLowerCase().includes(searchQuery.toLowerCase()));
+      return matchesSearch;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'nearby') return (a.distance || 9999) - (b.distance || 9999);
+      if (sortBy === 'experience') {
+        const aExp = a.crops?.reduce((sum, c) => sum + (c.years_of_experience || 0), 0) || 0;
+        const bExp = b.crops?.reduce((sum, c) => sum + (c.years_of_experience || 0), 0) || 0;
+        return bExp - aExp;
+      }
+      if (sortBy === 'active') {
+        return (b.equipment_count || 0) - (a.equipment_count || 0);
+      }
+      return 0;
+    });
+
+  useEffect(() => {
+    if (loadingFarmers || restoredScrollRef.current || filteredFarmers.length === 0) return;
+    const saved = getSavedNearbyState();
+    if (!saved?.scrollY) return;
+
+    restoredScrollRef.current = true;
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: saved.scrollY, behavior: 'auto' });
+    });
+  }, [loadingFarmers, farmers.length]);
+
+  const saveNearbyState = () => {
+    if (typeof window === 'undefined') return;
+    sessionStorage.setItem(NEARBY_STATE_KEY, JSON.stringify({
+      scrollY: window.scrollY,
+      searchType,
+      searchQuery,
+      sortBy,
+      filters,
+      savedAt: Date.now(),
+    }));
+  };
+
+  const navigateAndRemember = (href: string) => {
+    saveNearbyState();
+    router.push(href);
+  };
 
   const getUserLocation = async () => {
     try {
@@ -197,41 +272,43 @@ export default function NearbyFarmersClient() {
     }
   };
 
+  const trackNearbyCall = (farmer: any) => {
+    fetch(getApiUrl('/api/analytics'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventType: 'call_contact',
+        userId: user?.id || null,
+        userName: user?.name || null,
+        userEmail: user?.email || null,
+        pagePath: `/nearby-farmers?type=${searchType}`,
+        entityType: 'user',
+        entityId: farmer.id,
+        entityName: farmer.name,
+        metadata: {
+          source: 'nearby_farmers',
+          type: searchType,
+          distance: farmer.distance ?? null,
+        },
+      }),
+    }).catch(() => {});
+  };
+
   const toggleCropFilter = (crop: string) => {
     setFilters(prev => ({
       ...prev,
-      crops: prev.crops.includes(crop) ? prev.crops.filter(c => c !== crop) : [...prev.crops, crop]
+      crops: prev.crops.includes(crop) ? prev.crops.filter((c: string) => c !== crop) : [...prev.crops, crop]
     }));
   };
 
   const toggleEquipmentFilter = (equipment: string) => {
     setFilters(prev => ({
       ...prev,
-      equipment: prev.equipment.includes(equipment) ? prev.equipment.filter(e => e !== equipment) : [...prev.equipment, equipment]
+      equipment: prev.equipment.includes(equipment) ? prev.equipment.filter((e: string) => e !== equipment) : [...prev.equipment, equipment]
     }));
   };
 
   if (!mounted || loading || !isAuthenticated) return null;
-
-  const filteredFarmers = farmers
-    .filter((farmer) => {
-      const matchesSearch = searchQuery === '' ||
-        (farmer.name && farmer.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (farmer.location && farmer.location.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchesSearch;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'nearby') return (a.distance || 9999) - (b.distance || 9999);
-      if (sortBy === 'experience') {
-        const aExp = a.crops?.reduce((sum, c) => sum + (c.years_of_experience || 0), 0) || 0;
-        const bExp = b.crops?.reduce((sum, c) => sum + (c.years_of_experience || 0), 0) || 0;
-        return bExp - aExp;
-      }
-      if (sortBy === 'active') {
-        return (b.equipment_count || 0) - (a.equipment_count || 0);
-      }
-      return 0;
-    });
 
   return (
     <div className="pt-4 text-gray-800 relative min-min-h-[100dvh]">
@@ -255,7 +332,7 @@ export default function NearbyFarmersClient() {
           ].map(type => (
             <button
               key={type.id}
-              onClick={() => { setSearchType(type.id as any); setSortBy('nearby'); }}
+              onClick={() => { setSearchType(type.id as any); setSortBy('nearby'); restoredScrollRef.current = false; window.scrollTo({ top: 0, behavior: 'auto' }); }}
               className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${searchType === type.id ? 'bg-brand-700 text-white' : 'bg-gray-100 text-gray-700'}`}
             >
               <i className={`ph-bold ${type.icon} mr-2`}></i>{type.label}
@@ -303,7 +380,7 @@ export default function NearbyFarmersClient() {
             ]).map(opt => (
               <button
                 key={opt.key}
-                onClick={() => { setSortBy(opt.key); setShowSortMenu(false); }}
+                onClick={() => { setSortBy(opt.key); setShowSortMenu(false); restoredScrollRef.current = false; window.scrollTo({ top: 0, behavior: 'auto' }); }}
                 className={`flex w-full items-center gap-4 px-4 py-4 rounded-2xl mb-2 transition-all ${sortBy === opt.key ? 'bg-emerald-50 border-2 border-emerald-500' : 'bg-gray-50 border-2 border-transparent'}`}
               >
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${sortBy === opt.key ? 'bg-emerald-500' : 'bg-gray-200'}`}>
@@ -337,7 +414,7 @@ export default function NearbyFarmersClient() {
           <div className="text-center py-10 text-gray-500 font-bold">No results found</div>
         ) : (
           filteredFarmers.map(farmer => (
-            <div key={farmer.id} className="bg-white rounded-[24px] p-5 shadow-soft border border-gray-50 cursor-pointer" onClick={() => router.push(`/farmer-profile?id=${farmer.id}`)}>
+            <div key={farmer.id} className="bg-white rounded-[24px] p-5 shadow-soft border border-gray-50 cursor-pointer" onClick={() => navigateAndRemember(`/farmer-profile?id=${farmer.id}`)}>
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <img src={farmer.image || `https://api.dicebear.com/7.x/initials/svg?seed=${farmer.name}`} className="w-12 h-12 rounded-full object-cover" />
@@ -352,9 +429,9 @@ export default function NearbyFarmersClient() {
                 </div>
               </div>
               <div className="flex gap-3">
-                <button className="flex-1 py-3 bg-green-50 text-green-700 rounded-xl font-bold text-sm" onClick={e => { e.stopPropagation(); window.location.href = `tel:${(farmer as any).phone || ''}`; }}>Call</button>
-                <button className="flex-1 py-3 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm" onClick={e => { e.stopPropagation(); router.push(`/messages?ownerId=${farmer.id}&ownerName=${encodeURIComponent(farmer.name)}`); }}>Chat</button>
-                <button className="flex-1 py-3 bg-purple-50 text-purple-700 rounded-xl font-bold text-sm font-bold" onClick={e => { e.stopPropagation(); window.open(`https://www.google.com/maps/search/${encodeURIComponent(farmer.location)}`, '_blank'); }}>Maps</button>
+                <button className="flex-1 py-3 bg-green-50 text-green-700 rounded-xl font-bold text-sm" onClick={e => { e.stopPropagation(); saveNearbyState(); if ((farmer as any).phone) trackNearbyCall(farmer); window.location.href = `tel:${(farmer as any).phone || ''}`; }}>Call</button>
+                <button className="flex-1 py-3 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm" onClick={e => { e.stopPropagation(); navigateAndRemember(`/messages?ownerId=${farmer.id}&ownerName=${encodeURIComponent(farmer.name)}`); }}>Chat</button>
+                <button className="flex-1 py-3 bg-purple-50 text-purple-700 rounded-xl font-bold text-sm font-bold" onClick={e => { e.stopPropagation(); saveNearbyState(); window.open(`https://www.google.com/maps/search/${encodeURIComponent(farmer.location)}`, '_blank'); }}>Maps</button>
               </div>
             </div>
           ))
