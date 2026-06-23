@@ -539,7 +539,7 @@ const toggleCaption = (reelId: string) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 55 }}>
+    <div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 10020 }}>
       {/* Header */}
       <div className="h-12 bg-black border-b border-gray-700 px-4 flex items-center gap-3 z-40">
         <button onClick={() => router.back()} className="text-white hover:text-gray-300">

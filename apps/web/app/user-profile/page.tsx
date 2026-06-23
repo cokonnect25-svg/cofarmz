@@ -1914,7 +1914,7 @@ const fetchFollowersCounts = async () => {
 
       {/* Reel Viewer */}
       {selectedReel && (
-        <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black z-[10020] flex items-center justify-center">
           <button onClick={() => setSelectedReel(null)} className="absolute top-4 right-4 z-10 p-2 bg-white/10 hover:bg-white/20 rounded-full transition"><X className="w-6 h-6 text-white" /></button>
           <div className="relative w-full max-w-md h-full bg-black">
             <video ref={el => { if (el) videoRefsMap.current[selectedReel.id] = el; }} src={selectedReel.video_url} className="w-full h-full object-contain" autoPlay loop playsInline muted={isMuted} onClick={e => { const v = e.currentTarget; v.paused ? v.play() : v.pause(); }} />
