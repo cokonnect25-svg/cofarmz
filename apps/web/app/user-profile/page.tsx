@@ -1923,11 +1923,11 @@ const fetchFollowersCounts = async () => {
               <UserAvatar image={user?.image} name={user?.name} size={40} style={{ border: '2px solid white' }} />
               <p className="text-white font-semibold text-sm">{user?.name}</p>
             </div>
-            <div className="absolute right-3 bottom-20 flex flex-col gap-6 text-white">
-              <div className="flex flex-col items-center gap-1"><i className="ph-bold ph-eye text-2xl drop-shadow-lg"></i><span className="text-xs font-bold drop-shadow">{selectedReel.views || 0}</span></div>
-              <div className="flex flex-col items-center gap-1"><Heart className="w-7 h-7 drop-shadow-lg" fill="currentColor" stroke="currentColor" strokeWidth={1.5} /><span className="text-xs font-bold drop-shadow">{selectedReel.likes || 0}</span></div>
-              <div className="flex flex-col items-center gap-1"><MessageCircle className="w-7 h-7 drop-shadow-lg" strokeWidth={1.5} /><span className="text-xs font-bold drop-shadow">{selectedReel.comments || 0}</span></div>
-              <button onClick={() => { if (navigator.share) navigator.share({ title: 'Check out this reel', text: selectedReel.caption, url: window.location.href }); }} className="flex flex-col items-center gap-1 hover:scale-110 active:scale-95 transition-transform"><Send className="w-7 h-7 drop-shadow-lg" strokeWidth={1.5} /><span className="text-xs font-bold drop-shadow">Share</span></button>
+            <div className="absolute right-[max(1.25rem,env(safe-area-inset-right))] bottom-20 w-14 flex flex-col items-center gap-6 text-white">
+              <div className="flex w-14 flex-col items-center gap-1"><i className="ph-bold ph-eye text-2xl drop-shadow-lg"></i><span className="max-w-full text-center text-xs font-bold drop-shadow">{selectedReel.views || 0}</span></div>
+              <div className="flex w-14 flex-col items-center gap-1"><Heart className="w-7 h-7 drop-shadow-lg" fill="currentColor" stroke="currentColor" strokeWidth={1.5} /><span className="max-w-full text-center text-xs font-bold drop-shadow">{selectedReel.likes || 0}</span></div>
+              <div className="flex w-14 flex-col items-center gap-1"><MessageCircle className="w-7 h-7 drop-shadow-lg" strokeWidth={1.5} /><span className="max-w-full text-center text-xs font-bold drop-shadow">{selectedReel.comments || 0}</span></div>
+              <button onClick={() => { if (navigator.share) navigator.share({ title: 'Check out this reel', text: selectedReel.caption, url: window.location.href }); }} className="flex w-14 flex-col items-center gap-1 hover:scale-110 active:scale-95 transition-transform"><Send className="w-7 h-7 drop-shadow-lg" strokeWidth={1.5} /><span className="max-w-full text-center text-xs font-bold drop-shadow">Share</span></button>
             </div>
             <button onClick={() => setIsMuted(!isMuted)} className="absolute bottom-24 left-4 p-3 bg-white/10 hover:bg-white/20 rounded-full transition"><i className={`ph-bold ${isMuted ? 'ph-speaker-simple-slash' : 'ph-speaker-simple-high'} text-white text-xl`}></i></button>
             <button onClick={() => handleDeleteReel(selectedReel.id)} disabled={deletingReelId === selectedReel.id} className="absolute bottom-24 left-20 p-3 bg-red-600/80 hover:bg-red-600 rounded-full transition disabled:opacity-50">

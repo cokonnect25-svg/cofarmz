@@ -695,7 +695,7 @@ const toggleCaption = (reelId: string) => {
               </button>
 
               <div
-                className="absolute right-4 md:right-[calc(50%-180px)] lg:right-[calc(50%-230px)] flex flex-col gap-5 text-white z-30"
+                className="absolute right-[max(1.5rem,env(safe-area-inset-right))] md:right-[calc(50%-180px)] lg:right-[calc(50%-230px)] w-16 flex flex-col items-center gap-5 text-white z-30"
                 style={{ bottom: 'calc(env(safe-area-inset-bottom) + 88px)' }}
               >
                 {/* Views */}
@@ -704,12 +704,12 @@ const toggleCaption = (reelId: string) => {
                     e.stopPropagation();
                     handleShowViewers(reel.id);
                   }}
-                  className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
+                  className="flex w-16 flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
                 >
                   <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl transition-all group-hover:scale-110">
                     <i className="ph-fill ph-eye text-[24px] drop-shadow-xl"></i>
                   </div>
-                  <span className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase">
+                  <span className="max-w-full text-center text-[11px] font-black drop-shadow-xl tracking-tight uppercase">
                     {reel.views > 999 ? `${(reel.views / 1000).toFixed(1)}k` : reel.views || 0}
                   </span>
                 </button>
@@ -720,7 +720,7 @@ const toggleCaption = (reelId: string) => {
                     e.stopPropagation();
                     setIsMuted((prev) => !prev);
                   }}
-                  className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
+                  className="flex w-16 flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
                 >
                   <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl">
                     {isMuted ? (
@@ -734,7 +734,7 @@ const toggleCaption = (reelId: string) => {
                   </span>
                 </button>
 
-<div className="flex flex-col items-center gap-1">
+<div className="flex w-16 flex-col items-center gap-1">
   {/* Heart */}
   <button
     onClick={(e) => {
@@ -755,7 +755,7 @@ const toggleCaption = (reelId: string) => {
       e.stopPropagation();
       handleShowLikers(reel.id);
     }}
-    className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase hover:text-green-400 transition-colors"
+    className="max-w-full text-center text-[11px] font-black drop-shadow-xl tracking-tight uppercase hover:text-green-400 transition-colors"
   >
     {reel.likes > 999 ? `${(reel.likes / 1000).toFixed(1)}k` : reel.likes} {reel.likes === 1 ? 'like' : 'likes'}
   </button>
@@ -764,7 +764,7 @@ const toggleCaption = (reelId: string) => {
                 {/* Comments */}
                 <button
                   onClick={() => handleOpenComments(reel.id)}
-                  className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
+                  className="flex w-16 flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
                 >
                   <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl">
                     <MessageCircle className="w-6 h-6 text-white" strokeWidth={2.5} />
@@ -777,7 +777,7 @@ const toggleCaption = (reelId: string) => {
                 {/* Share */}
                 <button
                   onClick={(e) => handleShare(e, reel)}
-                  className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
+                  className="flex w-16 flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
                 >
                   <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl">
                     <Send className="w-6 h-6 text-white" strokeWidth={2.5} />
