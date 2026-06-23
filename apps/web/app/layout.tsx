@@ -8,6 +8,7 @@ import OfflineWrapper from '@/app/OfflineScreen/OfflineWrapper';
 import GoogleTranslate from "@/app/components/GoogleTranslate";
 import LocationPermissionPopup from "@/app/components/LocationPermissionPopup";
 import BottomNav from "@/app/components/BottomNav";
+import PhoneVerificationGate from "@/app/components/PhoneVerificationGate";
 import Script from "next/script";
 import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
@@ -66,7 +67,8 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     }).catch(() => {});
   }, [pathname, user?.id]);
 
-  const hideBottomNav = pathname?.startsWith("/chat");
+  const isFullscreenRoute = pathname?.startsWith("/reels");
+  const hideBottomNav = pathname?.startsWith("/chat") || isFullscreenRoute;
   const showBottomNav = !!user && !hideBottomNav;
 
   useEffect(() => {
@@ -93,15 +95,19 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       />
 
       {showSplash && <AdSplash onDone={() => setShowSplash(false)} />}
-      <TopNav />
+      {!isFullscreenRoute && <TopNav />}
 
       <main
         className="flex-1 w-full"
         style={{
-          paddingTop: `calc(${TOP_NAV_H}px + env(safe-area-inset-top))`,
-          paddingBottom: showBottomNav
-            ? `calc(${BOTTOM_NAV_H}px + env(safe-area-inset-bottom))`
-            : `env(safe-area-inset-bottom)`,
+          paddingTop: isFullscreenRoute
+            ? 0
+            : `calc(${TOP_NAV_H}px + env(safe-area-inset-top))`,
+          paddingBottom: isFullscreenRoute
+            ? 0
+            : showBottomNav
+              ? `calc(${BOTTOM_NAV_H}px + env(safe-area-inset-bottom))`
+              : `env(safe-area-inset-bottom)`,
         }}
       >
         {showBottomNav && (
@@ -131,8 +137,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       </main>
 
       {showBottomNav && <BottomNav />}
-      {!showBottomNav && <Footer />}
+      {!showBottomNav && !isFullscreenRoute && <Footer />}
 
+      <PhoneVerificationGate user={user} pathname={pathname} />
       <LocationPermissionPopup />
     </div>
   );

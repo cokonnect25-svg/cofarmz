@@ -143,6 +143,8 @@ export async function PUT(request: Request) {
     // Ensure latitude/longitude columns exist
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION`.catch(() => { });
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION`.catch(() => { });
+    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN DEFAULT false`.catch(() => { });
+    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMPTZ`.catch(() => { });
 
     // Build update query dynamically based on provided fields
     const updates: string[] = [];
@@ -201,6 +203,7 @@ export async function PUT(request: Request) {
     const result = await sql`
       SELECT
         u.id, u.name, u.email, u.phone, u.location, u.image, u.gender, u.age,
+        u.phone_verified, u.phone_verified_at,
         u.role_id,
         u.role,
         r.display_name as role_display_name,

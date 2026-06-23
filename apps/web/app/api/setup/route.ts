@@ -169,6 +169,16 @@ await sql`
     `;
     results.push("phone column ensured");
 
+    await sql`
+      ALTER TABLE "user"
+      ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN DEFAULT false
+    `;
+    await sql`
+      ALTER TABLE "user"
+      ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMPTZ
+    `;
+    results.push("phone verification columns ensured");
+
     // 7. Add role_confirmed column to track explicit role selection
     await sql`
       ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role_confirmed BOOLEAN DEFAULT false
