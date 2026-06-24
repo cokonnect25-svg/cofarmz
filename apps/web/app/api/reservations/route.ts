@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextResponse, NextRequest } from "next/server";
+import { sendPushToUser } from "@/app/api/utils/push";
 
 async function recordReservationEvent(reservation: any) {
   try {
@@ -118,6 +119,27 @@ export async function POST(request: Request) {
 
     await recordReservationEvent(result[0]);
 
+    const renterRows = await sql`
+      SELECT name, image
+      FROM "user"
+      WHERE id = ${user_id}
+      LIMIT 1
+    `.catch(() => []);
+    const renter = renterRows[0];
+
+    await sendPushToUser(owner_id, {
+      title: "New Booking Request",
+      body: `${renter?.name || 'A renter'} wants to book ${machinery_name}`,
+      image: renter?.image || undefined,
+      url: "/booking-requests",
+      tag: `booking-new-${result[0].id}`,
+      data: {
+        type: "booking_new",
+        reservationId: result[0].id,
+        machineryId: machinery_id,
+      },
+    });
+
     return NextResponse.json(result[0], { status: 201 });
   } catch (error) {
     console.error("Reservation error:", error);
@@ -152,6 +174,24 @@ export async function PUT(request: Request) {
     if (result.length === 0) {
       return NextResponse.json({ error: "Reservation not found" }, { status: 404 });
     }
+
+    const statusLabels: Record<string, string> = {
+      accepted: "confirmed",
+      rejected: "declined",
+      cancelled: "cancelled",
+      completed: "completed",
+    };
+    await sendPushToUser(result[0].user_id, {
+      title: `Booking ${statusLabels[status] || status}`,
+      body: `Your booking for ${result[0].machinery_name} was ${statusLabels[status] || status}`,
+      url: "/my-reservations",
+      tag: `booking-update-${result[0].id}`,
+      data: {
+        type: "booking_update",
+        reservationId: result[0].id,
+        status,
+      },
+    });
 
     return NextResponse.json(result[0], { status: 200 });
   } catch (error) {

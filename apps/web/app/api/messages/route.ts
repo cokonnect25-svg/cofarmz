@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextRequest, NextResponse } from "next/server";
+import { sendPushToUser } from "@/app/api/utils/push";
 
 type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'location';
 
@@ -141,6 +142,40 @@ export async function POST(request: Request) {
       RETURNING *
     `;
     await recordMessageContact(result[0]);
+
+    const senderRows = await sql`
+      SELECT name, image
+      FROM "user"
+      WHERE id = ${senderId}
+      LIMIT 1
+    `.catch(() => []);
+    const sender = senderRows[0];
+    const preview =
+      finalMessageType === 'text'
+        ? (message.length > 80 ? `${message.slice(0, 80)}...` : message)
+        : finalMessageType === 'image'
+          ? 'Sent you an image'
+          : finalMessageType === 'video'
+            ? 'Sent you a video'
+            : finalMessageType === 'audio'
+              ? 'Sent you an audio message'
+              : finalMessageType === 'location'
+                ? 'Shared a location'
+                : 'Sent you a file';
+
+    await sendPushToUser(receiverId, {
+      title: sender?.name || 'New message',
+      body: preview,
+      image: sender?.image || undefined,
+      url: `/chat?userId=${senderId}`,
+      tag: `msg-${result[0].id}`,
+      data: {
+        type: 'message',
+        messageId: result[0].id,
+        senderId,
+      },
+    });
+
     return NextResponse.json(result[0]);
   } catch (error: any) {
     console.error('Error creating message:', error);

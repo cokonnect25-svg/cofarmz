@@ -179,6 +179,25 @@ await sql`
     `;
     results.push("phone verification columns ensured");
 
+    await sql`
+      CREATE TABLE IF NOT EXISTS push_tokens (
+        id BIGSERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+        token TEXT NOT NULL UNIQUE,
+        platform TEXT NOT NULL DEFAULT 'android',
+        device_id TEXT,
+        enabled BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `;
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_push_tokens_user_enabled
+      ON push_tokens(user_id, enabled)
+    `;
+    results.push("push_tokens table ensured");
+
     // 7. Add role_confirmed column to track explicit role selection
     await sql`
       ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role_confirmed BOOLEAN DEFAULT false
@@ -271,6 +290,7 @@ export async function DELETE() {
     await sql`DELETE FROM machinery_unavailability`.catch(() => {});
     await sql`DELETE FROM machinery`.catch(() => {});
     await sql`DELETE FROM password_reset_tokens`.catch(() => {});
+    await sql`DELETE FROM push_tokens`.catch(() => {});
     await sql`DELETE FROM session`.catch(() => {});
     await sql`DELETE FROM account`.catch(() => {});
     await sql`DELETE FROM "user"`.catch(() => {});

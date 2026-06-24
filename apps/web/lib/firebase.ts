@@ -17,6 +17,10 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID!
 };
 
+if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "undefined") {
+  throw new Error("Missing NEXT_PUBLIC_FIREBASE_API_KEY. Add Firebase web config env vars before using Firebase.");
+}
+
 const app: FirebaseApp = initializeApp(firebaseConfig);
 export const auth: Auth = getAuth(app);
 

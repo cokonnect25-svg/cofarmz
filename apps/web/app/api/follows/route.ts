@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextResponse } from "next/server";
+import { sendPushToUser } from "@/app/api/utils/push";
 
 export async function POST(request: Request) {
   try {
@@ -20,6 +21,26 @@ export async function POST(request: Request) {
       VALUES (${userId}, ${followingId}, 'pending', NOW())
       RETURNING *
     `;
+    const requesterRows = await sql`
+      SELECT name, image
+      FROM "user"
+      WHERE id = ${userId}
+      LIMIT 1
+    `.catch(() => []);
+    const requester = requesterRows[0];
+
+    await sendPushToUser(followingId, {
+      title: "New Follow Request",
+      body: `${requester?.name || "Someone"} wants to follow you`,
+      image: requester?.image || undefined,
+      url: "/notifications",
+      tag: `follow-req-${userId}`,
+      data: {
+        type: "follow_request",
+        followerId: userId,
+      },
+    });
+
     return NextResponse.json(result[0], { status: 201 });
   } catch (error) {
     console.error("Follow error:", error);

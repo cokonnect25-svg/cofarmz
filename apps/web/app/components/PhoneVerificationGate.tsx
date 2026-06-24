@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import type { ConfirmationResult, RecaptchaVerifier as RecaptchaVerifierType } from "firebase/auth";
 import { getApiUrl } from "@/lib/api";
 import { Capacitor } from "@capacitor/core";
 
@@ -42,7 +41,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
   const [code, setCode] = useState("");
   const [message, setMessage] = useState("");
   const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
-  const verifierRef = useRef<RecaptchaVerifier | null>(null);
+  const verifierRef = useRef<RecaptchaVerifierType | null>(null);
 
   const hiddenByRoute = useMemo(
     () => HIDDEN_PATHS.some((path) => pathname?.startsWith(path)),
@@ -87,6 +86,11 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
   async function getVerifier() {
     if (verifierRef.current) return verifierRef.current;
 
+    const [{ RecaptchaVerifier }, { auth }] = await Promise.all([
+      import("firebase/auth"),
+      import("@/lib/firebase"),
+    ]);
+
     verifierRef.current = new RecaptchaVerifier(auth, "phone-recaptcha-container", {
       size: "invisible",
       callback: () => {},
@@ -104,6 +108,10 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
       }
 
       const verifier = await getVerifier();
+      const [{ signInWithPhoneNumber }, { auth }] = await Promise.all([
+        import("firebase/auth"),
+        import("@/lib/firebase"),
+      ]);
       const result = await signInWithPhoneNumber(auth, formattedPhone, verifier);
       setConfirmation(result);
       setPhone(formattedPhone);
