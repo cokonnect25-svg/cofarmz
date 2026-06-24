@@ -17,6 +17,7 @@ public class MainActivity extends BridgeActivity {
             finish();
             return;
         }
+        registerPlugin(NativePhoneAuthPlugin.class);
         super.onCreate(savedInstanceState);
     }
 

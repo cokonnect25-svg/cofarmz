@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ConfirmationResult, RecaptchaVerifier as RecaptchaVerifierType } from "firebase/auth";
 import { getApiUrl } from "@/lib/api";
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 
 type Profile = {
   id: string;
@@ -12,6 +12,22 @@ type Profile = {
   role?: string | null;
   role_id?: number | null;
 };
+
+type NativePhoneAuthPlugin = {
+  sendOtp(options: { phoneNumber: string }): Promise<{
+    verificationId?: string;
+    idToken?: string;
+    phoneNumber?: string;
+    autoVerified?: boolean;
+  }>;
+  verifyOtp(options: { verificationId?: string; code: string }): Promise<{
+    idToken: string;
+    phoneNumber?: string;
+    autoVerified?: boolean;
+  }>;
+};
+
+const NativePhoneAuth = registerPlugin<NativePhoneAuthPlugin>("NativePhoneAuth");
 
 const HIDDEN_PATHS = [
   "/login",
@@ -41,6 +57,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
   const [code, setCode] = useState("");
   const [message, setMessage] = useState("");
   const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
+  const [nativeVerificationId, setNativeVerificationId] = useState<string | null>(null);
   const verifierRef = useRef<RecaptchaVerifierType | null>(null);
 
   const hiddenByRoute = useMemo(
@@ -103,6 +120,30 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
     return verifierRef.current;
   }
 
+  async function completePhoneVerification(idToken: string) {
+    const res = await fetch(getApiUrl("/api/users/verify-phone"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, idToken }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Phone verification failed");
+
+    setProfile((prev) => prev ? { ...prev, phone: data.phone, phone_verified: true } : prev);
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const raw = localStorage.getItem("cofarmz_mobile_user");
+        if (raw) {
+          localStorage.setItem(
+            "cofarmz_mobile_user",
+            JSON.stringify({ ...JSON.parse(raw), phone: data.phone, phone_verified: true })
+          );
+        }
+      } catch {}
+    }
+  }
+
   async function handleSendOtp() {
     try {
       setMessage("");
@@ -110,6 +151,25 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
       const formattedPhone = toE164(phone);
       if (!/^\+[1-9]\d{9,14}$/.test(formattedPhone)) {
         throw new Error("Enter a valid mobile number with country code");
+      }
+
+      if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+        const result = await NativePhoneAuth.sendOtp({ phoneNumber: formattedPhone });
+        setPhone(formattedPhone);
+
+        if (result.idToken) {
+          await completePhoneVerification(result.idToken);
+          setMessage("Phone verified.");
+          return;
+        }
+
+        if (!result.verificationId) {
+          throw new Error("Could not start native phone verification");
+        }
+
+        setNativeVerificationId(result.verificationId);
+        setMessage("OTP sent. Please enter the code.");
+        return;
       }
 
       const verifier = await getVerifier();
@@ -132,32 +192,20 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
 
   async function handleVerifyOtp() {
     try {
-      if (!confirmation) throw new Error("Send OTP first");
+      if (!confirmation && !nativeVerificationId) throw new Error("Send OTP first");
       setMessage("");
       setVerifying(true);
 
-      const credential = await confirmation.confirm(code.trim());
-      const idToken = await credential.user.getIdToken();
-      const res = await fetch(getApiUrl("/api/users/verify-phone"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, idToken }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Phone verification failed");
-
-      setProfile((prev) => prev ? { ...prev, phone: data.phone, phone_verified: true } : prev);
-
-      if (Capacitor.isNativePlatform()) {
-        try {
-          const raw = localStorage.getItem("cofarmz_mobile_user");
-          if (raw) {
-            localStorage.setItem(
-              "cofarmz_mobile_user",
-              JSON.stringify({ ...JSON.parse(raw), phone: data.phone, phone_verified: true })
-            );
-          }
-        } catch {}
+      if (nativeVerificationId) {
+        const result = await NativePhoneAuth.verifyOtp({
+          verificationId: nativeVerificationId,
+          code: code.trim(),
+        });
+        await completePhoneVerification(result.idToken);
+      } else if (confirmation) {
+        const credential = await confirmation.confirm(code.trim());
+        const idToken = await credential.user.getIdToken();
+        await completePhoneVerification(idToken);
       }
     } catch (error: any) {
       setMessage(error?.message || "Invalid OTP");
@@ -167,6 +215,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
   }
 
   if (!shouldVerify) return null;
+  const otpSent = !!confirmation || !!nativeVerificationId;
 
   return (
     <div className="fixed inset-0 z-[10050] flex items-end justify-center bg-black/60 px-4 sm:items-center">
@@ -185,11 +234,11 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="+91 9876543210"
-            disabled={!!confirmation || sending || verifying}
+            disabled={otpSent || sending || verifying}
             className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-base font-bold text-gray-950 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-100"
           />
 
-          {confirmation && (
+          {otpSent && (
             <input
               type="text"
               inputMode="numeric"
@@ -204,7 +253,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
 
           {message && <p className="text-sm font-semibold text-gray-600">{message}</p>}
 
-          {!confirmation && (
+          {!otpSent && (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") && (
             <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3">
               <div
                 id="phone-recaptcha-container"
@@ -215,20 +264,21 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
 
           <button
             type="button"
-            onClick={confirmation ? handleVerifyOtp : handleSendOtp}
-            disabled={sending || verifying || (confirmation ? code.length < 6 : phone.trim().length < 10)}
+            onClick={otpSent ? handleVerifyOtp : handleSendOtp}
+            disabled={sending || verifying || (otpSent ? code.length < 6 : phone.trim().length < 10)}
             className="w-full rounded-2xl bg-green-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-green-600/20 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {confirmation
+            {otpSent
               ? verifying ? "Verifying..." : "Verify OTP"
               : sending ? "Sending OTP..." : "Send OTP"}
           </button>
 
-          {confirmation && (
+          {otpSent && (
             <button
               type="button"
               onClick={() => {
                 setConfirmation(null);
+                setNativeVerificationId(null);
                 setCode("");
                 setMessage("");
                 verifierRef.current?.clear();
