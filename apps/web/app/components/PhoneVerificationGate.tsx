@@ -92,9 +92,14 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
     ]);
 
     verifierRef.current = new RecaptchaVerifier(auth, "phone-recaptcha-container", {
-      size: "invisible",
-      callback: () => {},
+      size: "normal",
+      "expired-callback": () => {
+        verifierRef.current?.clear();
+        verifierRef.current = null;
+        setMessage("reCAPTCHA expired. Please verify it again.");
+      },
     });
+    await verifierRef.current.render();
     return verifierRef.current;
   }
 
@@ -199,6 +204,15 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
 
           {message && <p className="text-sm font-semibold text-gray-600">{message}</p>}
 
+          {!confirmation && (
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3">
+              <div
+                id="phone-recaptcha-container"
+                className="flex min-h-[78px] items-center justify-center overflow-hidden"
+              />
+            </div>
+          )}
+
           <button
             type="button"
             onClick={confirmation ? handleVerifyOtp : handleSendOtp}
@@ -227,7 +241,6 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
           )}
         </div>
 
-        <div id="phone-recaptcha-container" />
       </div>
     </div>
   );
