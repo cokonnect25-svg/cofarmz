@@ -10,6 +10,7 @@ import LocationPermissionPopup from "@/app/components/LocationPermissionPopup";
 import BottomNav from "@/app/components/BottomNav";
 import PhoneVerificationGate from "@/app/components/PhoneVerificationGate";
 import NativePushNotifications from "@/app/components/NativePushNotifications";
+import MandatoryUpdateGate from "@/app/components/MandatoryUpdateGate";
 import Script from "next/script";
 import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
@@ -141,6 +142,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       {!showBottomNav && !isFullscreenRoute && <Footer />}
 
       <PhoneVerificationGate user={user} pathname={pathname} />
+      <MandatoryUpdateGate />
       <NativePushNotifications userId={user?.id} />
       <LocationPermissionPopup />
     </div>
