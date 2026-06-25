@@ -53,6 +53,9 @@ export async function GET(req: NextRequest) {
     u.image,
     conv.last_message,
     conv.last_message_time,
+    conv.last_message_sender_id,
+    conv.last_message_receiver_id,
+    conv.last_message_read_at,
     conv.machinery_id,
     conv.unread_count,
     u.last_seen
@@ -62,10 +65,14 @@ export async function GET(req: NextRequest) {
       MAX(created_at) as last_message_time,
       COUNT(*) FILTER (WHERE read_at IS NULL AND receiver_id = ${userId}) as unread_count,
       (ARRAY_AGG(message ORDER BY created_at DESC))[1] as last_message,
+      (ARRAY_AGG(sender_id ORDER BY created_at DESC))[1] as last_message_sender_id,
+      (ARRAY_AGG(receiver_id ORDER BY created_at DESC))[1] as last_message_receiver_id,
+      (ARRAY_AGG(read_at ORDER BY created_at DESC))[1] as last_message_read_at,
       (ARRAY_AGG(machinery_id ORDER BY created_at DESC))[1] as machinery_id
     FROM (
       SELECT 
         CASE WHEN sender_id = ${userId} THEN receiver_id ELSE sender_id END as other_user_id,
+        sender_id,
         receiver_id,
         created_at,
         message,

@@ -16,6 +16,12 @@ function base64UrlToBuffer(value: string) {
   return Buffer.from(padded, "base64");
 }
 
+function normalizePhoneForLookup(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2);
+  return digits;
+}
+
 async function verifyFirebasePhoneToken(idToken: string) {
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   if (!projectId) throw new Error("Firebase project ID is not configured");
@@ -88,6 +94,27 @@ export async function POST(request: NextRequest) {
     }
 
     const firebaseUser = await verifyFirebasePhoneToken(idToken);
+    const phoneLookup = normalizePhoneForLookup(firebaseUser.phone_number);
+
+    const duplicatePhone = await sql`
+      SELECT id
+      FROM "user"
+      WHERE id <> ${userId}
+        AND phone IS NOT NULL
+        AND phone <> ''
+        AND (
+          regexp_replace(phone, '[^0-9]', '', 'g') = ${phoneLookup}
+          OR regexp_replace(phone, '[^0-9]', '', 'g') = ${`91${phoneLookup}`}
+        )
+      LIMIT 1
+    `;
+
+    if (duplicatePhone.length > 0) {
+      return NextResponse.json(
+        { error: "This mobile number is already linked to another account." },
+        { status: 409 }
+      );
+    }
 
     const result = await sql`
       UPDATE "user"

@@ -91,6 +91,23 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
     };
   }, [user?.id, hiddenByRoute]);
 
+  useEffect(() => {
+    const handleProfileUpdated = (event: Event) => {
+      const updatedProfile = (event as CustomEvent<Profile>).detail;
+      if (!updatedProfile || updatedProfile.id !== user?.id) return;
+
+      setProfile(updatedProfile);
+      setPhone(updatedProfile.phone || "");
+      setConfirmation(null);
+      setNativeVerificationId(null);
+      setCode("");
+      setMessage("");
+    };
+
+    window.addEventListener("cofarmz:profile-updated", handleProfileUpdated);
+    return () => window.removeEventListener("cofarmz:profile-updated", handleProfileUpdated);
+  }, [user?.id]);
+
   const shouldVerify =
     !!user?.id &&
     !hiddenByRoute &&

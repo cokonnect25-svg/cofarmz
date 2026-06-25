@@ -3,6 +3,19 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 
+function normalizePhone(phone: string) {
+  const trimmed = phone.trim();
+  const digits = trimmed.replace(/\D/g, "");
+
+  if (!digits) return { value: "", lookup: "" };
+  if (digits.length === 10) return { value: `+91${digits}`, lookup: digits };
+  if (digits.length === 12 && digits.startsWith("91")) {
+    return { value: `+${digits}`, lookup: digits.slice(2) };
+  }
+
+  return { value: trimmed.startsWith("+") ? `+${digits}` : digits, lookup: digits };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const userId = request.nextUrl.searchParams.get("userId");
@@ -146,6 +159,43 @@ export async function PUT(request: Request) {
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN DEFAULT false`.catch(() => { });
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMPTZ`.catch(() => { });
 
+    let normalizedPhone: { value: string; lookup: string } | null = null;
+    let currentPhone: string | null = null;
+
+    if (phone !== undefined) {
+      normalizedPhone = normalizePhone(String(phone));
+
+      if (normalizedPhone.lookup) {
+        const duplicatePhone = await sql`
+          SELECT id
+          FROM "user"
+          WHERE id <> ${userId}
+            AND phone IS NOT NULL
+            AND phone <> ''
+            AND (
+              regexp_replace(phone, '[^0-9]', '', 'g') = ${normalizedPhone.lookup}
+              OR regexp_replace(phone, '[^0-9]', '', 'g') = ${`91${normalizedPhone.lookup}`}
+            )
+          LIMIT 1
+        `;
+
+        if (duplicatePhone.length > 0) {
+          return NextResponse.json(
+            { error: "This mobile number is already linked to another account." },
+            { status: 409 }
+          );
+        }
+      }
+
+      const currentUser = await sql`
+        SELECT phone
+        FROM "user"
+        WHERE id = ${userId}
+        LIMIT 1
+      `;
+      currentPhone = currentUser[0]?.phone || null;
+    }
+
     // Build update query dynamically based on provided fields
     const updates: string[] = [];
     const values: any[] = [];
@@ -160,7 +210,12 @@ export async function PUT(request: Request) {
     }
     if (phone !== undefined) {
       updates.push(`phone = $${updates.length + 1}`);
-      values.push(phone);
+      values.push(normalizedPhone?.value || null);
+
+      if (normalizePhone(currentPhone || "").lookup !== normalizedPhone?.lookup) {
+        updates.push(`phone_verified = false`);
+        updates.push(`phone_verified_at = NULL`);
+      }
     }
     if (location !== undefined) {
       updates.push(`location = $${updates.length + 1}`);

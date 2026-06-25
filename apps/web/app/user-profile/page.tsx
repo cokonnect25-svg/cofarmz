@@ -971,7 +971,9 @@ const fetchFollowersCounts = async () => {
   const handleOpenEditModal = () => {
     if (user) {
       const p = profileData || {};
-      setEditForm({ name: p.name || user.name || '', email: p.email || user.email || '', phone: p.phone || '', location: p.location || '', gender: p.gender || '', age: p.age ? String(p.age) : '', latitude: p.latitude || null, longitude: p.longitude || null });
+      const phoneDigits = String(p.phone || '').replace(/\D/g, '');
+      const displayPhone = phoneDigits.length === 12 && phoneDigits.startsWith('91') ? phoneDigits.slice(2) : phoneDigits;
+      setEditForm({ name: p.name || user.name || '', email: p.email || user.email || '', phone: displayPhone, location: p.location || '', gender: p.gender || '', age: p.age ? String(p.age) : '', latitude: p.latitude || null, longitude: p.longitude || null });
       setShowEditModal(true);
     }
   };
@@ -979,9 +981,14 @@ const fetchFollowersCounts = async () => {
   const handleUpdateProfile = async () => {
     if (!user?.id) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const nextPhoneDigits = editForm.phone.replace(/\D/g, '');
+    const currentPhoneDigits = String(profileData?.phone || '').replace(/\D/g, '');
+    const currentPhoneLocal = currentPhoneDigits.length === 12 && currentPhoneDigits.startsWith('91') ? currentPhoneDigits.slice(2) : currentPhoneDigits;
+    const phoneChanged = nextPhoneDigits !== currentPhoneLocal;
     if (
   !editForm.name.trim() ||
   !editForm.email.trim() ||
+  !editForm.phone.trim() ||
   !editForm.location.trim()
 ) {
   alert('Name, email, phone and location are required');
@@ -989,6 +996,7 @@ const fetchFollowersCounts = async () => {
 }
     if (!editForm.name.trim()) { alert('Name is required'); return; }
     if (!emailRegex.test(editForm.email)) { alert('Enter a valid email'); return; }
+    if (!/^[6-9][0-9]{9}$/.test(nextPhoneDigits)) { alert('Enter a valid 10 digit mobile number'); return; }
     setIsUpdatingProfile(true);
     try {
       const response = await fetch(getApiUrl(`/api/users/profile`), {
@@ -996,11 +1004,13 @@ const fetchFollowersCounts = async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, name: editForm.name, email: editForm.email, phone: editForm.phone, location: editForm.location, gender: editForm.gender || null, age: editForm.age ? parseInt(editForm.age) : null, ...(editForm.latitude != null ? { latitude: editForm.latitude, longitude: editForm.longitude } : {}) }),
       });
-      if (!response.ok) throw new Error('Failed to update profile');
       const updated = await response.json();
+      if (!response.ok) throw new Error(updated.error || 'Failed to update profile');
       setProfileData(updated); setUserRole(updated.role || 'buyer');
-      alert('Profile updated successfully!'); setShowEditModal(false);
-    } catch (error) { console.error('Error updating profile:', error); alert('Failed to update profile'); }
+      window.dispatchEvent(new CustomEvent('cofarmz:profile-updated', { detail: updated }));
+      alert(phoneChanged ? 'Profile updated. Please verify your new mobile number.' : 'Profile updated successfully!');
+      setShowEditModal(false);
+    } catch (error: any) { console.error('Error updating profile:', error); alert(error?.message || 'Failed to update profile'); }
     finally { setIsUpdatingProfile(false); }
   };
 

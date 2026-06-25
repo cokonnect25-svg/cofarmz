@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
-import { MessageCircle, Search, Trash2, X, CheckCheck } from 'lucide-react';
+import { MessageCircle, Search, Trash2, X, Check, CheckCheck } from 'lucide-react';
 
 const SCROLL_KEY = 'chatList_scrollY';
 const SEARCH_KEY = 'chatList_searchQuery';
@@ -15,6 +15,9 @@ interface Conversation {
   image: string | null;
   last_message: string;
   last_message_time: string;
+  last_message_sender_id?: string;
+  last_message_receiver_id?: string;
+  last_message_read_at?: string | null;
   machinery_id: string;
   machinery_name: string;
   machinery_image: string;
@@ -165,24 +168,28 @@ function ChatContent() {
     }
   };
 
-  const fetchConversations = async () => {
+  const fetchConversations = async (options: { restoreState?: boolean; showLoader?: boolean } = {}) => {
     try {
-      setLoadingConversations(true);
+      const { restoreState = true, showLoader = true } = options;
+      if (showLoader) setLoadingConversations(true);
 
-      const savedScroll = sessionStorage.getItem(SCROLL_KEY);
-      const savedSearch = sessionStorage.getItem(SEARCH_KEY);
+      if (restoreState) {
+        const savedScroll = sessionStorage.getItem(SCROLL_KEY);
+        const savedSearch = sessionStorage.getItem(SEARCH_KEY);
 
-      sessionStorage.removeItem(SCROLL_KEY);
-      sessionStorage.removeItem(SEARCH_KEY);
+        sessionStorage.removeItem(SCROLL_KEY);
+        sessionStorage.removeItem(SEARCH_KEY);
 
-      if (savedSearch) setSearchQuery(savedSearch);
-      if (savedScroll) {
-        isRestoringRef.current = true;
-        pendingScrollRef.current = parseInt(savedScroll);
+        if (savedSearch) setSearchQuery(savedSearch);
+        if (savedScroll) {
+          isRestoringRef.current = true;
+          pendingScrollRef.current = parseInt(savedScroll);
+        }
       }
 
       const response = await fetch(
-        getApiUrl(`/api/messages/conversations?userId=${user?.id}`)
+        getApiUrl(`/api/messages/conversations?userId=${user?.id}`),
+        { cache: 'no-store' }
       );
       if (response.ok) {
         const data = await response.json();
@@ -192,9 +199,29 @@ function ChatContent() {
       console.error('Failed to fetch conversations:', error);
       setConversations([]);
     } finally {
-      setLoadingConversations(false);
+      if (showLoader) setLoadingConversations(false);
     }
   };
+
+  useEffect(() => {
+    if (!user?.id || !isAuthenticated) return;
+
+    const refresh = () => fetchConversations({ restoreState: false, showLoader: false });
+    const interval = window.setInterval(refresh, 10000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user?.id, isAuthenticated]);
 
   const saveStateAndNavigate = (url: string) => {
     if (scrollContainerRef.current) {
@@ -373,6 +400,8 @@ const res = await fetch(getApiUrl(`/api/messages/conversations`), {
               const status = onlineStatuses[conversation.other_user_id];
               const isOnline = status?.isOnline ?? conversation.is_online;
               const hasUnread = (conversation.unread_count || 0) > 0;
+              const isLastMessageOwn = conversation.last_message_sender_id === user?.id;
+              const lastMessageSeen = Boolean(conversation.last_message_read_at);
 
               return (
                 <div 
@@ -442,13 +471,15 @@ const res = await fetch(getApiUrl(`/api/messages/conversations`), {
                       <div className="flex items-center gap-1">
                         {conversation.last_message && (
                           <>
-                            <span className="flex-shrink-0">
-                              {conversation.unread_count === 0 ? (
-                                <CheckCheck className="w-3 h-3 text-green-500" />
-                              ) : (
-                                <CheckCheck className="w-3 h-3 text-gray-300" />
-                              )}
-                            </span>
+                            {isLastMessageOwn && (
+                              <span className="flex-shrink-0" title={lastMessageSeen ? 'Seen' : 'Sent'}>
+                                {lastMessageSeen ? (
+                                  <CheckCheck className="w-3.5 h-3.5 text-blue-500" />
+                                ) : (
+                                  <Check className="w-3.5 h-3.5 text-gray-400" />
+                                )}
+                              </span>
+                            )}
                             <p className={`text-sm truncate ${
                               hasUnread ? 'text-gray-900 font-semibold' : 'text-gray-600'
                             }`}>
