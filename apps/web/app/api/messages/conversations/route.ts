@@ -47,31 +47,9 @@ export async function GET(req: NextRequest) {
     if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
   const conversations = await sql`
-  SELECT 
-    conv.other_user_id,
-    u.name,
-    u.image,
-    conv.last_message,
-    conv.last_message_time,
-    conv.last_message_sender_id,
-    conv.last_message_receiver_id,
-    conv.last_message_read_at,
-    conv.machinery_id,
-    conv.unread_count,
-    u.last_seen
-  FROM (
-    SELECT 
-      other_user_id,
-      MAX(created_at) as last_message_time,
-      COUNT(*) FILTER (WHERE read_at IS NULL AND receiver_id = ${userId}) as unread_count,
-      (ARRAY_AGG(message ORDER BY created_at DESC))[1] as last_message,
-      (ARRAY_AGG(sender_id ORDER BY created_at DESC))[1] as last_message_sender_id,
-      (ARRAY_AGG(receiver_id ORDER BY created_at DESC))[1] as last_message_receiver_id,
-      (ARRAY_AGG(read_at ORDER BY created_at DESC))[1] as last_message_read_at,
-      (ARRAY_AGG(machinery_id ORDER BY created_at DESC))[1] as machinery_id
-    FROM (
-      SELECT 
-        CASE WHEN sender_id = ${userId} THEN receiver_id ELSE sender_id END as other_user_id,
+    WITH visible_messages AS (
+      SELECT
+        receiver_id AS other_user_id,
         sender_id,
         receiver_id,
         created_at,
@@ -79,17 +57,53 @@ export async function GET(req: NextRequest) {
         machinery_id,
         read_at
       FROM messages
-      WHERE (sender_id = ${userId} OR receiver_id = ${userId})
-        AND (
-          (sender_id = ${userId} AND deleted_by_sender = false) OR
-          (receiver_id = ${userId} AND deleted_by_receiver = false)
-        )
-    ) m
-    GROUP BY other_user_id
-  ) conv
-  JOIN "user" u ON u.id = conv.other_user_id
-  ORDER BY conv.last_message_time DESC
-`;
+      WHERE sender_id = ${userId}
+        AND deleted_by_sender IS NOT TRUE
+
+      UNION ALL
+
+      SELECT
+        sender_id AS other_user_id,
+        sender_id,
+        receiver_id,
+        created_at,
+        message,
+        machinery_id,
+        read_at
+      FROM messages
+      WHERE receiver_id = ${userId}
+        AND deleted_by_receiver IS NOT TRUE
+    ),
+    ranked AS (
+      SELECT
+        *,
+        ROW_NUMBER() OVER (
+          PARTITION BY other_user_id
+          ORDER BY created_at DESC, sender_id DESC
+        ) AS rn,
+        COUNT(*) FILTER (
+          WHERE read_at IS NULL AND receiver_id = ${userId}
+        ) OVER (PARTITION BY other_user_id) AS unread_count
+      FROM visible_messages
+    )
+    SELECT
+      r.other_user_id,
+      u.name,
+      u.image,
+      r.message AS last_message,
+      r.created_at AS last_message_time,
+      r.sender_id AS last_message_sender_id,
+      r.receiver_id AS last_message_receiver_id,
+      r.read_at AS last_message_read_at,
+      r.machinery_id,
+      r.unread_count,
+      u.last_seen
+    FROM ranked r
+    JOIN "user" u ON u.id = r.other_user_id
+    WHERE r.rn = 1
+    ORDER BY r.created_at DESC
+    LIMIT 100
+  `;
     const machineryIds = conversations
       .map((c: any) => c.machinery_id)
       .filter(Boolean);

@@ -15,9 +15,5 @@ export const getApiUrl = (path: string) => {
     return `${baseUrl}${cleanPath}`;
   }
 
-  const baseUrl = backendUrl.endsWith('/')
-    ? backendUrl.slice(0, -1)
-    : backendUrl;
-
-  return `${baseUrl}${cleanPath}`;
+  return cleanPath;
 };

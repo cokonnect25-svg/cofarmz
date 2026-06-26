@@ -8,6 +8,7 @@ import { MessageCircle, Search, Trash2, X, Check, CheckCheck } from 'lucide-reac
 
 const SCROLL_KEY = 'chatList_scrollY';
 const SEARCH_KEY = 'chatList_searchQuery';
+const REQUEST_TIMEOUT_MS = 10000;
 
 interface Conversation {
   other_user_id: string;
@@ -162,18 +163,33 @@ function ChatContent() {
 
   const fetchAllUsers = async () => {
     setLoadingUsers(true);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      const res = await fetch(getApiUrl(`/api/nearby-farmers?type=all&latitude=0&longitude=0&currentUserId=${user?.id}`));
+      const res = await fetch(
+        getApiUrl(`/api/nearby-farmers?type=all&latitude=0&longitude=0&currentUserId=${encodeURIComponent(user?.id || '')}`),
+        { cache: 'no-store', signal: controller.signal }
+      );
       const data = await res.json();
       setAllUsers(Array.isArray(data) ? data.filter((u: any) => u.id !== user?.id) : []);
     } catch {
       setAllUsers([]);
     } finally {
+      window.clearTimeout(timeout);
       setLoadingUsers(false);
     }
   };
 
   const fetchConversations = async (options: { restoreState?: boolean; showLoader?: boolean } = {}) => {
+    if (!user?.id) {
+      setConversations([]);
+      setLoadingConversations(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
     try {
       const { restoreState = true, showLoader = true } = options;
       if (showLoader) setLoadingConversations(true);
@@ -193,17 +209,20 @@ function ChatContent() {
       }
 
       const response = await fetch(
-        getApiUrl(`/api/messages/conversations?userId=${user?.id}`),
-        { cache: 'no-store' }
+        getApiUrl(`/api/messages/conversations?userId=${encodeURIComponent(user.id)}`),
+        { cache: 'no-store', signal: controller.signal }
       );
       if (response.ok) {
         const data = await response.json();
         setConversations(Array.isArray(data) ? data : []);
+      } else {
+        setConversations([]);
       }
     } catch (error) {
       console.error('Failed to fetch conversations:', error);
       setConversations([]);
     } finally {
+      window.clearTimeout(timeout);
       if (showLoader) setLoadingConversations(false);
     }
   };
