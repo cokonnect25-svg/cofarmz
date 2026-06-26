@@ -8,7 +8,9 @@ import { MessageCircle, Search, Trash2, X, Check, CheckCheck } from 'lucide-reac
 
 const SCROLL_KEY = 'chatList_scrollY';
 const SEARCH_KEY = 'chatList_searchQuery';
+const CACHE_KEY_PREFIX = 'chatList_cachedConversations';
 const REQUEST_TIMEOUT_MS = 10000;
+const CONVERSATION_PAGE_SIZE = 10;
 
 interface Conversation {
   other_user_id: string;
@@ -25,6 +27,26 @@ interface Conversation {
   unread_count: number;
   is_online: boolean;
   last_seen: string | null;
+}
+
+function ConversationSkeleton() {
+  return (
+    <div className="divide-y divide-gray-100">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <div key={index} className="px-6 py-4 flex items-center gap-4 animate-pulse">
+          <div className="w-14 h-14 rounded-full bg-gray-200 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between mb-2">
+              <div className="h-4 bg-gray-200 rounded w-32" />
+              <div className="h-3 bg-gray-100 rounded w-12" />
+            </div>
+            <div className="h-3 bg-gray-100 rounded w-24 mb-2" />
+            <div className="h-3 bg-gray-100 rounded w-44" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ── Online Status Hook (batch check) ───────────────────────
@@ -108,6 +130,9 @@ function ChatContent() {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [conversationError, setConversationError] = useState('');
+  const [hasMoreConversations, setHasMoreConversations] = useState(false);
+  const [loadingMoreConversations, setLoadingMoreConversations] = useState(false);
+  const [showRefreshingHint, setShowRefreshingHint] = useState(false);
 
   // Delete conversation state
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
@@ -120,17 +145,53 @@ function ChatContent() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const pendingScrollRef = useRef<number | null>(null);
   const isRestoringRef = useRef(false);
+  const allUsersLoadedRef = useRef(false);
 
   // Get online statuses for all conversation partners
   const userIds = conversations.map(c => c.other_user_id);
   const onlineStatuses = useOnlineStatuses(userIds);
 
   useEffect(() => {
+    allUsersLoadedRef.current = false;
+    setAllUsers([]);
+  }, [user?.id]);
+
+  useEffect(() => {
     if (!loading && user && isAuthenticated) {
-      fetchConversations();
-      fetchAllUsers();
+      const cacheKey = `${CACHE_KEY_PREFIX}:${user.id}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      let hasCachedConversations = false;
+      if (cached) {
+        try {
+          const cachedConversations = JSON.parse(cached);
+          if (Array.isArray(cachedConversations) && cachedConversations.length > 0) {
+            hasCachedConversations = true;
+            setConversations(cachedConversations);
+            setLoadingConversations(false);
+            setShowRefreshingHint(true);
+          }
+        } catch {}
+      }
+      fetchConversations({ showLoader: !hasCachedConversations });
     }
   }, [user?.id, isAuthenticated, loading]);
+
+  useEffect(() => {
+    if (!user?.id || conversations.length === 0) return;
+    sessionStorage.setItem(
+      `${CACHE_KEY_PREFIX}:${user.id}`,
+      JSON.stringify(conversations.slice(0, CONVERSATION_PAGE_SIZE))
+    );
+  }, [user?.id, conversations]);
+
+  useEffect(() => {
+    if (!user?.id || allUsersLoadedRef.current) return;
+    if (!showNewChat && !searchQuery.trim()) return;
+    if (searchQuery.trim() && filteredConversations.length > 0) return;
+
+    allUsersLoadedRef.current = true;
+    fetchAllUsers();
+  }, [user?.id, showNewChat, searchQuery, filteredConversations.length]);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -184,6 +245,7 @@ function ChatContent() {
     setLoadingUsers(true);
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const hadVisibleConversations = conversations.length > 0;
     try {
       const res = await fetch(
         getApiUrl(`/api/nearby-farmers?type=all&latitude=0&longitude=0&currentUserId=${encodeURIComponent(user?.id || '')}`),
@@ -199,10 +261,12 @@ function ChatContent() {
     }
   };
 
-  const fetchConversations = async (options: { restoreState?: boolean; showLoader?: boolean } = {}) => {
+  const fetchConversations = async (options: { restoreState?: boolean; showLoader?: boolean; append?: boolean; offset?: number; limit?: number } = {}) => {
     if (!user?.id) {
       setConversations([]);
       setLoadingConversations(false);
+      setLoadingMoreConversations(false);
+      setHasMoreConversations(false);
       return;
     }
 
@@ -210,8 +274,15 @@ function ChatContent() {
     const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     try {
-      const { restoreState = true, showLoader = true } = options;
-      if (showLoader) setLoadingConversations(true);
+      const {
+        restoreState = true,
+        showLoader = true,
+        append = false,
+        offset = 0,
+        limit = CONVERSATION_PAGE_SIZE,
+      } = options;
+      if (append) setLoadingMoreConversations(true);
+      else if (showLoader) setLoadingConversations(true);
       setConversationError('');
 
       if (restoreState) {
@@ -229,22 +300,41 @@ function ChatContent() {
       }
 
       const response = await fetch(
-        getApiUrl(`/api/messages/conversations?userId=${encodeURIComponent(user.id)}`),
+        getApiUrl(`/api/messages/conversations?userId=${encodeURIComponent(user.id)}&limit=${limit}&offset=${offset}`),
         { cache: 'no-store', signal: controller.signal }
       );
       if (response.ok) {
-        const data = await response.json();
-        setConversations(Array.isArray(data) ? data : []);
+        const payload = await response.json();
+        const data = Array.isArray(payload) ? payload : payload.data;
+        const nextConversations = Array.isArray(data) ? data : [];
+
+        setHasMoreConversations(Boolean(payload?.pagination?.hasMore));
+        setShowRefreshingHint(false);
+        setConversations((prev) => {
+          if (!append) return nextConversations;
+
+          const existing = new Set(prev.map((c) => `${c.other_user_id}-${c.machinery_id || 'general'}`));
+          const merged = [...prev];
+          for (const conv of nextConversations) {
+            const key = `${conv.other_user_id}-${conv.machinery_id || 'general'}`;
+            if (!existing.has(key)) merged.push(conv);
+          }
+          return merged;
+        });
       } else {
-        setConversationError('Unable to load conversations right now.');
-        setConversations([]);
+        if (!append && !hadVisibleConversations) setConversationError('Unable to load conversations right now.');
+        setHasMoreConversations(false);
+        if (!append && !hadVisibleConversations) setConversations([]);
       }
     } catch (error) {
       console.error('Failed to fetch conversations:', error);
-      setConversationError('Unable to load conversations right now.');
-      setConversations([]);
+      if (!options.append && !hadVisibleConversations) setConversationError('Unable to load conversations right now.');
+      setHasMoreConversations(false);
+      if (!options.append && !hadVisibleConversations) setConversations([]);
     } finally {
       window.clearTimeout(timeout);
+      setLoadingMoreConversations(false);
+      if (options.append) return;
       if (showLoader) setLoadingConversations(false);
     }
   };
@@ -268,6 +358,17 @@ function ChatContent() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [user?.id, isAuthenticated]);
+
+  const handleLoadMore = () => {
+    if (loadingMoreConversations || !hasMoreConversations) return;
+    fetchConversations({
+      restoreState: false,
+      showLoader: false,
+      append: true,
+      offset: conversations.length,
+      limit: CONVERSATION_PAGE_SIZE,
+    });
+  };
 
   const saveStateAndNavigate = (url: string) => {
     if (scrollContainerRef.current) {
@@ -383,7 +484,14 @@ const res = await fetch(getApiUrl(`/api/messages/conversations`), {
         {/* Header */}
         <header className="w-full px-6 pb-4 pt-4 sticky top-0 bg-white z-40">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-black text-gray-900">Messages</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-black text-gray-900">Messages</h1>
+              {showRefreshingHint && (
+                <span className="text-[11px] font-bold text-green-700 bg-green-50 px-2 py-1 rounded-full">
+                  Updating...
+                </span>
+              )}
+            </div>
             {conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0) > 0 && (
               <span className="bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full">
                 {conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0)}
@@ -407,12 +515,7 @@ const res = await fetch(getApiUrl(`/api/messages/conversations`), {
         {/* Conversations List */}
         <div className="divide-y divide-gray-100">
           {loadingConversations ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-8 h-8 rounded-full border-2 border-green-600 border-t-transparent animate-spin"></div>
-                <p className="text-gray-500 text-sm">Loading conversations...</p>
-              </div>
-            </div>
+            <ConversationSkeleton />
           ) : conversationError ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
               <p className="text-sm text-gray-500 mb-4">{conversationError}</p>
@@ -469,7 +572,8 @@ const res = await fetch(getApiUrl(`/api/messages/conversations`), {
               <p className="text-sm text-gray-500 text-center">Tap + to start a conversation</p>
             </div>
           ) : (
-            filteredConversations.map((conversation) => {
+            <>
+            {filteredConversations.map((conversation) => {
               const status = onlineStatuses[conversation.other_user_id];
               const isOnline = status?.isOnline ?? conversation.is_online;
               const hasUnread = (conversation.unread_count || 0) > 0;
@@ -584,7 +688,19 @@ const res = await fetch(getApiUrl(`/api/messages/conversations`), {
                   </button>
                 </div>
               );
-            })
+            })}
+            {!searchQuery.trim() && hasMoreConversations && (
+              <div className="px-6 py-5">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMoreConversations}
+                  className="w-full py-3 rounded-full bg-gray-100 text-gray-800 text-sm font-bold hover:bg-gray-200 transition disabled:opacity-60"
+                >
+                  {loadingMoreConversations ? 'Loading...' : 'Load more'}
+                </button>
+              </div>
+            )}
+            </>
           )}
         </div>
       </div>

@@ -45,6 +45,11 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
     if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
+    const wantsPagination = searchParams.has('limit') || searchParams.has('offset');
+    const rawLimit = Number(searchParams.get('limit') || 10);
+    const rawOffset = Number(searchParams.get('offset') || 0);
+    const limit = Math.min(Math.max(Number.isFinite(rawLimit) ? rawLimit : 10, 1), 25);
+    const offset = Math.max(Number.isFinite(rawOffset) ? rawOffset : 0, 0);
 
   const conversations = await sql`
     WITH visible_messages AS (
@@ -102,9 +107,12 @@ export async function GET(req: NextRequest) {
     JOIN "user" u ON u.id = r.other_user_id
     WHERE r.rn = 1
     ORDER BY r.created_at DESC
-    LIMIT 100
+    LIMIT ${limit + 1}
+    OFFSET ${offset}
   `;
-    const machineryIds = conversations
+    const hasMore = conversations.length > limit;
+    const pageConversations = hasMore ? conversations.slice(0, limit) : conversations;
+    const machineryIds = pageConversations
       .map((c: any) => c.machinery_id)
       .filter(Boolean);
 
@@ -120,8 +128,8 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const now = new Date().getTime();
-const result = conversations.map((conv: any) => {
+const now = new Date().getTime();
+const result = pageConversations.map((conv: any) => {
   const machinery = conv.machinery_id ? machineryMap[conv.machinery_id] : null;
   return {
     ...conv,
@@ -133,7 +141,17 @@ const result = conversations.map((conv: any) => {
   };
 });
 
-    return NextResponse.json(result);
+    if (!wantsPagination) return NextResponse.json(result);
+
+    return NextResponse.json({
+      data: result,
+      pagination: {
+        limit,
+        offset,
+        nextOffset: offset + result.length,
+        hasMore,
+      },
+    });
   } catch (error: any) {
     console.error('Error fetching conversations:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
