@@ -9,7 +9,7 @@ import { MessageCircle, Search, Trash2, X, Check, CheckCheck } from 'lucide-reac
 const SCROLL_KEY = 'chatList_scrollY';
 const SEARCH_KEY = 'chatList_searchQuery';
 const CACHE_KEY_PREFIX = 'chatList_cachedConversations';
-const REQUEST_TIMEOUT_MS = 10000;
+const REQUEST_TIMEOUT_MS = 15000;
 const CONVERSATION_PAGE_SIZE = 10;
 
 interface Conversation {
@@ -45,6 +45,23 @@ function ConversationSkeleton() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function ChatSkeletonScreen() {
+  return (
+    <div className="flex flex-col bg-white overflow-y-auto" style={{ height: 'calc(100dvh - 55px)' }}>
+      <header className="w-full px-6 pb-4 pt-4 sticky top-0 bg-white z-40">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-black text-gray-900">Messages</h1>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <div className="w-full bg-gray-100 rounded-full pl-12 pr-4 py-3 h-11" />
+        </div>
+      </header>
+      <ConversationSkeleton />
     </div>
   );
 }
@@ -146,6 +163,7 @@ function ChatContent() {
   const pendingScrollRef = useRef<number | null>(null);
   const isRestoringRef = useRef(false);
   const allUsersLoadedRef = useRef(false);
+  const conversationsFetchInFlightRef = useRef(false);
 
   // Get online statuses for all conversation partners
   const userIds = conversations.map(c => c.other_user_id);
@@ -200,17 +218,6 @@ function ChatContent() {
     }
   }, [loading, isAuthenticated, router]);
 
-  useEffect(() => {
-    if (!loadingConversations) return;
-
-    const timeout = window.setTimeout(() => {
-      setConversationError('Messages are taking too long to load. Pull to refresh or try again.');
-      setLoadingConversations(false);
-    }, REQUEST_TIMEOUT_MS + 1000);
-
-    return () => window.clearTimeout(timeout);
-  }, [loadingConversations]);
-
   // Restore scroll position after conversations load
   useEffect(() => {
     if (loadingConversations) return;
@@ -245,7 +252,6 @@ function ChatContent() {
     setLoadingUsers(true);
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    const hadVisibleConversations = conversations.length > 0;
     try {
       const res = await fetch(
         getApiUrl(`/api/nearby-farmers?type=all&latitude=0&longitude=0&currentUserId=${encodeURIComponent(user?.id || '')}`),
@@ -270,17 +276,19 @@ function ChatContent() {
       return;
     }
 
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    if (conversationsFetchInFlightRef.current && !options.append) return;
+
+    const {
+      restoreState = true,
+      showLoader = true,
+      append = false,
+      offset = 0,
+      limit = CONVERSATION_PAGE_SIZE,
+    } = options;
+    const hadVisibleConversations = conversations.length > 0;
 
     try {
-      const {
-        restoreState = true,
-        showLoader = true,
-        append = false,
-        offset = 0,
-        limit = CONVERSATION_PAGE_SIZE,
-      } = options;
+      if (!append) conversationsFetchInFlightRef.current = true;
       if (append) setLoadingMoreConversations(true);
       else if (showLoader) setLoadingConversations(true);
       setConversationError('');
@@ -299,40 +307,43 @@ function ChatContent() {
         }
       }
 
-      const response = await fetch(
-        getApiUrl(`/api/messages/conversations?userId=${encodeURIComponent(user.id)}&limit=${limit}&offset=${offset}`),
-        { cache: 'no-store', signal: controller.signal }
-      );
-      if (response.ok) {
-        const payload = await response.json();
-        const data = Array.isArray(payload) ? payload : payload.data;
-        const nextConversations = Array.isArray(data) ? data : [];
-
-        setHasMoreConversations(Boolean(payload?.pagination?.hasMore));
-        setShowRefreshingHint(false);
-        setConversations((prev) => {
-          if (!append) return nextConversations;
-
-          const existing = new Set(prev.map((c) => `${c.other_user_id}-${c.machinery_id || 'general'}`));
-          const merged = [...prev];
-          for (const conv of nextConversations) {
-            const key = `${conv.other_user_id}-${conv.machinery_id || 'general'}`;
-            if (!existing.has(key)) merged.push(conv);
-          }
-          return merged;
-        });
-      } else {
-        if (!append && !hadVisibleConversations) setConversationError('Unable to load conversations right now.');
-        setHasMoreConversations(false);
-        if (!append && !hadVisibleConversations) setConversations([]);
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      let payload: any = null;
+      try {
+        const response = await fetch(
+          getApiUrl(`/api/messages/conversations?userId=${encodeURIComponent(user.id)}&limit=${limit}&offset=${offset}`),
+          { cache: 'no-store', signal: controller.signal }
+        );
+        if (!response.ok) throw new Error(`Conversation fetch failed: ${response.status}`);
+        payload = await response.json();
+      } finally {
+        window.clearTimeout(timeout);
       }
+
+      const data = Array.isArray(payload) ? payload : payload.data;
+      const nextConversations = Array.isArray(data) ? data : [];
+
+      setHasMoreConversations(Boolean(payload?.pagination?.hasMore));
+      setShowRefreshingHint(false);
+      setConversations((prev) => {
+        if (!append) return nextConversations;
+
+        const existing = new Set(prev.map((c) => `${c.other_user_id}-${c.machinery_id || 'general'}`));
+        const merged = [...prev];
+        for (const conv of nextConversations) {
+          const key = `${conv.other_user_id}-${conv.machinery_id || 'general'}`;
+          if (!existing.has(key)) merged.push(conv);
+        }
+        return merged;
+      });
     } catch (error) {
       console.error('Failed to fetch conversations:', error);
       if (!options.append && !hadVisibleConversations) setConversationError('Unable to load conversations right now.');
       setHasMoreConversations(false);
       if (!options.append && !hadVisibleConversations) setConversations([]);
     } finally {
-      window.clearTimeout(timeout);
+      if (!options.append) conversationsFetchInFlightRef.current = false;
       setLoadingMoreConversations(false);
       if (options.append) return;
       if (showLoader) setLoadingConversations(false);
@@ -343,7 +354,9 @@ function ChatContent() {
     if (!user?.id || !isAuthenticated) return;
 
     const refresh = () => fetchConversations({ restoreState: false, showLoader: false });
-    const interval = window.setInterval(refresh, 10000);
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') refresh();
+    }, 30000);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') refresh();
@@ -447,14 +460,7 @@ const res = await fetch(getApiUrl(`/api/messages/conversations`), {
   };
 
   if (loading) {
-    return (
-      <div className="w-full min-h-[100dvh] bg-gray-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-full border-4 border-green-600 border-t-transparent animate-spin"></div>
-          <p className="text-gray-600 text-sm font-medium">Loading...</p>
-        </div>
-      </div>
-    );
+    return <ChatSkeletonScreen />;
   }
 
   if (!isAuthenticated) {

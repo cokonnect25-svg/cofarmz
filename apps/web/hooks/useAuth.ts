@@ -68,10 +68,10 @@ export function useAuth() {
     }
 
     let cancelled = false;
-    const timer = window.setTimeout(async () => {
-      const controller = new AbortController();
-      const abortTimer = window.setTimeout(() => controller.abort(), 2500);
+    const controller = new AbortController();
+    const abortTimer = window.setTimeout(() => controller.abort(), 2500);
 
+    async function loadFallbackSession() {
       try {
         const res = await fetch("/api/my-session", {
           cache: "no-store",
@@ -86,11 +86,14 @@ export function useAuth() {
         window.clearTimeout(abortTimer);
         if (!cancelled) setFallbackResolved(true);
       }
-    }, 1200);
+    }
+
+    loadFallbackSession();
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
+      controller.abort();
+      window.clearTimeout(abortTimer);
     };
   }, [webLoading]);
 
