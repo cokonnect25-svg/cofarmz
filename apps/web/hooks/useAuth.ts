@@ -42,6 +42,8 @@ export function useAuth() {
 
   const [mobileUser, setMobileUser] = useState<any>(null);
   const [mobileLoading, setMobileLoading] = useState(true); // always true until effect runs
+  const [fallbackUser, setFallbackUser] = useState<any>(null);
+  const [fallbackResolved, setFallbackResolved] = useState(false);
 
   useEffect(() => {
     // ✅ Safe: Capacitor only called client-side inside useEffect
@@ -54,14 +56,52 @@ export function useAuth() {
     setMobileLoading(false);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (Capacitor.isNativePlatform()) {
+      setFallbackResolved(true);
+      return;
+    }
+    if (!webLoading) {
+      setFallbackResolved(true);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      const controller = new AbortController();
+      const abortTimer = window.setTimeout(() => controller.abort(), 2500);
+
+      try {
+        const res = await fetch("/api/my-session", {
+          cache: "no-store",
+          credentials: "include",
+          signal: controller.signal,
+        });
+        const data = res.ok ? await res.json() : null;
+        if (!cancelled) setFallbackUser(data?.user || null);
+      } catch {
+        if (!cancelled) setFallbackUser(null);
+      } finally {
+        window.clearTimeout(abortTimer);
+        if (!cancelled) setFallbackResolved(true);
+      }
+    }, 1200);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [webLoading]);
+
   // ✅ Safe SSR check — evaluated only after hydration in practice
   const isMobile =
     typeof window !== "undefined" &&
     typeof Capacitor !== "undefined" &&
     Capacitor.isNativePlatform();
 
-  const user: any = isMobile ? mobileUser : (session?.user as any);
-  const loading = isMobile ? mobileLoading : webLoading;
+  const user: any = isMobile ? mobileUser : ((session?.user as any) || fallbackUser);
+  const loading = isMobile ? mobileLoading : (webLoading && !fallbackResolved);
   const isAuthenticated = !!user;
 
   async function signIn(email: string, password: string) {
