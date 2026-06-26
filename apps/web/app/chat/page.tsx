@@ -107,6 +107,7 @@ function ChatContent() {
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [conversationError, setConversationError] = useState('');
 
   // Delete conversation state
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
@@ -130,6 +131,24 @@ function ChatContent() {
       fetchAllUsers();
     }
   }, [user?.id, isAuthenticated, loading]);
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      setLoadingConversations(false);
+      router.replace('/login');
+    }
+  }, [loading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!loadingConversations) return;
+
+    const timeout = window.setTimeout(() => {
+      setConversationError('Messages are taking too long to load. Pull to refresh or try again.');
+      setLoadingConversations(false);
+    }, REQUEST_TIMEOUT_MS + 1000);
+
+    return () => window.clearTimeout(timeout);
+  }, [loadingConversations]);
 
   // Restore scroll position after conversations load
   useEffect(() => {
@@ -193,6 +212,7 @@ function ChatContent() {
     try {
       const { restoreState = true, showLoader = true } = options;
       if (showLoader) setLoadingConversations(true);
+      setConversationError('');
 
       if (restoreState) {
         const savedScroll = sessionStorage.getItem(SCROLL_KEY);
@@ -216,10 +236,12 @@ function ChatContent() {
         const data = await response.json();
         setConversations(Array.isArray(data) ? data : []);
       } else {
+        setConversationError('Unable to load conversations right now.');
         setConversations([]);
       }
     } catch (error) {
       console.error('Failed to fetch conversations:', error);
+      setConversationError('Unable to load conversations right now.');
       setConversations([]);
     } finally {
       window.clearTimeout(timeout);
@@ -323,12 +345,29 @@ const res = await fetch(getApiUrl(`/api/messages/conversations`), {
     return msg.length > maxLength ? msg.substring(0, maxLength) + '...' : msg;
   };
 
-  if (loading || !isAuthenticated) {
+  if (loading) {
     return (
       <div className="w-full min-h-[100dvh] bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-full border-4 border-green-600 border-t-transparent animate-spin"></div>
           <p className="text-gray-600 text-sm font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="w-full min-h-[100dvh] bg-gray-50 flex items-center justify-center px-6">
+        <div className="text-center">
+          <h1 className="text-xl font-black text-gray-900 mb-2">Login required</h1>
+          <p className="text-sm text-gray-500 mb-5">Please login again to view your messages.</p>
+          <button
+            onClick={() => router.replace('/login')}
+            className="px-5 py-2.5 rounded-full bg-green-600 text-white text-sm font-bold hover:bg-green-700 transition"
+          >
+            Go to login
+          </button>
         </div>
       </div>
     );
@@ -373,6 +412,16 @@ const res = await fetch(getApiUrl(`/api/messages/conversations`), {
                 <div className="w-8 h-8 rounded-full border-2 border-green-600 border-t-transparent animate-spin"></div>
                 <p className="text-gray-500 text-sm">Loading conversations...</p>
               </div>
+            </div>
+          ) : conversationError ? (
+            <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+              <p className="text-sm text-gray-500 mb-4">{conversationError}</p>
+              <button
+                onClick={() => fetchConversations({ restoreState: false, showLoader: true })}
+                className="px-5 py-2.5 rounded-full bg-green-600 text-white text-sm font-bold hover:bg-green-700 transition"
+              >
+                Retry
+              </button>
             </div>
           ) : searchQuery.trim() && filteredConversations.length === 0 ? (
             <div>
