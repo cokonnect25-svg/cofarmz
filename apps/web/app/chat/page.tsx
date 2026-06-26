@@ -34,8 +34,11 @@ function useOnlineStatuses(userIds: string[]) {
 
   useEffect(() => {
     if (userIds.length === 0) return;
+    let shouldReconnect = true;
 
     const connect = () => {
+      if (!shouldReconnect) return;
+
       try {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const ws = new WebSocket(`${protocol}//${window.location.host}/api/socket`);
@@ -59,6 +62,7 @@ function useOnlineStatuses(userIds: string[]) {
         };
 
         ws.onclose = () => {
+          if (!shouldReconnect) return;
           if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
           reconnectTimeoutRef.current = setTimeout(connect, 5000);
         };
@@ -81,6 +85,7 @@ function useOnlineStatuses(userIds: string[]) {
     }, 15000);
 
     return () => {
+      shouldReconnect = false;
       wsRef.current?.close();
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       clearInterval(pollInterval);

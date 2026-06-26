@@ -1,6 +1,6 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState, Suspense, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
@@ -61,7 +61,11 @@ function useOnlineStatus(userId: string | null) {
 
   useEffect(() => {
     if (!userId) return;
+    let shouldReconnect = true;
+
     const connect = () => {
+      if (!shouldReconnect) return;
+
       try {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const ws = new WebSocket(`${protocol}//${window.location.host}/api/socket`);
@@ -77,6 +81,7 @@ function useOnlineStatus(userId: string | null) {
         };
         ws.onclose = () => {
           setIsOnline(false);
+          if (!shouldReconnect) return;
           if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
           reconnectTimeoutRef.current = setTimeout(connect, 5000);
         };
@@ -96,6 +101,7 @@ function useOnlineStatus(userId: string | null) {
       } catch {}
     }, 10000);
     return () => {
+      shouldReconnect = false;
       wsRef.current?.close();
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       clearInterval(pollInterval);
@@ -343,12 +349,13 @@ function UploadProgress({ progress }: { progress: number }) {
 
 // ── Main Component ─────────────────────────────────────────
 function MessagesContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const ownerId = searchParams.get('ownerId');
   const machineryId = searchParams.get('machineryId');
   const ownerName = searchParams.get('ownerName');
 
-  const { user } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -374,6 +381,12 @@ function MessagesContent() {
 
   const { isOnline, lastSeen } = useOnlineStatus(ownerId);
 
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [authLoading, isAuthenticated, router]);
+
   const markAsRead = useCallback(async () => {
     if (!user?.id || !ownerId) return;
     try {
@@ -397,7 +410,10 @@ function MessagesContent() {
   const fetchMessages = useCallback(async () => {
     if (!user?.id || !ownerId) return;
     try {
-      const response = await fetch(getApiUrl(`/api/messages?userId=${user.id}&otherUserId=${ownerId}`));
+      const response = await fetch(
+        getApiUrl(`/api/messages?userId=${encodeURIComponent(user.id)}&otherUserId=${encodeURIComponent(ownerId)}`),
+        { cache: 'no-store' }
+      );
       if (response.ok) {
         const data = await response.json();
         // ✅ CRITICAL: Ensure data is array, filter out invalid items
@@ -414,11 +430,28 @@ function MessagesContent() {
   }, [user?.id, ownerId, markAsRead]);
 
   useEffect(() => {
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
+
+    if (!isAuthenticated || !user?.id || !ownerId) {
+      setMessages([]);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
     setLoading(true);
-    fetchMessages().then(() => setLoading(false));
+    fetchMessages().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
     const interval = setInterval(fetchMessages, 3000);
-    return () => clearInterval(interval);
-  }, [fetchMessages]);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [authLoading, isAuthenticated, user?.id, ownerId, fetchMessages]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -593,6 +626,37 @@ function MessagesContent() {
   };
 
   // ── RENDER MESSAGE CONTENT ───────────────────────────────
+  if (authLoading || (!authLoading && !isAuthenticated)) {
+    return (
+      <div className="fixed left-0 right-0 flex items-center justify-center bg-white"
+        style={{ top: `calc(${TOP_NAV_H}px + env(safe-area-inset-top))`, bottom: `calc(${BOTTOM_NAV_H}px + env(safe-area-inset-bottom))` }}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-full border-4 border-green-600 border-t-transparent animate-spin" />
+          <p className="text-gray-600 text-sm font-medium">Loading messages...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!ownerId) {
+    return (
+      <div className="fixed left-0 right-0 flex flex-col bg-white"
+        style={{ top: `calc(${TOP_NAV_H}px + env(safe-area-inset-top))`, bottom: `calc(${BOTTOM_NAV_H}px + env(safe-area-inset-bottom))` }}>
+        <div className="flex-shrink-0 bg-green-600 text-white px-4 py-3 flex items-center gap-3">
+          <Link href="/chat"><ArrowLeft className="w-6 h-6 cursor-pointer" /></Link>
+          <h1 className="font-bold text-lg">Messages</h1>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+          <p className="text-gray-900 font-bold mb-2">No conversation selected</p>
+          <p className="text-gray-500 text-sm mb-5">Open a chat from your messages list to continue.</p>
+          <Link href="/chat" className="px-5 py-2.5 rounded-full bg-green-600 text-white text-sm font-bold hover:bg-green-700 transition">
+            Back to chats
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const renderMessageContent = (msg: Message, isOwn: boolean) => {
     // ✅ Guard against null/undefined message
     if (!msg) return null;
