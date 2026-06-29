@@ -1,93 +1,76 @@
 export default function PrivacyPage() {
-  return (
-    <div className="min-min-h-[100dvh] bg-gray-50">
-      <div className="bg-gradient-to-br from-green-700 to-green-600 py-16 px-6">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-4xl font-black text-white mb-3">Privacy Policy</h1>
-          <p className="text-green-100 text-sm">Last updated: January 2026</p>
-        </div>
-      </div>
-
-      <div className="max-w-3xl mx-auto px-6 py-12">
-        <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 space-y-8 text-sm text-gray-600 leading-relaxed">
-          {[
-            { title: '1. Information We Collect', body: 'We collect information you provide when registering (name, email, phone), profile details (location, photo), and usage data (pages visited, equipment listed, bookings made).' },
-            { title: '2. How We Use Your Information', body: 'Your information is used to operate the platform, connect farmers and equipment renters, send booking notifications, and improve our services. We do not sell your data to third parties.' },
-            { title: '3. Data Security', body: 'We use industry-standard encryption (HTTPS/TLS) for all data transmission. Passwords are hashed using bcrypt. Profile images are stored securely on Cloudflare R2.' },
-            { title: '4. Cookies', body: 'We use session cookies to keep you logged in and improve your experience. You can disable cookies in your browser settings, but this may affect platform functionality.' },
-            { title: '5. Third-Party Services', body: 'We use Cloudflare for media storage and PostgreSQL for data storage. These services have their own privacy policies. We do not share your personal data with advertisers.' },
-            { title: '6. Your Rights', body: 'You may request to view, update, or delete your account data at any time by contacting us via WhatsApp at +91 91777 38383.' },
-            { title: '7. Contact Us', body: 'For any privacy concerns, contact CoFarmz support at +91 91777 38383 or via WhatsApp.' },
-          ].map(s => (
-            <div key={s.title}>
-              <h2 className="text-gray-900 font-bold text-base mb-2">{s.title}</h2>
-              <p>{s.body}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-export default function PrivacyPage() {
   const sections = [
     {
-      title: "1. Information We Collect",
-      body: "We collect information you provide when creating an account, including your name, email address, phone number, profile photo, bio, and other profile details. We also collect content you upload, such as posts, reels, photos, videos, comments, likes, messages, and call preferences. Technical information such as your IP address, device information, browser type, operating system, app version, and usage logs may also be collected."
+      title: "1. Information You Provide",
+      body: "We collect information you provide when you create or update your CoFarmz account, including your name, email address, mobile number, profile photo, role, location, gender, age, supplier type, crops, equipment listings, certifications, booking details, and other profile information you choose to add."
     },
     {
-      title: "2. How We Use Your Information",
-      body: "We use your information to create and manage your account, display your profile, enable posting of reels and media, provide messaging and calling features, personalize your experience, recommend relevant content, improve platform performance, send notifications, prevent fraud, and maintain the security of our services."
+      title: "2. Content, Reels, Photos, and Activity",
+      body: "We collect and process content you create, upload, or interact with on CoFarmz, including reels, photos, videos, captions, comments, likes, crop details, equipment details, reviews, favorites, searches, page views, contact actions, and other activity on the platform. Content you publish may be visible to other users based on the feature and your privacy settings."
     },
     {
-      title: "3. Reels, Photos & Videos",
-      body: "Content you upload, including reels, photos, videos, captions, comments, and profile images, may be visible to other users according to your privacy settings. By uploading content, you grant CoFarmz permission to securely store, process, and display your content within the platform. You retain ownership of your content."
+      title: "3. Messages, Calls, Followers, and Notifications",
+      body: "We process messages, conversation details, media shared in messages, read status, follower requests, follower status, calling preferences, call-contact actions, and notification tokens so users can communicate, receive booking updates, manage follower requests, and control who can contact them. Calling can be enabled or disabled from your profile. When calling is enabled, only accepted followers can call you unless another feature requires a booking-related contact."
     },
     {
-      title: "4. Followers & Calling Feature",
-      body: "Users can follow other users on the platform. If you enable the 'Enable Calling' option in your profile settings, only followers (or users allowed by your privacy settings) can contact you through the calling feature. You can enable or disable calling at any time."
+      title: "4. Location Information",
+      body: "With your permission, we may collect precise or approximate location information from your device. We also store locations you enter manually for your profile, crops, equipment, and bookings. Location is used to show nearby farmers, buyers, suppliers, equipment, maps, distance estimates, and location-based recommendations. You can disable device location access in your device settings."
     },
     {
-      title: "5. Messages & Notifications",
-      body: "We use your information to deliver messages, notifications, booking updates, follower alerts, likes, comments, and other important account-related communications."
+      title: "5. Device, Usage, Cookies, and Analytics",
+      body: "We may collect technical and usage information such as IP address, browser type, operating system, device identifiers, app version, session data, pages visited, features used, error logs, and performance data. We use cookies, local storage, Firebase, and analytics tools to keep you logged in, remember preferences, improve performance, understand usage, prevent abuse, and secure the service."
     },
     {
-      title: "6. Location Information",
-      body: "With your permission, we may access your device location to provide nearby recommendations and improve location-based services. You can disable location access through your device settings."
+      title: "6. How We Use Information",
+      body: "We use information to provide, personalize, and improve CoFarmz; create and manage accounts; display profiles and listings; enable reels, comments, likes, messages, calls, follows, bookings, reviews, maps, and notifications; recommend relevant users, crops, equipment, and content; verify mobile numbers; detect fraud or misuse; debug issues; maintain safety; and comply with legal obligations."
     },
     {
-      title: "7. Cookies & Analytics",
-      body: "We use cookies, local storage, and analytics technologies to remember your preferences, keep you logged in, improve performance, analyze usage, and enhance your overall experience."
+      title: "7. Public and Shared Information",
+      body: "Your profile name, role, profile photo, location, crops, equipment, reels, captions, comments, likes, followers/following counts, reviews, and other public or feature-visible information may be seen by other users. Messages are visible to the sender and receiver. Booking details are shared between the renter and the equipment owner as needed to complete the booking."
     },
     {
-      title: "8. Data Security",
-      body: "We use HTTPS/TLS encryption to secure all communications. Passwords are securely encrypted, and we implement appropriate technical and organizational measures to protect your information against unauthorized access, disclosure, or misuse."
+      title: "8. How We Share Information",
+      body: "We do not sell your personal information. We may share information with other CoFarmz users when required by a feature, with trusted service providers that help us operate the platform, with payment or delivery partners if such features are enabled, with authorities when required by law, or when necessary to protect users, prevent fraud, enforce our terms, or respond to safety and security issues."
     },
     {
-      title: "9. Third-Party Services",
-      body: "Our platform may use trusted third-party providers for cloud storage, authentication, payment processing, analytics, notifications, and content delivery. These providers process information according to their own privacy policies."
+      title: "9. Service Providers and Integrations",
+      body: "CoFarmz may use third-party providers for hosting, database storage, cloud media storage, authentication, mobile verification, maps, analytics, push notifications, content delivery, email, and support. These providers may process information only to provide services to CoFarmz and are subject to their own privacy and security practices."
     },
     {
-      title: "10. Sharing Your Information",
-      body: "We do not sell your personal information. Information may be shared only with trusted service providers, when required by law, to protect the safety of users, or with your explicit consent."
+      title: "10. Data Security",
+      body: "We use HTTPS/TLS encryption, password hashing, access controls, and other reasonable technical and organizational measures to protect your information. No system is completely secure, but we work to protect accounts, content, messages, media, and platform data from unauthorized access, disclosure, alteration, or misuse."
     },
     {
-      title: "11. Your Rights",
-      body: "You may access, update, download, or delete your account information at any time. You can also manage your privacy settings, calling preferences, notifications, followers, and account visibility directly from your profile."
+      title: "11. Data Retention",
+      body: "We keep information for as long as needed to provide CoFarmz, maintain account records, complete bookings, resolve disputes, improve safety, prevent fraud, comply with legal obligations, and enforce our terms. If you delete content or request account deletion, we will delete or anonymize information unless retention is required for security, legal, backup, dispute, or legitimate business reasons."
     },
     {
-      title: "12. Children's Privacy",
-      body: "Our services are not intended for children below the minimum legal age required in your country. We do not knowingly collect personal information from children."
+      title: "12. Your Choices and Controls",
+      body: "You can access and update your profile, phone number, location, role, crop and equipment details, reels, calling preference, notification choices, followers, and other account information from the app. You can also control device permissions such as camera, media, notifications, and location through your device settings."
     },
     {
-      title: "13. Policy Updates",
-      body: "We may update this Privacy Policy from time to time. Any changes will be published on this page with the latest effective date."
+      title: "13. Your Rights",
+      body: "Depending on applicable law, you may have the right to access, correct, update, export, restrict, object to processing, or delete your personal information. You may contact us to request help with your data, account, content, privacy settings, or deletion requests."
     },
     {
-      title: "14. Contact Us",
-      body: "If you have any questions or concerns regarding this Privacy Policy, please contact the CoFarmz Support Team through our official email or WhatsApp support."
+      title: "14. Safety, Integrity, and Legal Requests",
+      body: "We may review or preserve information when needed to investigate suspicious activity, enforce our rules, protect users and the public, respond to legal requests, prevent spam or fraud, resolve technical issues, or maintain the integrity and availability of CoFarmz."
+    },
+    {
+      title: "15. Children's Privacy",
+      body: "CoFarmz is not intended for children below the minimum legal age required in their country. We do not knowingly collect personal information from children. If we learn that a child has provided personal information without proper consent, we will take appropriate steps to remove it."
+    },
+    {
+      title: "16. International Processing",
+      body: "Your information may be stored and processed using servers, databases, cloud providers, and service providers located in India or other countries. Where required, we take appropriate steps to protect information when it is transferred or processed outside your region."
+    },
+    {
+      title: "17. Policy Updates",
+      body: "We may update this Privacy Policy from time to time to reflect new features, legal requirements, security practices, or changes to CoFarmz. Updated versions will be posted on this page with the latest effective date."
+    },
+    {
+      title: "18. Contact Us",
+      body: "If you have questions, concerns, complaints, or requests about this Privacy Policy or your data, please contact the CoFarmz Support Team using the official email or WhatsApp number shown below."
     }
   ];
 
@@ -111,8 +94,10 @@ export default function PrivacyPage() {
           <p className="text-gray-600 leading-8">
             At <strong>CoFarmz</strong>, we value your privacy and are committed
             to protecting your personal information. This Privacy Policy explains
-            what information we collect, how we use it, and the choices you have
-            regarding your data when using our platform.
+            what information we collect, how we use and share it, how CoFarmz
+            features such as reels, messages, followers, calls, bookings, maps,
+            and notifications work with your data, and the choices you have when
+            using our platform.
           </p>
 
           {sections.map((section) => (
