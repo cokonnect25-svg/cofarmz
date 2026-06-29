@@ -559,6 +559,10 @@ const canManageCrops = userRole !== 'supplier' || isCommoditySupplier;
 const canManageEquipment = userRole !== 'supplier' || isEquipmentSupplier;
 const canUseFarmerCropFields = userRole === 'farmer' || userRole === 'fpo' || isCommoditySupplier;
 
+const toggleSupplierType = (type: 'commodities' | 'equipment') => {
+  setSupplierTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]);
+};
+
 useEffect(() => {
   if (userRole === 'supplier') setExpandedSection(isCommoditySupplier ? 'crops' : 'equipment'); 
   else setExpandedSection('crops'); // Default to crops for everyone else
@@ -1005,16 +1009,28 @@ const fetchFollowersCounts = async () => {
     if (!editForm.name.trim()) { alert('Name is required'); return; }
     if (!emailRegex.test(editForm.email)) { alert('Enter a valid email'); return; }
     if (!/^[6-9][0-9]{9}$/.test(nextPhoneDigits)) { alert('Enter a valid 10 digit mobile number'); return; }
+    if (userRole === 'supplier' && supplierTypes.length === 0) { alert('Please choose Commodities Supplier, Equipment Supplier, or both.'); return; }
     setIsUpdatingProfile(true);
     try {
       const response = await fetch(getApiUrl(`/api/users/profile`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, name: editForm.name, email: editForm.email, phone: editForm.phone, location: editForm.location, gender: editForm.gender || null, age: editForm.age ? parseInt(editForm.age) : null, ...(editForm.latitude != null ? { latitude: editForm.latitude, longitude: editForm.longitude } : {}) }),
+        body: JSON.stringify({
+          userId: user.id,
+          name: editForm.name,
+          email: editForm.email,
+          phone: editForm.phone,
+          location: editForm.location,
+          gender: editForm.gender || null,
+          age: editForm.age ? parseInt(editForm.age) : null,
+          ...(editForm.latitude != null ? { latitude: editForm.latitude, longitude: editForm.longitude } : {}),
+          ...(userRole === 'supplier' ? { supplier_types: supplierTypes } : {}),
+        }),
       });
       const updated = await response.json();
       if (!response.ok) throw new Error(updated.error || 'Failed to update profile');
       setProfileData(updated); setUserRole(updated.role || 'buyer');
+      setSupplierTypes(Array.isArray(updated.supplier_types) ? updated.supplier_types : []);
       window.dispatchEvent(new CustomEvent('cofarmz:profile-updated', { detail: updated }));
       alert(phoneChanged ? 'Profile updated. Please verify your new mobile number.' : 'Profile updated successfully!');
       setShowEditModal(false);
@@ -1881,6 +1897,24 @@ const fetchFollowersCounts = async () => {
               </div>
               <div><label className="block text-sm font-semibold text-gray-900 mb-2">Gender</label><select value={editForm.gender} onChange={e => setEditForm(p => ({ ...p, gender: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"><option value="">Select...</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div>
               <div><label className="block text-sm font-semibold text-gray-900 mb-2">Age</label><input type="number" inputMode="numeric" value={editForm.age} onChange={e => { const val = e.target.value.replace(/[^0-9]/g, ''); const num = parseInt(val); if (val === '' || (num >= 1 && num <= 120)) setEditForm(p => ({ ...p, age: val })); }} onKeyDown={e => ['-', '+', 'e', 'E', '.'].includes(e.key) && e.preventDefault()} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
+              {userRole === 'supplier' && (
+                <div className="rounded-xl border border-purple-100 bg-purple-50/70 p-4">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Supplier type</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <label className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 border border-purple-100 cursor-pointer">
+                      <input type="checkbox" checked={supplierTypes.includes('commodities')} onChange={() => toggleSupplierType('commodities')} className="w-4 h-4 text-purple-600 rounded" />
+                      <span className="text-xs font-semibold text-gray-700">Commodities supplier</span>
+                    </label>
+                    <label className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 border border-purple-100 cursor-pointer">
+                      <input type="checkbox" checked={supplierTypes.includes('equipment')} onChange={() => toggleSupplierType('equipment')} className="w-4 h-4 text-purple-600 rounded" />
+                      <span className="text-xs font-semibold text-gray-700">Equipment supplier</span>
+                    </label>
+                  </div>
+                  {supplierTypes.length === 0 && (
+                    <p className="text-xs text-red-600 font-semibold mt-2">Choose at least one supplier type.</p>
+                  )}
+                </div>
+              )}
               <div className="flex gap-3 pt-4">
                 <button onClick={() => setShowEditModal(false)} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition">Cancel</button>
                 <button onClick={handleUpdateProfile} disabled={isUpdatingProfile} className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">{isUpdatingProfile ? 'Saving...' : 'Save Changes'}</button>

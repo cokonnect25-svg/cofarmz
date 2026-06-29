@@ -156,7 +156,7 @@ const roleId = roleRow[0].id;
 
 export async function PUT(request: Request) {
   try {
-    const { userId, name, email, phone, location, gender, age, latitude, longitude } = await request.json();
+    const { userId, name, email, phone, location, gender, age, latitude, longitude, supplier_types } = await request.json();
 
     if (!userId) {
       return NextResponse.json(
@@ -170,6 +170,25 @@ export async function PUT(request: Request) {
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION`.catch(() => { });
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN DEFAULT false`.catch(() => { });
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMPTZ`.catch(() => { });
+    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS supplier_types TEXT[] DEFAULT ARRAY[]::TEXT[]`.catch(() => { });
+
+    const currentUserRows = await sql`
+      SELECT role, role_id
+      FROM "user"
+      WHERE id = ${userId}
+      LIMIT 1
+    `;
+
+    if (currentUserRows.length === 0) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    const currentRole =
+      currentUserRows[0].role ||
+      (currentUserRows[0].role_id === 3 ? "supplier" : null);
 
     let normalizedPhone: { value: string; lookup: string } | null = null;
     let currentPhone: string | null = null;
@@ -249,6 +268,17 @@ export async function PUT(request: Request) {
       updates.push(`longitude = $${updates.length + 1}`);
       values.push(longitude);
     }
+    if (supplier_types !== undefined) {
+      const supplierTypes = normalizeSupplierTypes(supplier_types);
+      if (currentRole === "supplier" && supplierTypes.length === 0) {
+        return NextResponse.json(
+          { error: "Select at least one supplier type" },
+          { status: 400 }
+        );
+      }
+      updates.push(`supplier_types = $${updates.length + 1}::text[]`);
+      values.push(currentRole === "supplier" ? supplierTypes : []);
+    }
 
     if (updates.length === 0) {
       return NextResponse.json(
@@ -272,6 +302,7 @@ export async function PUT(request: Request) {
         u.id, u.name, u.email, u.phone, u.location, u.image, u.gender, u.age,
         u.phone_verified, u.phone_verified_at,
         u.role_id,
+        u.supplier_types,
         u.role,
         r.display_name as role_display_name,
         r.permissions as role_permissions
