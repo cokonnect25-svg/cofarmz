@@ -502,6 +502,7 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     name: '', email: '', phone: '', location: '', gender: '', age: '',
     latitude: null as number | null, longitude: null as number | null,
+    calling_enabled: true,
   });
   const [profileLocationSuggestions, setProfileLocationSuggestions] = useState<any[]>([]);
   const [profileLocationSearching, setProfileLocationSearching] = useState(false);
@@ -985,7 +986,7 @@ const fetchFollowersCounts = async () => {
       const p = profileData || {};
       const phoneDigits = String(p.phone || '').replace(/\D/g, '');
       const displayPhone = phoneDigits.length === 12 && phoneDigits.startsWith('91') ? phoneDigits.slice(2) : phoneDigits;
-      setEditForm({ name: p.name || user.name || '', email: p.email || user.email || '', phone: displayPhone, location: p.location || '', gender: p.gender || '', age: p.age ? String(p.age) : '', latitude: p.latitude || null, longitude: p.longitude || null });
+      setEditForm({ name: p.name || user.name || '', email: p.email || user.email || '', phone: displayPhone, location: p.location || '', gender: p.gender || '', age: p.age ? String(p.age) : '', latitude: p.latitude || null, longitude: p.longitude || null, calling_enabled: p.calling_enabled !== false });
       setShowEditModal(true);
     }
   };
@@ -1023,6 +1024,7 @@ const fetchFollowersCounts = async () => {
           location: editForm.location,
           gender: editForm.gender || null,
           age: editForm.age ? parseInt(editForm.age) : null,
+          calling_enabled: editForm.calling_enabled,
           ...(editForm.latitude != null ? { latitude: editForm.latitude, longitude: editForm.longitude } : {}),
           ...(userRole === 'supplier' ? { supplier_types: supplierTypes } : {}),
         }),
@@ -1877,6 +1879,18 @@ const fetchFollowersCounts = async () => {
               <div><label className="block text-sm font-semibold text-gray-900 mb-2">Name</label><input type="text" value={editForm.name} onChange={e => { if (/^[A-Za-z\s]*$/.test(e.target.value)) setEditForm(p => ({ ...p, name: e.target.value })); }} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
               <div><label className="block text-sm font-semibold text-gray-900 mb-2">Email</label><input type="email" value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
               <div><label className="block text-sm font-semibold text-gray-900 mb-2">Phone</label><input type="tel" maxLength={10} value={editForm.phone} onChange={e => { if (/^\d*$/.test(e.target.value)) setEditForm(p => ({ ...p, phone: e.target.value })); }} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
+              <label className="flex items-center justify-between gap-4 rounded-xl border border-green-100 bg-green-50/70 p-4 cursor-pointer">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Enable calls from followers</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Only accepted followers can call when this is on.</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={editForm.calling_enabled}
+                  onChange={e => setEditForm(p => ({ ...p, calling_enabled: e.target.checked }))}
+                  className="w-5 h-5 text-green-600 rounded focus:ring-2 focus:ring-green-500"
+                />
+              </label>
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Location</label>
                 <div className="flex gap-2">

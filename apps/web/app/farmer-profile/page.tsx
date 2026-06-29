@@ -43,6 +43,9 @@ interface FarmerProfile {
   certificates_count?: number;
   isFollowing: boolean;
   phone?: string;
+  calling_enabled?: boolean;
+  can_call?: boolean;
+  followStatus?: 'none' | 'pending' | 'accepted';
   rating?: number;
   reviews_count?: number;
   member_since?: string;
@@ -359,14 +362,7 @@ function FarmerProfileContent() {
       setProfile(data);
       setIsFollowing(data.isFollowing || false);
       // Check follow status
-if (data.isFollowing) {
-  setFollowStatus('accepted');
-} else {
-  // Check if pending
-  const pendingRes = await fetch(getApiUrl(`/api/follows?user_id=${user.id}&following_id=${farmerId}&type=status`));
-  // Simpler: just track in profile API, for now default to none
-  setFollowStatus(data.isFollowing ? 'accepted' : 'none');
-}
+      setFollowStatus(data.followStatus || (data.isFollowing ? 'accepted' : 'none'));
 
       const rawCrops: Crop[] = Array.isArray(data.crops) ? data.crops : [];
       const rawCerts: Certificate[] = Array.isArray(data.certificates) ? data.certificates : [];
@@ -488,6 +484,13 @@ const handleFollow = async () => {
   const hasFollowers = followers.length > 0;
   const hasFollowing = following.length > 0;
   const hasReels = reels.length > 0;
+  const callUnavailableMessage = !profile.calling_enabled
+    ? 'This user has disabled calls.'
+    : followStatus === 'pending'
+    ? 'Your follow request must be accepted before you can call.'
+    : !isFollowing
+    ? 'Follow this profile and wait for acceptance before calling.'
+    : 'Phone number not available';
 
   return (
     <div className="min-h-[100dvh] bg-gray-50 pb-24">
@@ -626,13 +629,17 @@ const handleFollow = async () => {
               </button>
               <button
                 onClick={() => {
-                  if (profile.phone) {
+                  if (profile.can_call && profile.phone) {
                     trackProfileCall();
                     window.location.href = `tel:${profile.phone}`;
                   }
-                  else alert('Phone number not available');
+                  else alert(callUnavailableMessage);
                 }}
-                className="flex-1 bg-gray-100 text-gray-800 py-2.5 rounded-xl font-bold hover:bg-gray-200 transition flex items-center justify-center gap-2"
+                className={`flex-1 py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 ${
+                  profile.can_call
+                    ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                    : 'bg-gray-50 text-gray-400 border border-gray-100'
+                }`}
               >
                 <Phone className="w-4 h-4" />
                 Call

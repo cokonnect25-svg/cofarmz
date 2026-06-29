@@ -89,6 +89,12 @@ function MachineryDetailsContent() {
     }
   }, [mounted, machineryId]);
 
+  useEffect(() => {
+    if (mounted && user?.id && machinery?.owner_id) {
+      fetchOwnerProfile(machinery.owner_id);
+    }
+  }, [mounted, user?.id, machinery?.owner_id]);
+
   // Fetch booked dates when machinery ID changes
   useEffect(() => {
     if (machinery?.id) {
@@ -187,7 +193,8 @@ function MachineryDetailsContent() {
     try {
       setLoadingOwnerProfile(true);
       const response = await fetch(
-        getApiUrl(`/api/farmers/profile?farmerId=${ownerId}`)
+        getApiUrl(`/api/farmers/profile?farmerId=${ownerId}`),
+        user?.id ? { headers: { 'x-user-id': user.id } } : undefined
       );
       if (response.ok) {
         const data = await response.json();
@@ -368,6 +375,17 @@ function MachineryDetailsContent() {
   const machineryName = machinery?.name || 'Equipment';
   const ownerId = machinery?.owner_id || '';
   const fullDescription = machinery?.description || 'Premium quality equipment for rent.';
+  const ownerCanCall = Boolean(ownerProfile?.can_call);
+  const ownerCallPhone = ownerCanCall ? (machinery?.contact_phone || ownerProfile?.phone) : null;
+  const ownerCallUnavailableMessage = !ownerProfile
+    ? 'Owner profile is still loading. Please try again.'
+    : !ownerProfile.calling_enabled
+    ? 'This owner has disabled calls.'
+    : ownerProfile?.followStatus === 'pending'
+    ? 'Your follow request must be accepted before you can call.'
+    : !ownerProfile?.isFollowing && user?.id !== ownerId
+    ? 'Follow this owner and wait for acceptance before calling.'
+    : 'Phone number not available for this equipment.';
 
   const totalDays = calculateDays(startDate, endDate);
   const totalPrice = totalDays * dailyRate;
@@ -873,15 +891,18 @@ function MachineryDetailsContent() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    const phone = machinery?.contact_phone || ownerProfile?.phone;
-                    if (phone) {
+                    if (ownerCallPhone) {
                       trackOwnerCall('machinery_details');
-                      window.location.href = `tel:${phone}`;
+                      window.location.href = `tel:${ownerCallPhone}`;
                     } else {
-                      alert('Phone number not available for this equipment.');
+                      alert(ownerCallUnavailableMessage);
                     }
                   }}
-                  className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 rounded-[12px] py-3 font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  className={`flex-1 rounded-[12px] py-3 font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform ${
+                    ownerCallPhone
+                      ? 'bg-green-50 hover:bg-green-100 text-green-700'
+                      : 'bg-gray-50 text-gray-400 border border-gray-100'
+                  }`}
                 >
                   <i className="ph-bold ph-phone text-lg"></i>
                   <span className="text-sm">Call</span>
@@ -937,10 +958,18 @@ function MachineryDetailsContent() {
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    setCallType('audio');
-                    setShowCallModal(true);
+                    if (ownerCanCall) {
+                      setCallType('audio');
+                      setShowCallModal(true);
+                    } else {
+                      alert(ownerCallUnavailableMessage);
+                    }
                   }}
-                  className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 rounded-[12px] py-3 font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  className={`flex-1 rounded-[12px] py-3 font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform ${
+                    ownerCanCall
+                      ? 'bg-green-50 hover:bg-green-100 text-green-700'
+                      : 'bg-gray-50 text-gray-400 border border-gray-100'
+                  }`}
                 >
                   <i className="ph-bold ph-phone text-lg"></i>
                   <span className="text-sm">Call</span>
@@ -1578,15 +1607,15 @@ onClick={() => {
                   </div>
                   <div className="flex-1 cursor-pointer" onClick={() => { setShowBookingSuccess(false); router.push(`/farmer-profile?id=${ownerId}`); }}>
                     <p className="font-bold text-gray-900 text-sm underline underline-offset-2">{ownerName}</p>
-                    {ownerProfile?.phone ? (
-                      <p className="text-green-700 font-semibold text-sm">{ownerProfile.phone}</p>
+                    {ownerCallPhone ? (
+                      <p className="text-green-700 font-semibold text-sm">{ownerCallPhone}</p>
                     ) : (
-                      <p className="text-gray-400 text-xs">Phone not set</p>
+                      <p className="text-gray-400 text-xs">Calls unavailable</p>
                     )}
                   </div>
-                  {ownerProfile?.phone && (
+                  {ownerCallPhone && (
                     <a
-                      href={`tel:${ownerProfile.phone}`}
+                      href={`tel:${ownerCallPhone}`}
                       onClick={() => trackOwnerCall('booking_success')}
                       className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center shadow-md"
                     >

@@ -95,10 +95,24 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("farmerId") || searchParams.get("user_id");
+    const followingId = searchParams.get("following_id") || searchParams.get("followingId");
     const type = searchParams.get("type");
 
     if (!userId) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    }
+
+    if (type === "status") {
+      if (!followingId) {
+        return NextResponse.json({ error: "Missing followingId" }, { status: 400 });
+      }
+      const rows = await sql`
+        SELECT status FROM follows
+        WHERE user_id = ${userId} AND following_id = ${followingId}
+        LIMIT 1
+      `;
+      const status = rows?.[0]?.status === 'accepted' || rows?.[0]?.status === 'pending' ? rows[0].status : 'none';
+      return NextResponse.json({ status, isFollowing: status === 'accepted' });
     }
 
     if (type === "pending_requests") {

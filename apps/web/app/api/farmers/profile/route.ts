@@ -13,12 +13,14 @@ export async function GET(request: Request) {
     }
 
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS supplier_types TEXT[] DEFAULT ARRAY[]::TEXT[]`.catch(() => {});
+    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS calling_enabled BOOLEAN DEFAULT true`.catch(() => {});
 
     // ── Core profile ────────────────────────────────────────────────────────
     const farmers = await sql`
       SELECT
         u.id, u.name, u.email, u.phone, u.image, u.location,
         u.latitude, u.longitude,
+        COALESCE(u.calling_enabled, true) as calling_enabled,
         COALESCE(u.role, r.name) as role,
         COALESCE(u.supplier_types, ARRAY[]::text[]) as supplier_types,
         r.display_name as role_display_name,
@@ -39,12 +41,12 @@ export async function GET(request: Request) {
     let followers_count = 0, following_count = 0, crops_count = 0, equipments_count = 0;
 
     try {
-      const r = await sql`SELECT COUNT(*) as count FROM follows WHERE following_id = ${farmerId}`;
+      const r = await sql`SELECT COUNT(*) as count FROM follows WHERE following_id = ${farmerId} AND status = 'accepted'`;
       followers_count = parseInt(String(r?.[0]?.count || 0));
     } catch (e) { console.error("followers count:", e); }
 
     try {
-      const r = await sql`SELECT COUNT(*) as count FROM follows WHERE user_id = ${farmerId}`;
+      const r = await sql`SELECT COUNT(*) as count FROM follows WHERE user_id = ${farmerId} AND status = 'accepted'`;
       following_count = parseInt(String(r?.[0]?.count || 0));
     } catch (e) { console.error("following count:", e); }
 
@@ -65,7 +67,7 @@ export async function GET(request: Request) {
       followers = await sql`
         SELECT u.id, u.name, u.image FROM follows f
         JOIN "user" u ON f.user_id = u.id
-        WHERE f.following_id = ${farmerId}
+        WHERE f.following_id = ${farmerId} AND f.status = 'accepted'
         ORDER BY f.created_at DESC
       `;
     } catch (e) { console.error("followers:", e); }
@@ -74,7 +76,7 @@ export async function GET(request: Request) {
       following = await sql`
         SELECT u.id, u.name, u.image FROM follows f
         JOIN "user" u ON f.following_id = u.id
-        WHERE f.user_id = ${farmerId}
+        WHERE f.user_id = ${farmerId} AND f.status = 'accepted'
         ORDER BY f.created_at DESC
       `;
     } catch (e) { console.error("following:", e); }
@@ -165,16 +167,25 @@ export async function GET(request: Request) {
     } catch (e) { console.error("reels:", e); }
 
     // ── Follow status ────────────────────────────────────────────────────────
+    let followStatus: 'none' | 'pending' | 'accepted' = 'none';
     let isFollowing = false;
     if (currentUserId && currentUserId !== farmerId) {
       try {
         const fc = await sql`
-          SELECT COUNT(*) as count FROM follows
+          SELECT status FROM follows
           WHERE user_id = ${currentUserId} AND following_id = ${farmerId}
+          LIMIT 1
         `;
-        isFollowing = parseInt(String(fc?.[0]?.count || 0)) > 0;
+        followStatus = fc?.[0]?.status === 'accepted' || fc?.[0]?.status === 'pending' ? fc[0].status : 'none';
+        isFollowing = followStatus === 'accepted';
       } catch (e) { console.error("follow check:", e); }
     }
+
+    const canCall = Boolean(
+      farmer.calling_enabled &&
+      farmer.phone &&
+      (currentUserId === farmerId || followStatus === 'accepted')
+    );
 
     // ── Reverse geocode fallback ─────────────────────────────────────────────
     let locationText = farmer.location || "";
@@ -199,7 +210,9 @@ export async function GET(request: Request) {
       id: farmer.id,
       name: farmer.name,
       email: farmer.email,
-      phone: farmer.phone || null,
+      phone: canCall ? farmer.phone || null : null,
+      calling_enabled: farmer.calling_enabled,
+      can_call: canCall,
       image: farmer.image || null,
       location: locationText,
       latitude: farmer.latitude ? parseFloat(farmer.latitude) : null,
@@ -218,6 +231,7 @@ export async function GET(request: Request) {
       reels:        Array.isArray(reels)        ? reels        : [],
       certificates: Array.isArray(certificates) ? certificates : [],
       isFollowing,
+      followStatus,
     });
 
   } catch (error: any) {

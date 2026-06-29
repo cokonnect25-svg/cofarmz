@@ -34,6 +34,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS calling_enabled BOOLEAN DEFAULT true`.catch(() => { });
+
     // We use SELECT * for user to avoid "column does not exist" crashes
     // if role_confirmed hasn't been added to the schema in production yet.
     const result = await sql`
@@ -156,7 +158,7 @@ const roleId = roleRow[0].id;
 
 export async function PUT(request: Request) {
   try {
-    const { userId, name, email, phone, location, gender, age, latitude, longitude, supplier_types } = await request.json();
+    const { userId, name, email, phone, location, gender, age, latitude, longitude, supplier_types, calling_enabled } = await request.json();
 
     if (!userId) {
       return NextResponse.json(
@@ -171,6 +173,7 @@ export async function PUT(request: Request) {
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN DEFAULT false`.catch(() => { });
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMPTZ`.catch(() => { });
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS supplier_types TEXT[] DEFAULT ARRAY[]::TEXT[]`.catch(() => { });
+    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS calling_enabled BOOLEAN DEFAULT true`.catch(() => { });
 
     const currentUserRows = await sql`
       SELECT role, role_id
@@ -279,6 +282,10 @@ export async function PUT(request: Request) {
       updates.push(`supplier_types = $${updates.length + 1}::text[]`);
       values.push(currentRole === "supplier" ? supplierTypes : []);
     }
+    if (calling_enabled !== undefined) {
+      updates.push(`calling_enabled = $${updates.length + 1}`);
+      values.push(Boolean(calling_enabled));
+    }
 
     if (updates.length === 0) {
       return NextResponse.json(
@@ -301,6 +308,7 @@ export async function PUT(request: Request) {
       SELECT
         u.id, u.name, u.email, u.phone, u.location, u.image, u.gender, u.age,
         u.phone_verified, u.phone_verified_at,
+        u.calling_enabled,
         u.role_id,
         u.supplier_types,
         u.role,

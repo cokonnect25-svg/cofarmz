@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
       sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'buyer'`.catch(() => {}),
       sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS supplier_types TEXT[] DEFAULT ARRAY[]::TEXT[]`.catch(() => {}),
       sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone    TEXT`.catch(() => {}),
+      sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS calling_enabled BOOLEAN DEFAULT true`.catch(() => {}),
       sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS location TEXT`.catch(() => {}),
     ]);
 
@@ -44,6 +45,7 @@ const targetRole =
         u.latitude, u.longitude,
         COALESCE(u.location, '')  AS location,
         COALESCE(u.phone,    '')  AS phone,
+        COALESCE(u.calling_enabled, true) AS calling_enabled,
         COALESCE(u.role, 'buyer') AS role,
         COALESCE(u.supplier_types, ARRAY[]::text[]) AS supplier_types,
         COUNT(DISTINCT m.id)      AS equipment_count
@@ -65,7 +67,7 @@ const targetRole =
       ` : sql``}
       ${currentUserId ? sql`AND u.id != ${currentUserId}` : sql``}
       GROUP BY u.id, u.name, u.email, u.image,
-               u.latitude, u.longitude, u.location, u.phone, u.role, u.supplier_types
+               u.latitude, u.longitude, u.location, u.phone, u.calling_enabled, u.role, u.supplier_types
     `;
 
     // ── Haversine ───────────────────────────────────────────────────────────
@@ -216,9 +218,10 @@ const targetRole =
     let allEquip:     any[] = [];
     let allFollowers: any[] = [];
     let allFollowing: any[] = [];
+    let allViewerFollows: any[] = [];
 
     if (userIds.length > 0) {
-      [allCrops, allEquip, allFollowers, allFollowing] = await Promise.all([
+      [allCrops, allEquip, allFollowers, allFollowing, allViewerFollows] = await Promise.all([
         sql`
           SELECT user_id, crop_name, years_of_experience, expertise_level,
                  is_crop_waste, grade, certification_type,
@@ -236,15 +239,21 @@ const targetRole =
         sql`
           SELECT following_id, COUNT(*)::integer AS count
           FROM follows
-          WHERE following_id = ANY(${userIds}::text[])
+          WHERE following_id = ANY(${userIds}::text[]) AND status = 'accepted'
           GROUP BY following_id
         `,
         sql`
           SELECT user_id, COUNT(*)::integer AS count
           FROM follows
-          WHERE user_id = ANY(${userIds}::text[])
+          WHERE user_id = ANY(${userIds}::text[]) AND status = 'accepted'
           GROUP BY user_id
         `,
+        currentUserId ? sql`
+          SELECT following_id, status
+          FROM follows
+          WHERE user_id = ${currentUserId}
+            AND following_id = ANY(${userIds}::text[])
+        ` : Promise.resolve([]),
       ]);
     }
 
@@ -253,6 +262,7 @@ const targetRole =
     const equipMap     = new Map<string, any[]>();
     const followersMap = new Map<string, number>();
     const followingMap = new Map<string, number>();
+    const viewerFollowMap = new Map<string, string>();
 
     (allCrops as any[]).forEach((c: any) => {
       if (!cropsMap.has(c.user_id)) cropsMap.set(c.user_id, []);
@@ -279,6 +289,7 @@ const targetRole =
 
     (allFollowers as any[]).forEach((f: any) => followersMap.set(f.following_id, f.count || 0));
     (allFollowing as any[]).forEach((f: any) => followingMap.set(f.user_id,       f.count || 0));
+    (allViewerFollows as any[]).forEach((f: any) => viewerFollowMap.set(f.following_id, f.status || 'none'));
 
     // ── assemble + FIX 3: sort by score DESC then distance ASC ─────────────
     const finalResult = result
@@ -287,9 +298,14 @@ const targetRole =
         const visibleCrops  = showWasteBuyers
           ? allUserCrops.filter((c: any) => c.is_crop_waste)
           : allUserCrops;
+        const followStatus = user.id === currentUserId ? 'accepted' : viewerFollowMap.get(user.id) || 'none';
+        const canCall = Boolean(user.calling_enabled && user.phone && followStatus === 'accepted');
 
         return {
           ...user,
+          phone: canCall ? user.phone : '',
+          can_call: canCall,
+          followStatus,
           crops:           visibleCrops,
           crops_count:     visibleCrops.length,
           equipment:       (equipMap.get(user.id) || []).slice(0, 5),

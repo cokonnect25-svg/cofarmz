@@ -47,6 +47,9 @@ interface Farmer {
   equipment: Equipment[];
   followers_count?: number;
   following_count?: number;
+  phone?: string;
+  can_call?: boolean;
+  followStatus?: 'none' | 'pending' | 'accepted';
 }
 
 const CROP_OPTIONS = [
@@ -1161,8 +1164,8 @@ onClick={e => {
 
                     {/* Action buttons */}
                     <div className="flex gap-3" onClick={e => e.stopPropagation()}>
-                      <button onClick={e => { e.preventDefault(); e.stopPropagation(); const p = (farmer as any).phone; if (p) { trackNearbyCall(farmer); window.location.href = `tel:${p}`; } else alert('Phone number not available.'); }}
-                        className="flex-1 py-3 bg-green-50 text-green-700 rounded-xl font-bold text-sm active:scale-[0.98] transition-transform hover:bg-green-100 flex items-center justify-center gap-2">
+                      <button onClick={e => { e.preventDefault(); e.stopPropagation(); if (farmer.can_call && farmer.phone) { trackNearbyCall(farmer); window.location.href = `tel:${farmer.phone}`; } else alert(farmer.followStatus === 'pending' ? 'Your follow request must be accepted before you can call.' : 'Follow this profile and wait for acceptance before calling.'); }}
+                        className={`flex-1 py-3 rounded-xl font-bold text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2 ${farmer.can_call ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-gray-50 text-gray-400 border border-gray-100'}`}>
                         <i className="ph-bold ph-phone"></i>Call
                       </button>
                       <button onClick={e => {

@@ -36,6 +36,9 @@ interface Farmer {
   equipment: Equipment[];
   followers_count?: number;
   following_count?: number;
+  phone?: string;
+  can_call?: boolean;
+  followStatus?: 'none' | 'pending' | 'accepted';
 }
 
 const CROP_OPTIONS = [
@@ -429,7 +432,21 @@ export default function NearbyFarmersClient() {
                 </div>
               </div>
               <div className="flex gap-3">
-                <button className="flex-1 py-3 bg-green-50 text-green-700 rounded-xl font-bold text-sm" onClick={e => { e.stopPropagation(); saveNearbyState(); if ((farmer as any).phone) trackNearbyCall(farmer); window.location.href = `tel:${(farmer as any).phone || ''}`; }}>Call</button>
+                <button
+                  className={`flex-1 py-3 rounded-xl font-bold text-sm ${farmer.can_call ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-400 border border-gray-100'}`}
+                  onClick={e => {
+                    e.stopPropagation();
+                    saveNearbyState();
+                    if (farmer.can_call && farmer.phone) {
+                      trackNearbyCall(farmer);
+                      window.location.href = `tel:${farmer.phone}`;
+                    } else {
+                      alert(farmer.followStatus === 'pending' ? 'Your follow request must be accepted before you can call.' : 'Follow this profile and wait for acceptance before calling.');
+                    }
+                  }}
+                >
+                  Call
+                </button>
                 <button className="flex-1 py-3 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm" onClick={e => { e.stopPropagation(); navigateAndRemember(`/messages?ownerId=${farmer.id}&ownerName=${encodeURIComponent(farmer.name)}`); }}>Chat</button>
                 <button className="flex-1 py-3 bg-purple-50 text-purple-700 rounded-xl font-bold text-sm font-bold" onClick={e => { e.stopPropagation(); saveNearbyState(); window.open(`https://www.google.com/maps/search/${encodeURIComponent(farmer.location)}`, '_blank'); }}>Maps</button>
               </div>
