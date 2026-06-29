@@ -3,6 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 
+const SUPPLIER_TYPES = ['commodities', 'equipment'] as const;
+
+function normalizeSupplierTypes(value: any): string[] {
+  const list = Array.isArray(value) ? value : typeof value === 'string' ? value.split(',') : [];
+  return Array.from(new Set(list.map((v: any) => String(v).trim().toLowerCase()).filter(v => (SUPPLIER_TYPES as readonly string[]).includes(v))));
+}
+
 function normalizePhone(phone: string) {
   const trimmed = phone.trim();
   const digits = trimmed.replace(/\D/g, "");
@@ -73,12 +80,16 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { email, role, userId } = body;
+    const supplierTypes = role === 'supplier' ? normalizeSupplierTypes(body.supplier_types) : [];
 
 const allowedRoles = ['farmer', 'buyer', 'supplier', 'fpo', 'superadmin'];
 
 if (!role || !allowedRoles.includes(role)) {
   return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
 }
+    if (role === 'supplier' && supplierTypes.length === 0) {
+      return NextResponse.json({ error: 'Select at least one supplier type' }, { status: 400 });
+    }
     if (!email && !userId) {
       return NextResponse.json({ error: 'email or userId is required' }, { status: 400 });
     }
@@ -99,6 +110,7 @@ await sql`
 `;
       await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'buyer'`;
       await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role_id INTEGER`;
+      await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS supplier_types TEXT[] DEFAULT ARRAY[]::TEXT[]`;
     } catch (e: any) { errors.push('setup: ' + e.message); }
 
     const roleRow = await sql`
@@ -121,7 +133,7 @@ const roleId = roleRow[0].id;
     } catch (e: any) { errors.push('role_confirmed col: ' + e.message); }
 
     try {
-      result = await sql`UPDATE "user" SET role = ${role}, role_id = ${roleId}, role_confirmed = true ${whereClause} RETURNING id, email, role, role_id`;
+      result = await sql`UPDATE "user" SET role = ${role}, role_id = ${roleId}, supplier_types = ${supplierTypes}::text[], role_confirmed = true ${whereClause} RETURNING id, email, role, role_id, supplier_types`;
     } catch (e: any) {
       errors.push('update1: ' + e.message);
       try {

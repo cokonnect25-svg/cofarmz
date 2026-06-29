@@ -525,6 +525,7 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
   const videoRefsMap = useRef<{ [key: string]: HTMLVideoElement | null }>({});
   const [userReviews, setUserReviews] = useState<{ [key: number]: any }>({});
   const [userRole, setUserRole] = useState<'farmer' | 'buyer' | 'supplier' | 'fpo'>('buyer');
+  const [supplierTypes, setSupplierTypes] = useState<Array<'commodities' | 'equipment'>>([]);
   const [showCallModal, setShowCallModal] = useState(false);
   const [callRecipient, setCallRecipient] = useState<{ id: string; name: string; image: string } | null>(null);
   const [callType, setCallType] = useState<'audio' | 'video'>('audio');
@@ -552,10 +553,16 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
     }
   }, [mounted, user?.id]);
 
+const isCommoditySupplier = userRole === 'supplier' && (supplierTypes.length === 0 || supplierTypes.includes('commodities'));
+const isEquipmentSupplier = userRole === 'supplier' && (supplierTypes.length === 0 || supplierTypes.includes('equipment'));
+const canManageCrops = userRole !== 'supplier' || isCommoditySupplier;
+const canManageEquipment = userRole !== 'supplier' || isEquipmentSupplier;
+const canUseFarmerCropFields = userRole === 'farmer' || userRole === 'fpo' || isCommoditySupplier;
+
 useEffect(() => {
-  if (userRole === 'supplier') setExpandedSection('equipment'); 
+  if (userRole === 'supplier') setExpandedSection(isCommoditySupplier ? 'crops' : 'equipment'); 
   else setExpandedSection('crops'); // Default to crops for everyone else
-}, [userRole]);
+}, [userRole, isCommoditySupplier]);
 
 
   const fetchMatches = async (crops: FarmerCrop[]) => {
@@ -605,6 +612,7 @@ useEffect(() => {
         const data = await response.json();
         setProfileData(data);
         setUserRole(data.role || 'buyer');
+        setSupplierTypes(Array.isArray(data.supplier_types) ? data.supplier_types : []);
       }
     } catch (error) { console.error('Error fetching user profile:', error); }
   };
@@ -851,15 +859,15 @@ const fetchFollowersCounts = async () => {
         body: JSON.stringify({
           user_id: user.id,
           crop_name: newCrop.crop_name,
-          years_of_experience: (userRole === 'farmer' || userRole === 'fpo')  ? (newCrop.years_of_experience ? parseInt(newCrop.years_of_experience) : null) : null,
-          expertise_level: (userRole === 'farmer' || userRole === 'fpo') ? newCrop.expertise_level : 'Beginner',
+          years_of_experience: canUseFarmerCropFields  ? (newCrop.years_of_experience ? parseInt(newCrop.years_of_experience) : null) : null,
+          expertise_level: canUseFarmerCropFields ? newCrop.expertise_level : 'Beginner',
           expected_yield_date: newCrop.expected_yield_date || null,
           expected_yield_quantity: newCrop.expected_yield_quantity ? parseFloat(newCrop.expected_yield_quantity) : null,
           expected_yield_quantity_uom: newCrop.expected_yield_quantity_uom || 'kg',
           crop_type: 'grow',
           is_crop_waste: userRole === 'buyer' ? newCrop.is_crop_waste : false,
           certificate_url: newCrop.certificate_url || null,
-          certification_type: (userRole === 'farmer' || userRole === 'fpo') ? (newCrop.certification_type || null) : null,
+          certification_type: canUseFarmerCropFields ? (newCrop.certification_type || null) : null,
           grade: newCrop.grade || null,
         }),
       });
@@ -940,15 +948,15 @@ const fetchFollowersCounts = async () => {
         body: JSON.stringify({
           id: editingCrop.id,
           crop_name: editCropForm.crop_name,
-          years_of_experience: userRole === 'farmer' || userRole === 'fpo' ? (editCropForm.years_of_experience ? parseInt(editCropForm.years_of_experience) : null) : null,
-          expertise_level: userRole === 'farmer' || userRole === 'fpo' ? editCropForm.expertise_level : 'Beginner',
+          years_of_experience: canUseFarmerCropFields ? (editCropForm.years_of_experience ? parseInt(editCropForm.years_of_experience) : null) : null,
+          expertise_level: canUseFarmerCropFields ? editCropForm.expertise_level : 'Beginner',
           expected_yield_date: editCropForm.expected_yield_date || null,
           expected_yield_quantity: editCropForm.expected_yield_quantity ? parseFloat(editCropForm.expected_yield_quantity) : null,
           expected_yield_quantity_uom: editCropForm.expected_yield_quantity_uom || 'kg',
           crop_type: 'grow',
           is_crop_waste: userRole === 'buyer' ? editCropForm.is_crop_waste : false,
           certificate_url: editCropForm.certificate_url || null,
-          certification_type: userRole === 'farmer' || userRole === 'fpo' ? (editCropForm.certification_type || null) : null,
+          certification_type: canUseFarmerCropFields ? (editCropForm.certification_type || null) : null,
           grade: editCropForm.grade || null,
         }),
       });
@@ -1192,15 +1200,14 @@ const fetchFollowersCounts = async () => {
     <p className="font-bold text-lg text-gray-900">{followingCount}</p>
     <p className="text-xs text-gray-600">Following</p>
   </button>
-  {/* Show crops for ALL roles including supplier */}
-  <button onClick={() => { if (expandedSection === 'crops') { setExpandedSection(null); } else { setExpandedSection('crops'); fetchUserCrops(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
+  {canManageCrops && <button onClick={() => { if (expandedSection === 'crops') { setExpandedSection(null); } else { setExpandedSection('crops'); fetchUserCrops(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
     <p className="font-bold text-lg text-gray-900">{farmerCrops.length}</p>
     <p className="text-xs text-gray-600 leading-tight">Crops/<br />Commodities</p>
-  </button>
-  <button onClick={() => { if (expandedSection === 'equipment') { setExpandedSection(null); } else { setExpandedSection('equipment'); fetchUserEquipment(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
+  </button>}
+  {canManageEquipment && <button onClick={() => { if (expandedSection === 'equipment') { setExpandedSection(null); } else { setExpandedSection('equipment'); fetchUserEquipment(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
     <p className="font-bold text-lg text-gray-900">{myEquipment.length}</p>
     <p className="text-xs text-gray-600">Equipment</p>
-  </button>
+  </button>}
 </div>
         </div>
        </div>
@@ -1252,7 +1259,7 @@ const fetchFollowersCounts = async () => {
                 ))}</div>
             )}
 
-            {expandedSection === 'crops' && (
+            {expandedSection === 'crops' && canManageCrops && (
               <>
                 {farmerCrops.length === 0
                   ? <div className="text-center py-8"><p className="text-sm text-gray-600 mb-3">No crops added yet</p></div>
@@ -1301,7 +1308,7 @@ const fetchFollowersCounts = async () => {
               </>
             )}
 
-            {expandedSection === 'equipment' && (
+            {expandedSection === 'equipment' && canManageEquipment && (
               <>
                 {myEquipment.length === 0
                   ? <div className="text-center py-8"><p className="text-sm text-gray-600 mb-3">No equipment listed</p></div>
@@ -1602,7 +1609,7 @@ const fetchFollowersCounts = async () => {
       )}
 
       {/* ── Add Crop Modal ── */}
-      {showAddCropForm && (
+      {showAddCropForm && canManageCrops && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl overflow-hidden shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 flex items-center justify-between z-10">
@@ -1623,7 +1630,7 @@ const fetchFollowersCounts = async () => {
                 )}
               </div>
               {/* Farmer-only */}
-              {(userRole === 'farmer' || userRole === 'fpo') && (<>
+              {canUseFarmerCropFields && (<>
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">Years of Experience</label>
                   <input type="number" inputMode="numeric" value={newCrop.years_of_experience} onChange={e => { const val = e.target.value.replace(/[^0-9]/g, ''); const num = parseInt(val); if (val === '' || (num >= 0 && num <= 80)) setNewCrop(p => ({ ...p, years_of_experience: val })); }} onKeyDown={e => ['-', '+', 'e', 'E', '.'].includes(e.key) && e.preventDefault()} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
@@ -1644,13 +1651,13 @@ const fetchFollowersCounts = async () => {
               )}
               {/* Date */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">{userRole === 'farmer' || userRole === 'fpo' ? 'Expected Yield Date' : 'Want to Buy By'}</label>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">{canUseFarmerCropFields ? 'Expected Yield Date' : 'Want to Buy By'}</label>
                 <input type="date" min={localDate} value={newCrop.expected_yield_date} onChange={e => setNewCrop(p => ({ ...p, expected_yield_date: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
               </div>
               {/* Quantity + unit */}
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">{userRole === 'farmer' || userRole === 'fpo' ? 'Expected Quantity' : 'Quantity Needed'}</label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">{canUseFarmerCropFields ? 'Expected Quantity' : 'Quantity Needed'}</label>
                   <input type="number" min="1" step="0.1" value={newCrop.expected_yield_quantity} onChange={e => { const val = e.target.value; if (val === '' || parseFloat(val) >= 0) setNewCrop(p => ({ ...p, expected_yield_quantity: val })); }} onKeyDown={e => ['-', '+', 'e', 'E'].includes(e.key) && e.preventDefault()} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
                 <div className="w-24">
@@ -1692,7 +1699,7 @@ const fetchFollowersCounts = async () => {
      </div>
      </div>
               {/* ── NEW: Certificate ── */}
-              {userRole === 'farmer' || userRole === 'fpo'  && (
+              {canUseFarmerCropFields && (
               <CertificateUploader value={newCrop.certificate_url} onChange={url => setNewCrop(p => ({ ...p, certificate_url: url }))} accentColor="green" />
               )}
               {/* Actions */}
@@ -1747,7 +1754,7 @@ const fetchFollowersCounts = async () => {
                 )}
               </div>
               {/* Farmer-only */}
-              {(userRole === 'farmer' || userRole === 'fpo') && (<>
+              {canUseFarmerCropFields && (<>
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">Years of Experience</label>
                   <input type="number" inputMode="numeric" value={editCropForm.years_of_experience} onChange={e => { const val = e.target.value.replace(/[^0-9]/g, ''); const num = parseInt(val); if (val === '' || (num >= 0 && num <= 80)) setEditCropForm(p => ({ ...p, years_of_experience: val })); }} onKeyDown={e => ['-', '+', 'e', 'E', '.'].includes(e.key) && e.preventDefault()} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -1768,13 +1775,13 @@ const fetchFollowersCounts = async () => {
               )}
               {/* Date — ✅ FIXED: bound to editCropForm, not newCrop */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">{userRole === 'farmer' || userRole === 'fpo' ? 'Expected Yield Date' : 'Want to Buy By'}</label>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">{canUseFarmerCropFields ? 'Expected Yield Date' : 'Want to Buy By'}</label>
                 <input type="date" min={localDate} value={editCropForm.expected_yield_date} onChange={e => setEditCropForm(p => ({ ...p, expected_yield_date: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               {/* Quantity + unit */}
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">{userRole === 'farmer' || userRole === 'fpo' ? 'Expected Quantity' : 'Quantity Needed'}</label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">{canUseFarmerCropFields ? 'Expected Quantity' : 'Quantity Needed'}</label>
                   <input type="number" inputMode="decimal" value={editCropForm.expected_yield_quantity} onChange={e => { const val = e.target.value.replace(/[^0-9.]/g, ''); const parts = val.split('.'); const clean = parts[0] + (parts.length > 1 ? '.' + parts[1] : ''); if (clean === '' || (parseFloat(clean) > 0 && parseFloat(clean) <= 1000000)) setEditCropForm(p => ({ ...p, expected_yield_quantity: clean })); }} onKeyDown={e => ['-', '+', 'e', 'E'].includes(e.key) && e.preventDefault()} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div className="w-24">
@@ -1793,7 +1800,7 @@ const fetchFollowersCounts = async () => {
                 </select>
               </div>
               {/* ── Certification Type — farmer only ── */}
-     {(userRole === 'farmer' || userRole === 'fpo') && (
+     {canUseFarmerCropFields && (
      <div>
      <label className="block text-sm font-semibold text-gray-900 mb-2">
       Certification Type <span className="text-gray-400 font-normal text-xs">(optional)</span>
@@ -1828,7 +1835,7 @@ const fetchFollowersCounts = async () => {
         </div>
       )}
               {/* ── NEW: Certificate ── */}
-              {userRole === 'farmer' || userRole === 'fpo' ? (
+              {canUseFarmerCropFields ? (
                 <CertificateUploader value={editCropForm.certificate_url} onChange={url => setEditCropForm(p => ({ ...p, certificate_url: url }))} accentColor="blue" />
               ) : null}
               {/* Actions */}

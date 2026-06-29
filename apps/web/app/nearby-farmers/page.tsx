@@ -101,6 +101,7 @@ function NearbyFarmersContent() {
   const [locationError, setLocationError] = useState<string | null>(null);
 
 const rawType = searchParams.get('type');
+const rawSupplierType = searchParams.get('supplierType');
 const rawCrops = searchParams.get('crops');
 
 // Parse crops from URL query param
@@ -128,6 +129,9 @@ const initialType =
   'farmers';
 
 const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 'supplier' | 'fpo'>(initialType);
+const [supplierType, setSupplierType] = useState<'commodities' | 'equipment'>(
+  rawSupplierType === 'equipment' ? 'equipment' : 'commodities'
+);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy]           = useState('nearby');
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -228,7 +232,7 @@ useEffect(() => {
     const lat = userLocation?.latitude  ?? 0;
     const lon = userLocation?.longitude ?? 0;
     fetchNearbyFarmers(lat, lon, searchType);
-  }, [searchType, userLocation, mounted, isAuthenticated]);
+  }, [searchType, supplierType, userLocation, mounted, isAuthenticated]);
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -454,6 +458,7 @@ const fetchNearbyFarmers = async (
       params.append('latitude',  latitude.toString());
       params.append('longitude', longitude.toString());
       params.append('type', type);
+      if (type === 'supplier') params.append('supplierType', supplierType);
       if (user?.id) params.append('currentUserId', user.id);
       if (f.enableDistance) params.append('distance', f.distance.toString());
       params.append('minRating', f.minRating.toString());
@@ -568,7 +573,7 @@ const handleApplyFilters = () => {
 {searchType === 'farmers'  ? 'Nearby Farmers'    :
  searchType === 'buyers'   ? 'Nearby Buyers'     :
  searchType === 'wastage'  ? 'Crop Waste Buyers' :
- searchType === 'supplier' ? 'Nearby Suppliers'  :
+ searchType === 'supplier' ? (supplierType === 'commodities' ? 'Commodity Suppliers' : 'Equipment Suppliers')  :
  searchType === 'fpo'      ? 'Nearby FPOs'       : 'Nearby'}
               </h1>
             </div>
@@ -612,6 +617,31 @@ onClick={() => {
     </button>
   ))}
 </div>
+
+{searchType === 'supplier' && (
+  <div className="flex gap-2 mb-4">
+    {([
+      { key: 'commodities', label: 'Commodities', icon: 'ph-package' },
+      { key: 'equipment', label: 'Equipment', icon: 'ph-tractor' },
+    ] as const).map(tab => (
+      <button
+        key={tab.key}
+        onClick={() => {
+          setSupplierType(tab.key);
+          setSortBy('nearby');
+          sessionStorage.removeItem(SCROLL_KEY);
+          sessionStorage.removeItem(VISIBLE_KEY);
+        }}
+        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition ${
+          supplierType === tab.key ? 'bg-purple-600 text-white shadow-md' : 'bg-white text-purple-700 shadow-soft'
+        }`}
+      >
+        <i className={`ph-bold ${tab.icon}`}></i>
+        {tab.label}
+      </button>
+    ))}
+  </div>
+)}
 
           {/* Search */}
           <div className="relative mb-4">
@@ -843,7 +873,7 @@ onClick={() => {
 {loadingFarmers ? 'Searching...' : `Found ${farmers.length} ${
   searchType === 'farmers'  ? 'farmer'       :
   searchType === 'wastage'  ? 'wastage buyer':
-  searchType === 'supplier' ? 'supplier'     :
+  searchType === 'supplier' ? (supplierType === 'commodities' ? 'commodity supplier' : 'equipment supplier')     :
   searchType === 'fpo'      ? 'FPO'          : 'buyer'
 }${farmers.length !== 1 ? 's' : ''}`}
           </p>
@@ -1058,10 +1088,10 @@ onClick={e => {
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
   sessionStorage.setItem(TYPE_KEY, searchType);
-  saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=equipment`);
+  saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=${supplierType === 'commodities' ? 'crops' : 'equipment'}`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95">
-                            <i className="ph-bold ph-package text-purple-600 text-sm"></i>
-                            <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Products</span>
+                            <i className={`ph-bold ${supplierType === 'commodities' ? 'ph-package' : 'ph-tractor'} text-purple-600 text-sm`}></i>
+                            <span className="text-xs font-bold text-gray-900">{supplierType === 'commodities' ? (farmer.crops_count || 0) : (farmer.equipment_count || 0)} {supplierType === 'commodities' ? 'Commodities' : 'Equipment'}</span>
                           </button>
                           <button // e.g. Crops button
 onClick={e => {

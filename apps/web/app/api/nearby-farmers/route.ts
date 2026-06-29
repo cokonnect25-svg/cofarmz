@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
     const yieldDateFrom  = searchParams.get("yieldDateFrom") || null;
     const yieldDateTo    = searchParams.get("yieldDateTo")   || null;
     const searchType     = searchParams.get("type") || "farmers";
+    const supplierTypeParam = searchParams.get("supplierType");
+    const supplierType = supplierTypeParam === "commodities" || supplierTypeParam === "equipment" ? supplierTypeParam : null;
     const showWasteBuyers = searchParams.get("wasteOnly") === "true";
     const currentUserId  = searchParams.get("currentUserId");
 
@@ -24,6 +26,7 @@ export async function GET(request: NextRequest) {
       sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS latitude  DOUBLE PRECISION`.catch(() => {}),
       sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION`.catch(() => {}),
       sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'buyer'`.catch(() => {}),
+      sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS supplier_types TEXT[] DEFAULT ARRAY[]::TEXT[]`.catch(() => {}),
       sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone    TEXT`.catch(() => {}),
       sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS location TEXT`.catch(() => {}),
     ]);
@@ -42,6 +45,7 @@ const targetRole =
         COALESCE(u.location, '')  AS location,
         COALESCE(u.phone,    '')  AS phone,
         COALESCE(u.role, 'buyer') AS role,
+        COALESCE(u.supplier_types, ARRAY[]::text[]) AS supplier_types,
         COUNT(DISTINCT m.id)      AS equipment_count
       FROM "user" u
       LEFT JOIN machinery m ON u.id = m.owner_id
@@ -53,9 +57,15 @@ const targetRole =
   targetRole === "fpo"      ? 4 : 2
 })
       )
+      ${targetRole === "supplier" && supplierType ? sql`
+        AND (
+          COALESCE(array_length(u.supplier_types, 1), 0) = 0
+          OR ${supplierType} = ANY(u.supplier_types)
+        )
+      ` : sql``}
       ${currentUserId ? sql`AND u.id != ${currentUserId}` : sql``}
       GROUP BY u.id, u.name, u.email, u.image,
-               u.latitude, u.longitude, u.location, u.phone, u.role
+               u.latitude, u.longitude, u.location, u.phone, u.role, u.supplier_types
     `;
 
     // ── Haversine ───────────────────────────────────────────────────────────

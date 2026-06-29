@@ -12,6 +12,7 @@ function SelectRoleContent() {
   const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [supplierTypes, setSupplierTypes] = useState<Array<'commodities' | 'equipment'>>(['commodities']);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -33,13 +34,17 @@ function SelectRoleContent() {
 
 const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'fpo') => {
     if (!user?.email || selecting || !agreed) return;
+    if (role === 'supplier' && supplierTypes.length === 0) {
+      setError('Please choose Commodities Supplier, Equipment Supplier, or both.');
+      return;
+    }
     setSelecting(true);
     setError('');
     try {
       const res = await fetch(getApiUrl('/api/users/profile'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, email: user.email, role }),
+        body: JSON.stringify({ userId: user.id, email: user.email, role, supplier_types: role === 'supplier' ? supplierTypes : [] }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -50,6 +55,9 @@ const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'fpo') =
       setError(err.message || 'Something went wrong. Please try again.');
       setSelecting(false);
     }
+  };
+  const toggleSupplierType = (type: 'commodities' | 'equipment') => {
+    setSupplierTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]);
   };
 
   if (!mounted || loading) {
@@ -189,8 +197,18 @@ const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'fpo') =
   <div>
     <p className="font-black text-gray-900">supplier</p>
     <p className="text-gray-500 text-xs mt-0.5">
-      List and manage machinery only
+      List commodities, equipment, or both
     </p>
+    <div className="mt-2 flex flex-wrap gap-2" onClick={e => e.stopPropagation()}>
+      <label className="flex items-center gap-1.5 text-[11px] font-bold text-purple-700">
+        <input type="checkbox" checked={supplierTypes.includes('commodities')} onChange={() => toggleSupplierType('commodities')} className="w-3.5 h-3.5 rounded" />
+        Commodities
+      </label>
+      <label className="flex items-center gap-1.5 text-[11px] font-bold text-purple-700">
+        <input type="checkbox" checked={supplierTypes.includes('equipment')} onChange={() => toggleSupplierType('equipment')} className="w-3.5 h-3.5 rounded" />
+        Equipment
+      </label>
+    </div>
   </div>
 
   {agreed && (

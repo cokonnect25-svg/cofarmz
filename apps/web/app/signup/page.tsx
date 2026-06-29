@@ -17,6 +17,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [userType, setUserType] = useState<'farmer' | 'buyer' | 'supplier' | 'fpo'>('farmer');
+  const [supplierTypes, setSupplierTypes] = useState<Array<'commodities' | 'equipment'>>(['commodities']);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -41,10 +42,11 @@ export default function SignupPage() {
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
     if (!agreedToTerms) { setError('Please agree to the Terms of Service.'); return; }
+    if (userType === 'supplier' && supplierTypes.length === 0) { setError('Please choose Commodities Supplier, Equipment Supplier, or both.'); return; }
 
     setIsLoading(true);
     try {
-      await signUp(email, password, name, userType);
+      await signUp(email, password, name, userType, supplierTypes);
       // Redirect to select-role which shows full Terms & Conditions and lets user pick their role
       window.location.replace('/select-role');
     } catch (err: any) {
@@ -85,6 +87,9 @@ export default function SignupPage() {
   const passwordStrength = password.length === 0 ? 0 : password.length < 6 ? 1 : password.length < 8 ? 2 : /[A-Z]/.test(password) && /[0-9]/.test(password) ? 4 : 3;
   const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'];
   const strengthColor = ['', 'bg-red-400', 'bg-yellow-400', 'bg-blue-400', 'bg-green-500'];
+  const toggleSupplierType = (type: 'commodities' | 'equipment') => {
+    setSupplierTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]);
+  };
 
   return (
     <div className="min-min-h-[100dvh] flex bg-gray-50">
@@ -216,6 +221,21 @@ export default function SignupPage() {
     <span className="text-lg">🏢</span> FPO
   </button>
 </div>
+{userType === 'supplier' && (
+  <div className="mt-3 rounded-xl border border-purple-100 bg-purple-50/60 p-3">
+    <p className="text-xs font-bold text-purple-800 mb-2">Supplier type</p>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <label className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 border border-purple-100 cursor-pointer">
+        <input type="checkbox" checked={supplierTypes.includes('commodities')} onChange={() => toggleSupplierType('commodities')} className="w-4 h-4 text-purple-600 rounded" />
+        <span className="text-xs font-semibold text-gray-700">Commodities supplier</span>
+      </label>
+      <label className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 border border-purple-100 cursor-pointer">
+        <input type="checkbox" checked={supplierTypes.includes('equipment')} onChange={() => toggleSupplierType('equipment')} className="w-4 h-4 text-purple-600 rounded" />
+        <span className="text-xs font-semibold text-gray-700">Equipment supplier</span>
+      </label>
+    </div>
+  </div>
+)}
             </div>
 
             {/* Name */}

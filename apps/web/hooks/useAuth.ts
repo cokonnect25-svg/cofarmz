@@ -121,7 +121,8 @@ async function signUp(
   email: string,
   password: string,
   name: string,
-  role: 'farmer' | 'buyer' | 'supplier' | 'fpo' | 'superadmin' = 'farmer'
+  role: 'farmer' | 'buyer' | 'supplier' | 'fpo' | 'superadmin' = 'farmer',
+  supplierTypes: Array<'commodities' | 'equipment'> = []
 ) {
   const result = await authClient.signUp.email({ email, password, name });
   if (result.error) throw new Error(result.error.message || "Failed to create account");
@@ -137,6 +138,7 @@ async function signUp(
           userId: result.data.user.id,
           email: result.data.user.email,
           role,
+          supplier_types: role === 'supplier' ? supplierTypes : [],
           role_confirmed: true,   // skip the role modal on home page
         }),
       });
@@ -146,8 +148,8 @@ async function signUp(
   }
 
   if (isMobile && result.data?.user) {
-    storeMobileSession({ ...result.data.user, role });
-    setMobileUser({ ...result.data.user, role });
+    storeMobileSession({ ...result.data.user, role, supplier_types: supplierTypes });
+    setMobileUser({ ...result.data.user, role, supplier_types: supplierTypes });
   }
   return result;
 }

@@ -75,6 +75,8 @@ function HomePageContent() {
   const [roleUpdating, setRoleUpdating] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [supplierResults, setsupplierResults] = useState<Farmer[]>([]);
+  const [commoditySupplierResults, setCommoditySupplierResults] = useState<Farmer[]>([]);
+  const [equipmentSupplierResults, setEquipmentSupplierResults] = useState<Farmer[]>([]);
   const [spoResults, setSpoResults] = useState<Farmer[]>([]);
 const [expandedId, setExpandedId] = useState<string | null>(null);
   
@@ -124,7 +126,12 @@ const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'fpo') =
       const res = await fetch(getApiUrl('/api/users/profile'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user?.id, email: user?.email, role }),
+        body: JSON.stringify({
+          userId: user?.id,
+          email: user?.email,
+          role,
+          supplier_types: role === 'supplier' ? ['commodities', 'equipment'] : [],
+        }),
       });
       if (res.ok) {
         setShowRoleModal(false);
@@ -162,11 +169,13 @@ const fetchMatches = (lat: number, lon: number) => {
 
     fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
 
-    fetch(getApiUrl(`/api/nearby-farmers?type=supplier&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+    fetch(getApiUrl(`/api/nearby-farmers?type=supplier&supplierType=commodities&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+
+    fetch(getApiUrl(`/api/nearby-farmers?type=supplier&supplierType=equipment&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
 
     fetch(getApiUrl(`/api/nearby-farmers?type=fpo&latitude=${lat}&longitude=${lon}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
   ])
-    .then(([farmersData, buyersData, wasteBuyersData, suppliersData, spoData]) => {
+    .then(([farmersData, buyersData, wasteBuyersData, commoditySuppliersData, equipmentSuppliersData, spoData]) => {
       const normalize = (arr: any[]) => arr.map((f: any) => ({
         ...f,
         crops: Array.isArray(f.crops)
@@ -185,8 +194,10 @@ const fetchMatches = (lat: number, lon: number) => {
 
       setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
 setsupplierResults(
-  normalize(suppliersData).filter(s => s.role === 'supplier')
+  normalize(equipmentSuppliersData).filter(s => s.role === 'supplier')
 );
+setCommoditySupplierResults(normalize(commoditySuppliersData).filter(s => s.role === 'supplier'));
+setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role === 'supplier'));
  setSpoResults(
     normalize(Array.isArray(spoData) ? spoData : []).filter(s => s.role === 'fpo')
   );
@@ -277,8 +288,9 @@ setsupplierResults(
         fetch(getApiUrl(`/api/nearby-farmers?type=farmers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
         fetch(getApiUrl(`/api/nearby-farmers?type=buyers&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
         fetch(getApiUrl(`/api/nearby-farmers?type=buyers&wasteOnly=true&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
-          fetch(getApiUrl(`/api/nearby-farmers?type=supplier&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
-      ]).then(([farmersData, buyersData, wasteBuyersData, suppliersData]) => {
+          fetch(getApiUrl(`/api/nearby-farmers?type=supplier&supplierType=commodities&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+          fetch(getApiUrl(`/api/nearby-farmers?type=supplier&supplierType=equipment&latitude=${latitude}&longitude=${longitude}&currentUserId=${uid}`)).then(r => r.ok ? r.json() : []),
+      ]).then(([farmersData, buyersData, wasteBuyersData, commoditySuppliersData, equipmentSuppliersData]) => {
         const normalize = (arr: any[]) => arr.map((f: any) => ({
           ...f,
           crops: Array.isArray(f.crops)
@@ -291,10 +303,12 @@ setsupplierResults(
           ...normalize(Array.isArray(buyersData) ? buyersData : []),
         ]);
         setWasteBuyerResults(normalize(Array.isArray(wasteBuyersData) ? wasteBuyersData : []));
-        console.log("SUPPLIERS DATA:", suppliersData);
+        console.log("SUPPLIERS DATA:", { commoditySuppliersData, equipmentSuppliersData });
 setsupplierResults(
-  normalize(suppliersData).filter(s => s.role === 'supplier')
+  normalize(equipmentSuppliersData).filter(s => s.role === 'supplier')
 );
+setCommoditySupplierResults(normalize(commoditySuppliersData).filter(s => s.role === 'supplier'));
+setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role === 'supplier'));
       }).catch((err) => {
   console.error("MATCH ERROR:", err);
 }).finally(() => setLoadingMatches(false));
@@ -579,6 +593,33 @@ setsupplierResults(
   <div className="flex items-center justify-between mb-5">
     <div>
       <h2 className="text-2xl font-black text-gray-900 tracking-tight">
+        Nearby Commodities suppliers
+      </h2>
+      <p className="text-purple-600 text-xs font-bold uppercase tracking-wider">
+        Commodity providers near you
+      </p>
+    </div>
+
+    <button
+      onClick={() => router.push('/nearby-farmers?type=supplier&supplierType=commodities')}
+      className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 hover:bg-purple-600 hover:text-white transition-all shadow-sm"
+    >
+      <i className="ph-bold ph-arrow-right"></i>
+    </button>
+  </div>
+
+  <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
+    {commoditySupplierResults.length > 0
+      ? commoditySupplierResults.slice(0, 10).map((p: any) =>
+          renderCard(p, 'bg-purple-50 text-purple-700')
+        )
+      : renderEmpty('No commodity suppliers available nearby')}
+  </div>
+</div>
+<div className="mb-4">
+  <div className="flex items-center justify-between mb-5">
+    <div>
+      <h2 className="text-2xl font-black text-gray-900 tracking-tight">
         Nearby Equipment suppliers
       </h2>
       <p className="text-purple-600 text-xs font-bold uppercase tracking-wider">
@@ -587,7 +628,7 @@ setsupplierResults(
     </div>
 
     <button
-      onClick={() => router.push('/nearby-farmers?type=supplier')}
+      onClick={() => router.push('/nearby-farmers?type=supplier&supplierType=equipment')}
       className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 hover:bg-purple-600 hover:text-white transition-all shadow-sm"
     >
       <i className="ph-bold ph-arrow-right"></i>
@@ -595,11 +636,11 @@ setsupplierResults(
   </div>
 
   <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
-    {supplierResults.length > 0
-      ? supplierResults.slice(0, 10).map((p: any) =>
+    {equipmentSupplierResults.length > 0
+      ? equipmentSupplierResults.slice(0, 10).map((p: any) =>
           renderCard(p, 'bg-purple-50 text-purple-700')
         )
-      : renderEmpty('No suppliers available nearby')}
+      : renderEmpty('No equipment suppliers available nearby')}
   </div>
 </div>
 <div className="mb-4">

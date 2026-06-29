@@ -12,12 +12,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Missing farmerId" }, { status: 400 });
     }
 
+    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS supplier_types TEXT[] DEFAULT ARRAY[]::TEXT[]`.catch(() => {});
+
     // ── Core profile ────────────────────────────────────────────────────────
     const farmers = await sql`
       SELECT
         u.id, u.name, u.email, u.phone, u.image, u.location,
         u.latitude, u.longitude,
         COALESCE(u.role, r.name) as role,
+        COALESCE(u.supplier_types, ARRAY[]::text[]) as supplier_types,
         r.display_name as role_display_name,
         r.permissions as role_permissions
       FROM "user" u
@@ -202,6 +205,7 @@ export async function GET(request: Request) {
       latitude: farmer.latitude ? parseFloat(farmer.latitude) : null,
       longitude: farmer.longitude ? parseFloat(farmer.longitude) : null,
       role: farmer.role || 'buyer',
+      supplier_types: farmer.supplier_types || [],
       followers_count,
       following_count,
       crops_count,
