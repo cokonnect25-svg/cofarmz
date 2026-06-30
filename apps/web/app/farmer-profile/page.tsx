@@ -7,10 +7,13 @@ import {
   ArrowLeft, MessageCircle, Phone, MapPin, Heart, MessageSquare,
   ChevronUp, ChevronDown, Leaf, ShoppingCart, Award, Package,
   Tractor, Users, UserCheck, Star, Calendar, TrendingUp,
-  BadgeCheck, Wheat, Info, ExternalLink, PlayCircle, X
+  BadgeCheck, Wheat, Info, ExternalLink, PlayCircle, X, Share2
 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
 import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
+import { normalizePhoneNumber } from '@/lib/phone';
 import UserAvatar from '@/app/components/UserAvatar';
 
 
@@ -66,6 +69,14 @@ interface Reel {
 function getRealThumbnail(url?: string | null) {
   if (!url) return '';
   return url.includes('via.placeholder.com') ? '' : url;
+}
+
+function getRealProfilePhoto(url?: string | null) {
+  if (!url) return '';
+  const lower = url.toLowerCase();
+  if (lower.includes('via.placeholder.com')) return '';
+  if (lower.includes('api.dicebear.com')) return '';
+  return url;
 }
 
 interface Follower {
@@ -321,7 +332,10 @@ function FarmerProfileContent() {
   const [callType] = useState<'audio' | 'video'>('audio');
   const [expandedCropIdx, setExpandedCropIdx] = useState<number | null>(null);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [profilePhotoFailed, setProfilePhotoFailed] = useState(false);
   const [followStatus, setFollowStatus] = useState<'none' | 'pending' | 'accepted'>('none');
+  const [shareToast, setShareToast] = useState<string | null>(null);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const SCROLL_KEY = 'nearbyFarmers_scrollY';
   const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
@@ -398,6 +412,7 @@ function FarmerProfileContent() {
   }, [farmerId, user]);
 
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { setProfilePhotoFailed(false); }, [profile?.image]);
   useEffect(() => { if (mounted && farmerId && user) fetchProfile(); }, [mounted, farmerId, user, fetchProfile]);
 
 const handleFollow = async () => {
@@ -433,6 +448,74 @@ const handleFollow = async () => {
       setFollowStatus('pending');
     }
   } catch (e) { console.error(e); }
+};
+
+const getProfileShareData = () => {
+  if (!profile) return null;
+  const profileUrl = `https://cofarmz.com/farmer-profile?id=${profile.id}`;
+  return {
+    title: `${profile.name} on CoFarmz`,
+    text: `Check out ${profile.name}'s CoFarmz profile`,
+    url: profileUrl,
+    message: `Check out ${profile.name}'s CoFarmz profile:\n${profileUrl}`,
+  };
+};
+
+const showTemporaryShareToast = (message: string) => {
+  setShareToast(message);
+  setTimeout(() => setShareToast(null), 2200);
+};
+
+const handleShareInsideCoFarmz = async () => {
+  const shareData = getProfileShareData();
+  if (!shareData) return;
+
+  try {
+    sessionStorage.setItem('cofarmz_message_draft', shareData.message);
+    router.push('/chat');
+  } catch {
+    showTemporaryShareToast('Could not start CoFarmz share');
+  } finally {
+    setShowShareMenu(false);
+  }
+};
+
+const handleShareOutsideCoFarmz = async () => {
+  const shareData = getProfileShareData();
+  if (!shareData) return;
+
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await Share.share({ title: shareData.title, text: shareData.text, url: shareData.url });
+    } catch (err: any) {
+      showTemporaryShareToast(err?.message || 'Share failed');
+    } finally {
+      setShowShareMenu(false);
+    }
+    return;
+  }
+
+  if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+    try {
+      await navigator.share({ title: shareData.title, text: shareData.text, url: shareData.url });
+      setShowShareMenu(false);
+      return;
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        setShowShareMenu(false);
+        return;
+      }
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(shareData.message);
+    showTemporaryShareToast('Profile link copied');
+  } catch {
+    showTemporaryShareToast('Sharing not supported');
+  } finally {
+    setShowShareMenu(false);
+  }
 };
 
   // ── Loading / Error States ──────────────────────────────────────────────────
@@ -476,6 +559,7 @@ const handleFollow = async () => {
   const role = (profile.role as keyof typeof ROLE_CONFIG) || 'farmer';
   const rc = ROLE_CONFIG[role] || ROLE_CONFIG.farmer;
   const RoleIcon = rc.icon;
+  const realProfilePhoto = profilePhotoFailed ? '' : getRealProfilePhoto(profile.image);
 
   // Sections to show: only if data exists OR always show crops/equipment if counts > 0
   const hasCrops = crops.length > 0;
@@ -619,10 +703,10 @@ const handleFollow = async () => {
 
           {/* ── Action Buttons ────────────────────────────────────────────── */}
           {!isOwnProfile && (
-            <div className="flex gap-2 mt-4">
+            <div className="grid grid-cols-3 gap-2 mt-4">
               <button
                 onClick={() => router.push(`/messages?ownerId=${profile.id}&ownerName=${encodeURIComponent(profile.name)}`)}
-                className={`flex-1 ${rc.accentBg} text-white py-2.5 rounded-xl font-bold hover:opacity-90 transition flex items-center justify-center gap-2`}
+                className={`${rc.accentBg} text-white py-2.5 rounded-xl font-bold hover:opacity-90 transition flex items-center justify-center gap-2`}
               >
                 <MessageCircle className="w-4 h-4" />
                 Message
@@ -631,11 +715,11 @@ const handleFollow = async () => {
                 onClick={() => {
                   if (profile.can_call && profile.phone) {
                     trackProfileCall();
-                    window.location.href = `tel:${profile.phone}`;
+                    window.location.href = `tel:${normalizePhoneNumber(profile.phone)}`;
                   }
                   else alert(callUnavailableMessage);
                 }}
-                className={`flex-1 py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 ${
+                className={`py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 ${
                   profile.can_call
                     ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                     : 'bg-gray-50 text-gray-400 border border-gray-100'
@@ -643,6 +727,13 @@ const handleFollow = async () => {
               >
                 <Phone className="w-4 h-4" />
                 Call
+              </button>
+              <button
+                onClick={() => setShowShareMenu(true)}
+                className="py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 bg-gray-100 text-gray-800 hover:bg-gray-200"
+              >
+                <Share2 className="w-4 h-4" />
+                Share
               </button>
             </div>
           )}
@@ -1041,20 +1132,25 @@ const handleFollow = async () => {
             </button>
 
             {/* Full-size photo */}
-            {profile.image ? (
+            {realProfilePhoto ? (
               <img
-                src={profile.image}
+                src={realProfilePhoto}
                 alt={profile.name || 'Profile'}
-                className="w-full max-h-[70vh] rounded-2xl object-contain bg-black shadow-2xl"
+                onError={() => setProfilePhotoFailed(true)}
+                className="mx-auto max-w-full max-h-[70vh] rounded-2xl object-contain bg-black shadow-2xl"
               />
             ) : (
-              <UserAvatar
-                image={null}
-                name={profile.name}
-                size={320}
-                className="rounded-2xl shadow-2xl"
-                style={{ width: '100%', aspectRatio: '1', borderRadius: 16, border: '4px solid rgba(255,255,255,0.1)' }}
-              />
+              <div className="w-full aspect-square max-h-[70vh] rounded-2xl bg-white shadow-2xl border border-white/20 flex flex-col items-center justify-center text-center p-6">
+                <UserAvatar
+                  image={null}
+                  name={profile.name}
+                  size={112}
+                  className="rounded-full shadow-sm mb-4"
+                  style={{ border: '4px solid #dcfce7' }}
+                />
+                <p className="text-sm font-bold text-gray-900">No clear profile photo available</p>
+                <p className="text-xs text-gray-500 mt-1">This profile is using a default avatar.</p>
+              </div>
             )}
 
             {/* Name + role bar */}
@@ -1086,6 +1182,33 @@ const handleFollow = async () => {
           callType={callType}
           userId={user?.id || ''}
         />
+      )}
+
+      {showShareMenu && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4" onClick={() => setShowShareMenu(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-4 space-y-2 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-black text-gray-900">Share Profile</h3>
+              <button onClick={() => setShowShareMenu(false)} className="p-2 rounded-full hover:bg-gray-100">
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+            <button onClick={handleShareInsideCoFarmz} className="w-full flex items-center gap-3 p-3 rounded-xl bg-green-50 text-green-700 font-bold hover:bg-green-100 transition">
+              <MessageCircle className="w-5 h-5" />
+              Share in CoFarmz
+            </button>
+            <button onClick={handleShareOutsideCoFarmz} className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-100 text-gray-800 font-bold hover:bg-gray-200 transition">
+              <Share2 className="w-5 h-5" />
+              Share outside CoFarmz
+            </button>
+          </div>
+        </div>
+      )}
+
+      {shareToast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] rounded-full bg-gray-900 text-white px-4 py-2 text-sm font-bold shadow-xl">
+          {shareToast}
+        </div>
       )}
     </div>
   );

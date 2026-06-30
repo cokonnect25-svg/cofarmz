@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { normalizePhoneNumber } from '@/lib/phone';
 
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
@@ -440,7 +441,7 @@ export default function NearbyFarmersClient() {
                     saveNearbyState();
                     if (farmer.can_call && farmer.phone) {
                       trackNearbyCall(farmer);
-                      window.location.href = `tel:${farmer.phone}`;
+                      window.location.href = `tel:${normalizePhoneNumber(farmer.phone)}`;
                     } else {
                       alert(
                         farmer.calling_enabled === false

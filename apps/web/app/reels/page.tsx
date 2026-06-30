@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, type CSSProperties } from 'react';
 import { Suspense } from 'react';
 import { Heart, MessageCircle, Send, ArrowLeft, X } from 'lucide-react';
 import { getApiUrl } from '@/lib/api';
@@ -12,7 +12,12 @@ import { Share } from '@capacitor/share';
 const SCROLL_KEY = 'reels_scrollY';
 const INDEX_KEY = 'reels_currentIndex';
 const REEL_ID_KEY = 'reels_currentReelId';
-const CAPTION_PREVIEW_LIMIT = 120;
+const COLLAPSED_CAPTION_STYLE: CSSProperties = {
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
+  overflow: 'hidden',
+};
 
 interface Reel {
   id: string;
@@ -46,6 +51,73 @@ interface ProfileListItem {
   location?: string;
   liked_at?: string;
   viewed_at?: string;
+}
+
+function ReelCaption({
+  caption,
+  expanded,
+  onToggle,
+}: {
+  caption: string;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const captionRef = useRef<HTMLParagraphElement>(null);
+  const [canExpand, setCanExpand] = useState(false);
+
+  const measureCaption = useCallback(() => {
+    const captionElement = captionRef.current;
+    if (!captionElement) return;
+
+    if (expanded) {
+      setCanExpand(true);
+      return;
+    }
+
+    setCanExpand(captionElement.scrollHeight > captionElement.clientHeight + 1);
+  }, [expanded]);
+
+  useEffect(() => {
+    measureCaption();
+  }, [caption, measureCaption]);
+
+  useEffect(() => {
+    const captionElement = captionRef.current;
+    if (!captionElement) return;
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measureCaption);
+      return () => window.removeEventListener('resize', measureCaption);
+    }
+
+    const observer = new ResizeObserver(measureCaption);
+    observer.observe(captionElement);
+    return () => observer.disconnect();
+  }, [measureCaption]);
+
+  return (
+    <div className="max-w-[85%]">
+      <p
+        ref={captionRef}
+        className="text-[15px] font-bold leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,1)] text-white/95 whitespace-pre-wrap break-words"
+        style={expanded ? undefined : COLLAPSED_CAPTION_STYLE}
+      >
+        {caption}
+      </p>
+      {canExpand && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+          className="mt-1 text-[14px] font-black text-white/90 underline underline-offset-2 hover:text-green-300"
+        >
+          {expanded ? 'Show less' : 'Read more'}
+        </button>
+      )}
+    </div>
+  );
 }
 
 function ReelsContent() {
@@ -661,25 +733,11 @@ const toggleCaption = (reelId: string) => {
                   </div>
 
                   {reel.caption && (
-                    <div className="max-w-[85%]">
-                      <p className="text-[15px] font-bold leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,1)] text-white/95 whitespace-pre-wrap break-words">
-                        {expandedCaptions.has(reel.id) || reel.caption.length <= CAPTION_PREVIEW_LIMIT
-                          ? reel.caption
-                          : `${reel.caption.slice(0, CAPTION_PREVIEW_LIMIT).trim()}...`}
-                        {reel.caption.length > CAPTION_PREVIEW_LIMIT && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleCaption(reel.id);
-                            }}
-                            className="ml-1 text-white font-black underline underline-offset-2 hover:text-green-300"
-                          >
-                            {expandedCaptions.has(reel.id) ? 'less' : 'more'}
-                          </button>
-                        )}
-                      </p>
-                    </div>
+                    <ReelCaption
+                      caption={reel.caption}
+                      expanded={expandedCaptions.has(reel.id)}
+                      onToggle={() => toggleCaption(reel.id)}
+                    />
                   )}
                 </div>
               </div>

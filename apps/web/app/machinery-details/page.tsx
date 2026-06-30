@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
+import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 
 import InAppCall from '@/app/components/InAppCall';
 
@@ -376,7 +377,7 @@ function MachineryDetailsContent() {
   const ownerId = machinery?.owner_id || '';
   const fullDescription = machinery?.description || 'Premium quality equipment for rent.';
   const ownerCanCall = Boolean(ownerProfile?.can_call);
-  const ownerCallPhone = ownerCanCall ? (machinery?.contact_phone || ownerProfile?.phone) : null;
+  const ownerCallPhone = ownerCanCall ? normalizePhoneNumber(machinery?.contact_phone || ownerProfile?.phone) : null;
   const ownerCallUnavailableMessage = !ownerProfile
     ? 'Owner profile is still loading. Please try again.'
     : !ownerProfile.calling_enabled
@@ -433,7 +434,7 @@ function MachineryDetailsContent() {
           total_days: totalDays,
           daily_rate: dailyRate,
           total_price: totalPrice,
-          renter_phone: renterPhone || null,
+          renter_phone: normalizePhoneNumber(renterPhone) || null,
         }),
       });
 
@@ -1295,9 +1296,8 @@ function MachineryDetailsContent() {
                 <input
                   type="tel"
                   value={renterPhone}
-                  maxLength={10}
                   onChange={(e) => {
-  const value = e.target.value.replace(/\D/g, ''); // remove non-digits
+  const value = e.target.value.replace(/[^\d+\s-]/g, '');
   setRenterPhone(value);
 }}
                   placeholder="+91 9876543210"
@@ -1307,8 +1307,8 @@ function MachineryDetailsContent() {
               </div>
               <button
 onClick={() => {
-  if (!/^[0-9]{10}$/.test(renterPhone)) {
-    alert('Enter valid 10 digit mobile number');
+  if (!isValidPhoneNumber(renterPhone)) {
+    alert('Enter a valid mobile number with country code');
     return;
   }
 

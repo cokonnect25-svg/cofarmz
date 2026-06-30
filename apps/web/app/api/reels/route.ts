@@ -66,10 +66,7 @@ export async function GET(request: Request) {
   FROM reels r
   JOIN "user" u ON r.user_id = u.id
   WHERE r.created_at < ${new Date(cursor)}
-  ORDER BY 
-    CASE WHEN u.role = 'superadmin' OR u.role_id = 5 THEN 0 ELSE 1 END ASC,
-    is_followed DESC,
-    r.created_at DESC
+  ORDER BY r.created_at DESC
   LIMIT ${limit + 1}
 `;
       } else {
@@ -84,10 +81,7 @@ export async function GET(request: Request) {
     EXISTS(SELECT 1 FROM follows WHERE user_id = ${currentUserId} AND following_id = r.user_id) as is_followed
   FROM reels r
   JOIN "user" u ON r.user_id = u.id
-  ORDER BY
-    CASE WHEN u.role = 'superadmin' OR u.role_id = 5 THEN 0 ELSE 1 END ASC,
-    is_followed DESC,
-    r.created_at DESC
+  ORDER BY r.created_at DESC
   LIMIT ${limit + 1}
 `;
       }

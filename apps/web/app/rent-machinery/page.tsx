@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
+import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
@@ -107,7 +108,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   let { name, value } = e.target;
 
   if (name === "contact_phone") {
-    value = value.replace(/\D/g, '').slice(0, 10); // only digits + max 10
+    value = value.replace(/[^\d+\s-]/g, '');
   }
 
   setFormData((prev) => ({
@@ -311,10 +312,12 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       return;
     }
 
-    if (!/^[6-9][0-9]{9}$/.test(formData.contact_phone)) {
-  alert("Enter valid 10 digit mobile number");
+    if (!isValidPhoneNumber(formData.contact_phone)) {
+  alert("Enter a valid mobile number with country code");
   return;
 }
+
+    const normalizedContactPhone = normalizePhoneNumber(formData.contact_phone);
 
     setIsSubmitting(true);
 
@@ -345,7 +348,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
           power: formData.power || null,
           description: formData.description || null,
           daily_rate: parseFloat(formData.daily_rate),
-          contact_phone: formData.contact_phone || null,
+          contact_phone: normalizedContactPhone || null,
           // Always save current photos state (even if unchanged)
           image_url: imageUrl || null,
           images: images,
@@ -376,7 +379,7 @@ const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             power: formData.power || null,
             description: formData.description || null,
             daily_rate: parseFloat(formData.daily_rate),
-            contact_phone: formData.contact_phone || null,
+            contact_phone: normalizedContactPhone || null,
             image_url: imageUrl,
             images: images,
             location: formData.location || null,

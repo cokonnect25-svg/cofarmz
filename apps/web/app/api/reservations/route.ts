@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextResponse, NextRequest } from "next/server";
 import { sendPushToUser } from "@/app/api/utils/push";
+import { normalizePhoneNumber } from "@/lib/phone";
 
 async function recordReservationEvent(reservation: any) {
   try {
@@ -102,6 +103,7 @@ export async function POST(request: Request) {
     }
 
     await sql`ALTER TABLE reservations ADD COLUMN IF NOT EXISTS renter_phone TEXT`.catch(() => {});
+    const normalizedRenterPhone = renter_phone ? normalizePhoneNumber(renter_phone) : null;
 
     const result = await sql`
       INSERT INTO reservations (
@@ -112,7 +114,7 @@ export async function POST(request: Request) {
       VALUES (
         ${user_id}, ${owner_id}, ${machinery_id}, ${machinery_name},
         ${start_date}, ${end_date}, ${total_days}, ${daily_rate}, ${total_price},
-        'pending', ${renter_phone || null}
+        'pending', ${normalizedRenterPhone}
       )
       RETURNING *
     `;

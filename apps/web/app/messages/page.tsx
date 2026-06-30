@@ -13,6 +13,7 @@ import { getApiUrl } from '@/lib/api';
 
 const TOP_NAV_H = 64;
 const BOTTOM_NAV_H = 60;
+const MESSAGE_DRAFT_KEY = 'cofarmz_message_draft';
 
 type MessageType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'location';
 
@@ -386,6 +387,14 @@ function MessagesContent() {
       router.replace('/login');
     }
   }, [authLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!ownerId) return;
+    const draft = sessionStorage.getItem(MESSAGE_DRAFT_KEY);
+    if (!draft) return;
+    setNewMessage(draft);
+    sessionStorage.removeItem(MESSAGE_DRAFT_KEY);
+  }, [ownerId]);
 
   const markAsRead = useCallback(async () => {
     if (!user?.id || !ownerId) return;

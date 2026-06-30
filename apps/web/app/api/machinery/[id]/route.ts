@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import sql from '@/app/api/utils/sql';
 import { NextResponse } from 'next/server';
+import { normalizePhoneNumber } from '@/lib/phone';
 
 export async function GET(
   request: Request,
@@ -41,6 +42,7 @@ export async function PUT(
       : '[]';
 
     const finalImageUrl = image_url || null;
+    const normalizedContactPhone = contact_phone ? normalizePhoneNumber(contact_phone) : null;
 
     const result = await sql`
       UPDATE machinery
@@ -56,7 +58,7 @@ export async function PUT(
         image_url = COALESCE(${finalImageUrl}, image_url),
         images = ${imagesJson}::jsonb,
         location = COALESCE(${location ?? null}, location),
-        contact_phone = COALESCE(${contact_phone ?? null}, contact_phone)
+        contact_phone = COALESCE(${normalizedContactPhone}, contact_phone)
       WHERE id = ${id}
       RETURNING *
     `;

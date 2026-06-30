@@ -5,11 +5,13 @@ import { useEffect, useState, Suspense, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 
 import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
-import { MapPin, ChevronUp, LogOut, X, Phone, MessageCircle, MapPinIcon, Heart, Send, Trash2, Star } from 'lucide-react';
+import { MapPin, ChevronUp, LogOut, X, Phone, MessageCircle, MapPinIcon, Heart, Send, Trash2, Star, Share2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
+import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 import UserAvatar from '@/app/components/UserAvatar';
 
 const MapPicker = dynamic(() => import('@/app/components/MapPicker'), { ssr: false });
@@ -411,6 +413,8 @@ function ProfileContent() {
   const [pendingFollowRequests, setPendingFollowRequests] = useState<any[]>([]);
 const [showFollowRequests, setShowFollowRequests] = useState(false);
 const [processingFollow, setProcessingFollow] = useState<string | null>(null);
+  const [shareToast, setShareToast] = useState<string | null>(null);
+  const [showShareMenu, setShowShareMenu] = useState(false);
 
   const today = new Date();
   const localDate = new Date(
@@ -986,8 +990,7 @@ const fetchFollowersCounts = async () => {
   const handleOpenEditModal = () => {
     if (user) {
       const p = profileData || {};
-      const phoneDigits = String(p.phone || '').replace(/\D/g, '');
-      const displayPhone = phoneDigits.length === 12 && phoneDigits.startsWith('91') ? phoneDigits.slice(2) : phoneDigits;
+      const displayPhone = p.phone ? normalizePhoneNumber(p.phone) : '';
       setEditForm({ name: p.name || user.name || '', email: p.email || user.email || '', phone: displayPhone, location: p.location || '', gender: p.gender || '', age: p.age ? String(p.age) : '', bio: p.bio || '', latitude: p.latitude || null, longitude: p.longitude || null, calling_enabled: p.calling_enabled !== false });
       setShowEditModal(true);
     }
@@ -996,10 +999,8 @@ const fetchFollowersCounts = async () => {
   const handleUpdateProfile = async () => {
     if (!user?.id) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const nextPhoneDigits = editForm.phone.replace(/\D/g, '');
-    const currentPhoneDigits = String(profileData?.phone || '').replace(/\D/g, '');
-    const currentPhoneLocal = currentPhoneDigits.length === 12 && currentPhoneDigits.startsWith('91') ? currentPhoneDigits.slice(2) : currentPhoneDigits;
-    const phoneChanged = nextPhoneDigits !== currentPhoneLocal;
+    const normalizedEditPhone = normalizePhoneNumber(editForm.phone);
+    const phoneChanged = normalizedEditPhone !== normalizePhoneNumber(profileData?.phone || '');
     if (
   !editForm.name.trim() ||
   !editForm.email.trim() ||
@@ -1011,7 +1012,7 @@ const fetchFollowersCounts = async () => {
 }
     if (!editForm.name.trim()) { alert('Name is required'); return; }
     if (!emailRegex.test(editForm.email)) { alert('Enter a valid email'); return; }
-    if (!/^[6-9][0-9]{9}$/.test(nextPhoneDigits)) { alert('Enter a valid 10 digit mobile number'); return; }
+    if (!isValidPhoneNumber(editForm.phone)) { alert('Enter a valid mobile number with country code'); return; }
     if (userRole === 'supplier' && supplierTypes.length === 0) { alert('Please choose Commodities Supplier, Equipment Supplier, or both.'); return; }
     setIsUpdatingProfile(true);
     try {
@@ -1022,7 +1023,7 @@ const fetchFollowersCounts = async () => {
           userId: user.id,
           name: editForm.name,
           email: editForm.email,
-          phone: editForm.phone,
+          phone: normalizedEditPhone,
           location: editForm.location,
           gender: editForm.gender || null,
           age: editForm.age ? parseInt(editForm.age) : null,
@@ -1166,6 +1167,75 @@ const fetchFollowersCounts = async () => {
     } finally { setIsUploadingPhoto(false); }
   };
 
+  const getProfileShareData = () => {
+    if (!user?.id) return null;
+    const profileName = profileData?.name || user.name || 'CoFarmz User';
+    const profileUrl = `https://cofarmz.com/farmer-profile?id=${user.id}`;
+    return {
+      title: `${profileName} on CoFarmz`,
+      text: `Check out ${profileName}'s CoFarmz profile`,
+      url: profileUrl,
+      message: `Check out ${profileName}'s CoFarmz profile:\n${profileUrl}`,
+    };
+  };
+
+  const showTemporaryShareToast = (message: string) => {
+    setShareToast(message);
+    setTimeout(() => setShareToast(null), 2200);
+  };
+
+  const handleShareInsideCoFarmz = async () => {
+    const shareData = getProfileShareData();
+    if (!shareData) return;
+
+    try {
+      sessionStorage.setItem('cofarmz_message_draft', shareData.message);
+      router.push('/chat');
+    } catch {
+      showTemporaryShareToast('Could not start CoFarmz share');
+    } finally {
+      setShowShareMenu(false);
+    }
+  };
+
+  const handleShareOutsideCoFarmz = async () => {
+    const shareData = getProfileShareData();
+    if (!shareData) return;
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Share.share({ title: shareData.title, text: shareData.text, url: shareData.url });
+      } catch (err: any) {
+        showTemporaryShareToast(err?.message || 'Share failed');
+      } finally {
+        setShowShareMenu(false);
+      }
+      return;
+    }
+
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: shareData.title, text: shareData.text, url: shareData.url });
+        setShowShareMenu(false);
+        return;
+      } catch (err: any) {
+        if (err?.name === 'AbortError') {
+          setShowShareMenu(false);
+          return;
+        }
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareData.message);
+      showTemporaryShareToast('Profile link copied');
+    } catch {
+      showTemporaryShareToast('Sharing not supported');
+    } finally {
+      setShowShareMenu(false);
+    }
+  };
+
 
   if (loading || !isAuthenticated || !mounted) {
     return (
@@ -1188,6 +1258,10 @@ const fetchFollowersCounts = async () => {
              : '🛒 Buyer Profile'}
         </p>        </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setShowShareMenu(true)} className="flex items-center gap-1.5 px-3 py-2 bg-green-50 hover:bg-green-100 rounded-xl transition text-sm font-bold text-green-700 active:scale-95">
+            <Share2 className="w-4 h-4" />
+            Share
+          </button>
           <button onClick={handleOpenEditModal} className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition text-sm font-bold text-gray-700 active:scale-95">
             <i className="ph-bold ph-pencil text-base"></i>Edit
           </button>
@@ -1463,7 +1537,7 @@ const fetchFollowersCounts = async () => {
                       <p className="font-bold text-green-600 mt-1">₹{booking.total_price}</p>
                       <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <span className={`text-xs px-2 py-1 rounded-full font-semibold ${booking.status === 'accepted' ? 'bg-green-100 text-green-700' : booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : booking.status === 'completed' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>{booking.status}</span>
-                        {booking.owner_phone && (<button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${booking.owner_phone}`; }} className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 font-semibold hover:bg-green-100 transition"><Phone className="w-3 h-3" />Call</button>)}
+                        {booking.owner_phone && (<button onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${normalizePhoneNumber(booking.owner_phone)}`; }} className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 font-semibold hover:bg-green-100 transition"><Phone className="w-3 h-3" />Call</button>)}
                         {(booking.status === 'pending' || booking.status === 'accepted') && (() => {
                           const totalPrice = Number(booking.total_price);
                           const { pct } = getRefundInfo(booking.start_date, totalPrice);
@@ -1519,7 +1593,7 @@ const fetchFollowersCounts = async () => {
                             <p className="text-xs font-bold text-gray-700 truncate flex-1">{rental.renter_name || 'Anonymous Renter'}</p>
                             <i className="ph ph-arrow-right text-gray-400 text-xs"></i>
                           </div>
-                          {rental.renter_phone && (<a href={`tel:${rental.renter_phone}`} onClick={e => e.stopPropagation()} className="ml-auto"><div className="w-7 h-7 rounded-full bg-green-600 flex items-center justify-center"><i className="ph-bold ph-phone text-white text-xs"></i></div></a>)}
+                          {rental.renter_phone && (<a href={`tel:${normalizePhoneNumber(rental.renter_phone)}`} onClick={e => e.stopPropagation()} className="ml-auto"><div className="w-7 h-7 rounded-full bg-green-600 flex items-center justify-center"><i className="ph-bold ph-phone text-white text-xs"></i></div></a>)}
                         </div>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-3">
                           <div><p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Duration</p><p className="text-xs font-bold text-gray-800">{rental.total_days} nights</p></div>
@@ -1938,7 +2012,7 @@ const fetchFollowersCounts = async () => {
             <div className="p-6 space-y-4">
               <div><label className="block text-sm font-semibold text-gray-900 mb-2">Name</label><input type="text" value={editForm.name} onChange={e => { if (/^[A-Za-z\s]*$/.test(e.target.value)) setEditForm(p => ({ ...p, name: e.target.value })); }} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
               <div><label className="block text-sm font-semibold text-gray-900 mb-2">Email</label><input type="email" value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
-              <div><label className="block text-sm font-semibold text-gray-900 mb-2">Phone</label><input type="tel" maxLength={10} value={editForm.phone} onChange={e => { if (/^\d*$/.test(e.target.value)) setEditForm(p => ({ ...p, phone: e.target.value })); }} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
+              <div><label className="block text-sm font-semibold text-gray-900 mb-2">Phone</label><input type="tel" value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value.replace(/[^\d+\s-]/g, '') }))} placeholder="+91 9876543210" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-semibold text-gray-900">Bio</label>
@@ -2086,6 +2160,31 @@ const fetchFollowersCounts = async () => {
       )}
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+      {showShareMenu && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4" onClick={() => setShowShareMenu(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-4 space-y-2 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-black text-gray-900">Share Profile</h3>
+              <button onClick={() => setShowShareMenu(false)} className="p-2 rounded-full hover:bg-gray-100">
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+            <button onClick={handleShareInsideCoFarmz} className="w-full flex items-center gap-3 p-3 rounded-xl bg-green-50 text-green-700 font-bold hover:bg-green-100 transition">
+              <MessageCircle className="w-5 h-5" />
+              Share in CoFarmz
+            </button>
+            <button onClick={handleShareOutsideCoFarmz} className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-100 text-gray-800 font-bold hover:bg-gray-200 transition">
+              <Share2 className="w-5 h-5" />
+              Share outside CoFarmz
+            </button>
+          </div>
+        </div>
+      )}
+      {shareToast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] rounded-full bg-gray-900 text-white px-4 py-2 text-sm font-bold shadow-xl">
+          {shareToast}
+        </div>
+      )}
       {/* ── Follow Requests Notification Bell ── */}
 
 

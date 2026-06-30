@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
+import { normalizePhoneNumber } from "@/lib/phone";
 
 export async function GET(request: Request) {
   try {
@@ -129,6 +130,7 @@ export async function POST(request: Request) {
     await sql`ALTER TABLE machinery ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]'`.catch(() => {});
 
     const imagesJson = JSON.stringify(Array.isArray(images) && images.length > 0 ? images : (image_url ? [image_url] : []));
+    const normalizedContactPhone = contact_phone ? normalizePhoneNumber(contact_phone) : null;
 
     const result = await sql`
       INSERT INTO machinery (
@@ -163,7 +165,7 @@ export async function POST(request: Request) {
         ${image_url || null},
         ${imagesJson}::jsonb,
         ${location || null},
-        ${contact_phone || null},
+        ${normalizedContactPhone},
         ${latitude || null},
         ${longitude || null},
         NOW()
