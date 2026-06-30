@@ -602,7 +602,7 @@ const handleFollow = async () => {
             {[
               { key: 'followers', label: 'Followers', count: profile.followers_count, icon: Users, show: true },
               { key: 'following', label: 'Following', count: profile.following_count, icon: UserCheck, show: true },
-              { key: 'crops', label: role === 'buyer' ? 'Crops' : 'Crops', count: profile.crops_count, icon: Wheat, show: true },
+              { key: 'crops', label: role === 'buyer' ? 'Crops You Want to Buy' : 'Crops', count: profile.crops_count, icon: Wheat, show: true },
               { key: 'equipment', label: 'Equipment', count: profile.equipments_count, icon: Tractor, show: true },
             ].map(({ key, label, count, icon: Icon }) => (
               <button
@@ -656,7 +656,7 @@ const handleFollow = async () => {
         {hasCrops && (
           <div>
             <SectionHeader
-              title={role === 'buyer' ? 'Commodities Interested' : 'Crops & Expertise'}
+              title={role === 'buyer' ? 'Crops You Want to Buy' : 'Crops & Expertise'}
               count={crops.length}
               expanded={openSections.has('crops')}
               onToggle={() => toggleSection('crops')}

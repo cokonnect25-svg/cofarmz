@@ -37,6 +37,7 @@ interface Farmer {
   followers_count?: number;
   following_count?: number;
   phone?: string;
+  calling_enabled?: boolean;
   can_call?: boolean;
   followStatus?: 'none' | 'pending' | 'accepted';
 }
@@ -441,7 +442,13 @@ export default function NearbyFarmersClient() {
                       trackNearbyCall(farmer);
                       window.location.href = `tel:${farmer.phone}`;
                     } else {
-                      alert(farmer.followStatus === 'pending' ? 'Your follow request must be accepted before you can call.' : 'Follow this profile and wait for acceptance before calling.');
+                      alert(
+                        farmer.calling_enabled === false
+                          ? 'This user has disabled calls.'
+                          : farmer.followStatus === 'pending'
+                          ? 'Your follow request must be accepted before you can call.'
+                          : 'Follow this profile and wait for acceptance before calling.'
+                      );
                     }
                   }}
                 >

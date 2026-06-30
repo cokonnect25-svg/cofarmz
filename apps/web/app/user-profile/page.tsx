@@ -527,6 +527,7 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
   const [userReviews, setUserReviews] = useState<{ [key: number]: any }>({});
   const [userRole, setUserRole] = useState<'farmer' | 'buyer' | 'supplier' | 'fpo'>('buyer');
   const [supplierTypes, setSupplierTypes] = useState<Array<'commodities' | 'equipment'>>([]);
+  const [isUpdatingCallPreference, setIsUpdatingCallPreference] = useState(false);
   const [showCallModal, setShowCallModal] = useState(false);
   const [callRecipient, setCallRecipient] = useState<{ id: string; name: string; image: string } | null>(null);
   const [callType, setCallType] = useState<'audio' | 'video'>('audio');
@@ -559,6 +560,9 @@ const isEquipmentSupplier = userRole === 'supplier' && (supplierTypes.length ===
 const canManageCrops = userRole !== 'supplier' || isCommoditySupplier;
 const canManageEquipment = userRole !== 'supplier' || isEquipmentSupplier;
 const canUseFarmerCropFields = userRole === 'farmer' || userRole === 'fpo' || isCommoditySupplier;
+const cropProfileLabel = userRole === 'buyer' ? 'Crops You Want to Buy' : 'Crops/Commodities';
+const cropProfileEmptyLabel = userRole === 'buyer' ? 'No crops you want to buy added yet' : 'No crops added yet';
+const addCropLabel = userRole === 'buyer' ? 'Add Crop You Want to Buy' : 'Add Crop';
 
 const toggleSupplierType = (type: 'commodities' | 'equipment') => {
   setSupplierTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]);
@@ -1040,6 +1044,34 @@ const fetchFollowersCounts = async () => {
     finally { setIsUpdatingProfile(false); }
   };
 
+  const handleToggleCallingPreference = async () => {
+    if (!user?.id || isUpdatingCallPreference) return;
+    const nextCallingEnabled = profileData?.calling_enabled === false;
+    setIsUpdatingCallPreference(true);
+
+    try {
+      const response = await fetch(getApiUrl(`/api/users/profile`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          calling_enabled: nextCallingEnabled,
+        }),
+      });
+      const updated = await response.json();
+      if (!response.ok) throw new Error(updated.error || 'Failed to update call preference');
+
+      setProfileData((prev: any) => ({ ...(prev || {}), ...updated, calling_enabled: nextCallingEnabled }));
+      setEditForm(prev => ({ ...prev, calling_enabled: nextCallingEnabled }));
+      window.dispatchEvent(new CustomEvent('cofarmz:profile-updated', { detail: { ...updated, calling_enabled: nextCallingEnabled } }));
+    } catch (error: any) {
+      console.error('Error updating call preference:', error);
+      alert(error?.message || 'Failed to update call preference');
+    } finally {
+      setIsUpdatingCallPreference(false);
+    }
+  };
+
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try { await signOut(); router.push('/login'); }
@@ -1209,6 +1241,31 @@ const fetchFollowersCounts = async () => {
               ? <span className="text-gray-700 font-medium">{profileData.location}</span>
               : <span className="text-green-600 font-medium underline underline-offset-2">+ Add your location</span>}
           </button>
+          <div className="mt-4 rounded-2xl border border-green-100 bg-green-50/70 p-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${profileData?.calling_enabled === false ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'}`}>
+                <i className={`ph-bold ${profileData?.calling_enabled === false ? 'ph-phone-slash' : 'ph-phone-call'} text-lg`}></i>
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-gray-900">Calls from followers</p>
+                <p className="text-xs text-gray-500">
+                  {profileData?.calling_enabled === false
+                    ? 'Disabled. Followers cannot call you.'
+                    : 'Enabled for accepted followers.'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleToggleCallingPreference}
+              disabled={isUpdatingCallPreference}
+              aria-pressed={profileData?.calling_enabled !== false}
+              className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors disabled:opacity-60 ${profileData?.calling_enabled === false ? 'bg-gray-300' : 'bg-green-600'}`}
+            >
+              <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${profileData?.calling_enabled === false ? 'translate-x-1' : 'translate-x-6'}`}></span>
+              <span className="sr-only">{profileData?.calling_enabled === false ? 'Enable calls' : 'Disable calls'}</span>
+            </button>
+          </div>
 <div className="grid grid-cols-4 gap-2 mt-4 text-center text-xs">
   <button onClick={() => { if (expandedSection === 'followers') { setExpandedSection(null); } else { setExpandedSection('followers'); fetchFollowers(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
     <p className="font-bold text-lg text-gray-900">{followersCount}</p>
@@ -1220,7 +1277,7 @@ const fetchFollowersCounts = async () => {
   </button>
   {canManageCrops && <button onClick={() => { if (expandedSection === 'crops') { setExpandedSection(null); } else { setExpandedSection('crops'); fetchUserCrops(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
     <p className="font-bold text-lg text-gray-900">{farmerCrops.length}</p>
-    <p className="text-xs text-gray-600 leading-tight">Crops/<br />Commodities</p>
+    <p className="text-xs text-gray-600 leading-tight">{cropProfileLabel}</p>
   </button>}
   {canManageEquipment && <button onClick={() => { if (expandedSection === 'equipment') { setExpandedSection(null); } else { setExpandedSection('equipment'); fetchUserEquipment(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
     <p className="font-bold text-lg text-gray-900">{myEquipment.length}</p>
@@ -1238,10 +1295,7 @@ const fetchFollowersCounts = async () => {
   {expandedSection === 'followers' && 'Followers'}
   {expandedSection === 'following' && 'Following'}
   {expandedSection === 'crops' && (
-    <>
-      Crops
-      <span className="block text-[10px] normal-case text-gray-500">Commodities</span>
-    </>
+    cropProfileLabel
   )}
   {expandedSection === 'equipment' && 'My Equipment'}
 </h3>
@@ -1280,7 +1334,7 @@ const fetchFollowersCounts = async () => {
             {expandedSection === 'crops' && canManageCrops && (
               <>
                 {farmerCrops.length === 0
-                  ? <div className="text-center py-8"><p className="text-sm text-gray-600 mb-3">No crops added yet</p></div>
+                  ? <div className="text-center py-8"><p className="text-sm text-gray-600 mb-3">{cropProfileEmptyLabel}</p></div>
                   : <div className="space-y-3">{farmerCrops.map(crop => (
                     <div key={crop.id} className="bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-green-50 hover:border-green-200 transition-colors active:scale-[0.98]" onClick={() => setSelectedCrop(crop)}>
                       <div className="flex justify-between items-start mb-2">
@@ -1321,7 +1375,7 @@ const fetchFollowersCounts = async () => {
                 }
 {/* Add Crop button - available for all roles */}
 <button onClick={() => setShowAddCropForm(true)} className="w-full mt-4 text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2">
-  <i className="ph-bold ph-plus text-sm"></i>Add Crop
+  <i className="ph-bold ph-plus text-sm"></i>{addCropLabel}
 </button>
               </>
             )}
