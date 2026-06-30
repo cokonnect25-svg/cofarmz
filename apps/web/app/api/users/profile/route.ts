@@ -201,7 +201,16 @@ export async function PUT(request: Request) {
     if (phone !== undefined) {
       normalizedPhone = normalizePhone(String(phone));
 
-      if (normalizedPhone.lookup) {
+      const currentUser = await sql`
+        SELECT phone
+        FROM "user"
+        WHERE id = ${userId}
+        LIMIT 1
+      `;
+      currentPhone = currentUser[0]?.phone || null;
+      const phoneChanged = normalizePhone(currentPhone || "").lookup !== normalizedPhone.lookup;
+
+      if (phoneChanged && normalizedPhone.lookup) {
         const duplicatePhone = await sql`
           SELECT id
           FROM "user"
@@ -222,14 +231,6 @@ export async function PUT(request: Request) {
           );
         }
       }
-
-      const currentUser = await sql`
-        SELECT phone
-        FROM "user"
-        WHERE id = ${userId}
-        LIMIT 1
-      `;
-      currentPhone = currentUser[0]?.phone || null;
     }
 
     // Build update query dynamically based on provided fields

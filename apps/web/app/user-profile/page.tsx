@@ -156,22 +156,24 @@ function ReelThumbnail({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const storedThumbnail = getRealThumbnail(reel.thumbnail_url);
   const [poster, setPoster] = useState(storedThumbnail);
-  const [showVideoFallback, setShowVideoFallback] = useState(true);
 
   useEffect(() => {
-    setPoster(getRealThumbnail(reel.thumbnail_url));
-    setShowVideoFallback(true);
+    const nextStoredThumbnail = getRealThumbnail(reel.thumbnail_url);
+    setPoster(nextStoredThumbnail);
+
+    if (nextStoredThumbnail) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
 
     let captured = false;
+    let cancelled = false;
     let seekIndex = 0;
     const seekPoints = [1.2, 0.5, 2.2, 0.1];
 
     const captureFrame = () => {
-      if (captured || !video.videoWidth || !video.videoHeight) return;
+      if (cancelled || captured || !video.videoWidth || !video.videoHeight) return;
 
       try {
         canvas.width = video.videoWidth;
@@ -188,10 +190,8 @@ function ReelThumbnail({
 
         captured = true;
         setPoster(canvas.toDataURL('image/jpeg', 0.78));
-        setShowVideoFallback(false);
       } catch {
-        setPoster('');
-        setShowVideoFallback(true);
+        if (!cancelled) setPoster('');
       }
     };
 
@@ -214,6 +214,7 @@ function ReelThumbnail({
     }
 
     return () => {
+      cancelled = true;
       video.removeEventListener('loadedmetadata', seekForPreview);
       video.removeEventListener('seeked', captureFrame);
     };
@@ -228,20 +229,17 @@ function ReelThumbnail({
       <video
         ref={videoRef}
         src={reel.video_url}
-        className={showVideoFallback ? 'w-full h-full object-cover' : 'hidden'}
+        className="hidden"
         muted
         playsInline
-        preload="auto"
+        preload="metadata"
       />
       {poster ? (
         <img
           src={poster}
           alt={reel.caption || 'Farm tale'}
           className="absolute inset-0 w-full h-full object-cover"
-          onError={() => {
-            setPoster('');
-            setShowVideoFallback(true);
-          }}
+          onError={() => setPoster('')}
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-300 flex items-center justify-center">
