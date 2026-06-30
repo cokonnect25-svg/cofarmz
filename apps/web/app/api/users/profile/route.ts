@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
     }
 
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS calling_enabled BOOLEAN DEFAULT true`.catch(() => { });
+    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS bio TEXT`.catch(() => { });
 
     // We use SELECT * for user to avoid "column does not exist" crashes
     // if role_confirmed hasn't been added to the schema in production yet.
@@ -158,7 +159,7 @@ const roleId = roleRow[0].id;
 
 export async function PUT(request: Request) {
   try {
-    const { userId, name, email, phone, location, gender, age, latitude, longitude, supplier_types, calling_enabled } = await request.json();
+    const { userId, name, email, phone, location, gender, age, bio, latitude, longitude, supplier_types, calling_enabled } = await request.json();
 
     if (!userId) {
       return NextResponse.json(
@@ -174,6 +175,7 @@ export async function PUT(request: Request) {
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMPTZ`.catch(() => { });
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS supplier_types TEXT[] DEFAULT ARRAY[]::TEXT[]`.catch(() => { });
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS calling_enabled BOOLEAN DEFAULT true`.catch(() => { });
+    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS bio TEXT`.catch(() => { });
 
     const currentUserRows = await sql`
       SELECT role, role_id
@@ -263,6 +265,10 @@ export async function PUT(request: Request) {
       updates.push(`age = $${updates.length + 1}`);
       values.push(age ? parseInt(age) : null);
     }
+    if (bio !== undefined) {
+      updates.push(`bio = $${updates.length + 1}`);
+      values.push(String(bio).trim().slice(0, 150) || null);
+    }
     if (latitude !== undefined) {
       updates.push(`latitude = $${updates.length + 1}`);
       values.push(latitude);
@@ -306,7 +312,7 @@ export async function PUT(request: Request) {
     // Fetch updated user with role information
     const result = await sql`
       SELECT
-        u.id, u.name, u.email, u.phone, u.location, u.image, u.gender, u.age,
+        u.id, u.name, u.email, u.phone, u.location, u.image, u.gender, u.age, u.bio,
         u.phone_verified, u.phone_verified_at,
         u.calling_enabled,
         u.role_id,

@@ -500,7 +500,7 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
   const [selectedReel, setSelectedReel] = useState<any | null>(null);
   const [selectedCrop, setSelectedCrop] = useState<FarmerCrop | null>(null);
   const [editForm, setEditForm] = useState({
-    name: '', email: '', phone: '', location: '', gender: '', age: '',
+    name: '', email: '', phone: '', location: '', gender: '', age: '', bio: '',
     latitude: null as number | null, longitude: null as number | null,
     calling_enabled: true,
   });
@@ -560,8 +560,8 @@ const isEquipmentSupplier = userRole === 'supplier' && (supplierTypes.length ===
 const canManageCrops = userRole !== 'supplier' || isCommoditySupplier;
 const canManageEquipment = userRole !== 'supplier' || isEquipmentSupplier;
 const canUseFarmerCropFields = userRole === 'farmer' || userRole === 'fpo' || isCommoditySupplier;
-const cropProfileLabel = userRole === 'buyer' ? 'Crops You Want to Buy' : 'Crops/Commodities';
-const cropProfileEmptyLabel = userRole === 'buyer' ? 'No crops you want to buy added yet' : 'No crops added yet';
+const cropProfileLabel = userRole === 'buyer' ? 'Crops/Commodities You Want to Buy' : 'Crops/Commodities';
+const cropProfileEmptyLabel = userRole === 'buyer' ? 'No Crops/Commodities You Want to Buy added yet' : 'No crops added yet';
 const addCropLabel = userRole === 'buyer' ? 'Add Crop You Want to Buy' : 'Add Crop';
 
 const toggleSupplierType = (type: 'commodities' | 'equipment') => {
@@ -990,7 +990,7 @@ const fetchFollowersCounts = async () => {
       const p = profileData || {};
       const phoneDigits = String(p.phone || '').replace(/\D/g, '');
       const displayPhone = phoneDigits.length === 12 && phoneDigits.startsWith('91') ? phoneDigits.slice(2) : phoneDigits;
-      setEditForm({ name: p.name || user.name || '', email: p.email || user.email || '', phone: displayPhone, location: p.location || '', gender: p.gender || '', age: p.age ? String(p.age) : '', latitude: p.latitude || null, longitude: p.longitude || null, calling_enabled: p.calling_enabled !== false });
+      setEditForm({ name: p.name || user.name || '', email: p.email || user.email || '', phone: displayPhone, location: p.location || '', gender: p.gender || '', age: p.age ? String(p.age) : '', bio: p.bio || '', latitude: p.latitude || null, longitude: p.longitude || null, calling_enabled: p.calling_enabled !== false });
       setShowEditModal(true);
     }
   };
@@ -1028,6 +1028,7 @@ const fetchFollowersCounts = async () => {
           location: editForm.location,
           gender: editForm.gender || null,
           age: editForm.age ? parseInt(editForm.age) : null,
+          bio: editForm.bio,
           calling_enabled: editForm.calling_enabled,
           ...(editForm.latitude != null ? { latitude: editForm.latitude, longitude: editForm.longitude } : {}),
           ...(userRole === 'supplier' ? { supplier_types: supplierTypes } : {}),
@@ -1240,6 +1241,13 @@ const fetchFollowersCounts = async () => {
             {profileData?.location
               ? <span className="text-gray-700 font-medium">{profileData.location}</span>
               : <span className="text-green-600 font-medium underline underline-offset-2">+ Add your location</span>}
+          </button>
+          <button onClick={handleOpenEditModal} className="block text-left mt-3 group">
+            {profileData?.bio ? (
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{profileData.bio}</p>
+            ) : (
+              <p className="text-sm text-green-600 font-semibold underline underline-offset-2 group-hover:text-green-700">+ Add bio</p>
+            )}
           </button>
           <div className="mt-4 rounded-2xl border border-green-100 bg-green-50/70 p-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -1933,6 +1941,20 @@ const fetchFollowersCounts = async () => {
               <div><label className="block text-sm font-semibold text-gray-900 mb-2">Name</label><input type="text" value={editForm.name} onChange={e => { if (/^[A-Za-z\s]*$/.test(e.target.value)) setEditForm(p => ({ ...p, name: e.target.value })); }} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
               <div><label className="block text-sm font-semibold text-gray-900 mb-2">Email</label><input type="email" value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
               <div><label className="block text-sm font-semibold text-gray-900 mb-2">Phone</label><input type="tel" maxLength={10} value={editForm.phone} onChange={e => { if (/^\d*$/.test(e.target.value)) setEditForm(p => ({ ...p, phone: e.target.value })); }} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-semibold text-gray-900">Bio</label>
+                  <span className="text-xs font-semibold text-gray-400">{editForm.bio.length}/150</span>
+                </div>
+                <textarea
+                  value={editForm.bio}
+                  maxLength={150}
+                  rows={3}
+                  placeholder="Add a short bio..."
+                  onChange={e => setEditForm(p => ({ ...p, bio: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm resize-none"
+                />
+              </div>
               <label className="flex items-center justify-between gap-4 rounded-xl border border-green-100 bg-green-50/70 p-4 cursor-pointer">
                 <div>
                   <p className="text-sm font-semibold text-gray-900">Enable calls from followers</p>
@@ -1993,7 +2015,7 @@ const fetchFollowersCounts = async () => {
       )}
 
       {/* Profile Image Modal */}
-      {showProfileImageModal && user?.image && (
+      {showProfileImageModal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowProfileImageModal(false)}>
           <div className="bg-white rounded-2xl overflow-hidden shadow-2xl max-w-md w-full" onClick={e => e.stopPropagation()}>
             <div className="relative bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 flex items-center justify-between">
@@ -2001,7 +2023,15 @@ const fetchFollowersCounts = async () => {
               <button onClick={() => setShowProfileImageModal(false)} className="p-1 hover:bg-white/20 rounded-lg transition"><X className="w-5 h-5 text-white" /></button>
             </div>
             <div className="p-6 flex flex-col items-center">
-              <UserAvatar image={user.image} name={user.name} size={256} className="rounded-lg mb-6" style={{ border: '4px solid #dcfce7', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
+              {profileData?.image || user?.image ? (
+                <img
+                  src={profileData?.image || user?.image}
+                  alt={user?.name || 'Profile'}
+                  className="w-full max-h-[70vh] rounded-xl object-contain bg-gray-950 shadow-md mb-6"
+                />
+              ) : (
+                <UserAvatar image={null} name={user?.name} size={256} className="rounded-lg mb-6" style={{ borderRadius: 12, border: '4px solid #dcfce7', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
+              )}
               <button onClick={handleProfilePhotoClick} disabled={isUploadingPhoto} className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
                 <i className="ph-bold ph-pencil text-sm"></i><span>Change Photo</span>
               </button>

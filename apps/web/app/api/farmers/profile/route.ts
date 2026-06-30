@@ -14,11 +14,12 @@ export async function GET(request: Request) {
 
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS supplier_types TEXT[] DEFAULT ARRAY[]::TEXT[]`.catch(() => {});
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS calling_enabled BOOLEAN DEFAULT true`.catch(() => {});
+    await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS bio TEXT`.catch(() => {});
 
     // ── Core profile ────────────────────────────────────────────────────────
     const farmers = await sql`
       SELECT
-        u.id, u.name, u.email, u.phone, u.image, u.location,
+        u.id, u.name, u.email, u.phone, u.image, u.location, u.bio,
         u.latitude, u.longitude,
         COALESCE(u.calling_enabled, true) as calling_enabled,
         COALESCE(u.role, r.name) as role,
@@ -214,6 +215,7 @@ export async function GET(request: Request) {
       calling_enabled: farmer.calling_enabled,
       can_call: canCall,
       image: farmer.image || null,
+      bio: farmer.bio || null,
       location: locationText,
       latitude: farmer.latitude ? parseFloat(farmer.latitude) : null,
       longitude: farmer.longitude ? parseFloat(farmer.longitude) : null,

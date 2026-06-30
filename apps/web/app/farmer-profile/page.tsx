@@ -602,7 +602,7 @@ const handleFollow = async () => {
             {[
               { key: 'followers', label: 'Followers', count: profile.followers_count, icon: Users, show: true },
               { key: 'following', label: 'Following', count: profile.following_count, icon: UserCheck, show: true },
-              { key: 'crops', label: role === 'buyer' ? 'Crops You Want to Buy' : 'Crops', count: profile.crops_count, icon: Wheat, show: true },
+              { key: 'crops', label: role === 'buyer' ? 'Crops/Commodities You Want to Buy' : 'Crops', count: profile.crops_count, icon: Wheat, show: true },
               { key: 'equipment', label: 'Equipment', count: profile.equipments_count, icon: Tractor, show: true },
             ].map(({ key, label, count, icon: Icon }) => (
               <button
@@ -656,7 +656,7 @@ const handleFollow = async () => {
         {hasCrops && (
           <div>
             <SectionHeader
-              title={role === 'buyer' ? 'Crops You Want to Buy' : 'Crops & Expertise'}
+              title={role === 'buyer' ? 'Crops/Commodities You Want to Buy' : 'Crops & Expertise'}
               count={crops.length}
               expanded={openSections.has('crops')}
               onToggle={() => toggleSection('crops')}
@@ -1041,13 +1041,21 @@ const handleFollow = async () => {
             </button>
 
             {/* Full-size photo */}
-            <UserAvatar
-              image={profile.image}
-              name={profile.name}
-              size={320}
-              className="rounded-2xl shadow-2xl"
-              style={{ width: '100%', aspectRatio: '1', border: '4px solid rgba(255,255,255,0.1)' }}
-            />
+            {profile.image ? (
+              <img
+                src={profile.image}
+                alt={profile.name || 'Profile'}
+                className="w-full max-h-[70vh] rounded-2xl object-contain bg-black shadow-2xl"
+              />
+            ) : (
+              <UserAvatar
+                image={null}
+                name={profile.name}
+                size={320}
+                className="rounded-2xl shadow-2xl"
+                style={{ width: '100%', aspectRatio: '1', borderRadius: 16, border: '4px solid rgba(255,255,255,0.1)' }}
+              />
+            )}
 
             {/* Name + role bar */}
             <div className="mt-3 flex items-center gap-2 justify-center">
