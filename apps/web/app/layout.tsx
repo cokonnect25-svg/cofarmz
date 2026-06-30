@@ -21,6 +21,7 @@ import { usePathname } from "next/navigation";
 import AdSplash from "./components/AdSplash";
 import { useHeartbeat } from '@/hooks/useHeartbeat';
 import { getApiUrl } from "@/lib/api";
+import { getInAppPathFromSharedUrl } from "@/lib/deep-link";
 
 const TOP_NAV_H = 64;
 const BOTTOM_NAV_H = 60;
@@ -82,6 +83,12 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           await authClient.getSession();
           window.location.replace('/');
         }, 500);
+        return;
+      }
+
+      const inAppPath = getInAppPathFromSharedUrl(url);
+      if (inAppPath) {
+        window.location.replace(inAppPath);
       }
     };
     const listener = App.addListener('appUrlOpen', handleUrlOpen);

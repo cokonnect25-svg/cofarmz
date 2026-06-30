@@ -445,10 +445,10 @@ export default function NearbyFarmersClient() {
                     } else {
                       alert(
                         farmer.calling_enabled === false
-                          ? 'This user has disabled calls.'
+                          ? 'Calls are off.'
                           : farmer.followStatus === 'pending'
-                          ? 'Your follow request must be accepted before you can call.'
-                          : 'Follow this profile and wait for acceptance before calling.'
+                          ? 'Waiting for approval.'
+                          : 'Follow to call.'
                       );
                     }
                   }}

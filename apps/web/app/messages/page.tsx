@@ -10,6 +10,7 @@ import {
   Download, Play, Pause, Camera, MapPinned, Files
 } from 'lucide-react';
 import { getApiUrl } from '@/lib/api';
+import { getInAppPathFromSharedUrl } from '@/lib/deep-link';
 
 const TOP_NAV_H = 64;
 const BOTTOM_NAV_H = 60;
@@ -130,6 +131,42 @@ function formatLastSeen(lastSeen: string | null): string {
   } catch {
     return 'offline';
   }
+}
+
+function LinkifiedText({
+  text,
+  isOwn,
+  onOpenInApp,
+}: {
+  text: string;
+  isOwn: boolean;
+  onOpenInApp: (path: string) => void;
+}) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+
+  return (
+    <p className="text-sm whitespace-pre-wrap break-words">
+      {parts.map((part, index) => {
+        if (!/^https?:\/\//i.test(part)) return <span key={index}>{part}</span>;
+
+        const inAppPath = getInAppPathFromSharedUrl(part);
+        return (
+          <button
+            key={index}
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              if (inAppPath) onOpenInApp(inAppPath);
+              else window.open(part, '_blank', 'noopener,noreferrer');
+            }}
+            className={`text-left font-bold underline underline-offset-2 ${isOwn ? 'text-white' : 'text-green-700'}`}
+          >
+            {part}
+          </button>
+        );
+      })}
+    </p>
+  );
 }
 
 function formatFileSize(bytes?: number): string {
@@ -735,7 +772,13 @@ function MessagesContent() {
         );
 
       default:
-        return <p className="text-sm">{msg.message || ''}</p>;
+        return (
+          <LinkifiedText
+            text={msg.message || ''}
+            isOwn={isOwn}
+            onOpenInApp={(path) => router.push(path)}
+          />
+        );
     }
   };
 

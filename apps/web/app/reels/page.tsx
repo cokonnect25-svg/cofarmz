@@ -136,7 +136,7 @@ function ReelsContent() {
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [followingLoading, setFollowingLoading] = useState<Set<string>>(new Set());
   const [videoErrors, setVideoErrors] = useState<Set<string>>(new Set());
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
   const videosRef = useRef<(HTMLVideoElement | null)[]>([]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);

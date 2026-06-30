@@ -11,7 +11,19 @@ import { MapPin, ChevronUp, LogOut, X, Phone, MessageCircle, MapPinIcon, Heart, 
 import dynamic from 'next/dynamic';
 import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
-import { getCountryCodeFromPhone, getLocalPhoneNumber, isValidPhoneNumber, normalizePhoneNumber, PHONE_COUNTRIES } from '@/lib/phone';
+import {
+  getCountryCodeFromPhone,
+  getLocalPhoneNumber,
+  getPhoneCountry,
+  getPhoneLengthMessage,
+  getPhoneMaxLength,
+  isValidLocalPhoneNumber,
+  isValidPhoneNumber,
+  normalizePhoneNumber,
+  PHONE_COUNTRIES,
+  sanitizeLocalPhoneInput,
+} from '@/lib/phone';
+import { buildOpenUrl } from '@/lib/deep-link';
 import UserAvatar from '@/app/components/UserAvatar';
 
 const MapPicker = dynamic(() => import('@/app/components/MapPicker'), { ssr: false });
@@ -524,7 +536,7 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [showProfileImageModal, setShowProfileImageModal] = useState(false);
   const [deletingReelId, setDeletingReelId] = useState<string | null>(null);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0);
   const videoRefsMap = useRef<{ [key: string]: HTMLVideoElement | null }>({});
   const [userReviews, setUserReviews] = useState<{ [key: number]: any }>({});
@@ -1015,7 +1027,7 @@ const fetchFollowersCounts = async () => {
 }
     if (!editForm.name.trim()) { alert('Name is required'); return; }
     if (!emailRegex.test(editForm.email)) { alert('Enter a valid email'); return; }
-    if (!isValidPhoneNumber(editForm.phone, editPhoneCountryCode)) { alert('Enter a valid mobile number with country code'); return; }
+    if (!isValidLocalPhoneNumber(editForm.phone, editPhoneCountryCode) || !isValidPhoneNumber(editForm.phone, editPhoneCountryCode)) { alert(getPhoneLengthMessage(editPhoneCountryCode)); return; }
     if (userRole === 'supplier' && supplierTypes.length === 0) { alert('Please choose Commodities Supplier, Equipment Supplier, or both.'); return; }
     setIsUpdatingProfile(true);
     try {
@@ -1173,7 +1185,7 @@ const fetchFollowersCounts = async () => {
   const getProfileShareData = () => {
     if (!user?.id) return null;
     const profileName = profileData?.name || user.name || 'CoFarmz User';
-    const profileUrl = `https://cofarmz.com/farmer-profile?id=${user.id}`;
+    const profileUrl = buildOpenUrl('/farmer-profile', { id: user.id });
     return {
       title: `${profileName} on CoFarmz`,
       text: `Check out ${profileName}'s CoFarmz profile`,
@@ -1324,14 +1336,14 @@ const fetchFollowersCounts = async () => {
               <p className="text-sm text-green-600 font-semibold underline underline-offset-2 group-hover:text-green-700">+ Add bio</p>
             )}
           </button>
-          <div className="mt-4 rounded-2xl border border-green-100 bg-green-50/70 p-3 flex items-center justify-between gap-3">
+          <div className="mt-4 w-full min-w-0 rounded-2xl border border-green-100 bg-green-50/70 p-3 flex items-center justify-between gap-3 overflow-hidden">
             <div className="flex items-center gap-3 min-w-0">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${profileData?.calling_enabled === false ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'}`}>
                 <i className={`ph-bold ${profileData?.calling_enabled === false ? 'ph-phone-slash' : 'ph-phone-call'} text-lg`}></i>
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold text-gray-900">Calls from followers</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm font-bold text-gray-900 break-words">Calls from followers</p>
+                <p className="text-xs text-gray-500 break-words">
                   {profileData?.calling_enabled === false
                     ? 'Disabled. Followers cannot call you.'
                     : 'Enabled for accepted followers.'}
@@ -2007,12 +2019,12 @@ const fetchFollowersCounts = async () => {
 
       {/* ── Edit Profile Modal ── */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl overflow-hidden shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4">
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end justify-center p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:items-center">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-xl max-w-md w-full max-h-[calc(100dvh-2rem)] flex flex-col">
+            <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 shrink-0">
               <h3 className="text-lg font-bold text-white">Edit Profile</h3>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto overscroll-contain pb-0">
               <div><label className="block text-sm font-semibold text-gray-900 mb-2">Name</label><input type="text" value={editForm.name} onChange={e => { if (/^[A-Za-z\s]*$/.test(e.target.value)) setEditForm(p => ({ ...p, name: e.target.value })); }} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
               <div><label className="block text-sm font-semibold text-gray-900 mb-2">Email</label><input type="email" value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
               <div>
@@ -2020,7 +2032,11 @@ const fetchFollowersCounts = async () => {
                 <div className="flex gap-2">
                   <select
                     value={editPhoneCountryCode}
-                    onChange={e => setEditPhoneCountryCode(e.target.value)}
+                    onChange={e => {
+                      const nextCountryCode = e.target.value;
+                      setEditPhoneCountryCode(nextCountryCode);
+                      setEditForm(p => ({ ...p, phone: sanitizeLocalPhoneInput(p.phone, nextCountryCode) }));
+                    }}
                     className="w-28 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     {PHONE_COUNTRIES.map(country => (
@@ -2029,12 +2045,15 @@ const fetchFollowersCounts = async () => {
                   </select>
                   <input
                     type="tel"
+                    inputMode="numeric"
                     value={editForm.phone}
-                    onChange={e => setEditForm(p => ({ ...p, phone: e.target.value.replace(/[^\d\s-]/g, '') }))}
-                    placeholder="9876543210"
+                    onChange={e => setEditForm(p => ({ ...p, phone: sanitizeLocalPhoneInput(e.target.value, editPhoneCountryCode) }))}
+                    maxLength={getPhoneMaxLength(editPhoneCountryCode)}
+                    placeholder={getPhoneCountry(editPhoneCountryCode).placeholder}
                     className="min-w-0 flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
+                <p className="mt-1 text-xs font-semibold text-gray-500">{getPhoneLengthMessage(editPhoneCountryCode)}</p>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -2050,16 +2069,16 @@ const fetchFollowersCounts = async () => {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm resize-none"
                 />
               </div>
-              <label className="flex items-center justify-between gap-4 rounded-xl border border-green-100 bg-green-50/70 p-4 cursor-pointer">
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">Enable calls from followers</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Only accepted followers can call when this is on.</p>
+              <label className="flex w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded-xl border border-green-100 bg-green-50/70 p-4 cursor-pointer">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-900 break-words">Enable calls from followers</p>
+                  <p className="text-xs text-gray-500 mt-0.5 break-words">Only accepted followers can call when this is on.</p>
                 </div>
                 <input
                   type="checkbox"
                   checked={editForm.calling_enabled}
                   onChange={e => setEditForm(p => ({ ...p, calling_enabled: e.target.checked }))}
-                  className="w-5 h-5 text-green-600 rounded focus:ring-2 focus:ring-green-500"
+                  className="w-5 h-5 flex-shrink-0 text-green-600 rounded focus:ring-2 focus:ring-green-500"
                 />
               </label>
               <div>
@@ -2100,7 +2119,7 @@ const fetchFollowersCounts = async () => {
                   )}
                 </div>
               )}
-              <div className="flex gap-3 pt-4">
+              <div className="sticky bottom-0 -mx-6 mt-4 flex gap-3 border-t border-gray-100 bg-white px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
                 <button onClick={() => setShowEditModal(false)} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition">Cancel</button>
                 <button onClick={handleUpdateProfile} disabled={isUpdatingProfile} className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">{isUpdatingProfile ? 'Saving...' : 'Save Changes'}</button>
               </div>

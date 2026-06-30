@@ -1166,7 +1166,7 @@ onClick={e => {
 
                     {/* Action buttons */}
                     <div className="flex gap-3" onClick={e => e.stopPropagation()}>
-                      <button onClick={e => { e.preventDefault(); e.stopPropagation(); if (farmer.can_call && farmer.phone) { trackNearbyCall(farmer); window.location.href = `tel:${normalizePhoneNumber(farmer.phone)}`; } else alert(farmer.calling_enabled === false ? 'This user has disabled calls.' : farmer.followStatus === 'pending' ? 'Your follow request must be accepted before you can call.' : 'Follow this profile and wait for acceptance before calling.'); }}
+                      <button onClick={e => { e.preventDefault(); e.stopPropagation(); if (farmer.can_call && farmer.phone) { trackNearbyCall(farmer); window.location.href = `tel:${normalizePhoneNumber(farmer.phone)}`; } else alert(farmer.calling_enabled === false ? 'Calls are off.' : farmer.followStatus === 'pending' ? 'Waiting for approval.' : 'Follow to call.'); }}
                         className={`flex-1 py-3 rounded-xl font-bold text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2 ${farmer.can_call ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-gray-50 text-gray-400 border border-gray-100'}`}>
                         <i className="ph-bold ph-phone"></i>Call
                       </button>

@@ -4,7 +4,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ConfirmationResult, RecaptchaVerifier as RecaptchaVerifierType } from "firebase/auth";
 import { getApiUrl } from "@/lib/api";
 import { Capacitor, registerPlugin } from "@capacitor/core";
-import { getCountryCodeFromPhone, getLocalPhoneNumber, PHONE_COUNTRIES } from "@/lib/phone";
+import {
+  getCountryCodeFromPhone,
+  getLocalPhoneNumber,
+  getPhoneCountry,
+  getPhoneLengthMessage,
+  getPhoneMaxLength,
+  isValidLocalPhoneNumber,
+  PHONE_COUNTRIES,
+  sanitizeLocalPhoneInput,
+} from "@/lib/phone";
 
 type Profile = {
   id: string;
@@ -44,7 +53,7 @@ function toE164(raw: string, countryCode = "91") {
   const trimmed = raw.trim();
   if (trimmed.startsWith("+")) return trimmed.replace(/[^\d+]/g, "");
   const digits = trimmed.replace(/\D/g, "");
-  if (digits.startsWith(countryCode) && digits.length > countryCode.length) return `+${digits}`;
+  if (digits.startsWith(countryCode) && isValidLocalPhoneNumber(digits.slice(countryCode.length), countryCode)) return `+${digits}`;
   return `+${countryCode}${digits}`;
 }
 
@@ -170,9 +179,12 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
     try {
       setMessage("");
       setSending(true);
+      if (!isValidLocalPhoneNumber(phone, countryCode)) {
+        throw new Error(getPhoneLengthMessage(countryCode));
+      }
       const formattedPhone = toE164(phone, countryCode);
       if (!/^\+[1-9]\d{9,14}$/.test(formattedPhone)) {
-        throw new Error("Enter a valid mobile number with country code");
+        throw new Error(getPhoneLengthMessage(countryCode));
       }
 
       if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
@@ -238,7 +250,8 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
 
   if (!shouldVerify) return null;
   const otpSent = !!confirmation || !!nativeVerificationId;
-  const canSendOtp = /^\+[1-9]\d{9,14}$/.test(toE164(phone, countryCode));
+  const selectedPhoneCountry = getPhoneCountry(countryCode);
+  const canSendOtp = isValidLocalPhoneNumber(phone, countryCode) && /^\+[1-9]\d{9,14}$/.test(toE164(phone, countryCode));
 
   return (
     <div className="fixed inset-0 z-[10050] flex items-end justify-center bg-black/60 px-4 sm:items-center">
@@ -255,7 +268,11 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
           <div className="flex gap-2">
             <select
               value={countryCode}
-              onChange={(e) => setCountryCode(e.target.value)}
+              onChange={(e) => {
+                const nextCountryCode = e.target.value;
+                setCountryCode(nextCountryCode);
+                setPhone((prev) => sanitizeLocalPhoneInput(prev, nextCountryCode));
+              }}
               disabled={otpSent || sending || verifying}
               className="w-32 rounded-2xl border border-gray-200 bg-white px-3 py-3 text-sm font-black text-gray-950 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-100"
             >
@@ -267,13 +284,16 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
             </select>
             <input
               type="tel"
+              inputMode="numeric"
               value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/[^\d\s-]/g, ""))}
-              placeholder="9876543210"
+              onChange={(e) => setPhone(sanitizeLocalPhoneInput(e.target.value, countryCode))}
+              maxLength={getPhoneMaxLength(countryCode)}
+              placeholder={selectedPhoneCountry.placeholder}
               disabled={otpSent || sending || verifying}
               className="min-w-0 flex-1 rounded-2xl border border-gray-200 px-4 py-3 text-base font-bold text-gray-950 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-100"
             />
           </div>
+          {!otpSent && <p className="text-xs font-semibold text-gray-500">{getPhoneLengthMessage(countryCode)}</p>}
 
           {otpSent && (
             <input

@@ -14,6 +14,7 @@ import { Share } from '@capacitor/share';
 import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { buildOpenUrl } from '@/lib/deep-link';
 import UserAvatar from '@/app/components/UserAvatar';
 
 
@@ -452,7 +453,7 @@ const handleFollow = async () => {
 
 const getProfileShareData = () => {
   if (!profile) return null;
-  const profileUrl = `https://cofarmz.com/farmer-profile?id=${profile.id}`;
+  const profileUrl = buildOpenUrl('/farmer-profile', { id: profile.id });
   return {
     title: `${profile.name} on CoFarmz`,
     text: `Check out ${profile.name}'s CoFarmz profile`,
@@ -569,12 +570,12 @@ const handleShareOutsideCoFarmz = async () => {
   const hasFollowing = following.length > 0;
   const hasReels = reels.length > 0;
   const callUnavailableMessage = !profile.calling_enabled
-    ? 'This user has disabled calls.'
+    ? 'Calls are off.'
     : followStatus === 'pending'
-    ? 'Your follow request must be accepted before you can call.'
+    ? 'Waiting for approval.'
     : !isFollowing
-    ? 'Follow this profile and wait for acceptance before calling.'
-    : 'Phone number not available';
+    ? 'Follow to call.'
+    : 'Phone unavailable.';
 
   return (
     <div className="min-h-[100dvh] bg-gray-50 pb-24">
@@ -1119,10 +1120,10 @@ const handleShareOutsideCoFarmz = async () => {
       {/* ── Profile Photo Modal ───────────────────────────────────────────────── */}
       {showPhotoModal && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4"
           onClick={() => setShowPhotoModal(false)}
         >
-          <div className="relative max-w-sm w-full" onClick={e => e.stopPropagation()}>
+          <div className="relative w-full max-w-[min(94vw,40rem)]" onClick={e => e.stopPropagation()}>
             {/* Close button */}
             <button
               onClick={() => setShowPhotoModal(false)}
@@ -1137,14 +1138,14 @@ const handleShareOutsideCoFarmz = async () => {
                 src={realProfilePhoto}
                 alt={profile.name || 'Profile'}
                 onError={() => setProfilePhotoFailed(true)}
-                className="mx-auto max-w-full max-h-[70vh] rounded-2xl object-contain bg-black shadow-2xl"
+                className="mx-auto w-full max-h-[84dvh] rounded-3xl object-contain bg-black shadow-2xl"
               />
             ) : (
-              <div className="w-full aspect-square max-h-[70vh] rounded-2xl bg-white shadow-2xl border border-white/20 flex flex-col items-center justify-center text-center p-6">
+              <div className="w-full aspect-square max-h-[84dvh] rounded-3xl bg-white shadow-2xl border border-white/20 flex flex-col items-center justify-center text-center p-6">
                 <UserAvatar
                   image={null}
                   name={profile.name}
-                  size={112}
+                  size={156}
                   className="rounded-full shadow-sm mb-4"
                   style={{ border: '4px solid #dcfce7' }}
                 />
