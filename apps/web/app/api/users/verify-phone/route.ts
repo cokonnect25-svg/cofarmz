@@ -18,8 +18,10 @@ function base64UrlToBuffer(value: string) {
 
 function normalizePhoneForLookup(phone: string) {
   const digits = phone.replace(/\D/g, "");
-  if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2);
-  return digits;
+  return {
+    lookup: digits,
+    legacyLookup: digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : "",
+  };
 }
 
 async function verifyFirebasePhoneToken(idToken: string) {
@@ -103,8 +105,8 @@ export async function POST(request: NextRequest) {
         AND phone IS NOT NULL
         AND phone <> ''
         AND (
-          regexp_replace(phone, '[^0-9]', '', 'g') = ${phoneLookup}
-          OR regexp_replace(phone, '[^0-9]', '', 'g') = ${`91${phoneLookup}`}
+          regexp_replace(phone, '[^0-9]', '', 'g') = ${phoneLookup.lookup}
+          OR (${phoneLookup.legacyLookup} <> '' AND regexp_replace(phone, '[^0-9]', '', 'g') = ${phoneLookup.legacyLookup})
         )
       LIMIT 1
     `;

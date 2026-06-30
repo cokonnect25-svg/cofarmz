@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ConfirmationResult, RecaptchaVerifier as RecaptchaVerifierType } from "firebase/auth";
 import { getApiUrl } from "@/lib/api";
 import { Capacitor, registerPlugin } from "@capacitor/core";
+import { getCountryCodeFromPhone, getLocalPhoneNumber, PHONE_COUNTRIES } from "@/lib/phone";
 
 type Profile = {
   id: string;
@@ -39,13 +40,12 @@ const HIDDEN_PATHS = [
   "/admin",
 ];
 
-function toE164(raw: string) {
+function toE164(raw: string, countryCode = "91") {
   const trimmed = raw.trim();
   if (trimmed.startsWith("+")) return trimmed.replace(/[^\d+]/g, "");
   const digits = trimmed.replace(/\D/g, "");
-  if (digits.length === 10) return `+91${digits}`;
-  if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
-  return `+${digits}`;
+  if (digits.startsWith(countryCode) && digits.length > countryCode.length) return `+${digits}`;
+  return `+${countryCode}${digits}`;
 }
 
 export default function PhoneVerificationGate({ user, pathname }: { user: any; pathname?: string | null }) {
@@ -54,6 +54,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [phone, setPhone] = useState("");
+  const [countryCode, setCountryCode] = useState("91");
   const [code, setCode] = useState("");
   const [message, setMessage] = useState("");
   const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
@@ -79,7 +80,9 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
       .then((data) => {
         if (cancelled || !data) return;
         setProfile(data);
-        setPhone(data.phone || "");
+        const nextCountryCode = getCountryCodeFromPhone(data.phone);
+        setCountryCode(nextCountryCode);
+        setPhone(data.phone ? getLocalPhoneNumber(data.phone, nextCountryCode) : "");
       })
       .catch(() => {})
       .finally(() => {
@@ -97,7 +100,9 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
       if (!updatedProfile || updatedProfile.id !== user?.id) return;
 
       setProfile(updatedProfile);
-      setPhone(updatedProfile.phone || "");
+      const nextCountryCode = getCountryCodeFromPhone(updatedProfile.phone);
+      setCountryCode(nextCountryCode);
+      setPhone(updatedProfile.phone ? getLocalPhoneNumber(updatedProfile.phone, nextCountryCode) : "");
       setConfirmation(null);
       setNativeVerificationId(null);
       setCode("");
@@ -165,14 +170,14 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
     try {
       setMessage("");
       setSending(true);
-      const formattedPhone = toE164(phone);
+      const formattedPhone = toE164(phone, countryCode);
       if (!/^\+[1-9]\d{9,14}$/.test(formattedPhone)) {
         throw new Error("Enter a valid mobile number with country code");
       }
 
       if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
         const result = await NativePhoneAuth.sendOtp({ phoneNumber: formattedPhone });
-        setPhone(formattedPhone);
+        setPhone(getLocalPhoneNumber(formattedPhone, countryCode));
 
         if (result.idToken) {
           await completePhoneVerification(result.idToken);
@@ -196,7 +201,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
       ]);
       const result = await signInWithPhoneNumber(auth, formattedPhone, verifier);
       setConfirmation(result);
-      setPhone(formattedPhone);
+      setPhone(getLocalPhoneNumber(formattedPhone, countryCode));
       setMessage("OTP sent. Please enter the code.");
     } catch (error: any) {
       verifierRef.current?.clear();
@@ -233,6 +238,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
 
   if (!shouldVerify) return null;
   const otpSent = !!confirmation || !!nativeVerificationId;
+  const canSendOtp = /^\+[1-9]\d{9,14}$/.test(toE164(phone, countryCode));
 
   return (
     <div className="fixed inset-0 z-[10050] flex items-end justify-center bg-black/60 px-4 sm:items-center">
@@ -246,14 +252,28 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
         </div>
 
         <div className="space-y-3">
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+91 9876543210"
-            disabled={otpSent || sending || verifying}
-            className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-base font-bold text-gray-950 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-100"
-          />
+          <div className="flex gap-2">
+            <select
+              value={countryCode}
+              onChange={(e) => setCountryCode(e.target.value)}
+              disabled={otpSent || sending || verifying}
+              className="w-32 rounded-2xl border border-gray-200 bg-white px-3 py-3 text-sm font-black text-gray-950 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-100"
+            >
+              {PHONE_COUNTRIES.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.flag} +{country.code}
+                </option>
+              ))}
+            </select>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/[^\d\s-]/g, ""))}
+              placeholder="9876543210"
+              disabled={otpSent || sending || verifying}
+              className="min-w-0 flex-1 rounded-2xl border border-gray-200 px-4 py-3 text-base font-bold text-gray-950 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 disabled:bg-gray-100"
+            />
+          </div>
 
           {otpSent && (
             <input
@@ -282,7 +302,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
           <button
             type="button"
             onClick={otpSent ? handleVerifyOtp : handleSendOtp}
-            disabled={sending || verifying || (otpSent ? code.length < 6 : phone.trim().length < 10)}
+            disabled={sending || verifying || (otpSent ? code.length < 6 : !canSendOtp)}
             className="w-full rounded-2xl bg-green-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-green-600/20 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {otpSent

@@ -11,7 +11,7 @@ import { MapPin, ChevronUp, LogOut, X, Phone, MessageCircle, MapPinIcon, Heart, 
 import dynamic from 'next/dynamic';
 import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
-import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
+import { getCountryCodeFromPhone, getLocalPhoneNumber, isValidPhoneNumber, normalizePhoneNumber, PHONE_COUNTRIES } from '@/lib/phone';
 import UserAvatar from '@/app/components/UserAvatar';
 
 const MapPicker = dynamic(() => import('@/app/components/MapPicker'), { ssr: false });
@@ -506,6 +506,7 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
     latitude: null as number | null, longitude: null as number | null,
     calling_enabled: true,
   });
+  const [editPhoneCountryCode, setEditPhoneCountryCode] = useState('91');
   const [profileLocationSuggestions, setProfileLocationSuggestions] = useState<any[]>([]);
   const [profileLocationSearching, setProfileLocationSearching] = useState(false);
   const [profileDetectingLocation, setProfileDetectingLocation] = useState(false);
@@ -990,7 +991,9 @@ const fetchFollowersCounts = async () => {
   const handleOpenEditModal = () => {
     if (user) {
       const p = profileData || {};
-      const displayPhone = p.phone ? normalizePhoneNumber(p.phone) : '';
+      const nextCountryCode = getCountryCodeFromPhone(p.phone);
+      const displayPhone = p.phone ? getLocalPhoneNumber(p.phone, nextCountryCode) : '';
+      setEditPhoneCountryCode(nextCountryCode);
       setEditForm({ name: p.name || user.name || '', email: p.email || user.email || '', phone: displayPhone, location: p.location || '', gender: p.gender || '', age: p.age ? String(p.age) : '', bio: p.bio || '', latitude: p.latitude || null, longitude: p.longitude || null, calling_enabled: p.calling_enabled !== false });
       setShowEditModal(true);
     }
@@ -999,7 +1002,7 @@ const fetchFollowersCounts = async () => {
   const handleUpdateProfile = async () => {
     if (!user?.id) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const normalizedEditPhone = normalizePhoneNumber(editForm.phone);
+    const normalizedEditPhone = normalizePhoneNumber(editForm.phone, editPhoneCountryCode);
     const phoneChanged = normalizedEditPhone !== normalizePhoneNumber(profileData?.phone || '');
     if (
   !editForm.name.trim() ||
@@ -1012,7 +1015,7 @@ const fetchFollowersCounts = async () => {
 }
     if (!editForm.name.trim()) { alert('Name is required'); return; }
     if (!emailRegex.test(editForm.email)) { alert('Enter a valid email'); return; }
-    if (!isValidPhoneNumber(editForm.phone)) { alert('Enter a valid mobile number with country code'); return; }
+    if (!isValidPhoneNumber(editForm.phone, editPhoneCountryCode)) { alert('Enter a valid mobile number with country code'); return; }
     if (userRole === 'supplier' && supplierTypes.length === 0) { alert('Please choose Commodities Supplier, Equipment Supplier, or both.'); return; }
     setIsUpdatingProfile(true);
     try {
@@ -2012,7 +2015,27 @@ const fetchFollowersCounts = async () => {
             <div className="p-6 space-y-4">
               <div><label className="block text-sm font-semibold text-gray-900 mb-2">Name</label><input type="text" value={editForm.name} onChange={e => { if (/^[A-Za-z\s]*$/.test(e.target.value)) setEditForm(p => ({ ...p, name: e.target.value })); }} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
               <div><label className="block text-sm font-semibold text-gray-900 mb-2">Email</label><input type="email" value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
-              <div><label className="block text-sm font-semibold text-gray-900 mb-2">Phone</label><input type="tel" value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value.replace(/[^\d+\s-]/g, '') }))} placeholder="+91 9876543210" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" /></div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Phone</label>
+                <div className="flex gap-2">
+                  <select
+                    value={editPhoneCountryCode}
+                    onChange={e => setEditPhoneCountryCode(e.target.value)}
+                    className="w-28 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    {PHONE_COUNTRIES.map(country => (
+                      <option key={country.code} value={country.code}>{country.flag} +{country.code}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={e => setEditForm(p => ({ ...p, phone: e.target.value.replace(/[^\d\s-]/g, '') }))}
+                    placeholder="9876543210"
+                    className="min-w-0 flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+              </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-semibold text-gray-900">Bio</label>
@@ -2161,8 +2184,8 @@ const fetchFollowersCounts = async () => {
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
       {showShareMenu && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4" onClick={() => setShowShareMenu(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-sm p-4 space-y-2 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-[10030] flex items-end justify-center px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]" onClick={() => setShowShareMenu(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-4 space-y-2 shadow-2xl mb-2" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-black text-gray-900">Share Profile</h3>
               <button onClick={() => setShowShareMenu(false)} className="p-2 rounded-full hover:bg-gray-100">

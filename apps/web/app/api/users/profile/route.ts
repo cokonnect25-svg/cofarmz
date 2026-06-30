@@ -14,13 +14,13 @@ function normalizePhone(phone: string) {
   const trimmed = phone.trim();
   const digits = trimmed.replace(/\D/g, "");
 
-  if (!digits) return { value: "", lookup: "" };
-  if (digits.length === 10) return { value: `+91${digits}`, lookup: digits };
+  if (!digits) return { value: "", lookup: "", legacyLookup: "" };
+  if (digits.length === 10) return { value: `+91${digits}`, lookup: `91${digits}`, legacyLookup: digits };
   if (digits.length === 12 && digits.startsWith("91")) {
-    return { value: `+${digits}`, lookup: digits.slice(2) };
+    return { value: `+${digits}`, lookup: digits, legacyLookup: digits.slice(2) };
   }
 
-  return { value: trimmed.startsWith("+") ? `+${digits}` : digits, lookup: digits };
+  return { value: `+${digits}`, lookup: digits, legacyLookup: "" };
 }
 
 export async function GET(request: NextRequest) {
@@ -195,7 +195,7 @@ export async function PUT(request: Request) {
       currentUserRows[0].role ||
       (currentUserRows[0].role_id === 3 ? "supplier" : null);
 
-    let normalizedPhone: { value: string; lookup: string } | null = null;
+    let normalizedPhone: { value: string; lookup: string; legacyLookup: string } | null = null;
     let currentPhone: string | null = null;
 
     if (phone !== undefined) {
@@ -219,7 +219,7 @@ export async function PUT(request: Request) {
             AND phone <> ''
             AND (
               regexp_replace(phone, '[^0-9]', '', 'g') = ${normalizedPhone.lookup}
-              OR regexp_replace(phone, '[^0-9]', '', 'g') = ${`91${normalizedPhone.lookup}`}
+              OR (${normalizedPhone.legacyLookup} <> '' AND regexp_replace(phone, '[^0-9]', '', 'g') = ${normalizedPhone.legacyLookup})
             )
           LIMIT 1
         `;

@@ -1185,8 +1185,8 @@ const handleShareOutsideCoFarmz = async () => {
       )}
 
       {showShareMenu && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4" onClick={() => setShowShareMenu(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-sm p-4 space-y-2 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-[10030] flex items-end justify-center px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]" onClick={() => setShowShareMenu(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-4 space-y-2 shadow-2xl mb-2" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-black text-gray-900">Share Profile</h3>
               <button onClick={() => setShowShareMenu(false)} className="p-2 rounded-full hover:bg-gray-100">
