@@ -7,8 +7,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
 import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 
-import InAppCall from '@/app/components/InAppCall';
-
 interface BookedDateRange {
   start_date: string;
   end_date: string;
@@ -63,8 +61,6 @@ function MachineryDetailsContent() {
   const [userPendingBooking, setUserPendingBooking] = useState<any | null>(null);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
-  const [showCallModal, setShowCallModal] = useState(false);
-  const [callType, setCallType] = useState<'audio' | 'video'>('audio');
   const [showBookingSuccess, setShowBookingSuccess] = useState(false);
   const [bookingDetails, setBookingDetails] = useState<{ totalDays: number; totalPrice: number; startDate: string; endDate: string } | null>(null);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
@@ -963,15 +959,15 @@ function MachineryDetailsContent() {
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (ownerCanCall) {
-                      setCallType('audio');
-                      setShowCallModal(true);
+                    if (ownerCallPhone) {
+                      trackOwnerCall('machinery_owner_card');
+                      window.location.href = `tel:${ownerCallPhone}`;
                     } else {
                       alert(ownerCallUnavailableMessage);
                     }
                   }}
                   className={`flex-1 rounded-[12px] py-3 font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform ${
-                    ownerCanCall
+                    ownerCallPhone
                       ? 'bg-green-50 hover:bg-green-100 text-green-700'
                       : 'bg-gray-50 text-gray-400 border border-gray-100'
                   }`}
@@ -1651,18 +1647,6 @@ onClick={() => {
           </div>
         )}
 
-        {/* In-App Call Modal */}
-        {showCallModal && ownerProfile && (
-          <InAppCall
-            isOpen={showCallModal}
-            onClose={() => setShowCallModal(false)}
-            recipientId={ownerId}
-            recipientName={ownerProfile.name || ownerName}
-            recipientImage={ownerProfile.image || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + ownerId}
-            callType={callType}
-            userId={user?.id || ''}
-          />
-        )}
       </div>
 
     </>

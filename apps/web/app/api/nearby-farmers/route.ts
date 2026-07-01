@@ -322,8 +322,8 @@ const targetRole =
           : allUserCrops;
         const followStatus = user.id === currentUserId ? 'accepted' : viewerFollowMap.get(user.id) || 'none';
         const canCall = Boolean(
-          isAdminViewer ||
-          (user.phone && user.calling_enabled && followStatus === 'accepted')
+          user.phone &&
+          (isAdminViewer || (user.calling_enabled && followStatus === 'accepted'))
         );
 
         return {

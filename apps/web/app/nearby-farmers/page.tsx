@@ -9,7 +9,6 @@ import { normalizePhoneNumber } from '@/lib/phone';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import UserAvatar from '@/app/components/UserAvatar';
-import InAppCall from '@/app/components/InAppCall';
 
   const SCROLL_KEY = 'nearbyFarmers_scrollY';
 const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
@@ -106,7 +105,6 @@ function NearbyFarmersContent() {
   return null;
 });
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [callRecipient, setCallRecipient] = useState<Farmer | null>(null);
 
 const rawType = searchParams.get('type');
 const rawSupplierType = searchParams.get('supplierType');
@@ -1179,13 +1177,9 @@ onClick={e => {
                       <button onClick={e => {
                         e.preventDefault();
                         e.stopPropagation();
-                        if (farmer.can_call) {
+                        if (farmer.can_call && farmer.phone) {
                           trackNearbyCall(farmer);
-                          if (farmer.phone) {
-                            window.location.href = `tel:${normalizePhoneNumber(farmer.phone)}`;
-                          } else {
-                            setCallRecipient(farmer);
-                          }
+                          window.location.href = `tel:${normalizePhoneNumber(farmer.phone)}`;
                         } else {
                           alert(farmer.has_phone === false ? 'Phone number is not available.' : farmer.calling_enabled === false ? 'Calls are off.' : farmer.followStatus === 'pending' ? 'Waiting for approval.' : 'Follow to call.');
                         }
@@ -1228,17 +1222,6 @@ onClick={e => {
           })()}
         </section>
       </div>
-      {callRecipient && user?.id && (
-        <InAppCall
-          isOpen={Boolean(callRecipient)}
-          onClose={() => setCallRecipient(null)}
-          recipientId={callRecipient.id}
-          recipientName={callRecipient.name}
-          recipientImage={callRecipient.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(callRecipient.name || callRecipient.id)}`}
-          callType="audio"
-          userId={user.id}
-        />
-      )}
     </>
   );
 }

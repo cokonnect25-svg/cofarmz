@@ -28,6 +28,7 @@ export default function InAppCall({
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [callDuration, setCallDuration] = useState(0);
   const [callStatus, setCallStatus] = useState<'connecting' | 'ringing' | 'connected' | 'ended'>('connecting');
+  const [callError, setCallError] = useState('');
   
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -67,6 +68,7 @@ export default function InAppCall({
   const initializeCall = async () => {
     try {
       setCallStatus('connecting');
+      setCallError('');
       
       // Get user media
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -133,8 +135,12 @@ export default function InAppCall({
 
     } catch (error) {
       console.error('Error initializing call:', error);
-      alert('Unable to access camera/microphone. Please check permissions.');
-      onClose();
+      setCallStatus('ended');
+      setCallError(
+        callType === 'video'
+          ? 'Camera or microphone permission is blocked. Allow permission to start a video call.'
+          : 'Microphone permission is blocked. Allow permission to start an audio call.'
+      );
     }
   };
 
@@ -157,6 +163,7 @@ export default function InAppCall({
     // Reset state
     setCallDuration(0);
     setIsConnected(false);
+    setCallError('');
     setCallStatus('connecting');
   };
 
@@ -221,11 +228,27 @@ export default function InAppCall({
               />
               <h2 className="text-white text-2xl font-bold mb-2">{recipientName}</h2>
               <p className="text-white/80 text-lg">
-                {callStatus === 'connecting' && 'Connecting...'}
-                {callStatus === 'ringing' && 'Ringing...'}
-                {callStatus === 'connected' && formatDuration(callDuration)}
-                {callStatus === 'ended' && 'Call Ended'}
+                {callError || (callStatus === 'connecting' && 'Connecting...')}
+                {!callError && callStatus === 'ringing' && 'Ringing...'}
+                {!callError && callStatus === 'connected' && formatDuration(callDuration)}
+                {!callError && callStatus === 'ended' && 'Call Ended'}
               </p>
+              {callError && (
+                <div className="mt-6 flex items-center justify-center gap-3">
+                  <button
+                    onClick={initializeCall}
+                    className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-gray-900"
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    onClick={handleEndCall}
+                    className="rounded-full bg-white/15 px-5 py-2.5 text-sm font-bold text-white"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -265,9 +288,10 @@ export default function InAppCall({
           {/* Mute button */}
           <button
             onClick={toggleMute}
+            disabled={Boolean(callError)}
             className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
               isMuted ? 'bg-white text-gray-900' : 'bg-white/20 text-white'
-            }`}
+            } disabled:opacity-40`}
           >
             {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
           </button>
@@ -284,9 +308,10 @@ export default function InAppCall({
           {callType === 'video' && (
             <button
               onClick={toggleVideo}
+              disabled={Boolean(callError)}
               className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
                 isVideoEnabled ? 'bg-white/20 text-white' : 'bg-white text-gray-900'
-              }`}
+              } disabled:opacity-40`}
             >
               {isVideoEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
             </button>
@@ -296,9 +321,10 @@ export default function InAppCall({
           {callType === 'audio' && (
             <button
               onClick={toggleSpeaker}
+              disabled={Boolean(callError)}
               className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
                 isSpeakerOn ? 'bg-white/20 text-white' : 'bg-white text-gray-900'
-              }`}
+              } disabled:opacity-40`}
             >
               {isSpeakerOn ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
             </button>

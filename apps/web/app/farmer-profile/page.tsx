@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
-import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { buildAndroidIntentUrl, buildOpenUrl } from '@/lib/deep-link';
@@ -331,8 +330,6 @@ function FarmerProfileContent() {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [mounted, setMounted] = useState(false);
-  const [showCallModal, setShowCallModal] = useState(false);
-  const [callType] = useState<'audio' | 'video'>('audio');
   const [expandedCropIdx, setExpandedCropIdx] = useState<number | null>(null);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [profilePhotoFailed, setProfilePhotoFailed] = useState(false);
@@ -722,13 +719,9 @@ const handleShareOutsideCoFarmz = async () => {
               </button>
               <button
                 onClick={() => {
-                  if (profile.can_call) {
+                  if (profile.can_call && profile.phone) {
                     trackProfileCall();
-                    if (profile.phone) {
-                      window.location.href = `tel:${normalizePhoneNumber(profile.phone)}`;
-                    } else {
-                      setShowCallModal(true);
-                    }
+                    window.location.href = `tel:${normalizePhoneNumber(profile.phone)}`;
                   }
                   else alert(callUnavailableMessage);
                 }}
@@ -1183,18 +1176,6 @@ const handleShareOutsideCoFarmz = async () => {
       )}
 
       {/* ── In-App Call Modal ─────────────────────────────────────────────────── */}
-      {showCallModal && profile && (
-        <InAppCall
-          isOpen={showCallModal}
-          onClose={() => setShowCallModal(false)}
-          recipientId={profile.id}
-          recipientName={profile.name}
-          recipientImage={profile.image || 'https://via.placeholder.com/150'}
-          callType={callType}
-          userId={user?.id || ''}
-        />
-      )}
-
       {showShareMenu && (
         <div className="fixed inset-0 bg-black/50 z-[10030] flex items-end justify-center px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]" onClick={() => setShowShareMenu(false)}>
           <div className="bg-white rounded-2xl w-full max-w-sm p-4 space-y-2 shadow-2xl mb-2" onClick={(e) => e.stopPropagation()}>
