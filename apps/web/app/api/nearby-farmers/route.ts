@@ -2,6 +2,12 @@ export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextRequest, NextResponse } from "next/server";
 
+function isAdminRole(row: any) {
+  const role = String(row?.role || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const displayName = String(row?.role_display_name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return role === 'admin' || role === 'superadmin' || displayName === 'admin' || displayName === 'superadmin' || Number(row?.role_id) === 5;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -14,7 +20,7 @@ export async function GET(request: NextRequest) {
     const supplierTypeParam = searchParams.get("supplierType");
     const supplierType = supplierTypeParam === "commodities" || supplierTypeParam === "equipment" ? supplierTypeParam : null;
     const showWasteBuyers = searchParams.get("wasteOnly") === "true";
-    const currentUserId  = searchParams.get("currentUserId");
+    const currentUserId  = searchParams.get("currentUserId") || request.headers.get("x-user-id");
 
     const crops     = (searchParams.get("crops")    ?.split(",").filter(Boolean) ?? []).map(c => c.trim().toLowerCase());
     const grades    = (searchParams.get("grades")   ?.split(",").filter(Boolean) ?? []).map(g => g.trim().toLowerCase());
@@ -41,18 +47,13 @@ const targetRole =
     if (currentUserId) {
       try {
         const viewerRows = await sql`
-          SELECT COALESCE(u.role, r.name, '') AS role, u.role_id
+          SELECT COALESCE(NULLIF(u.role, ''), r.name, '') AS role, r.display_name AS role_display_name, u.role_id
           FROM "user" u
           LEFT JOIN roles r ON u.role_id = r.id
           WHERE u.id = ${currentUserId}
           LIMIT 1
         `;
-        const viewerRole = String(viewerRows?.[0]?.role || '').toLowerCase();
-        isAdminViewer =
-          viewerRole === 'admin' ||
-          viewerRole === 'superadmin' ||
-          viewerRole === 'super_admin' ||
-          Number(viewerRows?.[0]?.role_id) === 5;
+        isAdminViewer = isAdminRole(viewerRows?.[0]);
       } catch (e) {
         console.error('nearby farmers viewer role check:', e);
       }

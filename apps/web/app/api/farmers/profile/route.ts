@@ -2,11 +2,17 @@ export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextResponse } from "next/server";
 
+function isAdminRole(row: any) {
+  const role = String(row?.role || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const displayName = String(row?.role_display_name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return role === 'admin' || role === 'superadmin' || displayName === 'admin' || displayName === 'superadmin' || Number(row?.role_id) === 5;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const farmerId = searchParams.get("farmerId") || searchParams.get("userId") || searchParams.get("id");
-    const currentUserId = request.headers.get("x-user-id");
+    const currentUserId = request.headers.get("x-user-id") || searchParams.get("currentUserId");
 
     if (!farmerId) {
       return NextResponse.json({ error: "Missing farmerId" }, { status: 400 });
@@ -185,14 +191,13 @@ export async function GET(request: Request) {
     if (currentUserId) {
       try {
         const viewerRows = await sql`
-          SELECT COALESCE(u.role, r.name, '') AS role, u.role_id
+          SELECT COALESCE(NULLIF(u.role, ''), r.name, '') AS role, r.display_name AS role_display_name, u.role_id
           FROM "user" u
           LEFT JOIN roles r ON u.role_id = r.id
           WHERE u.id = ${currentUserId}
           LIMIT 1
         `;
-        const viewerRole = String(viewerRows?.[0]?.role || '').toLowerCase();
-        isAdminViewer = viewerRole === 'admin' || viewerRole === 'superadmin' || viewerRole === 'super_admin' || Number(viewerRows?.[0]?.role_id) === 5;
+        isAdminViewer = isAdminRole(viewerRows?.[0]);
       } catch (e) { console.error("viewer role check:", e); }
     }
 

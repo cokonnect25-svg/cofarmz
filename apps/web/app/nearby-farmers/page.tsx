@@ -487,7 +487,7 @@ const fetchNearbyFarmers = async (
       const url = getApiUrl(`/api/nearby-farmers?${params.toString()}`);
       console.log('Fetching', type, 'from:', url);
 
-      const response = await fetch(url);
+      const response = await fetch(url, user?.id ? { headers: { 'x-user-id': user.id } } : undefined);
       if (!response.ok) {
         const txt = await response.text();
         throw new Error(`HTTP ${response.status}: ${txt}`);

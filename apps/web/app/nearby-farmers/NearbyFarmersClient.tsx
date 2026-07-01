@@ -257,7 +257,7 @@ export default function NearbyFarmersClient() {
       if (type === 'buyers' && filters.wasteOnly) params.append('wasteOnly', 'true');
 
       const url = getApiUrl(`/api/nearby-farmers?${params.toString()}`);
-      const response = await fetch(url);
+      const response = await fetch(url, user?.id ? { headers: { 'x-user-id': user.id } } : undefined);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       
       const data = await response.json();

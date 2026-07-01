@@ -361,7 +361,7 @@ function FarmerProfileContent() {
   const fetchProfile = useCallback(async () => {
     if (!farmerId || !user) return;
     try {
-      const url = getApiUrl(`/api/farmers/profile?farmerId=${encodeURIComponent(farmerId)}`);
+      const url = getApiUrl(`/api/farmers/profile?farmerId=${encodeURIComponent(farmerId)}&currentUserId=${encodeURIComponent(user.id)}`);
       const res = await fetch(url, { headers: { 'x-user-id': user.id } });
 
       if (!res.ok) {

@@ -194,7 +194,7 @@ function MachineryDetailsContent() {
     try {
       setLoadingOwnerProfile(true);
       const response = await fetch(
-        getApiUrl(`/api/farmers/profile?farmerId=${ownerId}`),
+        getApiUrl(`/api/farmers/profile?farmerId=${ownerId}${user?.id ? `&currentUserId=${encodeURIComponent(user.id)}` : ''}`),
         user?.id ? { headers: { 'x-user-id': user.id } } : undefined
       );
       if (response.ok) {
