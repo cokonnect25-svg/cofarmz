@@ -23,7 +23,7 @@ import {
   PHONE_COUNTRIES,
   sanitizeLocalPhoneInput,
 } from '@/lib/phone';
-import { buildOpenUrl } from '@/lib/deep-link';
+import { buildAndroidIntentUrl, buildOpenUrl } from '@/lib/deep-link';
 import UserAvatar from '@/app/components/UserAvatar';
 import LinkifiedText from '@/app/components/LinkifiedText';
 
@@ -1187,10 +1187,12 @@ const fetchFollowersCounts = async () => {
     if (!user?.id) return null;
     const profileName = profileData?.name || user.name || 'CoFarmz User';
     const profileUrl = buildOpenUrl('/farmer-profile', { id: user.id });
+    const appUrl = buildAndroidIntentUrl(`/farmer-profile?id=${encodeURIComponent(user.id)}`);
     return {
       title: `${profileName} on CoFarmz`,
-      text: `Check out ${profileName}'s CoFarmz profile. If CoFarmz is installed, this opens in the app; otherwise it will take you to install it.`,
+      text: `Check out ${profileName}'s CoFarmz profile. Tap the link to open CoFarmz app or install it.`,
       url: profileUrl,
+      appUrl,
       message: `Check out ${profileName}'s CoFarmz profile:\n${profileUrl}\n\nIf CoFarmz is installed, this opens in the app. If not, install it from Play Store.`,
     };
   };
@@ -1220,7 +1222,9 @@ const fetchFollowersCounts = async () => {
 
     if (Capacitor.isNativePlatform()) {
       try {
-        await Share.share({ title: shareData.title, text: shareData.text, url: shareData.url });
+        const nativeUrl = Capacitor.getPlatform() === 'android' ? shareData.appUrl : shareData.url;
+        const nativeText = Capacitor.getPlatform() === 'android' ? `${shareData.text}\n${nativeUrl}` : shareData.text;
+        await Share.share({ title: shareData.title, text: nativeText, url: nativeUrl });
       } catch (err: any) {
         showTemporaryShareToast(err?.message || 'Share failed');
       } finally {

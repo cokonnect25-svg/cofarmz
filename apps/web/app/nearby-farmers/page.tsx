@@ -234,9 +234,8 @@ useEffect(() => {
 
   useEffect(() => {
     if (!mounted || !isAuthenticated) return;
-    const lat = userLocation?.latitude  ?? 0;
-    const lon = userLocation?.longitude ?? 0;
-    fetchNearbyFarmers(lat, lon, searchType);
+    if (!userLocation) return;
+    fetchNearbyFarmers(userLocation.latitude, userLocation.longitude, searchType);
   }, [searchType, supplierType, userLocation, mounted, isAuthenticated]);
 
   useEffect(() => {
@@ -422,7 +421,8 @@ const saveStateAndNavigate = (url: string) => {
 
   // Fall back to profile location from API
   if (!user?.id) { 
-    fetchNearbyFarmers(0, 0, searchType); 
+    setLocationError('Location is required. Please allow location access to continue.');
+    setFarmers([]);
     return; 
   }
   try {
@@ -446,7 +446,8 @@ const saveStateAndNavigate = (url: string) => {
   } catch {}
   
   setUserLocation(null);
-  fetchNearbyFarmers(0, 0, searchType);
+  setFarmers([]);
+  setLocationError('Location is required. Please allow location access to continue.');
 };
   // ── core fetch ──────────────────────────────────────────────────────────────
 const fetchNearbyFarmers = async (
@@ -457,6 +458,12 @@ const fetchNearbyFarmers = async (
 ) => {
     // Use explicitly-passed filters first, then the always-current ref
     const f = overrideFilters ?? filtersRef.current;
+    if (!latitude || !longitude || (latitude === 0 && longitude === 0)) {
+      setFarmers([]);
+      setLoadingFarmers(false);
+      setLocationError('Location is required. Please allow location access to continue.');
+      return;
+    }
     setLoadingFarmers(true);
     try {
       const params = new URLSearchParams();

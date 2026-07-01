@@ -170,6 +170,7 @@ export async function GET(request: Request) {
     // ── Follow status ────────────────────────────────────────────────────────
     let followStatus: 'none' | 'pending' | 'accepted' = 'none';
     let isFollowing = false;
+    let isAdminViewer = false;
     if (currentUserId && currentUserId !== farmerId) {
       try {
         const fc = await sql`
@@ -181,11 +182,23 @@ export async function GET(request: Request) {
         isFollowing = followStatus === 'accepted';
       } catch (e) { console.error("follow check:", e); }
     }
+    if (currentUserId) {
+      try {
+        const viewerRows = await sql`
+          SELECT COALESCE(u.role, r.name, '') AS role, u.role_id
+          FROM "user" u
+          LEFT JOIN roles r ON u.role_id = r.id
+          WHERE u.id = ${currentUserId}
+          LIMIT 1
+        `;
+        const viewerRole = String(viewerRows?.[0]?.role || '').toLowerCase();
+        isAdminViewer = viewerRole === 'admin' || viewerRole === 'superadmin' || viewerRole === 'super_admin' || Number(viewerRows?.[0]?.role_id) === 5;
+      } catch (e) { console.error("viewer role check:", e); }
+    }
 
     const canCall = Boolean(
-      farmer.calling_enabled &&
       farmer.phone &&
-      (currentUserId === farmerId || followStatus === 'accepted')
+      (isAdminViewer || (farmer.calling_enabled && (currentUserId === farmerId || followStatus === 'accepted')))
     );
 
     // ── Reverse geocode fallback ─────────────────────────────────────────────

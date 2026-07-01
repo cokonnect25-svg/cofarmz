@@ -37,6 +37,27 @@ const targetRole =
   searchType === "supplier" ? "supplier" :
   searchType === "fpo"      ? "fpo"      : "buyer";
 
+    let isAdminViewer = false;
+    if (currentUserId) {
+      try {
+        const viewerRows = await sql`
+          SELECT COALESCE(u.role, r.name, '') AS role, u.role_id
+          FROM "user" u
+          LEFT JOIN roles r ON u.role_id = r.id
+          WHERE u.id = ${currentUserId}
+          LIMIT 1
+        `;
+        const viewerRole = String(viewerRows?.[0]?.role || '').toLowerCase();
+        isAdminViewer =
+          viewerRole === 'admin' ||
+          viewerRole === 'superadmin' ||
+          viewerRole === 'super_admin' ||
+          Number(viewerRows?.[0]?.role_id) === 5;
+      } catch (e) {
+        console.error('nearby farmers viewer role check:', e);
+      }
+    }
+
     // ── fetch users by role ─────────────────────────────────────────────────
     const users = await sql`
       SELECT
@@ -299,7 +320,10 @@ const targetRole =
           ? allUserCrops.filter((c: any) => c.is_crop_waste)
           : allUserCrops;
         const followStatus = user.id === currentUserId ? 'accepted' : viewerFollowMap.get(user.id) || 'none';
-        const canCall = Boolean(user.calling_enabled && user.phone && followStatus === 'accepted');
+        const canCall = Boolean(
+          user.phone &&
+          (isAdminViewer || (user.calling_enabled && followStatus === 'accepted'))
+        );
 
         return {
           ...user,

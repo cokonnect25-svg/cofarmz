@@ -6,7 +6,7 @@ import { useEffect, useState, useRef, useCallback, type CSSProperties } from 're
 import { Suspense } from 'react';
 import { Heart, MessageCircle, Send, ArrowLeft, X } from 'lucide-react';
 import { getApiUrl } from '@/lib/api';
-import { buildOpenUrl } from '@/lib/deep-link';
+import { buildAndroidIntentUrl, buildOpenUrl } from '@/lib/deep-link';
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 
@@ -540,12 +540,15 @@ const toggleCaption = (reelId: string) => {
     e.stopPropagation();
 
     const shareUrl = buildOpenUrl('/reels', { reelId: reel.id });
+    const nativeShareUrl = buildAndroidIntentUrl(`/reels?reelId=${encodeURIComponent(reel.id)}`);
     const title = reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel';
-    const text = reel.caption || 'Check out this reel on CoFarmz! If CoFarmz is installed, this opens in the app.';
+    const text = reel.caption || 'Check out this reel on CoFarmz! Tap the link to open CoFarmz app or install it.';
 
     if (Capacitor.isNativePlatform()) {
       try {
-        await Share.share({ title, text, url: shareUrl });
+        const nativeUrl = Capacitor.getPlatform() === 'android' ? nativeShareUrl : shareUrl;
+        const nativeText = Capacitor.getPlatform() === 'android' ? `${text}\n${nativeUrl}` : text;
+        await Share.share({ title, text: nativeText, url: nativeUrl });
       } catch (err: any) {
         setShareToast(`Error: ${err?.message || 'Share failed'}`);
         setTimeout(() => setShareToast(null), 4000);

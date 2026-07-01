@@ -12,6 +12,7 @@ export default function LocationPermissionPopup() {
   const [show, setShow] = useState(false);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState('');
 
   const hideNav = ['/login', '/signup', '/forgot-password', '/reset-password', '/select-role', '/auth-callback'].includes(pathname);
 
@@ -38,12 +39,9 @@ export default function LocationPermissionPopup() {
     checkAndShow();
   }, [isAuthenticated, user?.id, hideNav]);
 
-  const dismiss = () => {
-    setShow(false);
-  };
-
   const allowLocation = async () => {
     setSaving(true);
+    setError('');
     try {
       let latitude: number, longitude: number;
       if (Capacitor.isNativePlatform()) {
@@ -72,20 +70,24 @@ export default function LocationPermissionPopup() {
           locationText = [a.suburb || a.village || a.town, a.city || a.county, a.state].filter(Boolean).join(', ');
         }
       } catch {}
+      if (!locationText) {
+        locationText = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+      }
 
       // Save to user profile
-      await fetch(getApiUrl('/api/users/profile'), {
+      const saveRes = await fetch(getApiUrl('/api/users/profile'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-user-id': user!.id },
         body: JSON.stringify({ userId: user!.id, latitude, longitude, location: locationText }),
       });
+      if (!saveRes.ok) throw new Error('Unable to save location');
 
       // Notify other components that location was updated
       window.dispatchEvent(new CustomEvent('userLocationUpdated', { detail: { latitude, longitude, location: locationText } }));
       setDone(true);
       setTimeout(() => setShow(false), 1500);
     } catch {
-      dismiss();
+      setError('Location is required to continue. Please allow location access and try again.');
     } finally {
       setSaving(false);
     }
@@ -113,8 +115,13 @@ export default function LocationPermissionPopup() {
             </div>
             <h2 className="text-xl font-black text-gray-900 text-center mb-2">Choose Your Farm Location</h2>
             <p className="text-sm text-gray-500 text-center mb-6">
-              Set your farm location so nearby farmers, buyers and equipment show correct distances from you.
+              Location is required so nearby farmers, buyers and equipment show correct distances from you.
             </p>
+            {error && (
+              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-center text-xs font-semibold text-red-700">
+                {error}
+              </div>
+            )}
             <button
               onClick={allowLocation}
               disabled={saving}
@@ -125,9 +132,6 @@ export default function LocationPermissionPopup() {
               ) : (
                 <><i className="ph-bold ph-map-pin"></i> Detect My Farm Location</>
               )}
-            </button>
-            <button onClick={dismiss} className="w-full py-3 text-gray-500 font-semibold text-sm">
-              Skip for Now
             </button>
           </>
         )}
