@@ -8,6 +8,7 @@ import { normalizePhoneNumber } from '@/lib/phone';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { getApiUrl } from '@/lib/api';
+import InAppCall from '@/app/components/InAppCall';
 
 interface FarmerCrop {
   crop_name: string;
@@ -38,6 +39,7 @@ interface Farmer {
   followers_count?: number;
   following_count?: number;
   phone?: string;
+  has_phone?: boolean;
   calling_enabled?: boolean;
   can_call?: boolean;
   followStatus?: 'none' | 'pending' | 'accepted';
@@ -79,6 +81,7 @@ export default function NearbyFarmersClient() {
   const [showFilter, setShowFilter] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [callRecipient, setCallRecipient] = useState<Farmer | null>(null);
 
   const initialType = (searchParams.get('type') === 'buyers' ? 'buyers' : 'farmers');
   const savedState = getSavedNearbyState();
@@ -439,12 +442,18 @@ export default function NearbyFarmersClient() {
                   onClick={e => {
                     e.stopPropagation();
                     saveNearbyState();
-                    if (farmer.can_call && farmer.phone) {
+                    if (farmer.can_call) {
                       trackNearbyCall(farmer);
-                      window.location.href = `tel:${normalizePhoneNumber(farmer.phone)}`;
+                      if (farmer.phone) {
+                        window.location.href = `tel:${normalizePhoneNumber(farmer.phone)}`;
+                      } else {
+                        setCallRecipient(farmer);
+                      }
                     } else {
                       alert(
-                        farmer.calling_enabled === false
+                        farmer.has_phone === false
+                          ? 'Phone number is not available.'
+                          : farmer.calling_enabled === false
                           ? 'Calls are off.'
                           : farmer.followStatus === 'pending'
                           ? 'Waiting for approval.'
@@ -462,6 +471,17 @@ export default function NearbyFarmersClient() {
           ))
         )}
       </section>
+      {callRecipient && user?.id && (
+        <InAppCall
+          isOpen={Boolean(callRecipient)}
+          onClose={() => setCallRecipient(null)}
+          recipientId={callRecipient.id}
+          recipientName={callRecipient.name}
+          recipientImage={callRecipient.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(callRecipient.name || callRecipient.id)}`}
+          callType="audio"
+          userId={user.id}
+        />
+      )}
     </div>
   );
 }

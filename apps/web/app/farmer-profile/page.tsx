@@ -48,6 +48,7 @@ interface FarmerProfile {
   certificates_count?: number;
   isFollowing: boolean;
   phone?: string;
+  has_phone?: boolean;
   calling_enabled?: boolean;
   can_call?: boolean;
   followStatus?: 'none' | 'pending' | 'accepted';
@@ -574,13 +575,15 @@ const handleShareOutsideCoFarmz = async () => {
   const hasFollowers = followers.length > 0;
   const hasFollowing = following.length > 0;
   const hasReels = reels.length > 0;
-  const callUnavailableMessage = !profile.calling_enabled
+  const callUnavailableMessage = profile.has_phone === false
+    ? 'Phone number is not available.'
+    : !profile.calling_enabled
     ? 'Calls are off.'
     : followStatus === 'pending'
     ? 'Waiting for approval.'
     : !isFollowing
     ? 'Follow to call.'
-    : 'Phone unavailable.';
+    : 'Phone number is not available.';
 
   return (
     <div className="min-h-[100dvh] bg-gray-50 pb-24">
@@ -719,9 +722,13 @@ const handleShareOutsideCoFarmz = async () => {
               </button>
               <button
                 onClick={() => {
-                  if (profile.can_call && profile.phone) {
+                  if (profile.can_call) {
                     trackProfileCall();
-                    window.location.href = `tel:${normalizePhoneNumber(profile.phone)}`;
+                    if (profile.phone) {
+                      window.location.href = `tel:${normalizePhoneNumber(profile.phone)}`;
+                    } else {
+                      setShowCallModal(true);
+                    }
                   }
                   else alert(callUnavailableMessage);
                 }}

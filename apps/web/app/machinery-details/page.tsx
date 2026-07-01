@@ -377,9 +377,13 @@ function MachineryDetailsContent() {
   const ownerId = machinery?.owner_id || '';
   const fullDescription = machinery?.description || 'Premium quality equipment for rent.';
   const ownerCanCall = Boolean(ownerProfile?.can_call);
-  const ownerCallPhone = ownerCanCall ? normalizePhoneNumber(machinery?.contact_phone || ownerProfile?.phone) : null;
+  const ownerRawPhone = machinery?.contact_phone || ownerProfile?.phone || '';
+  const ownerHasPhone = Boolean(ownerRawPhone || ownerProfile?.has_phone);
+  const ownerCallPhone = ownerCanCall && ownerRawPhone ? normalizePhoneNumber(ownerRawPhone) : null;
   const ownerCallUnavailableMessage = !ownerProfile
     ? 'Owner profile is still loading. Please try again.'
+    : !ownerHasPhone
+    ? 'Phone number is not available.'
     : !ownerProfile.calling_enabled
     ? 'This owner has disabled calls.'
     : ownerProfile?.followStatus === 'pending'

@@ -202,8 +202,8 @@ export async function GET(request: Request) {
     }
 
     const canCall = Boolean(
-      farmer.phone &&
-      (isAdminViewer || (farmer.calling_enabled && (currentUserId === farmerId || followStatus === 'accepted')))
+      isAdminViewer ||
+      (farmer.phone && farmer.calling_enabled && (currentUserId === farmerId || followStatus === 'accepted'))
     );
 
     // ── Reverse geocode fallback ─────────────────────────────────────────────
@@ -230,6 +230,7 @@ export async function GET(request: Request) {
       name: farmer.name,
       email: farmer.email,
       phone: canCall ? farmer.phone || null : null,
+      has_phone: Boolean(farmer.phone),
       calling_enabled: farmer.calling_enabled,
       can_call: canCall,
       image: farmer.image || null,

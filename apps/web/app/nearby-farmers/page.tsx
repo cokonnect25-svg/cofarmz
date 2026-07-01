@@ -9,6 +9,7 @@ import { normalizePhoneNumber } from '@/lib/phone';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import UserAvatar from '@/app/components/UserAvatar';
+import InAppCall from '@/app/components/InAppCall';
 
   const SCROLL_KEY = 'nearbyFarmers_scrollY';
 const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
@@ -49,6 +50,7 @@ interface Farmer {
   followers_count?: number;
   following_count?: number;
   phone?: string;
+  has_phone?: boolean;
   calling_enabled?: boolean;
   can_call?: boolean;
   followStatus?: 'none' | 'pending' | 'accepted';
@@ -104,6 +106,7 @@ function NearbyFarmersContent() {
   return null;
 });
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [callRecipient, setCallRecipient] = useState<Farmer | null>(null);
 
 const rawType = searchParams.get('type');
 const rawSupplierType = searchParams.get('supplierType');
@@ -1173,7 +1176,20 @@ onClick={e => {
 
                     {/* Action buttons */}
                     <div className="flex gap-3" onClick={e => e.stopPropagation()}>
-                      <button onClick={e => { e.preventDefault(); e.stopPropagation(); if (farmer.can_call && farmer.phone) { trackNearbyCall(farmer); window.location.href = `tel:${normalizePhoneNumber(farmer.phone)}`; } else alert(farmer.calling_enabled === false ? 'Calls are off.' : farmer.followStatus === 'pending' ? 'Waiting for approval.' : 'Follow to call.'); }}
+                      <button onClick={e => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (farmer.can_call) {
+                          trackNearbyCall(farmer);
+                          if (farmer.phone) {
+                            window.location.href = `tel:${normalizePhoneNumber(farmer.phone)}`;
+                          } else {
+                            setCallRecipient(farmer);
+                          }
+                        } else {
+                          alert(farmer.has_phone === false ? 'Phone number is not available.' : farmer.calling_enabled === false ? 'Calls are off.' : farmer.followStatus === 'pending' ? 'Waiting for approval.' : 'Follow to call.');
+                        }
+                      }}
                         className={`flex-1 py-3 rounded-xl font-bold text-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2 ${farmer.can_call ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-gray-50 text-gray-400 border border-gray-100'}`}>
                         <i className="ph-bold ph-phone"></i>Call
                       </button>
@@ -1212,6 +1228,17 @@ onClick={e => {
           })()}
         </section>
       </div>
+      {callRecipient && user?.id && (
+        <InAppCall
+          isOpen={Boolean(callRecipient)}
+          onClose={() => setCallRecipient(null)}
+          recipientId={callRecipient.id}
+          recipientName={callRecipient.name}
+          recipientImage={callRecipient.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(callRecipient.name || callRecipient.id)}`}
+          callType="audio"
+          userId={user.id}
+        />
+      )}
     </>
   );
 }
