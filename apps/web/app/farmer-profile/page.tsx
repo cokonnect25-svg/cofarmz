@@ -16,6 +16,7 @@ import { getApiUrl } from '@/lib/api';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { buildOpenUrl } from '@/lib/deep-link';
 import UserAvatar from '@/app/components/UserAvatar';
+import LinkifiedText from '@/app/components/LinkifiedText';
 
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────
@@ -456,9 +457,9 @@ const getProfileShareData = () => {
   const profileUrl = buildOpenUrl('/farmer-profile', { id: profile.id });
   return {
     title: `${profile.name} on CoFarmz`,
-    text: `Check out ${profile.name}'s CoFarmz profile`,
+    text: `Check out ${profile.name}'s CoFarmz profile. If CoFarmz is installed, this opens in the app; otherwise it will take you to install it.`,
     url: profileUrl,
-    message: `Check out ${profile.name}'s CoFarmz profile:\n${profileUrl}`,
+    message: `Check out ${profile.name}'s CoFarmz profile:\n${profileUrl}\n\nIf CoFarmz is installed, this opens in the app. If not, install it from Play Store.`,
   };
 };
 
@@ -659,7 +660,7 @@ const handleShareOutsideCoFarmz = async () => {
 
           {/* Bio */}
           {profile.bio && (
-            <p className="text-sm text-gray-600 mt-2 leading-relaxed">{profile.bio}</p>
+            <LinkifiedText text={profile.bio} className="text-sm text-gray-600 mt-2 leading-relaxed whitespace-pre-wrap" />
           )}
 
           {/* Rating */}
@@ -1050,8 +1051,7 @@ const handleShareOutsideCoFarmz = async () => {
                     onClick={() => router.push(f.id === user.id ? '/user-profile' : `/farmer-profile?id=${f.id}`)}
                     className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition text-left"
                   >
-                    <img src={f.image }
-                      alt={f.name} className="w-10 h-10 rounded-full object-cover" />
+                    <UserAvatar image={f.image} name={f.name} size={40} />
                     <p className="font-semibold text-gray-900 text-sm">{f.name}</p>
                   </button>
                 ))}
@@ -1079,8 +1079,7 @@ const handleShareOutsideCoFarmz = async () => {
                     onClick={() => router.push(f.id === user.id ? '/user-profile' : `/farmer-profile?id=${f.id}`)}
                     className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition text-left"
                   >
-                    <img src={f.image }
-                      alt={f.name} className="w-10 h-10 rounded-full object-cover" />
+                    <UserAvatar image={f.image} name={f.name} size={40} />
                     <p className="font-semibold text-gray-900 text-sm">{f.name}</p>
                   </button>
                 ))}

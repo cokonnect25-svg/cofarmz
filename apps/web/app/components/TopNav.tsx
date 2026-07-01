@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { getApiUrl } from '@/lib/api';
 import { Bell } from 'lucide-react';
+import UserAvatar from '@/app/components/UserAvatar';
 
 
 // Two separate keys:
@@ -191,12 +192,6 @@ const handleOpenNotifPanel = () => {
     { href: '/nearby-farmers', label: 'Farmers & Buyers', icon: 'ph-users' },
     { href: '/chat', label: 'Messages', icon: 'ph-chat-circle' },
   ];
-
-  const avatarUrl =
-    profileImage ||
-    (user?.name
-      ? `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}&backgroundColor=166534&textColor=ffffff`
-      : `https://api.dicebear.com/7.x/initials/svg?seed=U&backgroundColor=166534&textColor=ffffff`);
 
   return (
     <>
@@ -435,15 +430,11 @@ const handleOpenNotifPanel = () => {
                   onClick={() => router.push('/user-profile')}
                   className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-gray-50 transition-colors"
                 >
-                  <img
-                    src={avatarUrl}
-                    alt={user?.name || 'Profile'}
+                  <UserAvatar
+                    image={profileImage}
+                    name={user?.name || 'Profile'}
+                    size={32}
                     className="w-8 h-8 rounded-full object-cover ring-2 ring-green-100"
-                    onError={(e) => {
-                      e.currentTarget.src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
-                        user?.name || 'U'
-                      )}&backgroundColor=166534&textColor=ffffff`;
-                    }}
                   />
                   <span className="hidden md:block text-[13px] font-semibold text-gray-700 max-w-[90px] truncate">
                     {user?.name?.split(' ')[0] || 'Profile'}

@@ -25,6 +25,7 @@ import {
 } from '@/lib/phone';
 import { buildOpenUrl } from '@/lib/deep-link';
 import UserAvatar from '@/app/components/UserAvatar';
+import LinkifiedText from '@/app/components/LinkifiedText';
 
 const MapPicker = dynamic(() => import('@/app/components/MapPicker'), { ssr: false });
 
@@ -1188,9 +1189,9 @@ const fetchFollowersCounts = async () => {
     const profileUrl = buildOpenUrl('/farmer-profile', { id: user.id });
     return {
       title: `${profileName} on CoFarmz`,
-      text: `Check out ${profileName}'s CoFarmz profile`,
+      text: `Check out ${profileName}'s CoFarmz profile. If CoFarmz is installed, this opens in the app; otherwise it will take you to install it.`,
       url: profileUrl,
-      message: `Check out ${profileName}'s CoFarmz profile:\n${profileUrl}`,
+      message: `Check out ${profileName}'s CoFarmz profile:\n${profileUrl}\n\nIf CoFarmz is installed, this opens in the app. If not, install it from Play Store.`,
     };
   };
 
@@ -1329,13 +1330,24 @@ const fetchFollowersCounts = async () => {
               ? <span className="text-gray-700 font-medium">{profileData.location}</span>
               : <span className="text-green-600 font-medium underline underline-offset-2">+ Add your location</span>}
           </button>
-          <button onClick={handleOpenEditModal} className="block text-left mt-3 group">
+          <div
+            onClick={handleOpenEditModal}
+            onKeyDown={event => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                handleOpenEditModal();
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            className="block text-left mt-3 group cursor-pointer focus:outline-none"
+          >
             {profileData?.bio ? (
-              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{profileData.bio}</p>
+              <LinkifiedText text={profileData.bio} className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap" />
             ) : (
               <p className="text-sm text-green-600 font-semibold underline underline-offset-2 group-hover:text-green-700">+ Add bio</p>
             )}
-          </button>
+          </div>
           <div className="mt-4 w-full min-w-0 rounded-2xl border border-green-100 bg-green-50/70 p-3 flex items-center justify-between gap-3 overflow-hidden">
             <div className="flex items-center gap-3 min-w-0">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${profileData?.calling_enabled === false ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'}`}>
@@ -1355,9 +1367,20 @@ const fetchFollowersCounts = async () => {
               onClick={handleToggleCallingPreference}
               disabled={isUpdatingCallPreference}
               aria-pressed={profileData?.calling_enabled !== false}
-              className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors disabled:opacity-60 ${profileData?.calling_enabled === false ? 'bg-gray-300' : 'bg-green-600'}`}
+              className={`relative h-9 w-[76px] flex-shrink-0 overflow-hidden rounded-full border p-1 shadow-sm transition-all duration-300 disabled:opacity-60 ${
+                profileData?.calling_enabled === false
+                  ? 'border-gray-200 bg-gray-200 text-gray-500'
+                  : 'border-green-400 bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-green-200'
+              }`}
             >
-              <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${profileData?.calling_enabled === false ? 'translate-x-1' : 'translate-x-6'}`}></span>
+              <span className={`absolute inset-y-0 flex items-center text-[10px] font-black uppercase tracking-normal transition-opacity ${profileData?.calling_enabled === false ? 'right-3 opacity-100' : 'left-3 opacity-100'}`}>
+                {profileData?.calling_enabled === false ? 'Off' : 'On'}
+              </span>
+              <span className={`absolute left-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm shadow-md ring-1 ring-black/5 transition-transform duration-300 ${
+                profileData?.calling_enabled === false ? 'translate-x-0 text-gray-500' : 'translate-x-10 text-green-600'
+              }`}>
+                <i className={`ph-bold ${profileData?.calling_enabled === false ? 'ph-phone-slash' : 'ph-phone-call'} text-sm`}></i>
+              </span>
               <span className="sr-only">{profileData?.calling_enabled === false ? 'Enable calls' : 'Disable calls'}</span>
             </button>
           </div>
@@ -1419,7 +1442,7 @@ const fetchFollowersCounts = async () => {
                 : <div className="space-y-3">{following.map(u => (
                   <button key={u.id} onClick={() => router.push(`/farmer-profile?id=${u.id}`)} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg w-full text-left hover:bg-gray-100 transition">
                     <div className="flex items-center gap-3 flex-1">
-                      <img src={u.image } alt={u.name} className="w-10 h-10 rounded-full object-cover" />
+                      <UserAvatar image={u.image} name={u.name} size={40} />
                       <p className="font-semibold text-sm text-gray-900">{u.name}</p>
                     </div>
                   </button>
@@ -2078,8 +2101,22 @@ const fetchFollowersCounts = async () => {
                   type="checkbox"
                   checked={editForm.calling_enabled}
                   onChange={e => setEditForm(p => ({ ...p, calling_enabled: e.target.checked }))}
-                  className="w-5 h-5 flex-shrink-0 text-green-600 rounded focus:ring-2 focus:ring-green-500"
+                  className="sr-only"
                 />
+                <span className={`relative h-9 w-[76px] flex-shrink-0 overflow-hidden rounded-full border p-1 shadow-sm transition-all duration-300 ${
+                  editForm.calling_enabled
+                    ? 'border-green-400 bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-green-200'
+                    : 'border-gray-200 bg-gray-200 text-gray-500'
+                }`}>
+                  <span className={`absolute inset-y-0 flex items-center text-[10px] font-black uppercase tracking-normal ${editForm.calling_enabled ? 'left-3' : 'right-3'}`}>
+                    {editForm.calling_enabled ? 'On' : 'Off'}
+                  </span>
+                  <span className={`absolute left-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm shadow-md ring-1 ring-black/5 transition-transform duration-300 ${
+                    editForm.calling_enabled ? 'translate-x-10 text-green-600' : 'translate-x-0 text-gray-500'
+                  }`}>
+                    <i className={`ph-bold ${editForm.calling_enabled ? 'ph-phone-call' : 'ph-phone-slash'} text-sm`}></i>
+                  </span>
+                </span>
               </label>
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Location</label>
@@ -2190,7 +2227,7 @@ const fetchFollowersCounts = async () => {
               <div className="flex w-14 flex-col items-center gap-1"><i className="ph-bold ph-eye text-2xl drop-shadow-lg"></i><span className="max-w-full text-center text-xs font-bold drop-shadow">{selectedReel.views || 0}</span></div>
               <div className="flex w-14 flex-col items-center gap-1"><Heart className="w-7 h-7 drop-shadow-lg" fill="currentColor" stroke="currentColor" strokeWidth={1.5} /><span className="max-w-full text-center text-xs font-bold drop-shadow">{selectedReel.likes || 0}</span></div>
               <div className="flex w-14 flex-col items-center gap-1"><MessageCircle className="w-7 h-7 drop-shadow-lg" strokeWidth={1.5} /><span className="max-w-full text-center text-xs font-bold drop-shadow">{selectedReel.comments || 0}</span></div>
-              <button onClick={() => { if (navigator.share) navigator.share({ title: 'Check out this reel', text: selectedReel.caption, url: window.location.href }); }} className="flex w-14 flex-col items-center gap-1 hover:scale-110 active:scale-95 transition-transform"><Send className="w-7 h-7 drop-shadow-lg" strokeWidth={1.5} /><span className="max-w-full text-center text-xs font-bold drop-shadow">Share</span></button>
+              <button onClick={() => { if (navigator.share) navigator.share({ title: 'Check out this reel', text: selectedReel.caption, url: buildOpenUrl('/reels', { reelId: selectedReel.id }) }); }} className="flex w-14 flex-col items-center gap-1 hover:scale-110 active:scale-95 transition-transform"><Send className="w-7 h-7 drop-shadow-lg" strokeWidth={1.5} /><span className="max-w-full text-center text-xs font-bold drop-shadow">Share</span></button>
             </div>
             <button onClick={() => setIsMuted(!isMuted)} className="absolute bottom-24 left-4 p-3 bg-white/10 hover:bg-white/20 rounded-full transition"><i className={`ph-bold ${isMuted ? 'ph-speaker-simple-slash' : 'ph-speaker-simple-high'} text-white text-xl`}></i></button>
             <button onClick={() => handleDeleteReel(selectedReel.id)} disabled={deletingReelId === selectedReel.id} className="absolute bottom-24 left-20 p-3 bg-red-600/80 hover:bg-red-600 rounded-full transition disabled:opacity-50">

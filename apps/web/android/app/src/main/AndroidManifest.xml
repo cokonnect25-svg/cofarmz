@@ -28,6 +28,7 @@
                 <data android:scheme="https" android:host="cofarmz.com" android:pathPrefix="/open" />
                 <data android:scheme="https" android:host="cofarmz.com" android:pathPrefix="/farmer-profile" />
                 <data android:scheme="https" android:host="cofarmz.com" android:pathPrefix="/reels" />
+                <data android:scheme="https" android:host="cofarmz.com" android:pathPrefix="/machinery-details" />
             </intent-filter>
 
             <intent-filter>

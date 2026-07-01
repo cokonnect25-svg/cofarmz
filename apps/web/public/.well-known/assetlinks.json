@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.cofarmz.com",
+      "sha256_cert_fingerprints": [
+        "25:58:D4:25:86:F8:77:E0:8F:4B:F0:2F:6B:EF:E2:03:B2:0C:82:35:6B:9E:09:47:91:32:0B:11:46:1D:8D:37"
+      ]
+    }
+  }
+]

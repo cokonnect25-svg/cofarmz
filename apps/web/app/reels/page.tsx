@@ -6,6 +6,7 @@ import { useEffect, useState, useRef, useCallback, type CSSProperties } from 're
 import { Suspense } from 'react';
 import { Heart, MessageCircle, Send, ArrowLeft, X } from 'lucide-react';
 import { getApiUrl } from '@/lib/api';
+import { buildOpenUrl } from '@/lib/deep-link';
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 
@@ -538,9 +539,9 @@ const toggleCaption = (reelId: string) => {
   const handleShare = async (e: React.MouseEvent, reel: Reel) => {
     e.stopPropagation();
 
-    const shareUrl = `https://cofarmz.com/reels?reelId=${reel.id}`;
+    const shareUrl = buildOpenUrl('/reels', { reelId: reel.id });
     const title = reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel';
-    const text = reel.caption || 'Check out this reel on CoFarmz!';
+    const text = reel.caption || 'Check out this reel on CoFarmz! If CoFarmz is installed, this opens in the app.';
 
     if (Capacitor.isNativePlatform()) {
       try {

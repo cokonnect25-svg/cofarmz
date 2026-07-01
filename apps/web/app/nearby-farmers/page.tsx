@@ -874,14 +874,14 @@ onClick={() => {
 
         {/* Results header */}
         <section className="px-6 mb-4 relative z-10 flex items-center justify-between">
-          <p className="text-sm font-medium text-gray-500">
+          {/* <p className="text-sm font-medium text-gray-500">
 {loadingFarmers ? 'Searching...' : `Found ${farmers.length} ${
   searchType === 'farmers'  ? 'farmer'       :
   searchType === 'wastage'  ? 'wastage buyer':
   searchType === 'supplier' ? (supplierType === 'commodities' ? 'commodity supplier' : 'equipment supplier')     :
   searchType === 'fpo'      ? 'FPO'          : 'buyer'
 }${farmers.length !== 1 ? 's' : ''}`}
-          </p>
+          </p> */}
           <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-900 shadow-soft font-medium text-sm" onClick={() => setShowSortMenu(true)}>
             <i className="ph-bold ph-funnel text-base"></i>
             {sortBy === 'nearby' ? 'Nearby' : sortBy === 'experience' ? 'Experience' : 'Most Active'}
