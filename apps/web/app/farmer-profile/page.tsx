@@ -13,7 +13,7 @@ import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import { getApiUrl } from '@/lib/api';
 import { normalizePhoneNumber } from '@/lib/phone';
-import { buildAndroidIntentUrl, buildOpenUrl } from '@/lib/deep-link';
+import { buildOpenUrl } from '@/lib/deep-link';
 import UserAvatar from '@/app/components/UserAvatar';
 import LinkifiedText from '@/app/components/LinkifiedText';
 
@@ -453,12 +453,10 @@ const handleFollow = async () => {
 const getProfileShareData = () => {
   if (!profile) return null;
   const profileUrl = buildOpenUrl('/farmer-profile', { id: profile.id });
-  const appUrl = buildAndroidIntentUrl(`/farmer-profile?id=${encodeURIComponent(profile.id)}`);
   return {
     title: `${profile.name} on CoFarmz`,
     text: `Check out ${profile.name}'s CoFarmz profile. Tap the link to open CoFarmz app or install it.`,
     url: profileUrl,
-    appUrl,
     message: `Check out ${profile.name}'s CoFarmz profile:\n${profileUrl}\n\nIf CoFarmz is installed, this opens in the app. If not, install it from Play Store.`,
   };
 };
@@ -486,11 +484,9 @@ const handleShareOutsideCoFarmz = async () => {
   const shareData = getProfileShareData();
   if (!shareData) return;
 
-  if (Capacitor.isNativePlatform()) {
+if (Capacitor.isNativePlatform()) {
     try {
-      const nativeUrl = Capacitor.getPlatform() === 'android' ? shareData.appUrl : shareData.url;
-      const nativeText = Capacitor.getPlatform() === 'android' ? `${shareData.text}\n${nativeUrl}` : shareData.text;
-      await Share.share({ title: shareData.title, text: nativeText, url: nativeUrl });
+      await Share.share({ title: shareData.title, text: shareData.text, url: shareData.url });
     } catch (err: any) {
       showTemporaryShareToast(err?.message || 'Share failed');
     } finally {

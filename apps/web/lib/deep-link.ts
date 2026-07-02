@@ -1,6 +1,19 @@
-export const COFARMZ_WEB_ORIGIN = 'https://cofarmz.com';
+const DEFAULT_COFARMZ_WEB_ORIGIN = 'https://cofarmz-backend-866114557322.asia-south1.run.app';
+
+export const COFARMZ_WEB_ORIGIN = (
+  process.env.NEXT_PUBLIC_APP_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  DEFAULT_COFARMZ_WEB_ORIGIN
+).replace(/\/$/, '');
 export const COFARMZ_APP_PACKAGE = 'com.cofarmz.com';
 export const COFARMZ_PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${COFARMZ_APP_PACKAGE}`;
+
+const ALLOWED_SHARED_LINK_HOSTS = new Set([
+  'cofarmz.com',
+  'www.cofarmz.com',
+  'cofarmz-backend-866114557322.asia-south1.run.app',
+  new URL(COFARMZ_WEB_ORIGIN).hostname,
+]);
 
 const ALLOWED_IN_APP_PATHS = new Set([
   '/farmer-profile',
@@ -36,7 +49,7 @@ export function getInAppPathFromSharedUrl(rawUrl: string) {
       return ALLOWED_IN_APP_PATHS.has(path) ? `${path}${url.search}` : null;
     }
 
-    if (!['cofarmz.com', 'www.cofarmz.com'].includes(url.hostname)) return null;
+    if (!ALLOWED_SHARED_LINK_HOSTS.has(url.hostname)) return null;
 
     if (url.pathname === '/open') {
       const path = url.searchParams.get('path') || '';

@@ -29,6 +29,14 @@
                 <data android:scheme="https" android:host="cofarmz.com" android:pathPrefix="/farmer-profile" />
                 <data android:scheme="https" android:host="cofarmz.com" android:pathPrefix="/reels" />
                 <data android:scheme="https" android:host="cofarmz.com" android:pathPrefix="/machinery-details" />
+                <data android:scheme="https" android:host="www.cofarmz.com" android:pathPrefix="/open" />
+                <data android:scheme="https" android:host="www.cofarmz.com" android:pathPrefix="/farmer-profile" />
+                <data android:scheme="https" android:host="www.cofarmz.com" android:pathPrefix="/reels" />
+                <data android:scheme="https" android:host="www.cofarmz.com" android:pathPrefix="/machinery-details" />
+                <data android:scheme="https" android:host="cofarmz-backend-866114557322.asia-south1.run.app" android:pathPrefix="/open" />
+                <data android:scheme="https" android:host="cofarmz-backend-866114557322.asia-south1.run.app" android:pathPrefix="/farmer-profile" />
+                <data android:scheme="https" android:host="cofarmz-backend-866114557322.asia-south1.run.app" android:pathPrefix="/reels" />
+                <data android:scheme="https" android:host="cofarmz-backend-866114557322.asia-south1.run.app" android:pathPrefix="/machinery-details" />
             </intent-filter>
 
             <intent-filter>
