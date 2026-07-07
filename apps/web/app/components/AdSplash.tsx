@@ -87,7 +87,7 @@ const doneTimer = setTimeout(() => onDone(), 2000);
         {/* Farmer quote from About page */}
         <p className="text-xs font-semibold italic max-w-[240px] leading-relaxed"
           style={{ color: 'rgba(187,247,208,0.5)', animation: 'fadeUp 0.6s ease forwards 1.1s', opacity: 0 }}>
-          "You grow food for everyone. Now let's grow together."
+          "The Digital Identity & Discovery Network for Agriculture."
         </p>
       </div>
 
