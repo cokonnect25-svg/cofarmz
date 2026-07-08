@@ -1019,40 +1019,43 @@ onClick={() => {
 
         {/* Results header */}
         <section className="px-6 mb-4 relative z-10 flex items-center justify-end">
-          {/* <p className="text-sm font-medium text-gray-500">
-{loadingFarmers ? 'Searching...' : `Found ${farmers.length} ${
-  searchType === 'farmers'  ? 'farmer'       :
-  searchType === 'wastage'  ? 'wastage buyer':
-  searchType === 'supplier' ? (supplierType === 'commodities' ? 'commodity supplier' : 'equipment supplier')     :
-  searchType === 'fpo'      ? 'FPO'          : 'buyer'
-}${farmers.length !== 1 ? 's' : ''}`}
-          </p> */}
-          <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-2">
-            <button className="flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-gray-900 shadow-soft" onClick={() => setShowSortMenu(true)}>
-              <i className="ph-bold ph-funnel text-base"></i>
-              {sortBy === 'nearby' ? 'Nearby' : sortBy === 'experience' ? 'Experience' : 'Most Active'}
-              <i className="ph-bold ph-caret-down text-sm"></i>
+          <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-1.5 rounded-2xl border border-white/80 bg-white/85 p-1.5 shadow-soft backdrop-blur">
+            <button
+              className="flex h-10 items-center gap-2 rounded-xl border border-transparent px-3.5 text-sm font-bold text-gray-900 transition hover:border-gray-100 hover:bg-gray-50 active:scale-[0.98]"
+              onClick={() => setShowSortMenu(true)}
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+                <i className="ph-bold ph-map-pin text-base"></i>
+              </span>
+              <span className="whitespace-nowrap">{sortBy === 'nearby' ? 'Nearby' : sortBy === 'experience' ? 'Experience' : 'Most Active'}</span>
+              <i className="ph-bold ph-caret-down text-xs text-gray-400"></i>
             </button>
-            <button className="relative flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-brand-700 shadow-soft" onClick={() => setShowFilter(true)}>
-              <i className="ph-bold ph-sliders-horizontal text-base"></i>
-              Filter
+            <button
+              className="relative flex h-10 items-center gap-2 rounded-xl border border-transparent px-3.5 text-sm font-bold text-brand-700 transition hover:border-brand-100 hover:bg-brand-50 active:scale-[0.98]"
+              onClick={() => setShowFilter(true)}
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-100 text-brand-700">
+                <i className="ph-bold ph-sliders-horizontal text-base"></i>
+              </span>
+              <span>Filter</span>
               {(filters.crops.length > 0 || filters.equipment.length > 0 || filters.grades.length > 0 || filters.certTypes.length > 0) && (
                 <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-brand-700"></span>
               )}
             </button>
             <label className="sr-only" htmlFor="nearby-country">Country</label>
-            <div className="relative">
+            <div className="relative h-10 min-w-[142px] sm:min-w-[168px]">
+              <i className="ph-bold ph-globe-hemisphere-east pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400"></i>
               <select
                 id="nearby-country"
                 value={filters.country}
                 onChange={e => handleCountryChange(e.target.value)}
-                className="h-10 min-w-[132px] max-w-[42vw] appearance-none rounded-lg bg-white pl-3 pr-8 text-sm font-medium text-gray-900 shadow-soft outline-none focus:ring-2 focus:ring-brand-500"
+                className="h-10 w-full appearance-none rounded-xl border border-gray-100 bg-white pl-9 pr-8 text-sm font-bold text-gray-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               >
                 {COUNTRY_OPTIONS.map(country => (
                   <option key={country} value={country}>{country}</option>
                 ))}
               </select>
-              <i className="ph-bold ph-caret-down pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-gray-400"></i>
+              <i className="ph-bold ph-caret-down pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400"></i>
             </div>
           </div>
         </section>
