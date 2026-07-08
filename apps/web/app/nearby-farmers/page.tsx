@@ -1027,7 +1027,19 @@ onClick={() => {
   searchType === 'fpo'      ? 'FPO'          : 'buyer'
 }${farmers.length !== 1 ? 's' : ''}`}
           </p> */}
-          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-2">
+            <button className="flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-gray-900 shadow-soft" onClick={() => setShowSortMenu(true)}>
+              <i className="ph-bold ph-funnel text-base"></i>
+              {sortBy === 'nearby' ? 'Nearby' : sortBy === 'experience' ? 'Experience' : 'Most Active'}
+              <i className="ph-bold ph-caret-down text-sm"></i>
+            </button>
+            <button className="relative flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-brand-700 shadow-soft" onClick={() => setShowFilter(true)}>
+              <i className="ph-bold ph-sliders-horizontal text-base"></i>
+              Filter
+              {(filters.crops.length > 0 || filters.equipment.length > 0 || filters.grades.length > 0 || filters.certTypes.length > 0) && (
+                <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-brand-700"></span>
+              )}
+            </button>
             <label className="sr-only" htmlFor="nearby-country">Country</label>
             <div className="relative">
               <select
@@ -1042,18 +1054,6 @@ onClick={() => {
               </select>
               <i className="ph-bold ph-caret-down pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-gray-400"></i>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-900 shadow-soft font-medium text-sm" onClick={() => setShowSortMenu(true)}>
-              <i className="ph-bold ph-funnel text-base"></i>
-              {sortBy === 'nearby' ? 'Nearby' : sortBy === 'experience' ? 'Experience' : 'Most Active'}
-              <i className="ph-bold ph-caret-down text-sm"></i>
-            </button>
-            <button className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-brand-700 shadow-soft font-medium text-sm" onClick={() => setShowFilter(true)}>
-              <i className="ph-bold ph-sliders-horizontal text-base"></i>
-              Filter
-              {(filters.crops.length > 0 || filters.equipment.length > 0 || filters.grades.length > 0 || filters.certTypes.length > 0) && (
-                <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-brand-700"></span>
-              )}
-            </button>
           </div>
         </section>
 
