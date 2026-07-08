@@ -584,6 +584,18 @@ const handleApplyFilters = () => {
   setShowFilter(false);
 };
 
+const handleCountryChange = (country: string) => {
+  const next = { ...filters, country };
+  setFilters(next);
+  sessionStorage.removeItem(SCROLL_KEY);
+  sessionStorage.removeItem(VISIBLE_KEY);
+  sessionStorage.removeItem(TYPE_KEY);
+
+  const lat = userLocation?.latitude ?? 0;
+  const lon = userLocation?.longitude ?? 0;
+  fetchNearbyFarmers(lat, lon, searchType, next);
+};
+
   const trackNearbyCall = (farmer: any) => {
     fetch(getApiUrl('/api/analytics'), {
       method: 'POST',
@@ -946,20 +958,9 @@ onClick={() => {
         )}
 
         {/* Active filter chips — BUG FIX E: pass refetch=true so removing a chip immediately re-fetches */}
-        {(filters.country !== 'All countries' || filters.crops.length > 0 || filters.equipment.length > 0 || filters.grades.length > 0 || filters.certTypes.length > 0) && (
+        {(filters.crops.length > 0 || filters.equipment.length > 0 || filters.grades.length > 0 || filters.certTypes.length > 0) && (
           <section className="px-6 mb-4 relative z-10">
             <div className="flex flex-wrap gap-2">
-              {filters.country !== 'All countries' && (
-                <button onClick={() => {
-                  const next = { ...filters, country: 'All countries' };
-                  setFilters(next);
-                  const lat = userLocation?.latitude ?? 0;
-                  const lon = userLocation?.longitude ?? 0;
-                  fetchNearbyFarmers(lat, lon, searchType, next);
-                }} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium flex items-center gap-2 active:scale-95 transition-transform">
-                  {filters.country}<i className="ph-bold ph-x text-sm"></i>
-                </button>
-              )}
               {filters.crops.map(crop => (
                 <button key={`crop-${crop}`} onClick={() => toggleCropFilter(crop, true)} className="px-3 py-1.5 bg-brand-100 text-brand-700 rounded-full text-xs font-medium flex items-center gap-2 active:scale-95 transition-transform">
                   {crop}<i className="ph-bold ph-x text-sm"></i>
@@ -1017,7 +1018,7 @@ onClick={() => {
         )}
 
         {/* Results header */}
-        <section className="px-6 mb-4 relative z-10 flex items-center justify-between">
+        <section className="px-6 mb-4 relative z-10 flex items-center justify-end">
           {/* <p className="text-sm font-medium text-gray-500">
 {loadingFarmers ? 'Searching...' : `Found ${farmers.length} ${
   searchType === 'farmers'  ? 'farmer'       :
@@ -1026,7 +1027,21 @@ onClick={() => {
   searchType === 'fpo'      ? 'FPO'          : 'buyer'
 }${farmers.length !== 1 ? 's' : ''}`}
           </p> */}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            <label className="sr-only" htmlFor="nearby-country">Country</label>
+            <div className="relative">
+              <select
+                id="nearby-country"
+                value={filters.country}
+                onChange={e => handleCountryChange(e.target.value)}
+                className="h-10 min-w-[132px] max-w-[42vw] appearance-none rounded-lg bg-white pl-3 pr-8 text-sm font-medium text-gray-900 shadow-soft outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                {COUNTRY_OPTIONS.map(country => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+              <i className="ph-bold ph-caret-down pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-gray-400"></i>
+            </div>
             <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-900 shadow-soft font-medium text-sm" onClick={() => setShowSortMenu(true)}>
               <i className="ph-bold ph-funnel text-base"></i>
               {sortBy === 'nearby' ? 'Nearby' : sortBy === 'experience' ? 'Experience' : 'Most Active'}
@@ -1035,7 +1050,7 @@ onClick={() => {
             <button className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-brand-700 shadow-soft font-medium text-sm" onClick={() => setShowFilter(true)}>
               <i className="ph-bold ph-sliders-horizontal text-base"></i>
               Filter
-              {(filters.country !== 'All countries' || filters.crops.length > 0 || filters.equipment.length > 0 || filters.grades.length > 0 || filters.certTypes.length > 0) && (
+              {(filters.crops.length > 0 || filters.equipment.length > 0 || filters.grades.length > 0 || filters.certTypes.length > 0) && (
                 <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-brand-700"></span>
               )}
             </button>
