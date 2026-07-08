@@ -44,11 +44,37 @@ export function sanitizeLocalPhoneInput(value: string, countryCode = '91') {
 }
 
 export function getCountryCodeFromPhone(phone?: string | null, fallback = '91') {
-  const digits = String(phone || '').replace(/\D/g, '');
+  const raw = String(phone || '').trim();
+  const digits = raw.replace(/\D/g, '');
+  const fallbackCountry = getPhoneCountry(fallback);
+
+  if (!digits) return fallback;
+
+  if (
+    digits.length >= fallbackCountry.minLength &&
+    digits.length <= fallbackCountry.maxLength
+  ) {
+    return fallback;
+  }
+
+  if (
+    digits.startsWith(fallback) &&
+    isValidLocalPhoneNumber(digits.slice(fallback.length), fallback)
+  ) {
+    return fallback;
+  }
+
+  const hasInternationalPrefix = raw.startsWith('+') || raw.startsWith('00');
+  if (!hasInternationalPrefix) return fallback;
+
+  const internationalDigits = raw.startsWith('00') ? digits.slice(2) : digits;
   const country = PHONE_COUNTRIES
     .slice()
     .sort((a, b) => b.code.length - a.code.length)
-    .find((item) => digits.startsWith(item.code));
+    .find((item) => {
+      if (!internationalDigits.startsWith(item.code)) return false;
+      return isValidLocalPhoneNumber(internationalDigits.slice(item.code.length), item.code);
+    });
 
   return country?.code || fallback;
 }
