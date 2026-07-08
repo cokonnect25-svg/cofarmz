@@ -1018,10 +1018,10 @@ onClick={() => {
         )}
 
         {/* Results header */}
-        <section className="px-6 mb-4 relative z-10 flex items-center justify-end">
-          <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-1.5 rounded-2xl border border-white/80 bg-white/85 p-1.5 shadow-soft backdrop-blur">
+        <section className="px-6 mb-4 relative z-10 flex items-center justify-end overflow-x-auto hide-scrollbar">
+          <div className="ml-auto flex max-w-full flex-nowrap items-center justify-end gap-1.5 rounded-2xl border border-white/80 bg-white/85 p-1.5 shadow-soft backdrop-blur">
             <button
-              className="flex h-10 items-center gap-2 rounded-xl border border-transparent px-3.5 text-sm font-bold text-gray-900 transition hover:border-gray-100 hover:bg-gray-50 active:scale-[0.98]"
+              className="flex h-10 flex-shrink-0 items-center gap-2 rounded-xl border border-transparent px-3.5 text-sm font-bold text-gray-900 transition hover:border-gray-100 hover:bg-gray-50 active:scale-[0.98]"
               onClick={() => setShowSortMenu(true)}
             >
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
@@ -1031,7 +1031,7 @@ onClick={() => {
               <i className="ph-bold ph-caret-down text-xs text-gray-400"></i>
             </button>
             <button
-              className="relative flex h-10 items-center gap-2 rounded-xl border border-transparent px-3.5 text-sm font-bold text-brand-700 transition hover:border-brand-100 hover:bg-brand-50 active:scale-[0.98]"
+              className="relative flex h-10 flex-shrink-0 items-center gap-2 rounded-xl border border-transparent px-3.5 text-sm font-bold text-brand-700 transition hover:border-brand-100 hover:bg-brand-50 active:scale-[0.98]"
               onClick={() => setShowFilter(true)}
             >
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-100 text-brand-700">
@@ -1043,7 +1043,7 @@ onClick={() => {
               )}
             </button>
             <label className="sr-only" htmlFor="nearby-country">Country</label>
-            <div className="relative h-10 min-w-[142px] sm:min-w-[168px]">
+            <div className="relative h-10 w-[142px] flex-shrink-0 sm:w-[168px]">
               <i className="ph-bold ph-globe-hemisphere-east pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-gray-400"></i>
               <select
                 id="nearby-country"
