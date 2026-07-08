@@ -120,34 +120,18 @@ const targetRole =
       "Malaysia": ["malaysia"],
     };
 
-    const phoneCountryCodes: Record<string, string> = {
-      "91": "India",
-      "1": "United States",
-      "44": "United Kingdom",
-      "971": "United Arab Emirates",
-      "966": "Saudi Arabia",
-      "65": "Singapore",
-      "60": "Malaysia",
-      "61": "Australia",
-    };
-
-    const inferCountry = (location: string, phone: string) => {
+    const inferCountry = (location: string) => {
       const cleanLocation = String(location || "").toLowerCase();
       for (const [country, aliases] of Object.entries(countryAliases)) {
         if (aliases.some(alias => cleanLocation.includes(alias))) return country;
       }
 
-      const digits = String(phone || "").replace(/\D/g, "");
-      const code = Object.keys(phoneCountryCodes)
-        .sort((a, b) => b.length - a.length)
-        .find(prefix => digits.startsWith(prefix));
-
-      return code ? phoneCountryCodes[code] : "India";
+      return "India";
     };
 
     const usersWithDist = (users as any[]).map((u: any) => ({
       ...u,
-      inferred_country: inferCountry(u.location, u.phone),
+      inferred_country: inferCountry(u.location),
       distance:
         userHasLocation && u.latitude != null && u.longitude != null
           ? calcDist(latitude, longitude, parseFloat(u.latitude), parseFloat(u.longitude))

@@ -5,6 +5,7 @@ import type { ConfirmationResult, RecaptchaVerifier as RecaptchaVerifierType } f
 import { getApiUrl } from "@/lib/api";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import {
+  getCountryCodeFromLocation,
   getCountryCodeFromPhone,
   getLocalPhoneNumber,
   getPhoneCountry,
@@ -18,6 +19,7 @@ import {
 type Profile = {
   id: string;
   phone?: string | null;
+  location?: string | null;
   phone_verified?: boolean | null;
   role?: string | null;
   role_id?: number | null;
@@ -89,7 +91,8 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
       .then((data) => {
         if (cancelled || !data) return;
         setProfile(data);
-        const nextCountryCode = getCountryCodeFromPhone(data.phone);
+        const locationCountryCode = getCountryCodeFromLocation(data.location);
+        const nextCountryCode = getCountryCodeFromPhone(data.phone, locationCountryCode);
         setCountryCode(nextCountryCode);
         setPhone(data.phone ? getLocalPhoneNumber(data.phone, nextCountryCode) : "");
       })
@@ -109,7 +112,8 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
       if (!updatedProfile || updatedProfile.id !== user?.id) return;
 
       setProfile(updatedProfile);
-      const nextCountryCode = getCountryCodeFromPhone(updatedProfile.phone);
+      const locationCountryCode = getCountryCodeFromLocation(updatedProfile.location);
+      const nextCountryCode = getCountryCodeFromPhone(updatedProfile.phone, locationCountryCode);
       setCountryCode(nextCountryCode);
       setPhone(updatedProfile.phone ? getLocalPhoneNumber(updatedProfile.phone, nextCountryCode) : "");
       setConfirmation(null);

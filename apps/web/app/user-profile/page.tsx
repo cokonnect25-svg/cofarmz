@@ -12,6 +12,7 @@ import dynamic from 'next/dynamic';
 import InAppCall from '@/app/components/InAppCall';
 import { getApiUrl } from '@/lib/api';
 import {
+  getCountryCodeFromLocation,
   getCountryCodeFromPhone,
   getLocalPhoneNumber,
   getPhoneCountry,
@@ -1004,7 +1005,8 @@ const fetchFollowersCounts = async () => {
   const handleOpenEditModal = () => {
     if (user) {
       const p = profileData || {};
-      const nextCountryCode = getCountryCodeFromPhone(p.phone);
+      const locationCountryCode = getCountryCodeFromLocation(p.location);
+      const nextCountryCode = getCountryCodeFromPhone(p.phone, locationCountryCode);
       const displayPhone = p.phone ? getLocalPhoneNumber(p.phone, nextCountryCode) : '';
       setEditPhoneCountryCode(nextCountryCode);
       setEditForm({ name: p.name || user.name || '', email: p.email || user.email || '', phone: displayPhone, location: p.location || '', gender: p.gender || '', age: p.age ? String(p.age) : '', bio: p.bio || '', latitude: p.latitude || null, longitude: p.longitude || null, calling_enabled: p.calling_enabled !== false });

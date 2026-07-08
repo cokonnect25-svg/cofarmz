@@ -43,6 +43,27 @@ export function sanitizeLocalPhoneInput(value: string, countryCode = '91') {
   return String(value || '').replace(/\D/g, '').slice(0, getPhoneMaxLength(countryCode));
 }
 
+export function getCountryCodeFromLocation(location?: string | null, fallback = '91') {
+  const cleanLocation = String(location || '').toLowerCase();
+  const matches = [
+    { code: '91', aliases: ['india', 'bharat'] },
+    { code: '1', aliases: ['united states', 'usa', 'u.s.a', 'america'] },
+    { code: '44', aliases: ['united kingdom', 'uk', 'england', 'scotland', 'wales'] },
+    { code: '61', aliases: ['australia'] },
+    { code: '971', aliases: ['united arab emirates', 'uae', 'dubai', 'abu dhabi'] },
+    { code: '966', aliases: ['saudi arabia', 'ksa'] },
+    { code: '974', aliases: ['qatar'] },
+    { code: '965', aliases: ['kuwait'] },
+    { code: '65', aliases: ['singapore'] },
+    { code: '60', aliases: ['malaysia'] },
+    { code: '94', aliases: ['sri lanka'] },
+    { code: '880', aliases: ['bangladesh'] },
+    { code: '977', aliases: ['nepal'] },
+  ];
+
+  return matches.find((item) => item.aliases.some((alias) => cleanLocation.includes(alias)))?.code || fallback;
+}
+
 export function getCountryCodeFromPhone(phone?: string | null, fallback = '91') {
   const raw = String(phone || '').trim();
   const digits = raw.replace(/\D/g, '');
