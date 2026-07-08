@@ -120,10 +120,15 @@ const targetRole =
       "Malaysia": ["malaysia"],
     };
 
+    const hasLocationAlias = (location: string, alias: string) => {
+      const escapedAlias = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return new RegExp(`(^|[^a-z0-9])${escapedAlias}([^a-z0-9]|$)`, "i").test(location);
+    };
+
     const inferCountry = (location: string) => {
       const cleanLocation = String(location || "").toLowerCase();
       for (const [country, aliases] of Object.entries(countryAliases)) {
-        if (aliases.some(alias => cleanLocation.includes(alias))) return country;
+        if (aliases.some(alias => hasLocationAlias(cleanLocation, alias))) return country;
       }
 
       return "India";

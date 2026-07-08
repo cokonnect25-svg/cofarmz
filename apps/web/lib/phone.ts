@@ -43,6 +43,11 @@ export function sanitizeLocalPhoneInput(value: string, countryCode = '91') {
   return String(value || '').replace(/\D/g, '').slice(0, getPhoneMaxLength(countryCode));
 }
 
+function hasLocationAlias(location: string, alias: string) {
+  const escapedAlias = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^a-z0-9])${escapedAlias}([^a-z0-9]|$)`, 'i').test(location);
+}
+
 export function getCountryCodeFromLocation(location?: string | null, fallback = '91') {
   const cleanLocation = String(location || '').toLowerCase();
   const matches = [
@@ -61,7 +66,7 @@ export function getCountryCodeFromLocation(location?: string | null, fallback = 
     { code: '977', aliases: ['nepal'] },
   ];
 
-  return matches.find((item) => item.aliases.some((alias) => cleanLocation.includes(alias)))?.code || fallback;
+  return matches.find((item) => item.aliases.some((alias) => hasLocationAlias(cleanLocation, alias)))?.code || fallback;
 }
 
 export function getCountryCodeFromPhone(phone?: string | null, fallback = '91') {
