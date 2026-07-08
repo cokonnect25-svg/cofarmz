@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     const supplierTypeParam = searchParams.get("supplierType");
     const supplierType = supplierTypeParam === "commodities" || supplierTypeParam === "equipment" ? supplierTypeParam : null;
     const showWasteBuyers = searchParams.get("wasteOnly") === "true";
+    const countryFilter = searchParams.get("country") || null;
     const currentUserId  = searchParams.get("currentUserId") || request.headers.get("x-user-id");
 
     const crops     = (searchParams.get("crops")    ?.split(",").filter(Boolean) ?? []).map(c => c.trim().toLowerCase());
@@ -107,19 +108,62 @@ const targetRole =
 
     const userHasLocation = latitude !== 0 || longitude !== 0;
 
+    const countryAliases: Record<string, string[]> = {
+      "India": ["india", "bharat"],
+      "United States": ["united states", "usa", "u.s.a", "america"],
+      "United Kingdom": ["united kingdom", "uk", "england", "scotland", "wales"],
+      "Canada": ["canada"],
+      "Australia": ["australia"],
+      "United Arab Emirates": ["united arab emirates", "uae", "dubai", "abu dhabi"],
+      "Saudi Arabia": ["saudi arabia", "ksa"],
+      "Singapore": ["singapore"],
+      "Malaysia": ["malaysia"],
+    };
+
+    const phoneCountryCodes: Record<string, string> = {
+      "91": "India",
+      "1": "United States",
+      "44": "United Kingdom",
+      "971": "United Arab Emirates",
+      "966": "Saudi Arabia",
+      "65": "Singapore",
+      "60": "Malaysia",
+      "61": "Australia",
+    };
+
+    const inferCountry = (location: string, phone: string) => {
+      const cleanLocation = String(location || "").toLowerCase();
+      for (const [country, aliases] of Object.entries(countryAliases)) {
+        if (aliases.some(alias => cleanLocation.includes(alias))) return country;
+      }
+
+      const digits = String(phone || "").replace(/\D/g, "");
+      const code = Object.keys(phoneCountryCodes)
+        .sort((a, b) => b.length - a.length)
+        .find(prefix => digits.startsWith(prefix));
+
+      return code ? phoneCountryCodes[code] : "India";
+    };
+
     const usersWithDist = (users as any[]).map((u: any) => ({
       ...u,
+      inferred_country: inferCountry(u.location, u.phone),
       distance:
         userHasLocation && u.latitude != null && u.longitude != null
           ? calcDist(latitude, longitude, parseFloat(u.latitude), parseFloat(u.longitude))
           : null,
     }));
 
+    const afterCountry =
+      countryFilter && countryFilter !== "All countries"
+        ? usersWithDist.filter((u: any) => u.inferred_country === countryFilter)
+        : usersWithDist;
+
     // distance hard-filter (only when enabled AND user has location)
     const afterDistance =
       distanceLimit !== null
-        ? usersWithDist.filter((u: any) => u.distance != null && u.distance <= distanceLimit)
-        : usersWithDist;
+        ? afterCountry.filter((u: any) => u.distance != null && u.distance <= distanceLimit)
+        : afterCountry;
 
     // ── crop / grade / cert / date matching ─────────────────────────────────
     // FIX 1: never use sql.join inside ARRAY[] — use a plain JS subquery per value

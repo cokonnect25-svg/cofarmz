@@ -82,6 +82,18 @@ const CERTIFICATION_TYPES = [
   { value: 'other',          label: 'Other',                                icon: '📜' },
 ];
 
+const COUNTRY_OPTIONS = [
+  'All countries',
+  'India',
+  'United States',
+  'United Kingdom',
+  'Canada',
+  'Australia',
+  'United Arab Emirates',
+  'Saudi Arabia',
+  'Singapore',
+  'Malaysia',
+];
 
 function NearbyFarmersContent() {
   const router = useRouter();
@@ -141,6 +153,8 @@ const [supplierType, setSupplierType] = useState<'commodities' | 'equipment'>(
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy]           = useState('nearby');
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [cropFilterSearch, setCropFilterSearch] = useState('');
+  const [equipmentFilterSearch, setEquipmentFilterSearch] = useState('');
 
 const defaultFilters = {
   distance:        50,
@@ -148,6 +162,7 @@ const defaultFilters = {
   crops:           urlCropFilters,
   equipment:       [] as string[],
   enableDistance:  false,
+  country:         'India',
   yieldDateFrom:   '',
   yieldDateTo:     '',
   wasteOnly:       initialType === 'wastage', // <-- AUTO-SET FOR WASTAGE
@@ -177,6 +192,31 @@ const pendingScrollRef = useRef<number | null>(null);
   }));
   return Array.from(seen).sort();
 }, [farmers]);
+
+  const cropPickerOptions = useMemo(() => {
+    const query = cropFilterSearch.trim().toLowerCase();
+    const options = Array.from(new Set([...filters.crops, ...availableCrops, ...CROP_OPTIONS]));
+    return options
+      .filter(crop => !query || crop.toLowerCase().includes(query))
+      .sort((a, b) => {
+        const aSelected = filters.crops.includes(a);
+        const bSelected = filters.crops.includes(b);
+        if (aSelected !== bSelected) return aSelected ? -1 : 1;
+        return a.localeCompare(b);
+      });
+  }, [availableCrops, cropFilterSearch, filters.crops]);
+
+  const equipmentPickerOptions = useMemo(() => {
+    const query = equipmentFilterSearch.trim().toLowerCase();
+    return Array.from(new Set([...filters.equipment, ...EQUIPMENT_OPTIONS]))
+      .filter(equip => !query || equip.toLowerCase().includes(query))
+      .sort((a, b) => {
+        const aSelected = filters.equipment.includes(a);
+        const bSelected = filters.equipment.includes(b);
+        if (aSelected !== bSelected) return aSelected ? -1 : 1;
+        return a.localeCompare(b);
+      });
+  }, [equipmentFilterSearch, filters.equipment]);
 
   useEffect(() => {
   if (isRestoringRef.current) return; // don't reset while restoring
@@ -211,8 +251,17 @@ useEffect(() => {
   if (savedFilters) {
     try {
       const parsed = JSON.parse(savedFilters);
-      setFilters(parsed);
-      filtersRef.current = parsed; // keep ref in sync
+      const restoredFilters = {
+        ...defaultFilters,
+        ...parsed,
+        country: parsed.country || 'India',
+        crops: Array.isArray(parsed.crops) ? parsed.crops : defaultFilters.crops,
+        equipment: Array.isArray(parsed.equipment) ? parsed.equipment : [],
+        grades: Array.isArray(parsed.grades) ? parsed.grades : [],
+        certTypes: Array.isArray(parsed.certTypes) ? parsed.certTypes : [],
+      };
+      setFilters(restoredFilters);
+      filtersRef.current = restoredFilters; // keep ref in sync
     } catch {}
   }
 
@@ -474,6 +523,7 @@ const fetchNearbyFarmers = async (
       if (type === 'supplier') params.append('supplierType', supplierType);
       if (user?.id) params.append('currentUserId', user.id);
       if (f.enableDistance) params.append('distance', f.distance.toString());
+      if (f.country && f.country !== 'All countries') params.append('country', f.country);
       params.append('minRating', f.minRating.toString());
       if (f.crops.length     > 0) params.append('crops',     f.crops.join(','));
       if (f.equipment.length > 0) params.append('equipment', f.equipment.join(','));
@@ -590,12 +640,6 @@ const handleApplyFilters = () => {
  searchType === 'fpo'      ? 'Nearby FPOs'       : 'Nearby'}
               </h1>
             </div>
-            <button
-              className="relative w-10 h-10 rounded-full bg-white shadow-soft flex items-center justify-center text-brand-700 active:scale-95 transition-transform"
-              onClick={() => setShowFilter(!showFilter)}
-            >
-              <i className="ph-bold ph-sliders-horizontal text-lg"></i>
-            </button>
           </div>
 
           {/* Tab toggle */}
@@ -684,6 +728,23 @@ onClick={() => {
                 </button>
               </div>
 
+              {/* Country */}
+              <div className="mb-8">
+                <label className="block text-sm font-bold text-gray-900 mb-3">Country</label>
+                <div className="relative">
+                  <select
+                    value={filters.country}
+                    onChange={e => setFilters(p => ({ ...p, country: e.target.value }))}
+                    className="w-full appearance-none rounded-xl border border-gray-200 bg-white px-3 py-3 pr-10 text-sm font-medium text-gray-900 outline-none focus:border-brand-600"
+                  >
+                    {COUNTRY_OPTIONS.map(country => (
+                      <option key={country} value={country}>{country}</option>
+                    ))}
+                  </select>
+                  <i className="ph-bold ph-caret-down pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+              </div>
+
               {/* Distance */}
               <div className="mb-8">
                 <label className="flex items-center gap-3 mb-4 cursor-pointer">
@@ -735,27 +796,54 @@ onClick={() => {
               )}
 
               {/* Crops */}
-// REPLACE in the filter modal crops section:
 <div className="mb-8">
   <label className="block text-sm font-bold text-gray-900 mb-3">
-    Crops (select any)
-    {availableCrops.length > 0 && (
+    Crops (search and select any)
+    {cropPickerOptions.length > 0 && (
       <span className="ml-2 text-xs font-normal text-gray-400">
-        {availableCrops.length} available
+        {cropPickerOptions.length} shown
       </span>
     )}
   </label>
 
-  {availableCrops.length === 0 ? (
+  {filters.crops.length > 0 && (
+    <div className="mb-3 flex flex-wrap gap-2 rounded-xl bg-brand-50 p-3">
+      {filters.crops.map(crop => (
+        <button
+          key={`selected-crop-${crop}`}
+          onClick={() => toggleCropFilter(crop)}
+          className="px-3 py-1.5 bg-white text-brand-700 rounded-full text-xs font-bold flex items-center gap-2 shadow-sm"
+        >
+          {crop}<i className="ph-bold ph-x text-sm"></i>
+        </button>
+      ))}
+    </div>
+  )}
+
+  <div className="relative mb-3">
+    <i className="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+    <input
+      type="text"
+      value={cropFilterSearch}
+      onChange={e => setCropFilterSearch(e.target.value)}
+      placeholder="Search crops"
+      className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-3 text-sm text-gray-900 outline-none focus:border-brand-600"
+    />
+  </div>
+
+  {cropPickerOptions.length === 0 ? (
     <p className="text-xs text-gray-400 italic">
-      No crops found — load farmers first
+      No crops match your search
     </p>
   ) : (
-    <div className="flex flex-wrap gap-2">
-      {availableCrops.map(crop => (
+    <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-xl border border-gray-100 p-2">
+      {cropPickerOptions.map(crop => (
         <button
           key={crop}
-          onClick={() => toggleCropFilter(crop)}
+          onClick={() => {
+            toggleCropFilter(crop);
+            setCropFilterSearch('');
+          }}
           className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
             filters.crops.includes(crop)
               ? 'bg-brand-700 text-white'
@@ -803,14 +891,51 @@ onClick={() => {
 
               {/* Equipment */}
               <div className="mb-8">
-                <label className="block text-sm font-bold text-gray-900 mb-3">Equipment (select any)</label>
-                <div className="flex flex-wrap gap-2">
-                  {EQUIPMENT_OPTIONS.map(equip => (
-                    <button key={equip} onClick={() => toggleEquipmentFilter(equip)} className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${filters.equipment.includes(equip) ? 'bg-brand-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                      {equip}
-                    </button>
-                  ))}
+                <label className="block text-sm font-bold text-gray-900 mb-3">Equipment (search and select any)</label>
+
+                {filters.equipment.length > 0 && (
+                  <div className="mb-3 flex flex-wrap gap-2 rounded-xl bg-blue-50 p-3">
+                    {filters.equipment.map(equip => (
+                      <button
+                        key={`selected-equip-${equip}`}
+                        onClick={() => toggleEquipmentFilter(equip)}
+                        className="px-3 py-1.5 bg-white text-blue-700 rounded-full text-xs font-bold flex items-center gap-2 shadow-sm"
+                      >
+                        {equip}<i className="ph-bold ph-x text-sm"></i>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="relative mb-3">
+                  <i className="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                  <input
+                    type="text"
+                    value={equipmentFilterSearch}
+                    onChange={e => setEquipmentFilterSearch(e.target.value)}
+                    placeholder="Search equipment"
+                    className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-3 text-sm text-gray-900 outline-none focus:border-brand-600"
+                  />
                 </div>
+
+                {equipmentPickerOptions.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">No equipment matches your search</p>
+                ) : (
+                  <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-xl border border-gray-100 p-2">
+                    {equipmentPickerOptions.map(equip => (
+                      <button
+                        key={equip}
+                        onClick={() => {
+                          toggleEquipmentFilter(equip);
+                          setEquipmentFilterSearch('');
+                        }}
+                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${filters.equipment.includes(equip) ? 'bg-brand-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                      >
+                        {equip}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <button onClick={handleApplyFilters} disabled={loadingFarmers} className="w-full py-3.5 bg-brand-700 text-white rounded-xl font-bold text-sm active:scale-[0.98] transition-transform disabled:opacity-50">
@@ -821,9 +946,20 @@ onClick={() => {
         )}
 
         {/* Active filter chips — BUG FIX E: pass refetch=true so removing a chip immediately re-fetches */}
-        {(filters.crops.length > 0 || filters.equipment.length > 0 || filters.grades.length > 0 || filters.certTypes.length > 0) && (
+        {(filters.country !== 'All countries' || filters.crops.length > 0 || filters.equipment.length > 0 || filters.grades.length > 0 || filters.certTypes.length > 0) && (
           <section className="px-6 mb-4 relative z-10">
             <div className="flex flex-wrap gap-2">
+              {filters.country !== 'All countries' && (
+                <button onClick={() => {
+                  const next = { ...filters, country: 'All countries' };
+                  setFilters(next);
+                  const lat = userLocation?.latitude ?? 0;
+                  const lon = userLocation?.longitude ?? 0;
+                  fetchNearbyFarmers(lat, lon, searchType, next);
+                }} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium flex items-center gap-2 active:scale-95 transition-transform">
+                  {filters.country}<i className="ph-bold ph-x text-sm"></i>
+                </button>
+              )}
               {filters.crops.map(crop => (
                 <button key={`crop-${crop}`} onClick={() => toggleCropFilter(crop, true)} className="px-3 py-1.5 bg-brand-100 text-brand-700 rounded-full text-xs font-medium flex items-center gap-2 active:scale-95 transition-transform">
                   {crop}<i className="ph-bold ph-x text-sm"></i>
@@ -890,11 +1026,20 @@ onClick={() => {
   searchType === 'fpo'      ? 'FPO'          : 'buyer'
 }${farmers.length !== 1 ? 's' : ''}`}
           </p> */}
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-900 shadow-soft font-medium text-sm" onClick={() => setShowSortMenu(true)}>
-            <i className="ph-bold ph-funnel text-base"></i>
-            {sortBy === 'nearby' ? 'Nearby' : sortBy === 'experience' ? 'Experience' : 'Most Active'}
-            <i className="ph-bold ph-caret-down text-sm"></i>
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-gray-900 shadow-soft font-medium text-sm" onClick={() => setShowSortMenu(true)}>
+              <i className="ph-bold ph-funnel text-base"></i>
+              {sortBy === 'nearby' ? 'Nearby' : sortBy === 'experience' ? 'Experience' : 'Most Active'}
+              <i className="ph-bold ph-caret-down text-sm"></i>
+            </button>
+            <button className="relative flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-brand-700 shadow-soft font-medium text-sm" onClick={() => setShowFilter(true)}>
+              <i className="ph-bold ph-sliders-horizontal text-base"></i>
+              Filter
+              {(filters.country !== 'All countries' || filters.crops.length > 0 || filters.equipment.length > 0 || filters.grades.length > 0 || filters.certTypes.length > 0) && (
+                <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-brand-700"></span>
+              )}
+            </button>
+          </div>
         </section>
 
         {/* Results list */}
