@@ -59,12 +59,14 @@ export default function TopNav() {
   const [selectedLang, setSelectedLang] = useState('en');
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
   const notifRef = useRef<HTMLDivElement>(null);
   const plusRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
   // Add this state near the other notification states
 const [showAllNotifications, setShowAllNotifications] = useState(false);
 const [pendingCount, setPendingCount] = useState(0);
@@ -158,6 +160,9 @@ const [pendingCount, setPendingCount] = useState(0);
       if (plusRef.current && !plusRef.current.contains(e.target as Node)) {
         setShowPlusMenu(false);
       }
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -186,7 +191,7 @@ const handleOpenNotifPanel = () => {
 
   const navLinks = [
     { href: '/', label: 'Home', icon: 'ph-house' },
-    { href: '/about', label: 'About', icon: 'ph-info' },
+    { href: '/products', label: 'Products', icon: 'ph-storefront' },
     { href: '/machinery-list', label: 'Fleets', icon: 'ph-tractor' },
     { href: '/reels', label: 'Farm Tales', icon: 'ph-video' },
     { href: '/nearby-farmers', label: 'Farmers & Buyers', icon: 'ph-users' },
@@ -425,10 +430,13 @@ const handleOpenNotifPanel = () => {
 
                 <div className="hidden md:block w-px h-6 bg-gray-200" />
 
-                {/* Profile */}
+                {/* Profile and About menu */}
+                <div className="relative" ref={profileRef}>
                 <button
-                  onClick={() => router.push('/user-profile')}
+                  onClick={() => { setShowProfileMenu(value => !value); setShowNotifPanel(false); setShowPlusMenu(false); }}
                   className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-gray-50 transition-colors"
+                  aria-expanded={showProfileMenu}
+                  aria-label="Open profile menu"
                 >
                   <UserAvatar
                     image={profileImage}
@@ -441,6 +449,20 @@ const handleOpenNotifPanel = () => {
                   </span>
                   <i className="ph ph-caret-down text-gray-400 text-xs hidden md:block" />
                 </button>
+                {showProfileMenu && (
+                  <div className="absolute right-0 top-12 z-[10000] w-52 overflow-hidden rounded-2xl border border-gray-100 bg-white py-1 shadow-2xl">
+                    <button onClick={() => { setShowProfileMenu(false); router.push('/user-profile'); }} className="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-green-50 active:bg-green-100">
+                      <span className="grid h-9 w-9 place-items-center rounded-xl bg-green-100 text-green-700"><i className="ph-bold ph-user text-base" /></span>
+                      <span><span className="block text-sm font-bold text-gray-900">My Profile</span><span className="block text-[11px] text-gray-500">View and manage profile</span></span>
+                    </button>
+                    <div className="mx-3 border-t border-gray-100" />
+                    <button onClick={() => { setShowProfileMenu(false); router.push('/about'); }} className="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-teal-50 active:bg-teal-100">
+                      <span className="grid h-9 w-9 place-items-center rounded-xl bg-teal-100 text-teal-700"><i className="ph-bold ph-info text-base" /></span>
+                      <span><span className="block text-sm font-bold text-gray-900">About Us</span><span className="block text-[11px] text-gray-500">Learn about CoFarmz</span></span>
+                    </button>
+                  </div>
+                )}
+                </div>
 
                 {/* Mobile + Quick Actions button */}
                 <div className="md:hidden relative" ref={plusRef}>

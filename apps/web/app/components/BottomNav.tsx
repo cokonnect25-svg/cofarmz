@@ -23,7 +23,7 @@ function BottomNavContent() {
     { href: '/machinery-list', label: 'Fleet',    icon: 'ph-tractor',     activeColor: 'text-blue-600',    activeBg: 'bg-blue-50',     activeDot: 'bg-blue-500'    },
     { href: '/chat',           label: 'Messages', icon: 'ph-chat-circle', activeColor: 'text-amber-600',   activeBg: 'bg-amber-50',    activeDot: 'bg-amber-500'   },
     { href: '/reels',          label: 'Farm Tales',    icon: 'ph-video',       activeColor: 'text-rose-600',    activeBg: 'bg-rose-50',     activeDot: 'bg-rose-500'    },
-    { href: '/about',          label: 'About Us',  icon: 'ph-info', activeColor: 'text-teal-600',    activeBg: 'bg-teal-50',     activeDot: 'bg-teal-500'    },
+    { href: '/products',       label: 'Products',  icon: 'ph-storefront', activeColor: 'text-teal-600', activeBg: 'bg-teal-50', activeDot: 'bg-teal-500' },
   ];
 
   return (

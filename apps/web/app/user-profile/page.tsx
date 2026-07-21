@@ -395,6 +395,7 @@ function ProfileContent() {
   const [favoriteEquipment, setFavoriteEquipment] = useState<FavoriteEquipment[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
   const [farmerCrops, setFarmerCrops] = useState<FarmerCrop[]>([]);
+  const [productCount, setProductCount] = useState(0);
   const [newCrop, setNewCrop] = useState({
     crop_name: '', years_of_experience: '', expertise_level: 'Beginner',
     expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg',
@@ -562,6 +563,7 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
         await fetchUserProfile();
         await fetchFollowersCounts();
         const crops = await fetchUserCrops();
+        await fetchProductCount();
         if (crops && crops.length > 0) fetchMatches(crops);
         await fetchUserEquipment();
         await fetchFavoriteEquipment();
@@ -580,6 +582,19 @@ const canUseFarmerCropFields = userRole === 'farmer' || userRole === 'fpo' || is
 const cropProfileLabel = userRole === 'buyer' ? 'Crops/Commodities You Want to Buy' : 'Crops/Commodities';
 const cropProfileEmptyLabel = userRole === 'buyer' ? 'No Crops/Commodities You Want to Buy added yet' : 'No crops added yet';
 const addCropLabel = userRole === 'buyer' ? 'Add Crop You Want to Buy' : 'Add Crop';
+
+const fetchProductCount = async () => {
+  if (!user?.id) return;
+  try {
+    const response = await fetch(getApiUrl(`/api/farmer-products?userId=${encodeURIComponent(user.id)}`));
+    if (response.ok) {
+      const data = await response.json();
+      setProductCount(Array.isArray(data) ? data.length : 0);
+    }
+  } catch (error) {
+    console.error('Error fetching product count:', error);
+  }
+};
 
 const toggleSupplierType = (type: 'commodities' | 'equipment') => {
   setSupplierTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]);
@@ -1386,7 +1401,7 @@ const fetchFollowersCounts = async () => {
               <span className="sr-only">{profileData?.calling_enabled === false ? 'Enable calls' : 'Disable calls'}</span>
             </button>
           </div>
-<div className="grid grid-cols-4 gap-2 mt-4 text-center text-xs">
+<div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-4 text-center text-xs">
   <button onClick={() => { if (expandedSection === 'followers') { setExpandedSection(null); } else { setExpandedSection('followers'); fetchFollowers(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
     <p className="font-bold text-lg text-gray-900">{followersCount}</p>
     <p className="text-xs text-gray-600">Followers</p>
@@ -1398,6 +1413,10 @@ const fetchFollowersCounts = async () => {
   {canManageCrops && <button onClick={() => { if (expandedSection === 'crops') { setExpandedSection(null); } else { setExpandedSection('crops'); fetchUserCrops(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
     <p className="font-bold text-lg text-gray-900">{farmerCrops.length}</p>
     <p className="text-xs text-gray-600 leading-tight">{cropProfileLabel}</p>
+  </button>}
+  {(userRole === 'farmer' || userRole === 'fpo' || isCommoditySupplier) && <button onClick={() => router.push('/farmer-products')} className="cursor-pointer hover:bg-green-50 p-2 rounded transition">
+    <p className="font-bold text-lg text-gray-900">{productCount}</p>
+    <p className="text-xs text-gray-600">Products</p>
   </button>}
   {canManageEquipment && <button onClick={() => { if (expandedSection === 'equipment') { setExpandedSection(null); } else { setExpandedSection('equipment'); fetchUserEquipment(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
     <p className="font-bold text-lg text-gray-900">{myEquipment.length}</p>
