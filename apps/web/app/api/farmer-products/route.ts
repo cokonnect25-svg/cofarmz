@@ -92,6 +92,35 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const id = Number(body.id);
+    const userId = String(body.user_id || '').trim();
+    const name = String(body.name || '').trim();
+    const price = Number(body.price);
+    const quantity = body.quantity === '' || body.quantity == null ? null : Number(body.quantity);
+    if (!Number.isInteger(id) || !userId || !name) return NextResponse.json({ error: 'Product, name and user are required' }, { status: 400 });
+    if (!Number.isFinite(price) || price < 0) return NextResponse.json({ error: 'Enter a valid product price' }, { status: 400 });
+    if (quantity !== null && (!Number.isFinite(quantity) || quantity < 0)) return NextResponse.json({ error: 'Enter a valid quantity' }, { status: 400 });
+
+    await ensureSchema();
+    const result = await sql`
+      UPDATE farmer_products
+      SET name = ${name}, category = ${body.category || null}, description = ${body.description || null},
+          price = ${price}, unit = ${body.unit || 'kg'}, quantity = ${quantity},
+          image_url = ${body.image_url || null}, updated_at = NOW()
+      WHERE id = ${id} AND user_id = ${userId}
+      RETURNING *
+    `;
+    if (!result.length) return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    return NextResponse.json(result[0]);
+  } catch (error: any) {
+    console.error('Error updating farmer product:', error);
+    return NextResponse.json({ error: error?.message || 'Failed to update product' }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   const params = new URL(request.url).searchParams;
   const id = Number(params.get('id'));

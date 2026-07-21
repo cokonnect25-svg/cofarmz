@@ -2,7 +2,7 @@
 
 import { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Camera as CameraIcon, Images, ImagePlus, Package, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Camera as CameraIcon, Images, ImagePlus, Package, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,6 +29,7 @@ export default function FarmerProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -110,27 +111,50 @@ export default function FarmerProductsPage() {
     ? pickNativeImage(CameraSource.Photos)
     : galleryInputRef.current?.click();
 
-  const addProduct = async (event: FormEvent) => {
+  const saveProduct = async (event: FormEvent) => {
     event.preventDefault();
     if (!user?.id || saving || uploading) return;
     setSaving(true);
     setError('');
     try {
       const response = await fetch(getApiUrl('/api/farmer-products'), {
-        method: 'POST',
+        method: editingProduct ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, user_id: user.id }),
+        body: JSON.stringify({ ...form, id: editingProduct?.id, user_id: user.id }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Could not add product');
-      setProducts(current => [data, ...current]);
+      if (!response.ok) throw new Error(data.error || `Could not ${editingProduct ? 'update' : 'add'} product`);
+      setProducts(current => editingProduct ? current.map(item => item.id === editingProduct.id ? data : item) : [data, ...current]);
       setForm(emptyForm);
+      setEditingProduct(null);
       setShowForm(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not add product');
+      setError(err instanceof Error ? err.message : `Could not ${editingProduct ? 'update' : 'add'} product`);
     } finally {
       setSaving(false);
     }
+  };
+
+  const openAddForm = () => {
+    setEditingProduct(null);
+    setForm(emptyForm);
+    setError('');
+    setShowForm(true);
+  };
+
+  const openEditForm = (product: Product) => {
+    setEditingProduct(product);
+    setForm({
+      name: product.name,
+      category: product.category || '',
+      description: product.description || '',
+      price: String(product.price),
+      unit: product.unit || 'kg',
+      quantity: product.quantity == null ? '' : String(product.quantity),
+      image_url: product.image_url || '',
+    });
+    setError('');
+    setShowForm(true);
   };
 
   const deleteProduct = async (product: Product) => {
@@ -155,7 +179,7 @@ export default function FarmerProductsPage() {
             <button onClick={() => router.back()} className="rounded-full p-2 text-gray-700 hover:bg-gray-100" aria-label="Back"><ArrowLeft className="h-5 w-5" /></button>
             <div><h1 className="text-lg font-black text-gray-900">My Products</h1><p className="text-xs text-gray-500">{products.length} product{products.length === 1 ? '' : 's'} listed</p></div>
           </div>
-          <button onClick={() => { setError(''); setShowForm(true); }} className="flex items-center gap-2 rounded-xl bg-green-600 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-green-700">
+          <button onClick={openAddForm} className="flex items-center gap-2 rounded-xl bg-green-600 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-green-700">
             <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Add Product</span>
           </button>
         </div>
@@ -176,7 +200,7 @@ export default function FarmerProductsPage() {
             <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-green-100 text-green-700"><Package className="h-8 w-8" /></div>
             <h2 className="text-xl font-black text-gray-900">No products yet</h2>
             <p className="mx-auto mt-2 max-w-sm text-sm text-gray-500">Add products you grow or sell so they are easy to manage from your farmer profile.</p>
-            <button onClick={() => setShowForm(true)} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-bold text-white"><Plus className="h-4 w-4" /> Add your first product</button>
+            <button onClick={openAddForm} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-bold text-white"><Plus className="h-4 w-4" /> Add your first product</button>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -186,7 +210,7 @@ export default function FarmerProductsPage() {
                   {product.image_url ? <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-green-300"><Package className="h-14 w-14" /></div>}
                 </div>
                 <div className="p-4">
-                  <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="truncate font-black text-gray-900">{product.name}</h2>{product.category && <p className="mt-0.5 text-xs font-semibold text-green-700">{product.category}</p>}</div><button onClick={() => deleteProduct(product)} className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600" aria-label={`Delete ${product.name}`}><Trash2 className="h-4 w-4" /></button></div>
+                  <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="truncate font-black text-gray-900">{product.name}</h2>{product.category && <p className="mt-0.5 text-xs font-semibold text-green-700">{product.category}</p>}</div><div className="flex gap-1"><button onClick={() => openEditForm(product)} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50" aria-label={`Edit ${product.name}`}><Pencil className="h-4 w-4" /></button><button onClick={() => deleteProduct(product)} className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600" aria-label={`Delete ${product.name}`}><Trash2 className="h-4 w-4" /></button></div></div>
                   {product.description && <p className="mt-2 line-clamp-2 text-sm text-gray-500">{product.description}</p>}
                   <div className="mt-4 flex items-end justify-between"><p className="text-lg font-black text-green-700">₹{Number(product.price).toLocaleString('en-IN')}<span className="text-xs font-semibold text-gray-500">/{product.unit}</span></p>{product.quantity != null && <p className="text-xs font-semibold text-gray-500">{Number(product.quantity).toLocaleString()} {product.unit} available</p>}</div>
                 </div>
@@ -198,9 +222,9 @@ export default function FarmerProductsPage() {
 
       {showForm && (
         <div className="fixed inset-0 z-[10001] flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onMouseDown={event => { if (event.target === event.currentTarget && !saving) setShowForm(false); }}>
-          <form onSubmit={addProduct} className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-3xl">
+          <form onSubmit={saveProduct} className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-3xl">
             <div className="overflow-y-auto p-5 sm:p-6">
-            <div className="mb-5 flex items-center justify-between"><div><h2 className="text-xl font-black text-gray-900">Add Product</h2><p className="text-sm text-gray-500">Enter the product details and add a photo.</p></div><button type="button" onClick={() => setShowForm(false)} disabled={saving} className="rounded-full p-2 hover:bg-gray-100"><X className="h-5 w-5" /></button></div>
+            <div className="mb-5 flex items-center justify-between"><div><h2 className="text-xl font-black text-gray-900">{editingProduct ? 'Edit Product' : 'Add Product'}</h2><p className="text-sm text-gray-500">{editingProduct ? 'Update the product details or image.' : 'Enter the product details and add a photo.'}</p></div><button type="button" onClick={() => setShowForm(false)} disabled={saving} className="rounded-full p-2 hover:bg-gray-100"><X className="h-5 w-5" /></button></div>
 
             <div className="relative flex aspect-[16/8] w-full items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-green-300 bg-green-50 text-green-700">
               {form.image_url ? <img src={form.image_url} alt="Product preview" className="h-full w-full object-cover" /> : <div className="text-center"><ImagePlus className="mx-auto mb-2 h-8 w-8" /><p className="text-sm font-bold">{uploading ? 'Uploading image…' : 'Add product image'}</p><p className="mt-1 text-xs text-green-600">JPG, PNG or WebP · max 10MB</p></div>}
@@ -216,14 +240,14 @@ export default function FarmerProductsPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="sm:col-span-2 text-sm font-bold text-gray-700">Product name *<input required maxLength={160} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Organic tomatoes" className="mt-1.5 w-full rounded-xl border border-gray-300 px-3 py-3 font-normal outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100" /></label>
               <label className="text-sm font-bold text-gray-700">Category<input maxLength={100} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="Vegetables" className="mt-1.5 w-full rounded-xl border border-gray-300 px-3 py-3 font-normal outline-none focus:border-green-500" /></label>
-              <label className="text-sm font-bold text-gray-700">Unit<select value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-3 font-normal outline-none focus:border-green-500"><option value="kg">kg</option><option value="quintal">quintal</option><option value="tonne">tonne</option><option value="piece">piece</option><option value="dozen">dozen</option><option value="litre">litre</option><option value="bag">bag</option></select></label>
+              <label className="text-sm font-bold text-gray-700">Unit<select value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-3 font-normal outline-none focus:border-green-500"><option value="kg">kg</option><option value="quintal">quintal</option><option value="tonne">tonne</option><option value="piece">piece</option><option value="dozen">dozen</option><option value="litre">litre</option><option value="bag">bag</option><option value="g">g</option><option value="ml">ml</option></select></label>
               <label className="text-sm font-bold text-gray-700">Price per unit (₹) *<input required min="0" step="0.01" type="number" inputMode="decimal" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} placeholder="0.00" className="mt-1.5 w-full rounded-xl border border-gray-300 px-3 py-3 font-normal outline-none focus:border-green-500" /></label>
               <label className="text-sm font-bold text-gray-700">Available quantity<input min="0" step="0.01" type="number" inputMode="decimal" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} placeholder="Optional" className="mt-1.5 w-full rounded-xl border border-gray-300 px-3 py-3 font-normal outline-none focus:border-green-500" /></label>
               <label className="sm:col-span-2 text-sm font-bold text-gray-700">Description<textarea rows={3} maxLength={1000} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Quality, variety, harvest or delivery details…" className="mt-1.5 w-full resize-none rounded-xl border border-gray-300 px-3 py-3 font-normal outline-none focus:border-green-500" /></label>
             </div>
             {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p>}
             </div>
-            <div className="flex flex-shrink-0 gap-3 border-t border-gray-200 bg-white px-5 pt-3 shadow-[0_-8px_20px_rgba(0,0,0,0.05)] sm:px-6" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}><button type="button" onClick={() => setShowForm(false)} disabled={saving} className="flex-1 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-700">Cancel</button><button type="submit" disabled={saving || uploading} className="flex-1 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Adding…' : 'Add Product'}</button></div>
+            <div className="flex flex-shrink-0 gap-3 border-t border-gray-200 bg-white px-5 pt-3 shadow-[0_-8px_20px_rgba(0,0,0,0.05)] sm:px-6" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}><button type="button" onClick={() => setShowForm(false)} disabled={saving} className="flex-1 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-700">Cancel</button><button type="submit" disabled={saving || uploading} className="flex-1 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Saving…' : editingProduct ? 'Save Changes' : 'Add Product'}</button></div>
           </form>
         </div>
       )}
