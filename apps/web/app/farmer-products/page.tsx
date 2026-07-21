@@ -2,7 +2,9 @@
 
 import { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Camera, ImagePlus, Package, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Camera as CameraIcon, Images, ImagePlus, Package, Plus, Trash2, X } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
 
@@ -31,7 +33,8 @@ export default function FarmerProductsPage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const loadProducts = useCallback(async () => {
     if (!user?.id) return;
@@ -53,8 +56,7 @@ export default function FarmerProductsPage() {
     if (!authLoading && !user?.id) setLoading(false);
   }, [authLoading, user?.id]);
 
-  const uploadImage = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const uploadProductImage = async (file?: File) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) return setError('Please choose an image file.');
     if (file.size > 10 * 1024 * 1024) return setError('Image must be smaller than 10MB.');
@@ -72,9 +74,41 @@ export default function FarmerProductsPage() {
       setError(err instanceof Error ? err.message : 'Image upload failed');
     } finally {
       setUploading(false);
-      event.target.value = '';
     }
   };
+
+  const uploadImage = async (event: ChangeEvent<HTMLInputElement>) => {
+    await uploadProductImage(event.target.files?.[0]);
+    event.target.value = '';
+  };
+
+  const pickNativeImage = async (source: CameraSource) => {
+    setError('');
+    try {
+      const photo = await Camera.getPhoto({
+        source,
+        resultType: CameraResultType.Uri,
+        quality: 85,
+        correctOrientation: true,
+      });
+      if (!photo.webPath) return;
+      const blob = await (await fetch(photo.webPath)).blob();
+      const extension = photo.format || 'jpeg';
+      await uploadProductImage(new File([blob], `product-${Date.now()}.${extension}`, { type: blob.type || `image/${extension}` }));
+    } catch (err: any) {
+      if (!String(err?.message || err).toLowerCase().includes('cancel')) {
+        setError('Could not open the image picker. Please try again.');
+      }
+    }
+  };
+
+  const openCamera = () => Capacitor.isNativePlatform()
+    ? pickNativeImage(CameraSource.Camera)
+    : cameraInputRef.current?.click();
+
+  const openGallery = () => Capacitor.isNativePlatform()
+    ? pickNativeImage(CameraSource.Photos)
+    : galleryInputRef.current?.click();
 
   const addProduct = async (event: FormEvent) => {
     event.preventDefault();
@@ -163,14 +197,21 @@ export default function FarmerProductsPage() {
       </section>
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onMouseDown={event => { if (event.target === event.currentTarget && !saving) setShowForm(false); }}>
-          <form onSubmit={addProduct} className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl sm:p-6">
+        <div className="fixed inset-0 z-[10001] flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onMouseDown={event => { if (event.target === event.currentTarget && !saving) setShowForm(false); }}>
+          <form onSubmit={addProduct} className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-3xl">
+            <div className="overflow-y-auto p-5 sm:p-6">
             <div className="mb-5 flex items-center justify-between"><div><h2 className="text-xl font-black text-gray-900">Add Product</h2><p className="text-sm text-gray-500">Enter the product details and add a photo.</p></div><button type="button" onClick={() => setShowForm(false)} disabled={saving} className="rounded-full p-2 hover:bg-gray-100"><X className="h-5 w-5" /></button></div>
 
-            <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className="relative mb-5 flex aspect-[16/8] w-full items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-green-300 bg-green-50 text-green-700">
-              {form.image_url ? <><img src={form.image_url} alt="Product preview" className="h-full w-full object-cover" /><span className="absolute bottom-3 right-3 rounded-lg bg-white/95 px-3 py-2 text-xs font-bold shadow"><Camera className="mr-1 inline h-4 w-4" /> Change photo</span></> : <div className="text-center"><ImagePlus className="mx-auto mb-2 h-8 w-8" /><p className="text-sm font-bold">{uploading ? 'Uploading image…' : 'Add product image'}</p><p className="mt-1 text-xs text-green-600">JPG, PNG or WebP · max 10MB</p></div>}
-            </button>
-            <input ref={inputRef} type="file" accept="image/*" capture="environment" onChange={uploadImage} className="hidden" />
+            <div className="relative flex aspect-[16/8] w-full items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-green-300 bg-green-50 text-green-700">
+              {form.image_url ? <img src={form.image_url} alt="Product preview" className="h-full w-full object-cover" /> : <div className="text-center"><ImagePlus className="mx-auto mb-2 h-8 w-8" /><p className="text-sm font-bold">{uploading ? 'Uploading image…' : 'Add product image'}</p><p className="mt-1 text-xs text-green-600">JPG, PNG or WebP · max 10MB</p></div>}
+              {uploading && <div className="absolute inset-0 grid place-items-center bg-white/75"><div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" /></div>}
+            </div>
+            <div className="mb-5 mt-3 grid grid-cols-2 gap-3">
+              <button type="button" onClick={openCamera} disabled={uploading} className="flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-3 py-3 text-sm font-bold text-green-700 disabled:opacity-50"><CameraIcon className="h-5 w-5" /> Camera</button>
+              <button type="button" onClick={openGallery} disabled={uploading} className="flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-3 text-sm font-bold text-blue-700 disabled:opacity-50"><Images className="h-5 w-5" /> Gallery</button>
+            </div>
+            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={uploadImage} className="hidden" />
+            <input ref={galleryInputRef} type="file" accept="image/*" onChange={uploadImage} className="hidden" />
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="sm:col-span-2 text-sm font-bold text-gray-700">Product name *<input required maxLength={160} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Organic tomatoes" className="mt-1.5 w-full rounded-xl border border-gray-300 px-3 py-3 font-normal outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100" /></label>
@@ -181,7 +222,8 @@ export default function FarmerProductsPage() {
               <label className="sm:col-span-2 text-sm font-bold text-gray-700">Description<textarea rows={3} maxLength={1000} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Quality, variety, harvest or delivery details…" className="mt-1.5 w-full resize-none rounded-xl border border-gray-300 px-3 py-3 font-normal outline-none focus:border-green-500" /></label>
             </div>
             {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p>}
-            <div className="mt-5 flex gap-3"><button type="button" onClick={() => setShowForm(false)} disabled={saving} className="flex-1 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-700">Cancel</button><button type="submit" disabled={saving || uploading} className="flex-1 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Adding…' : 'Add Product'}</button></div>
+            </div>
+            <div className="flex flex-shrink-0 gap-3 border-t border-gray-200 bg-white px-5 pt-3 shadow-[0_-8px_20px_rgba(0,0,0,0.05)] sm:px-6" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}><button type="button" onClick={() => setShowForm(false)} disabled={saving} className="flex-1 rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-700">Cancel</button><button type="submit" disabled={saving || uploading} className="flex-1 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Adding…' : 'Add Product'}</button></div>
           </form>
         </div>
       )}
