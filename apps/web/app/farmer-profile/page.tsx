@@ -113,6 +113,19 @@ interface Equipment {
   availability?: boolean;
 }
 
+interface FarmerProduct {
+  id: number;
+  name: string;
+  category: string | null;
+  description: string | null;
+  price: number | string;
+  unit: string;
+  quantity: number | string | null;
+  image_url: string | null;
+}
+
+const displayProductUnit = (unit: string) => unit === 'litre' ? 'L' : unit;
+
 // ─── Role Config ──────────────────────────────────────────────────────────────
 
 const ROLE_CONFIG = {
@@ -328,6 +341,7 @@ function FarmerProfileContent() {
   const [following, setFollowing] = useState<Follower[]>([]);
   const [crops, setCrops] = useState<Crop[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [products, setProducts] = useState<FarmerProduct[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [mounted, setMounted] = useState(false);
   const [expandedCropIdx, setExpandedCropIdx] = useState<number | null>(null);
@@ -404,6 +418,14 @@ function FarmerProfileContent() {
       setEquipment(Array.isArray(data.equipment) ? data.equipment : []);
       setFollowers(Array.isArray(data.followers) ? data.followers : []);
       setFollowing(Array.isArray(data.following) ? data.following : []);
+
+      try {
+        const productsRes = await fetch(getApiUrl(`/api/farmer-products?userId=${encodeURIComponent(farmerId)}`));
+        const productsData = await productsRes.json();
+        setProducts(productsRes.ok && Array.isArray(productsData) ? productsData : []);
+      } catch {
+        setProducts([]);
+      }
     } catch (e: any) {
       setError(e?.message || 'Unknown error');
     } finally {
@@ -564,6 +586,7 @@ if (Capacitor.isNativePlatform()) {
   // Sections to show: only if data exists OR always show crops/equipment if counts > 0
   const hasCrops = crops.length > 0;
   const hasEquipment = equipment.length > 0;
+  const hasProducts = products.length > 0;
   const hasCertificates = certificates.length > 0;
   const hasFollowers = followers.length > 0;
   const hasFollowing = following.length > 0;
@@ -684,11 +707,12 @@ if (Capacitor.isNativePlatform()) {
           )}
 
           {/* ── Stats Bar ──────────────────────────────────────────────────── */}
-          <div className="grid grid-cols-4 gap-1 mt-4 rounded-2xl bg-gray-50 border border-gray-100 overflow-hidden">
+          <div className="grid grid-cols-5 gap-1 mt-4 rounded-2xl bg-gray-50 border border-gray-100 overflow-hidden">
             {[
               { key: 'followers', label: 'Followers', count: profile.followers_count, icon: Users, show: true },
               { key: 'following', label: 'Following', count: profile.following_count, icon: UserCheck, show: true },
               { key: 'crops', label: role === 'buyer' ? 'Crops/Commodities You Want to Buy' : 'Crops', count: profile.crops_count, icon: Wheat, show: true },
+              { key: 'products', label: 'Products', count: products.length, icon: Package, show: true },
               { key: 'equipment', label: 'Equipment', count: profile.equipments_count, icon: Tractor, show: true },
             ].map(({ key, label, count, icon: Icon }) => (
               <button
@@ -965,6 +989,38 @@ if (Capacitor.isNativePlatform()) {
         )}
 
         {/* ── Equipment ───────────────────────────────────────────────────────── */}
+        {hasProducts && (
+          <div>
+            <SectionHeader
+              title="Products for Sale"
+              count={products.length}
+              expanded={openSections.has('products')}
+              onToggle={() => toggleSection('products')}
+              icon={Package}
+              color="text-emerald-600"
+            />
+            {openSections.has('products') && (
+              <div className="grid grid-cols-2 gap-3 px-4 pb-4 pt-1">
+                {products.map(product => (
+                  <article key={product.id} className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                    <div className="aspect-square bg-green-50">
+                      {product.image_url
+                        ? <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                        : <div className="grid h-full place-items-center"><Package className="h-10 w-10 text-green-200" /></div>}
+                    </div>
+                    <div className="p-3">
+                      {product.category && <p className="truncate text-[9px] font-black uppercase tracking-wide text-green-700">{product.category}</p>}
+                      <h4 className="mt-0.5 truncate text-sm font-black text-gray-900">{product.name}</h4>
+                      <p className="mt-1 truncate text-base font-black text-green-700">₹{Number(product.price).toLocaleString('en-IN')}<span className="text-[10px] font-semibold text-gray-500"> / {Number(product.quantity || 1).toLocaleString()} {displayProductUnit(product.unit)}</span></p>
+                      {product.description && <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-gray-500">{product.description}</p>}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {(hasEquipment || profile.equipments_count > 0) && (
           <div>
             <SectionHeader
@@ -1108,11 +1164,11 @@ if (Capacitor.isNativePlatform()) {
       )}
 
       {/* ── Nothing to show fallback ──────────────────────────────────────────── */}
-      {!hasCrops && !hasEquipment && !hasCertificates && !hasReels && (
+      {!hasCrops && !hasProducts && !hasEquipment && !hasCertificates && !hasReels && (
         <div className="mt-8 text-center text-gray-400 px-6">
           <Info className="w-10 h-10 mx-auto mb-2 text-gray-300" />
           <p className="font-semibold text-gray-500">No additional profile info yet</p>
-          <p className="text-sm mt-1">This user hasn't added crops, equipment, or certificates.</p>
+          <p className="text-sm mt-1">This user hasn't added crops, products, equipment, or certificates.</p>
         </div>
       )}
 
