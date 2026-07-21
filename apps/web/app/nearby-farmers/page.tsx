@@ -43,9 +43,11 @@ interface Farmer {
   distance: number;
   rating: string | null;
   equipment_count: number;
+  products_count: number;
   crops_count: number;
   crops: FarmerCrop[];
   equipment: Equipment[];
+  products?: Array<{ id: number; name: string; category?: string; price: number; unit: string; quantity?: number; image_url?: string }>;
   followers_count?: number;
   following_count?: number;
   phone?: string;
@@ -1230,7 +1232,7 @@ onClick={e => {
                     })()}
 
                     {/* Stats row */}
-                    <div className="flex gap-3 mb-4">
+                    <div className="flex flex-wrap gap-2 mb-4">
                       {searchType === 'farmers' ? (
                         <>
                           <button // e.g. Crops button
@@ -1254,6 +1256,17 @@ onClick={e => {
 }} className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-wrench text-blue-600 text-sm"></i>
                             <span className="text-xs font-bold text-gray-900">{farmer.equipment_count || 0} Equipment</span>
+                          </button>
+                          <button
+onClick={e => {
+  e.stopPropagation();
+  sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+  sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
+  sessionStorage.setItem(TYPE_KEY, searchType);
+  saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=products`);
+}} className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors active:scale-95">
+                            <i className="ph-bold ph-package text-emerald-600 text-sm"></i>
+                            <span className="text-xs font-bold text-gray-900">{farmer.products_count || 0} Products</span>
                           </button>
                         </>
                       ) : searchType === 'supplier' ? (

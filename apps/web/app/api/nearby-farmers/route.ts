@@ -271,12 +271,19 @@ const targetRole =
 
     let allCrops:     any[] = [];
     let allEquip:     any[] = [];
+    let allProducts:  any[] = [];
     let allFollowers: any[] = [];
     let allFollowing: any[] = [];
     let allViewerFollows: any[] = [];
 
     if (userIds.length > 0) {
-      [allCrops, allEquip, allFollowers, allFollowing, allViewerFollows] = await Promise.all([
+      await sql`CREATE TABLE IF NOT EXISTS farmer_products (
+        id SERIAL PRIMARY KEY, user_id TEXT NOT NULL, name VARCHAR(160) NOT NULL,
+        category VARCHAR(100), description TEXT, price NUMERIC(12,2) NOT NULL,
+        unit VARCHAR(30) NOT NULL DEFAULT 'kg', quantity NUMERIC(12,2), image_url TEXT,
+        created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW()
+      )`;
+      [allCrops, allEquip, allProducts, allFollowers, allFollowing, allViewerFollows] = await Promise.all([
         sql`
           SELECT user_id, crop_name, years_of_experience, expertise_level,
                  is_crop_waste, grade, certification_type,
@@ -298,6 +305,12 @@ const targetRole =
           GROUP BY following_id
         `,
         sql`
+          SELECT id, user_id, name, category, price, unit, quantity, image_url
+          FROM farmer_products
+          WHERE user_id = ANY(${userIds}::text[])
+          ORDER BY created_at DESC
+        `,
+        sql`
           SELECT user_id, COUNT(*)::integer AS count
           FROM follows
           WHERE user_id = ANY(${userIds}::text[]) AND status = 'accepted'
@@ -315,6 +328,7 @@ const targetRole =
     // ── build lookup maps ───────────────────────────────────────────────────
     const cropsMap     = new Map<string, any[]>();
     const equipMap     = new Map<string, any[]>();
+    const productsMap  = new Map<string, any[]>();
     const followersMap = new Map<string, number>();
     const followingMap = new Map<string, number>();
     const viewerFollowMap = new Map<string, string>();
@@ -339,6 +353,14 @@ const targetRole =
       equipMap.get(e.owner_id)!.push({
         id: e.id, name: e.name, model: e.model,
         daily_rate: e.daily_rate, image_url: e.image_url,
+      });
+    });
+
+    (allProducts as any[]).forEach((p: any) => {
+      if (!productsMap.has(p.user_id)) productsMap.set(p.user_id, []);
+      productsMap.get(p.user_id)!.push({
+        id: p.id, name: p.name, category: p.category, price: p.price,
+        unit: p.unit, quantity: p.quantity, image_url: p.image_url,
       });
     });
 
@@ -369,6 +391,8 @@ const targetRole =
           crops_count:     visibleCrops.length,
           equipment:       (equipMap.get(user.id) || []).slice(0, 5),
           equipment_count: parseInt(user.equipment_count) || 0,
+          products:        (productsMap.get(user.id) || []).slice(0, 5),
+          products_count:  (productsMap.get(user.id) || []).length,
           rating:          null,
           followers_count: followersMap.get(user.id) || 0,
           following_count: followingMap.get(user.id) || 0,
