@@ -21,6 +21,8 @@ type Product = {
   farmer_image: string | null;
 };
 
+const displayUnit = (unit: string) => unit === 'litre' ? 'L' : unit;
+
 export default function ProductsPage() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
@@ -74,8 +76,7 @@ export default function ProductsPage() {
               <div className="p-3 sm:p-4">
                 {product.category && <p className="mb-1 truncate text-[10px] font-black uppercase tracking-wide text-green-700">{product.category}</p>}
                 <h2 className="truncate text-sm font-black text-gray-900 sm:text-base">{product.name}</h2>
-                <p className="mt-1 truncate text-base font-black text-green-700 sm:text-lg">₹{Number(product.price).toLocaleString('en-IN')}<span className="text-[10px] font-semibold text-gray-500">/{product.unit}</span></p>
-                {product.quantity != null && <p className="mt-0.5 truncate text-[10px] font-medium text-gray-500">{Number(product.quantity).toLocaleString()} {product.unit} available</p>}
+                <p className="mt-1 truncate text-base font-black text-green-700 sm:text-lg">₹{Number(product.price).toLocaleString('en-IN')}<span className="text-[10px] font-semibold text-gray-500"> / {Number(product.quantity || 1).toLocaleString()} {displayUnit(product.unit)}</span></p>
                 <button onClick={() => router.push(`/farmer-profile?id=${product.user_id}`)} className="mt-3 flex w-full min-w-0 items-center gap-2 border-t border-gray-100 pt-3 text-left">
                   <UserAvatar image={product.farmer_image || ''} name={product.farmer_name || 'Farmer'} size={28} />
                   <span className="min-w-0"><span className="block truncate text-[11px] font-bold text-gray-800">{product.farmer_name || 'Farmer'}</span>{product.farmer_location && <span className="flex items-center gap-0.5 truncate text-[9px] text-gray-500"><MapPin className="h-2.5 w-2.5 flex-shrink-0" />{product.farmer_location}</span>}</span>

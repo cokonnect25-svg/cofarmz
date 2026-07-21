@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     const name = String(body.name || '').trim();
     const userId = String(body.user_id || '').trim();
     const price = Number(body.price);
-    const quantity = body.quantity === '' || body.quantity == null ? null : Number(body.quantity);
+    const quantity = Number(body.quantity);
 
     if (!userId || !name) {
       return NextResponse.json({ error: 'Product name and user are required' }, { status: 400 });
@@ -72,8 +72,8 @@ export async function POST(request: Request) {
     if (!Number.isFinite(price) || price < 0) {
       return NextResponse.json({ error: 'Enter a valid product price' }, { status: 400 });
     }
-    if (quantity !== null && (!Number.isFinite(quantity) || quantity < 0)) {
-      return NextResponse.json({ error: 'Enter a valid quantity' }, { status: 400 });
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return NextResponse.json({ error: 'Enter the quantity this price is for' }, { status: 400 });
     }
 
     await ensureSchema();
@@ -99,10 +99,10 @@ export async function PUT(request: Request) {
     const userId = String(body.user_id || '').trim();
     const name = String(body.name || '').trim();
     const price = Number(body.price);
-    const quantity = body.quantity === '' || body.quantity == null ? null : Number(body.quantity);
+    const quantity = Number(body.quantity);
     if (!Number.isInteger(id) || !userId || !name) return NextResponse.json({ error: 'Product, name and user are required' }, { status: 400 });
     if (!Number.isFinite(price) || price < 0) return NextResponse.json({ error: 'Enter a valid product price' }, { status: 400 });
-    if (quantity !== null && (!Number.isFinite(quantity) || quantity < 0)) return NextResponse.json({ error: 'Enter a valid quantity' }, { status: 400 });
+    if (!Number.isFinite(quantity) || quantity <= 0) return NextResponse.json({ error: 'Enter the quantity this price is for' }, { status: 400 });
 
     await ensureSchema();
     const result = await sql`

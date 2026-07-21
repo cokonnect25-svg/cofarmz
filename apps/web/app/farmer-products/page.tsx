@@ -20,8 +20,10 @@ type Product = {
 };
 
 const emptyForm = {
-  name: '', category: '', description: '', price: '', unit: 'kg', quantity: '', image_url: '',
+  name: '', category: '', description: '', price: '', unit: 'kg', quantity: '1', image_url: '',
 };
+
+const displayUnit = (unit: string) => unit === 'litre' ? 'L' : unit;
 
 export default function FarmerProductsPage() {
   const router = useRouter();
@@ -212,7 +214,7 @@ export default function FarmerProductsPage() {
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="truncate font-black text-gray-900">{product.name}</h2>{product.category && <p className="mt-0.5 text-xs font-semibold text-green-700">{product.category}</p>}</div><div className="flex gap-1"><button onClick={() => openEditForm(product)} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50" aria-label={`Edit ${product.name}`}><Pencil className="h-4 w-4" /></button><button onClick={() => deleteProduct(product)} className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600" aria-label={`Delete ${product.name}`}><Trash2 className="h-4 w-4" /></button></div></div>
                   {product.description && <p className="mt-2 line-clamp-2 text-sm text-gray-500">{product.description}</p>}
-                  <div className="mt-4 flex items-end justify-between"><p className="text-lg font-black text-green-700">₹{Number(product.price).toLocaleString('en-IN')}<span className="text-xs font-semibold text-gray-500">/{product.unit}</span></p>{product.quantity != null && <p className="text-xs font-semibold text-gray-500">{Number(product.quantity).toLocaleString()} {product.unit} available</p>}</div>
+                  <div className="mt-4"><p className="text-lg font-black text-green-700">₹{Number(product.price).toLocaleString('en-IN')}<span className="text-xs font-semibold text-gray-500"> / {Number(product.quantity || 1).toLocaleString()} {displayUnit(product.unit)}</span></p></div>
                 </div>
               </article>
             ))}
@@ -241,8 +243,8 @@ export default function FarmerProductsPage() {
               <label className="sm:col-span-2 text-sm font-bold text-gray-700">Product name *<input required maxLength={160} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Organic tomatoes" className="mt-1.5 w-full rounded-xl border border-gray-300 px-3 py-3 font-normal outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100" /></label>
               <label className="text-sm font-bold text-gray-700">Category<input maxLength={100} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="Vegetables" className="mt-1.5 w-full rounded-xl border border-gray-300 px-3 py-3 font-normal outline-none focus:border-green-500" /></label>
               <label className="text-sm font-bold text-gray-700">Unit<select value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-3 font-normal outline-none focus:border-green-500"><option value="kg">kg</option><option value="quintal">quintal</option><option value="tonne">tonne</option><option value="piece">piece</option><option value="dozen">dozen</option><option value="litre">litre</option><option value="bag">bag</option><option value="g">g</option><option value="ml">ml</option></select></label>
-              <label className="text-sm font-bold text-gray-700">Price per unit (₹) *<input required min="0" step="0.01" type="number" inputMode="decimal" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} placeholder="0.00" className="mt-1.5 w-full rounded-xl border border-gray-300 px-3 py-3 font-normal outline-none focus:border-green-500" /></label>
-              <label className="text-sm font-bold text-gray-700">Available quantity<input min="0" step="0.01" type="number" inputMode="decimal" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} placeholder="Optional" className="mt-1.5 w-full rounded-xl border border-gray-300 px-3 py-3 font-normal outline-none focus:border-green-500" /></label>
+              <label className="text-sm font-bold text-gray-700">Price (₹) *<input required min="0" step="0.01" type="number" inputMode="decimal" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} placeholder="e.g. 40" className="mt-1.5 w-full rounded-xl border border-gray-300 px-3 py-3 font-normal outline-none focus:border-green-500" /></label>
+              <label className="text-sm font-bold text-gray-700">This price is for *<input required min="0.01" step="0.01" type="number" inputMode="decimal" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} placeholder="Enter quantity" className="mt-1.5 w-full rounded-xl border border-gray-300 px-3 py-3 font-normal outline-none focus:border-green-500" /></label>
               <label className="sm:col-span-2 text-sm font-bold text-gray-700">Description<textarea rows={3} maxLength={1000} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Quality, variety, harvest or delivery details…" className="mt-1.5 w-full resize-none rounded-xl border border-gray-300 px-3 py-3 font-normal outline-none focus:border-green-500" /></label>
             </div>
             {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p>}
