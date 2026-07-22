@@ -4,6 +4,13 @@ import { Pool } from "pg";
 const DEFAULT_APP_URL = "https://cofarmz-backend-866114557322.asia-south1.run.app";
 const appBaseURL = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_BACKEND_URL || DEFAULT_APP_URL;
 const isHttpsAuth = appBaseURL.startsWith("https://");
+const cleanEnvValue = (value?: string) => value?.trim().replace(/^["']|["']$/g, "");
+
+// In the existing Cloud Run configuration, GOOGLE_CLIENT_ID_MOBILE contains
+// the Web OAuth client used by both Better Auth and the Capacitor server flow.
+const googleWebClientId = cleanEnvValue(
+  process.env.GOOGLE_CLIENT_ID_MOBILE || process.env.GOOGLE_CLIENT_ID
+);
 
 export const auth = betterAuth({
   baseURL: appBaseURL,
@@ -20,7 +27,7 @@ export const auth = betterAuth({
   },
   socialProviders: {
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientId: googleWebClientId!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     },
   },

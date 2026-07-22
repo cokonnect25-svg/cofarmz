@@ -13,7 +13,9 @@ function getValidAudiences(): string[] {
   const fromEnv = [
     process.env.GOOGLE_CLIENT_ID_MOBILE,
     process.env.GOOGLE_CLIENT_ID,
-  ].filter(Boolean) as string[];
+  ]
+    .map((value) => value?.trim().replace(/^["']|["']$/g, ''))
+    .filter(Boolean) as string[];
   return [...new Set([...hardcoded, ...fromEnv])];
 }
 
