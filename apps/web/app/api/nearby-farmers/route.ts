@@ -299,16 +299,16 @@ const targetRole =
           ORDER BY created_at DESC
         `,
         sql`
-          SELECT following_id, COUNT(*)::integer AS count
-          FROM follows
-          WHERE following_id = ANY(${userIds}::text[]) AND status = 'accepted'
-          GROUP BY following_id
-        `,
-        sql`
           SELECT id, user_id, name, category, price, unit, quantity, image_url
           FROM farmer_products
           WHERE user_id = ANY(${userIds}::text[])
           ORDER BY created_at DESC
+        `,
+        sql`
+          SELECT following_id, COUNT(*)::integer AS count
+          FROM follows
+          WHERE following_id = ANY(${userIds}::text[]) AND status = 'accepted'
+          GROUP BY following_id
         `,
         sql`
           SELECT user_id, COUNT(*)::integer AS count
