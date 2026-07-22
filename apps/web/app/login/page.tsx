@@ -150,19 +150,18 @@ const handleGoogleSignIn = async () => {
 
     // 🌐 WEB FLOW
     else {
-      const backendUrl = (
-        process.env.NEXT_PUBLIC_BACKEND_URL ||
-        'https://cofarmz-backend-866114557322.asia-south1.run.app'
-      ).replace(/\/$/, '');
-
       const callbackURL = `${window.location.origin}/auth-callback`;
 
       // 🔥 ADD prompt=select_account FOR WEB
-      const authUrl = `${backendUrl}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(
-        callbackURL
-      )}&prompt=select_account`;
+      const result = await authClient.signIn.social({
+        provider: 'google',
+        callbackURL,
+        errorCallbackURL: `${window.location.origin}/login`,
+      });
 
-      window.location.href = authUrl;
+      if (result.error) {
+        throw new Error(result.error.message || 'Google sign-in could not be started.');
+      }
     }
   } catch (err: any) {
     console.error('Google Sign-in Error:', err);

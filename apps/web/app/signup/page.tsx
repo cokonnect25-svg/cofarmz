@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
+import { authClient } from '@/lib/auth-client';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -74,8 +75,16 @@ export default function SignupPage() {
         await Browser.open({ url: authUrl, windowName: '_self' });
       } else {
         const callbackURL = `${window.location.origin}/auth-callback`;
-        const authUrl = `${backendUrl}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`;
-        window.location.href = authUrl;
+        const result = await authClient.signIn.social({
+          provider: 'google',
+          callbackURL,
+          newUserCallbackURL: callbackURL,
+          errorCallbackURL: `${window.location.origin}/signup`,
+        });
+
+        if (result.error) {
+          throw new Error(result.error.message || 'Google sign-up could not be started.');
+        }
       }
     } catch (err: any) {
       console.error('Google Sign-in Error:', err);

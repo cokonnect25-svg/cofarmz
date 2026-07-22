@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:web": "next dev --hostname 0.0.0.0",
     "build": "next build",
-    "start": "next start -p 8080",
+    "start": "next start --hostname 0.0.0.0 -p 8080",
     "lint": "next lint",
     "static": "next build",
     "mobile:build": "node scripts/mobile-build.js",
