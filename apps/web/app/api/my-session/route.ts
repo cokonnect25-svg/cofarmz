@@ -12,7 +12,11 @@ export async function GET(req: NextRequest) {
 
     // Better Auth uses these cookie names
     const cookieNames = [
+      "__Secure-cofarmz.session_token",
+      "__Host-cofarmz.session_token",
+      "cofarmz.session_token",
       "__Secure-better-auth.session_token",
+      "__Host-better-auth.session_token",
       "better-auth.session_token",
     ];
 

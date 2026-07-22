@@ -62,12 +62,15 @@ export function useAuth() {
       setFallbackResolved(true);
       return;
     }
-    if (!webLoading) {
+    if (session?.user) {
+      setFallbackUser(null);
       setFallbackResolved(true);
       return;
     }
+    if (webLoading) return;
 
     let cancelled = false;
+    setFallbackResolved(false);
     const controller = new AbortController();
     const abortTimer = window.setTimeout(() => controller.abort(), 2500);
 
@@ -95,7 +98,7 @@ export function useAuth() {
       controller.abort();
       window.clearTimeout(abortTimer);
     };
-  }, [webLoading]);
+  }, [webLoading, session?.user]);
 
   // ✅ Safe SSR check — evaluated only after hydration in practice
   const isMobile =
@@ -104,7 +107,9 @@ export function useAuth() {
     Capacitor.isNativePlatform();
 
   const user: any = isMobile ? mobileUser : ((session?.user as any) || fallbackUser);
-  const loading = isMobile ? mobileLoading : (webLoading && !fallbackResolved);
+  const loading = isMobile
+    ? mobileLoading
+    : (webLoading || (!session?.user && !fallbackResolved));
   const isAuthenticated = !!user;
 
   async function signIn(email: string, password: string) {
