@@ -19,6 +19,8 @@ interface Notification {
   link: string;
   followerId?: string;
   status?: string;
+  matchedCrops?: string[];
+  targetSearchType?: 'farmers' | 'buyers';
 }
 
 interface FollowRequest {
@@ -375,6 +377,27 @@ function NotificationsContent() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-gray-900 leading-snug">{notif.title}</p>
                     <p className="text-xs text-gray-500 mt-0.5 leading-relaxed line-clamp-2">{notif.body}</p>
+                    {notif.type === 'profile_match' && notif.matchedCrops && notif.matchedCrops.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {notif.matchedCrops.slice(0, 3).map((crop) => (
+                          <button
+                            key={crop}
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              const params = new URLSearchParams({
+                                type: notif.targetSearchType || 'farmers',
+                                crops: crop,
+                              });
+                              router.push(`/nearby-farmers?${params.toString()}`);
+                            }}
+                            className="px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-black text-emerald-700 hover:bg-emerald-100 active:scale-95 transition"
+                          >
+                            {crop}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <p className="text-[10px] text-gray-400 mt-1">
                       {new Date(notif.time).toLocaleDateString('en-IN', {
                         day: 'numeric', month: 'short',

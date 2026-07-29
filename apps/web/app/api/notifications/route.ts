@@ -488,9 +488,9 @@ if (
   notifications.push({
     id: `profile-match-setup-${userId}-${recommendationTime.slice(0, 10)}`,
     type: 'profile_match_setup',
-    title: needsCrops ? 'Your next crop connection is waiting' : 'Find crop partners near you',
+    title: needsCrops ? 'Farmers and buyers are connecting directly' : 'Find crop partners near you',
     body: needsCrops
-      ? `Add the crops you ${viewerMatch.role === 'farmer' ? 'grow' : 'want to buy'} and we will introduce nearby ${viewerMatch.role === 'farmer' ? 'buyers' : 'farmers'}.`
+      ? `Others are benefiting by contacting ${viewerMatch.role === 'farmer' ? 'buyers' : 'farmers'} directly. Add the crops you ${viewerMatch.role === 'farmer' ? 'grow' : 'want to buy'} to get your matches.`
       : 'Add your location to discover the closest people matching your crops.',
     image: null,
     time: recommendationTime,
@@ -511,12 +511,13 @@ matchedProfiles.forEach((profile: any, index: number) => {
     title: index === 0
       ? `${profile.name} is your closest crop match`
       : `Another ${targetLabel} match: ${profile.name}`,
-    body: `${cropNames} · ${distance < 1 ? `${Math.round(distance * 1000)} m` : `${distance.toFixed(1)} km`} away${profile.location ? ` · ${profile.location}` : ''}`,
+    body: `${targetLabel === 'buyer' ? 'Farmers' : 'Buyers'} are benefiting by contacting ${targetLabel}s directly for ${cropNames}. Connect with ${profile.name} · ${distance < 1 ? `${Math.round(distance * 1000)} m` : `${distance.toFixed(1)} km`} away${profile.location ? ` · ${profile.location}` : ''}`,
     image: profile.image,
     time: recommendationTime,
     link: `/farmer-profile?id=${profile.id}`,
     distanceKm: distance,
     matchedCrops: profile.matched_crops,
+    targetSearchType: targetLabel === 'buyer' ? 'buyers' : 'farmers',
   });
 });
 
