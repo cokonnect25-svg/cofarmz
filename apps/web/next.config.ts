@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  ...(process.env.MOBILE_BUILD === 'true' ? { output: 'export' as const } : {}),
   devIndicators: { buildActivity: false },
   images: {
     unoptimized: true,
