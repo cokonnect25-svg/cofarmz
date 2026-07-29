@@ -101,7 +101,11 @@ interface Stats {
   recentCallContacts: ContactReport[];
   recentEvents: RecentEvent[];
 }
-interface Announcement { id: string; title: string; body: string; created_at: string; expires_at?: string; }
+interface Announcement {
+  id: string; title: string; body: string; created_at: string; expires_at?: string;
+  scheduled_at?: string; repeat_interval_hours?: number; next_send_at?: string;
+  last_sent_at?: string; send_count?: number; is_active?: boolean;
+}
 
 function normalizeRole(role?: string) {
   const value = (role || "unknown").trim().toLowerCase();
@@ -276,6 +280,9 @@ export default function AdminDashboard() {
   const [annTitle, setAnnTitle] = useState("");
   const [annBody, setAnnBody] = useState("");
   const [annExpiry, setAnnExpiry] = useState("");
+  const [annDelivery, setAnnDelivery] = useState<"now" | "scheduled">("now");
+  const [annScheduledAt, setAnnScheduledAt] = useState("");
+  const [annRepeatHours, setAnnRepeatHours] = useState("");
   const [posting, setPosting] = useState(false);
   const [annSuccess, setAnnSuccess] = useState("");
 
@@ -324,20 +331,30 @@ export default function AdminDashboard() {
         body: JSON.stringify({
           title: annTitle,
           body: annBody,
-          createdBy: user?.name || "Admin",
-          expiresAt: annExpiry || null,
+          createdBy: user?.id,
+          expiresAt: annExpiry ? new Date(annExpiry).toISOString() : null,
+          scheduledAt: annDelivery === "scheduled" && annScheduledAt ? new Date(annScheduledAt).toISOString() : null,
+          repeatIntervalHours: annRepeatHours ? Number(annRepeatHours) : null,
         }),
       });
       if (res.ok) {
+        const created = await res.json();
         setAnnTitle("");
         setAnnBody("");
         setAnnExpiry("");
-        setAnnSuccess("Announcement posted! All users will see it in notifications.");
+        setAnnScheduledAt("");
+        setAnnRepeatHours("");
+        setAnnDelivery("now");
+        setAnnSuccess(created.sentImmediately ? "Announcement pushed to all users." : "Announcement scheduled successfully.");
         setTimeout(() => setAnnSuccess(""), 4000);
         fetchAnnouncements();
+      } else {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.error || "Failed to save announcement");
       }
     } catch (e) {
       console.error(e);
+      setAnnSuccess(e instanceof Error ? e.message : "Failed to save announcement");
     } finally {
       setPosting(false);
     }
@@ -439,9 +456,42 @@ export default function AdminDashboard() {
               rows={3}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
             />
-            <div className="flex items-center gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1 block">Delivery</label>
+                <select value={annDelivery} onChange={(e) => setAnnDelivery(e.target.value as "now" | "scheduled")} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="now">Push now</option>
+                  <option value="scheduled">Schedule for later</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1 block">Repeat frequency</label>
+                <select value={annRepeatHours} onChange={(e) => setAnnRepeatHours(e.target.value)} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">Send once</option>
+                  <option value="1">Every 1 hour</option>
+                  <option value="3">Every 3 hours</option>
+                  <option value="6">Every 6 hours</option>
+                  <option value="12">Every 12 hours</option>
+                </select>
+              </div>
+              {annDelivery === "scheduled" && (
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1 block">First push at</label>
+                  <input
+                    type="datetime-local"
+                    value={annScheduledAt}
+                    min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                    onChange={(e) => setAnnScheduledAt(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
               <div className="flex-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1 block">Expires at (optional)</label>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1 block">
+                  Stop sending / expires at {annRepeatHours ? "(recommended)" : "(optional)"}
+                </label>
                 <input
                   type="datetime-local"
                   value={annExpiry}
@@ -451,12 +501,12 @@ export default function AdminDashboard() {
               </div>
               <button
                 onClick={handlePostAnnouncement}
-                disabled={posting || !annTitle.trim() || !annBody.trim()}
+                disabled={posting || !annTitle.trim() || !annBody.trim() || (annDelivery === "scheduled" && !annScheduledAt)}
                 className="self-end px-6 py-2.5 bg-green-600 text-white text-sm font-black rounded-xl hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               >
                 {posting ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : "📤 Post"}
+                ) : annDelivery === "scheduled" ? "Schedule" : "Push Now"}
               </button>
             </div>
             {annSuccess && (
@@ -469,12 +519,18 @@ export default function AdminDashboard() {
           {/* Existing announcements */}
           {announcements.length > 0 && (
             <div className="mt-6 space-y-3">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Active Announcements</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Announcements and schedules</p>
               {announcements.map((ann) => (
                 <div key={ann.id} className="flex items-start justify-between gap-3 bg-orange-50 border border-orange-100 rounded-xl p-4">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-black text-gray-900">{ann.title}</p>
                     <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{ann.body}</p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {ann.scheduled_at && !ann.last_sent_at && <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded-full">Scheduled {new Date(ann.scheduled_at).toLocaleString("en-IN")}</span>}
+                      {ann.repeat_interval_hours && <span className="text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-1 rounded-full">Every {ann.repeat_interval_hours}h</span>}
+                      {!!ann.send_count && <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-1 rounded-full">Sent {ann.send_count} time{ann.send_count === 1 ? "" : "s"}</span>}
+                      {ann.next_send_at && ann.is_active && <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-1 rounded-full">Next {new Date(ann.next_send_at).toLocaleString("en-IN")}</span>}
+                    </div>
                     <p className="text-[10px] text-gray-400 mt-1">
                       {new Date(ann.created_at).toLocaleString("en-IN")}
                       {ann.expires_at && ` · expires ${new Date(ann.expires_at).toLocaleDateString("en-IN")}`}

@@ -152,6 +152,7 @@ const announcements = await sql`
   LEFT JOIN "user" u ON u.id = a.created_by
   WHERE a.created_at > ${sevenDaysAgo}   -- ← fixed 7-day window
     AND (a.expires_at IS NULL OR a.expires_at > NOW())
+    AND (a.scheduled_at IS NULL OR a.last_sent_at IS NOT NULL)
   ORDER BY a.created_at DESC
   LIMIT 5
 `.catch(() => []);
