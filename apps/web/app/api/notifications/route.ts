@@ -232,6 +232,80 @@ const followedReels = await sql`
   LIMIT 10
 `.catch(() => []);
 
+// Crop-based discovery: farmers see buyers, buyers see farmers.
+const viewerMatchRows = await sql`
+  SELECT
+    u.id,
+    CASE
+      WHEN LOWER(COALESCE(u.role, '')) = 'farmer' OR u.role_id = 1 THEN 'farmer'
+      WHEN LOWER(COALESCE(u.role, '')) = 'buyer' OR u.role_id = 2 THEN 'buyer'
+      ELSE LOWER(COALESCE(u.role, ''))
+    END AS role,
+    u.latitude,
+    u.longitude,
+    (SELECT COUNT(*)::int FROM crops c WHERE c.user_id = u.id) AS crop_count
+  FROM "user" u
+  WHERE u.id = ${userId}
+  LIMIT 1
+`.catch(() => []);
+
+const viewerMatch: any = viewerMatchRows[0] || null;
+const hasMatchProfile =
+  viewerMatch &&
+  ['farmer', 'buyer'].includes(viewerMatch.role) &&
+  Number(viewerMatch.crop_count) > 0 &&
+  viewerMatch.latitude != null &&
+  viewerMatch.longitude != null;
+
+const matchedProfiles = hasMatchProfile ? await sql`
+  WITH viewer_crops AS (
+    SELECT DISTINCT LOWER(TRIM(crop_name)) AS normalized_crop
+    FROM crops
+    WHERE user_id = ${userId}
+      AND NULLIF(TRIM(crop_name), '') IS NOT NULL
+  ),
+  candidates AS (
+    SELECT
+      u.id, u.name, u.image, u.location, u.latitude, u.longitude,
+      ARRAY_AGG(DISTINCT c.crop_name ORDER BY c.crop_name) AS matched_crops,
+      6371 * ACOS(
+        LEAST(1, GREATEST(-1,
+          COS(RADIANS(${Number(viewerMatch.latitude)})) *
+          COS(RADIANS(u.latitude)) *
+          COS(RADIANS(u.longitude) - RADIANS(${Number(viewerMatch.longitude)})) +
+          SIN(RADIANS(${Number(viewerMatch.latitude)})) *
+          SIN(RADIANS(u.latitude))
+        ))
+      ) AS distance_km
+    FROM "user" u
+    JOIN crops c ON c.user_id = u.id
+    JOIN viewer_crops vc ON vc.normalized_crop = LOWER(TRIM(c.crop_name))
+    WHERE u.id != ${userId}
+      AND u.latitude IS NOT NULL
+      AND u.longitude IS NOT NULL
+      AND (
+        (${viewerMatch.role} = 'farmer' AND (LOWER(COALESCE(u.role, '')) = 'buyer' OR u.role_id = 2))
+        OR (${viewerMatch.role} = 'buyer' AND (LOWER(COALESCE(u.role, '')) = 'farmer' OR u.role_id = 1))
+      )
+    GROUP BY u.id, u.name, u.image, u.location, u.latitude, u.longitude
+  )
+  , nearest_pool AS (
+    SELECT *
+    FROM candidates
+    ORDER BY distance_km ASC, name ASC
+    LIMIT 10
+  ),
+  daily_selection AS (
+    SELECT *
+    FROM nearest_pool
+    ORDER BY MD5(id || CURRENT_DATE::text)
+    LIMIT 2
+  )
+  SELECT *
+  FROM daily_selection
+  ORDER BY distance_km ASC, name ASC
+`.catch(() => []) : [];
+
     const notifications: any[] = [];
 
     newMessages.forEach((msg: any) => {
@@ -394,6 +468,55 @@ followedReels.forEach((reel: any) => {
     image: reel.thumbnail_url ?? reel.creator_image,
     time: reel.created_at,
     link: `/reels?reelId=${reel.id}&userId=${reel.creator_id}`,
+  });
+});
+
+const recommendationDay = new Date();
+recommendationDay.setUTCHours(0, 0, 0, 0);
+const recommendationTime = recommendationDay.toISOString();
+
+if (
+  viewerMatch &&
+  ['farmer', 'buyer'].includes(viewerMatch.role) &&
+  (
+    Number(viewerMatch.crop_count) === 0 ||
+    viewerMatch.latitude == null ||
+    viewerMatch.longitude == null
+  )
+) {
+  const needsCrops = Number(viewerMatch.crop_count) === 0;
+  notifications.push({
+    id: `profile-match-setup-${userId}-${recommendationTime.slice(0, 10)}`,
+    type: 'profile_match_setup',
+    title: needsCrops ? 'Your next crop connection is waiting' : 'Find crop partners near you',
+    body: needsCrops
+      ? `Add the crops you ${viewerMatch.role === 'farmer' ? 'grow' : 'want to buy'} and we will introduce nearby ${viewerMatch.role === 'farmer' ? 'buyers' : 'farmers'}.`
+      : 'Add your location to discover the closest people matching your crops.',
+    image: null,
+    time: recommendationTime,
+    link: needsCrops ? '/user-profile?addCrop=true' : '/user-profile',
+  });
+}
+
+matchedProfiles.forEach((profile: any, index: number) => {
+  const cropNames = Array.isArray(profile.matched_crops)
+    ? profile.matched_crops.slice(0, 2).join(', ')
+    : 'Your crop';
+  const distance = Number(profile.distance_km);
+  const targetLabel = viewerMatch.role === 'farmer' ? 'buyer' : 'farmer';
+
+  notifications.push({
+    id: `profile-match-${userId}-${profile.id}-${recommendationTime.slice(0, 10)}`,
+    type: 'profile_match',
+    title: index === 0
+      ? `${profile.name} is your closest crop match`
+      : `Another ${targetLabel} match: ${profile.name}`,
+    body: `${cropNames} · ${distance < 1 ? `${Math.round(distance * 1000)} m` : `${distance.toFixed(1)} km`} away${profile.location ? ` · ${profile.location}` : ''}`,
+    image: profile.image,
+    time: recommendationTime,
+    link: `/farmer-profile?id=${profile.id}`,
+    distanceKm: distance,
+    matchedCrops: profile.matched_crops,
   });
 });
 
