@@ -4,7 +4,25 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;  // 10MB
-const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // Keep in sync with the reel picker
+
+const VIDEO_MIME_TYPES: Record<string, string> = {
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+  m4v: 'video/x-m4v',
+  webm: 'video/webm',
+  avi: 'video/x-msvideo',
+  mkv: 'video/x-matroska',
+  '3gp': 'video/3gpp',
+  '3g2': 'video/3gpp2',
+  mpeg: 'video/mpeg',
+  mpg: 'video/mpeg',
+};
+
+function getFileExtension(fileName: string) {
+  const extension = fileName.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return extension || '';
+}
 
 const r2 = new S3Client({
   region: 'auto',
@@ -24,8 +42,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    const mimeType = file.type || 'image/jpeg';
-    const isVideo = mimeType.startsWith('video/');
+    const ext = getFileExtension(file.name);
+    const suppliedMimeType = file.type?.toLowerCase() || '';
+    const isVideo = suppliedMimeType.startsWith('video/') || ext in VIDEO_MIME_TYPES;
+    const mimeType = isVideo
+      ? (suppliedMimeType.startsWith('video/') ? suppliedMimeType : VIDEO_MIME_TYPES[ext])
+      : (suppliedMimeType || 'image/jpeg');
     const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
 
     if (file.size > maxSize) {
@@ -36,9 +58,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ext = file.name.split('.').pop() || (isVideo ? 'mp4' : 'jpg');
+    const safeExt = ext || (isVideo ? 'mp4' : 'jpg');
     const folder = isVideo ? 'videos' : 'images';
-    const key = `${folder}/${randomUUID()}.${ext}`;
+    const key = `${folder}/${randomUUID()}.${safeExt}`;
 
     const buffer = Buffer.from(await file.arrayBuffer());
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
+import GooglePlayBadge from '@/app/components/GooglePlayBadge';
 
 export default function Footer() {
   const pathname = usePathname();
@@ -77,6 +78,12 @@ export default function Footer() {
               <p className="text-gray-400 text-sm leading-relaxed mb-8 max-w-xs">
                 Your Global Farmer &amp; Buyer Network — Growing Together, Selling Smarter.
               </p>
+              <div className="mb-7">
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-green-400">
+                  Take CoFarmz anywhere
+                </p>
+                <GooglePlayBadge className="shadow-xl shadow-black/30" />
+              </div>
               <div className="flex items-center gap-3">
                 <a href="https://www.facebook.com/share/18WXm79jck/" target="_blank" rel="noopener noreferrer"
                   className="group w-10 h-10 bg-gray-800 hover:bg-blue-600 rounded-xl flex items-center justify-center transition-all hover:scale-110">

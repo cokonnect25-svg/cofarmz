@@ -16,6 +16,16 @@ interface Reel {
   created_at: string;
 }
 
+const MAX_REEL_SIZE = 100 * 1024 * 1024;
+const VIDEO_EXTENSIONS = new Set([
+  'mp4', 'mov', 'm4v', 'webm', 'avi', 'mkv', '3gp', '3g2', 'mpeg', 'mpg'
+]);
+
+function isVideoFile(file: File) {
+  const extension = file.name.split('.').pop()?.toLowerCase() || '';
+  return file.type.toLowerCase().startsWith('video/') || VIDEO_EXTENSIONS.has(extension);
+}
+
 function getRealThumbnail(url?: string | null) {
   if (!url) return '';
   return url.includes('via.placeholder.com') ? '' : url;
@@ -44,6 +54,8 @@ function createVideoThumbnail(file: File): Promise<Blob | null> {
     const canvas = document.createElement('canvas');
     const seekPoints = [1.2, 0.5, 2.2, 0.1];
     let seekIndex = 0;
+    let settled = false;
+    let timeout: number;
 
     const cleanup = () => {
       URL.revokeObjectURL(objectUrl);
@@ -52,9 +64,14 @@ function createVideoThumbnail(file: File): Promise<Blob | null> {
     };
 
     const finish = (blob: Blob | null) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
       cleanup();
       resolve(blob);
     };
+
+    timeout = window.setTimeout(() => finish(null), 8000);
 
     video.preload = 'metadata';
     video.muted = true;
@@ -161,13 +178,15 @@ const { user, loading: authLoading } = useAuth();
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('video/')) {
+    if (!isVideoFile(file)) {
       alert('Please select a valid video file');
+      e.target.value = '';
       return;
     }
 
-    if (file.size > 100 * 1024 * 1024) {
+    if (file.size > MAX_REEL_SIZE) {
       alert('Video file must be less than 100MB');
+      e.target.value = '';
       return;
     }
 
@@ -257,7 +276,7 @@ const { user, loading: authLoading } = useAuth();
       }
     } catch (error) {
       console.error('Error uploading reel:', error);
-      alert('Failed to upload reel. Please try again.');
+      alert(error instanceof Error ? error.message : 'Failed to upload reel. Please try again.');
     } finally {
       setUploading(false);
     }

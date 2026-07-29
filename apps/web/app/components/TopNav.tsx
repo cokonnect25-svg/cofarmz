@@ -7,6 +7,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { getApiUrl } from '@/lib/api';
 import { Bell } from 'lucide-react';
 import UserAvatar from '@/app/components/UserAvatar';
+import GooglePlayBadge from '@/app/components/GooglePlayBadge';
 
 
 // Two separate keys:
@@ -242,6 +243,8 @@ const handleOpenNotifPanel = () => {
 
           {/* Right side — language + actions */}
           <div className="flex items-center gap-2.5 flex-shrink-0 ml-auto">
+
+            <GooglePlayBadge compact className="hidden xl:inline-flex" />
 
             {/* Translate */}
             <div className="flex items-center">
