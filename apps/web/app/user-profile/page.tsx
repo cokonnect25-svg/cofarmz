@@ -430,6 +430,9 @@ const [showFollowRequests, setShowFollowRequests] = useState(false);
 const [processingFollow, setProcessingFollow] = useState<string | null>(null);
   const [shareToast, setShareToast] = useState<string | null>(null);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [roleChangeRequest, setRoleChangeRequest] = useState<any | null>(null);
+  const [canRequestRoleChange, setCanRequestRoleChange] = useState(true);
+  const [submittingRoleChange, setSubmittingRoleChange] = useState(false);
 
   const today = new Date();
   const localDate = new Date(
@@ -569,6 +572,12 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
         await fetchFavoriteEquipment();
         await fetchBookings();
         await fetchRentals();
+        const roleRequestResponse = await fetch(getApiUrl(`/api/role-change-requests?userId=${encodeURIComponent(user.id)}`));
+        if (roleRequestResponse.ok) {
+          const roleRequestData = await roleRequestResponse.json();
+          setRoleChangeRequest(roleRequestData.request || null);
+          setCanRequestRoleChange(roleRequestData.canRequest === true);
+        }
       };
       fetchInitialData();
     }
@@ -582,6 +591,33 @@ const canUseFarmerCropFields = userRole === 'farmer' || userRole === 'fpo' || is
 const cropProfileLabel = userRole === 'buyer' ? 'Crops/Commodities You Want to Buy' : 'Crops/Commodities';
 const cropProfileEmptyLabel = userRole === 'buyer' ? 'No Crops/Commodities You Want to Buy added yet' : 'No crops added yet';
 const addCropLabel = userRole === 'buyer' ? 'Add Crop You Want to Buy' : 'Add Crop';
+
+const handleRoleChangeRequest = async () => {
+  if (!user?.id || !['farmer', 'buyer'].includes(userRole) || !canRequestRoleChange) return;
+  const requestedRole = userRole === 'farmer' ? 'buyer' : 'farmer';
+  const confirmed = window.confirm(
+    `Request a change from ${userRole} to ${requestedRole}?\n\nThis request can only be submitted once. Your role changes only if an admin approves it.`
+  );
+  if (!confirmed) return;
+
+  setSubmittingRoleChange(true);
+  try {
+    const response = await fetch(getApiUrl('/api/role-change-requests'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user.id, requestedRole }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to submit request');
+    setRoleChangeRequest(data.request);
+    setCanRequestRoleChange(false);
+    alert('Your one-time role-change request was sent to the admin.');
+  } catch (error: any) {
+    alert(error?.message || 'Failed to submit role-change request');
+  } finally {
+    setSubmittingRoleChange(false);
+  }
+};
 
 const fetchProductCount = async () => {
   if (!user?.id) return;
@@ -1341,6 +1377,52 @@ const fetchFollowersCounts = async () => {
               </span>
             </div>
           </div>
+          {['farmer', 'buyer'].includes(userRole) && (
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+              {roleChangeRequest ? (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-bold text-gray-900">
+                      Role change to {roleChangeRequest.requested_role}
+                    </p>
+                    <p className="mt-0.5 text-xs text-gray-600">
+                      {roleChangeRequest.status === 'pending'
+                        ? 'Waiting for admin approval. Your current role remains active.'
+                        : roleChangeRequest.status === 'approved'
+                          ? 'Approved. Your new role is active; this one-time change has been used.'
+                          : 'Rejected by admin. Your role was not changed; the one-time request has been used.'}
+                    </p>
+                  </div>
+                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${
+                    roleChangeRequest.status === 'approved'
+                      ? 'bg-green-100 text-green-700'
+                      : roleChangeRequest.status === 'rejected'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {roleChangeRequest.status}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-gray-900">Need to become a {userRole === 'farmer' ? 'buyer' : 'farmer'}?</p>
+                    <p className="mt-0.5 text-xs text-gray-600">
+                      You can submit this request only once. Your role changes after admin approval.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRoleChangeRequest}
+                    disabled={!canRequestRoleChange || submittingRoleChange}
+                    className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white hover:bg-amber-700 disabled:opacity-50"
+                  >
+                    {submittingRoleChange ? 'Sending...' : 'Request role change'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           <button onClick={handleOpenEditModal} className="text-sm flex items-center gap-1 mt-1 hover:opacity-80 transition">
             <MapPin className="w-4 h-4 text-green-600 flex-shrink-0" />
             {profileData?.location

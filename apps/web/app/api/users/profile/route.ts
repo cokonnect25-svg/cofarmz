@@ -135,6 +135,16 @@ const roleId = roleRow[0].id;
       await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role_confirmed BOOLEAN DEFAULT false`;
     } catch (e: any) { errors.push('role_confirmed col: ' + e.message); }
 
+    const currentUsers = userId
+      ? await sql`SELECT role, role_confirmed FROM "user" WHERE id = ${userId} LIMIT 1`
+      : await sql`SELECT role, role_confirmed FROM "user" WHERE email = ${email} LIMIT 1`;
+    if (currentUsers[0]?.role_confirmed === true) {
+      return NextResponse.json(
+        { error: 'Your role is already confirmed. Submit the one-time role-change request from your profile.' },
+        { status: 403 }
+      );
+    }
+
     try {
       result = await sql`UPDATE "user" SET role = ${role}, role_id = ${roleId}, supplier_types = ${supplierTypes}::text[], role_confirmed = true ${whereClause} RETURNING id, email, role, role_id, supplier_types`;
     } catch (e: any) {

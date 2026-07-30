@@ -106,6 +106,17 @@ interface Announcement {
   scheduled_at?: string; repeat_interval_hours?: number; next_send_at?: string;
   last_sent_at?: string; send_count?: number; is_active?: boolean;
 }
+interface RoleChangeRequest {
+  id: number;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  current_role: "farmer" | "buyer";
+  requested_role: "farmer" | "buyer";
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+  reviewed_at?: string;
+}
 
 function normalizeRole(role?: string) {
   const value = (role || "unknown").trim().toLowerCase();
@@ -285,6 +296,9 @@ export default function AdminDashboard() {
   const [annRepeatHours, setAnnRepeatHours] = useState("");
   const [posting, setPosting] = useState(false);
   const [annSuccess, setAnnSuccess] = useState("");
+  const [roleRequests, setRoleRequests] = useState<RoleChangeRequest[]>([]);
+  const [loadingRoleRequests, setLoadingRoleRequests] = useState(false);
+  const [reviewingRoleRequest, setReviewingRoleRequest] = useState<number | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -310,6 +324,7 @@ export default function AdminDashboard() {
       .catch(console.error)
       .finally(() => setLoadingStats(false));
     fetchAnnouncements();
+    fetchRoleRequests();
   }, [verified]);
 
   const fetchAnnouncements = () => {
@@ -319,6 +334,37 @@ export default function AdminDashboard() {
       .then((data) => setAnnouncements(Array.isArray(data) ? data : []))
       .catch(console.error)
       .finally(() => setLoadingAnn(false));
+  };
+
+  const fetchRoleRequests = () => {
+    if (!user?.id) return;
+    setLoadingRoleRequests(true);
+    fetch(getApiUrl(`/api/role-change-requests?adminId=${encodeURIComponent(user.id)}`))
+      .then((r) => r.json())
+      .then((data) => setRoleRequests(Array.isArray(data.requests) ? data.requests : []))
+      .catch(console.error)
+      .finally(() => setLoadingRoleRequests(false));
+  };
+
+  const reviewRoleRequest = async (requestId: number, action: "approved" | "rejected") => {
+    if (!user?.id) return;
+    setReviewingRoleRequest(requestId);
+    try {
+      const response = await fetch(getApiUrl("/api/role-change-requests"), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminId: user.id, requestId, action }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to review request");
+      setRoleRequests((current) =>
+        current.map((item) => item.id === requestId ? { ...item, status: action } : item)
+      );
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to review request");
+    } finally {
+      setReviewingRoleRequest(null);
+    }
   };
 
   const handlePostAnnouncement = async () => {
@@ -430,6 +476,64 @@ export default function AdminDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <div>
+              <h2 className="text-lg font-black text-gray-900">Role Change Requests</h2>
+              <p className="text-xs text-gray-400 font-semibold mt-0.5">
+                Each user can submit only one farmer/buyer role-change request.
+              </p>
+            </div>
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700">
+              {roleRequests.filter((item) => item.status === "pending").length} pending
+            </span>
+          </div>
+          {loadingRoleRequests ? (
+            <div className="h-24 rounded-xl bg-gray-50 animate-pulse" />
+          ) : roleRequests.length === 0 ? (
+            <p className="rounded-xl bg-gray-50 p-4 text-center text-sm font-bold text-gray-400">No role-change requests yet</p>
+          ) : (
+            <div className="space-y-3">
+              {roleRequests.map((request) => (
+                <div key={request.id} className="flex flex-col gap-3 rounded-xl border border-gray-100 p-4 md:flex-row md:items-center md:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black text-gray-900">{request.user_name || "User"}</p>
+                    <p className="truncate text-xs text-gray-500">{request.user_email}</p>
+                    <p className="mt-1 text-xs font-bold text-gray-700">
+                      {roleLabel(request.current_role)} → {roleLabel(request.requested_role)}
+                      <span className="ml-2 font-semibold text-gray-400">{formatDateTime(request.created_at)}</span>
+                    </p>
+                  </div>
+                  {request.status === "pending" ? (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => reviewRoleRequest(request.id, "rejected")}
+                        disabled={reviewingRoleRequest === request.id}
+                        className="rounded-lg bg-red-50 px-4 py-2 text-xs font-black text-red-600 hover:bg-red-100 disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => reviewRoleRequest(request.id, "approved")}
+                        disabled={reviewingRoleRequest === request.id}
+                        className="rounded-lg bg-green-600 px-4 py-2 text-xs font-black text-white hover:bg-green-700 disabled:opacity-50"
+                      >
+                        {reviewingRoleRequest === request.id ? "Saving..." : "Approve"}
+                      </button>
+                    </div>
+                  ) : (
+                    <span className={`w-fit rounded-full px-3 py-1 text-[10px] font-black uppercase ${
+                      request.status === "approved" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                    }`}>
+                      {request.status}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* ── ANNOUNCEMENT COMPOSER ── */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
