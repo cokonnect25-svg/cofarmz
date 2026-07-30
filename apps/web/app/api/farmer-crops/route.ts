@@ -1,4 +1,5 @@
 import sql from "@/app/api/utils/sql";
+import { sendCropMatchPushes } from "@/app/api/utils/crop-match-push";
 import { NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
@@ -123,6 +124,8 @@ export async function POST(request: Request) {
       RETURNING *
     `;
 
+    await sendCropMatchPushes(user_id, trimmedCropName);
+
     return NextResponse.json(result[0]);
   } catch (error: any) {
     console.error('Error creating crop:', error);
@@ -150,7 +153,11 @@ export async function PUT(request: Request) {
 
     await ensureSchema();
 
-    const cropRow = await sql`SELECT user_id FROM crops WHERE id = ${parseInt(id)}`;
+    const cropRow = await sql`
+      SELECT user_id, crop_name
+      FROM crops
+      WHERE id = ${parseInt(id)}
+    `;
 
     if (cropRow.length === 0) {
       return NextResponse.json({ error: 'Crop not found' }, { status: 404 });
@@ -186,6 +193,13 @@ export async function PUT(request: Request) {
       WHERE id = ${parseInt(id)}
       RETURNING *
     `;
+
+    if (
+      String(cropRow[0].crop_name).trim().toLowerCase() !==
+      trimmedCropName.toLowerCase()
+    ) {
+      await sendCropMatchPushes(user_id, trimmedCropName);
+    }
 
     return NextResponse.json(result[0]);
   } catch (error: any) {
