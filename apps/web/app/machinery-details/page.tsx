@@ -116,7 +116,7 @@ function MachineryDetailsContent() {
         getApiUrl(`/api/reservations?user_id=${user.id}`)
       );
       if (response.ok) {
-        const data = await response.json();
+                const data = await response.json();
         // Check for pending booking on this machine
         const pendingBooking = data.find((r: any) =>
           r.machinery_id === machineryId &&

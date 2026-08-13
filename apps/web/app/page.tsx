@@ -414,9 +414,8 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
       <div className="max-w-7xl mx-auto px-6 py-10">
         {/* Profile posts — manual swipe carousel, intentionally no auto-scroll */}
         <section className="mb-10">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4">
             <div><h2 className="text-2xl font-black text-gray-900">Community Posts</h2><p className="mt-1 text-xs font-semibold text-gray-500">Updates shared for you</p></div>
-            <button onClick={() => router.push('/posts')} className="rounded-xl bg-green-600 px-4 py-2 text-xs font-black text-white shadow-sm">Create Post</button>
           </div>
           {profilePosts.length ? (
             <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 hide-scrollbar">
@@ -923,6 +922,16 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
       </div>
 
       {/* Role Selection Modal Overlay */}
+      <button
+        type="button"
+        onClick={() => router.push('/posts')}
+        aria-label="Create a new post"
+        className="fixed bottom-[calc(76px+env(safe-area-inset-bottom))] right-4 z-50 flex items-center gap-2 rounded-full bg-green-600 px-4 py-3 text-sm font-black text-white shadow-[0_10px_30px_rgba(22,163,74,0.4)] transition hover:bg-green-700 active:scale-95 md:bottom-6 md:right-6"
+      >
+        <i className="ph-bold ph-note-pencil text-xl" aria-hidden="true"></i>
+        <span>New Post</span>
+      </button>
+
       {showRoleModal && (
         <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">

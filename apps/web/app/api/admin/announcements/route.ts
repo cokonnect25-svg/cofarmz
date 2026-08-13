@@ -89,10 +89,11 @@ export async function POST(request: Request) {
         title: `Announcement: ${title}`,
         body: body.length > 120 ? `${body.slice(0, 120)}...` : body,
         url: "/notifications",
-        tag: `ann-${result[0].id}`,
+        tag: `ann-${result[0].id}-delivery-1`,
         data: {
           type: "announcement",
           announcementId: result[0].id,
+          deliveryNumber: 1,
         },
       });
     }
