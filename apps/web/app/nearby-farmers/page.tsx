@@ -172,8 +172,34 @@ const defaultFilters = {
   certTypes:       [] as string[],
 };
 
-const [filters, setFilters] = useState(defaultFilters);
-const [visibleCount, setVisibleCount] = useState(50);
+const [filters, setFilters] = useState(() => {
+  if (typeof window !== 'undefined') {
+    const saved = sessionStorage.getItem(FILTERS_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          ...defaultFilters,
+          ...parsed,
+          country: parsed.country || 'India',
+          crops: Array.isArray(parsed.crops) ? parsed.crops : defaultFilters.crops,
+          equipment: Array.isArray(parsed.equipment) ? parsed.equipment : [],
+          grades: Array.isArray(parsed.grades) ? parsed.grades : [],
+          certTypes: Array.isArray(parsed.certTypes) ? parsed.certTypes : [],
+        };
+      } catch {}
+    }
+  }
+  return defaultFilters;
+});
+
+const [visibleCount, setVisibleCount] = useState(() => {
+  if (typeof window !== 'undefined') {
+    const saved = sessionStorage.getItem(VISIBLE_KEY);
+    if (saved) return parseInt(saved);
+  }
+  return 50;
+});
 const isRestoringRef = useRef(false); 
 const scrollContainerRef = useRef<HTMLDivElement>(null);
 
