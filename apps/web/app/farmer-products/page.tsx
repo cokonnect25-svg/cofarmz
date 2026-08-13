@@ -201,7 +201,7 @@ export default function FarmerProductsPage() {
           <div className="rounded-3xl border border-dashed border-green-300 bg-white px-5 py-16 text-center">
             <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-green-100 text-green-700"><Package className="h-8 w-8" /></div>
             <h2 className="text-xl font-black text-gray-900">No products yet</h2>
-            <p className="mx-auto mt-2 max-w-sm text-sm text-gray-500">Add products you grow or sell so they are easy to manage from your farmer profile.</p>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-gray-500">Add products you grow or sell so they are easy to manage from your profile.</p>
             <button onClick={openAddForm} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-bold text-white"><Plus className="h-4 w-4" /> Add your first product</button>
           </div>
         ) : (

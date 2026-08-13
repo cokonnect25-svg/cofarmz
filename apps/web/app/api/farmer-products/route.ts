@@ -31,7 +31,7 @@ export async function GET(request: Request) {
       ? await sql`
           SELECT p.id, p.user_id, p.name, p.category, p.description, p.price, p.unit,
                  p.quantity, p.image_url, p.created_at, p.updated_at,
-                 u.name AS farmer_name, u.location AS farmer_location, u.image AS farmer_image
+                 u.name AS seller_name, u.location AS seller_location, u.image AS seller_image
           FROM farmer_products p
           LEFT JOIN "user" u ON u.id = p.user_id
           WHERE p.user_id = ${userId}
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
       : await sql`
           SELECT p.id, p.user_id, p.name, p.category, p.description, p.price, p.unit,
                  p.quantity, p.image_url, p.created_at, p.updated_at,
-                 u.name AS farmer_name, u.location AS farmer_location, u.image AS farmer_image
+                 u.name AS seller_name, u.location AS seller_location, u.image AS seller_image
           FROM farmer_products p
           LEFT JOIN "user" u ON u.id = p.user_id
           WHERE ${search} = ''

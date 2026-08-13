@@ -21,6 +21,7 @@ export async function GET(request: Request) {
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS supplier_types TEXT[] DEFAULT ARRAY[]::TEXT[]`.catch(() => {});
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS calling_enabled BOOLEAN DEFAULT true`.catch(() => {});
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS bio TEXT`.catch(() => {});
+    await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS image_url TEXT`.catch(() => {});
 
     // ── Core profile ────────────────────────────────────────────────────────
     const farmers = await sql`
@@ -101,6 +102,7 @@ export async function GET(request: Request) {
           expected_yield_quantity,
           expected_yield_quantity_uom,
           is_crop_waste,
+          image_url,
           certificate_url,
           grade,
           certification_type

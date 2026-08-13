@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, Suspense, useRef, useCallback } from 'react';
+import { ChangeEvent, useEffect, useState, Suspense, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 
 import { Capacitor } from '@capacitor/core';
@@ -41,6 +41,7 @@ interface FarmerCrop {
   is_crop_waste: boolean;
   crop_type: string;
   certificate_url: string | null;
+  image_url: string | null;
   grade: string | null;
   created_at: string;
   certification_type: string | null;
@@ -64,6 +65,57 @@ const COMMON_CROPS = [
 ];
 
 const GRADE_OPTIONS = ['A+', 'A', 'B+', 'B', 'C', 'D', 'Organic', 'Premium', 'Ungraded'];
+
+function CropImageUploader({ value, onChange, accent = 'green' }: { value: string; onChange: (url: string) => void; accent?: 'green' | 'blue' }) {
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  const upload = async (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return setError('Please select an image file.');
+    if (file.size > 10 * 1024 * 1024) return setError('Image must be smaller than 10MB.');
+    setUploading(true); setError('');
+    try {
+      const body = new FormData(); body.append('file', file);
+      const response = await fetch(getApiUrl('/api/upload'), { method: 'POST', body });
+      const result = await response.json();
+      if (!response.ok || !result.url) throw new Error(result.error || 'Image upload failed');
+      onChange(result.url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Image upload failed');
+    } finally { setUploading(false); }
+  };
+  const pickNative = async (source: CameraSource) => {
+    try {
+      const photo = await Camera.getPhoto({ source, resultType: CameraResultType.Uri, quality: 85, correctOrientation: true });
+      if (!photo.webPath) return;
+      const blob = await (await fetch(photo.webPath)).blob();
+      await upload(new File([blob], `crop-${Date.now()}.${photo.format || 'jpeg'}`, { type: blob.type || `image/${photo.format || 'jpeg'}` }));
+    } catch (err: any) {
+      if (!String(err?.message || err).toLowerCase().includes('cancel')) setError('Could not open the image picker.');
+    }
+  };
+  const fileChanged = (event: ChangeEvent<HTMLInputElement>) => { void upload(event.target.files?.[0]); event.target.value = ''; };
+  const imageBoxClass = accent === 'blue' ? 'border-blue-300 bg-blue-50' : 'border-green-300 bg-green-50';
+  const spinnerClass = accent === 'blue' ? 'border-blue-600' : 'border-green-600';
+  return <div>
+    <label className="block text-sm font-semibold text-gray-900 mb-2">Crop Image <span className="text-gray-400 font-normal text-xs">(optional)</span></label>
+    <div className={`relative aspect-[16/8] overflow-hidden rounded-xl border-2 border-dashed ${imageBoxClass}`}>
+      {value ? <img src={value} alt="Crop preview" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-center text-gray-500"><div><i className="ph-bold ph-image text-3xl"></i><p className="text-xs font-bold mt-1">Add a crop photo</p></div></div>}
+      {uploading && <div className="absolute inset-0 grid place-items-center bg-white/75"><div className={`h-8 w-8 animate-spin rounded-full border-4 border-t-transparent ${spinnerClass}`} /></div>}
+    </div>
+    <div className="grid grid-cols-2 gap-2 mt-2">
+      <button type="button" disabled={uploading} onClick={() => Capacitor.isNativePlatform() ? void pickNative(CameraSource.Camera) : cameraRef.current?.click()} className="rounded-lg border px-3 py-2 text-sm font-bold disabled:opacity-50"><i className="ph-bold ph-camera mr-1" />Camera</button>
+      <button type="button" disabled={uploading} onClick={() => Capacitor.isNativePlatform() ? void pickNative(CameraSource.Photos) : galleryRef.current?.click()} className="rounded-lg border px-3 py-2 text-sm font-bold disabled:opacity-50"><i className="ph-bold ph-images mr-1" />Gallery</button>
+    </div>
+    {value && <button type="button" onClick={() => onChange('')} className="mt-2 text-xs font-bold text-red-600">Remove image</button>}
+    {error && <p className="mt-2 text-xs font-semibold text-red-600">{error}</p>}
+    <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={fileChanged} className="hidden" />
+    <input ref={galleryRef} type="file" accept="image/*" onChange={fileChanged} className="hidden" />
+  </div>;
+}
 
 
 const CERTIFICATION_TYPES = [
@@ -399,7 +451,7 @@ function ProfileContent() {
   const [newCrop, setNewCrop] = useState({
     crop_name: '', years_of_experience: '', expertise_level: 'Beginner',
     expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg',
-    is_crop_waste: false, certificate_url: '', grade: '',certification_type: null as string | null,
+    is_crop_waste: false, certificate_url: '', image_url: '', grade: '',certification_type: null as string | null,
   });
   const [addingCrop, setAddingCrop] = useState(false);
   const [showAddCropForm, setShowAddCropForm] = useState(false);
@@ -533,7 +585,7 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
   const [editCropForm, setEditCropForm] = useState({
     crop_name: '', years_of_experience: '', expertise_level: 'Beginner',
     expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg',
-    is_crop_waste: false, certificate_url: '', grade: '',certification_type: null as string | null,
+    is_crop_waste: false, certificate_url: '', image_url: '', grade: '',certification_type: null as string | null,
   });
   const [editCropSuggestions, setEditCropSuggestions] = useState<string[]>([]);
   const [showEditCropSuggestions, setShowEditCropSuggestions] = useState(false);
@@ -944,13 +996,14 @@ const fetchFollowersCounts = async () => {
           crop_type: 'grow',
           is_crop_waste: userRole === 'buyer' ? newCrop.is_crop_waste : false,
           certificate_url: newCrop.certificate_url || null,
+          image_url: newCrop.image_url || null,
           certification_type: canUseFarmerCropFields ? (newCrop.certification_type || null) : null,
           grade: newCrop.grade || null,
         }),
       });
       const data = await response.json();
       if (response.ok && !data.error) {
-        setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '', certification_type: null });
+        setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', image_url: '', grade: '', certification_type: null });
         setShowAddCropForm(false);
         setCropSuggestions([]); setShowSuggestions(false);
         await fetchUserCrops();
@@ -993,6 +1046,7 @@ const fetchFollowersCounts = async () => {
       expected_yield_quantity_uom: crop.expected_yield_quantity_uom || 'kg',
       is_crop_waste: crop.is_crop_waste || false,
       certificate_url: crop.certificate_url || '',
+      image_url: crop.image_url || '',
       certification_type: crop.certification_type || null,
       grade: crop.grade || '',
     });
@@ -1033,6 +1087,7 @@ const fetchFollowersCounts = async () => {
           crop_type: 'grow',
           is_crop_waste: userRole === 'buyer' ? editCropForm.is_crop_waste : false,
           certificate_url: editCropForm.certificate_url || null,
+          image_url: editCropForm.image_url || null,
           certification_type: canUseFarmerCropFields ? (editCropForm.certification_type || null) : null,
           grade: editCropForm.grade || null,
         }),
@@ -1496,7 +1551,7 @@ const fetchFollowersCounts = async () => {
     <p className="font-bold text-lg text-gray-900">{farmerCrops.length}</p>
     <p className="text-xs text-gray-600 leading-tight">{cropProfileLabel}</p>
   </button>}
-  {(userRole === 'farmer' || userRole === 'fpo' || isCommoditySupplier) && <button onClick={() => router.push('/farmer-products')} className="cursor-pointer hover:bg-green-50 p-2 rounded transition">
+  {(userRole === 'farmer' || userRole === 'buyer' || userRole === 'fpo' || isCommoditySupplier) && <button onClick={() => router.push('/farmer-products')} className="cursor-pointer hover:bg-green-50 p-2 rounded transition">
     <p className="font-bold text-lg text-gray-900">{productCount}</p>
     <p className="text-xs text-gray-600">Products</p>
   </button>}
@@ -1558,6 +1613,7 @@ const fetchFollowersCounts = async () => {
                   ? <div className="text-center py-8"><p className="text-sm text-gray-600 mb-3">{cropProfileEmptyLabel}</p></div>
                   : <div className="space-y-3">{farmerCrops.map(crop => (
                     <div key={crop.id} className="bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-green-50 hover:border-green-200 transition-colors active:scale-[0.98]" onClick={() => setSelectedCrop(crop)}>
+                      {crop.image_url && <img src={crop.image_url} alt={crop.crop_name} className="mb-3 h-32 w-full rounded-lg object-cover" />}
                       <div className="flex justify-between items-start mb-2">
                         <h4 className="font-semibold text-sm text-gray-900">{crop.crop_name}</h4>
                         <div className="flex gap-1">
@@ -1824,6 +1880,7 @@ const fetchFollowersCounts = async () => {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setSelectedCrop(null)}>
           <div className="bg-white rounded-t-3xl w-full max-w-md p-6 pb-8" onClick={e => e.stopPropagation()}>
             <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-5"></div>
+            {selectedCrop.image_url && <img src={selectedCrop.image_url} alt={selectedCrop.crop_name} className="mb-5 h-52 w-full rounded-2xl object-cover" />}
             <div className="flex items-center gap-3 mb-5">
               <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center text-2xl flex-shrink-0">🌾</div>
               <div>
@@ -1907,11 +1964,12 @@ const fetchFollowersCounts = async () => {
           <div className="bg-white rounded-2xl overflow-hidden shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 flex items-center justify-between z-10">
               <h3 className="text-lg font-bold text-white">Add New Crop</h3>
-              <button onClick={() => { setShowAddCropForm(false); setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '', certification_type: null }); setCropSuggestions([]); setShowSuggestions(false); }} className="p-1 hover:bg-white/20 rounded-lg transition">
+              <button onClick={() => { setShowAddCropForm(false); setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', image_url: '', grade: '', certification_type: null }); setCropSuggestions([]); setShowSuggestions(false); }} className="p-1 hover:bg-white/20 rounded-lg transition">
                 <X className="w-5 h-5 text-white" />
               </button>
             </div>
             <div className="p-6 space-y-4">
+              <CropImageUploader value={newCrop.image_url} onChange={url => setNewCrop(p => ({ ...p, image_url: url }))} />
               {/* Crop name */}
               <div className="relative">
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Crop Name *</label>
@@ -2000,7 +2058,7 @@ const fetchFollowersCounts = async () => {
               <button
                 onClick={() => {
                   setShowAddCropForm(false);
-                  setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '', certification_type: null });
+                  setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', image_url: '', grade: '', certification_type: null });
                   setCropSuggestions([]); setShowSuggestions(false);
                 }}
                 className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition active:scale-95"
@@ -2031,11 +2089,12 @@ const fetchFollowersCounts = async () => {
                 <h3 className="text-xl font-black text-gray-900 leading-none mb-1">Edit Crop Details</h3>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Update your agricultural profile</p>
               </div>
-              <button onClick={() => { setEditingCrop(null); setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '', certification_type: null }); setEditCropSuggestions([]); setShowEditCropSuggestions(false); }} className="p-2 hover:bg-gray-100 rounded-xl transition">
+              <button onClick={() => { setEditingCrop(null); setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', image_url: '', grade: '', certification_type: null }); setEditCropSuggestions([]); setShowEditCropSuggestions(false); }} className="p-2 hover:bg-gray-100 rounded-xl transition">
                 <X className="w-5 h-5 text-gray-600" />
               </button>
             </div>
             <div className="p-6 space-y-4">
+              <CropImageUploader value={editCropForm.image_url} onChange={url => setEditCropForm(p => ({ ...p, image_url: url }))} accent="blue" />
               {/* Crop name */}
               <div className="relative">
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Crop Name *</label>
@@ -2133,7 +2192,7 @@ const fetchFollowersCounts = async () => {
               ) : null}
               {/* Actions */}
               <div className="flex gap-3 pt-4">
-                <button onClick={() => { setEditingCrop(null); setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', grade: '',certification_type: null }); setEditCropSuggestions([]); setShowEditCropSuggestions(false); }} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition">Cancel</button>
+                <button onClick={() => { setEditingCrop(null); setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', image_url: '', grade: '',certification_type: null }); setEditCropSuggestions([]); setShowEditCropSuggestions(false); }} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition">Cancel</button>
                 <button onClick={handleSaveEditCrop} disabled={savingCrop} className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   {savingCrop ? (<><div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div><span>Saving...</span></>) : (<><i className="ph-bold ph-check text-sm"></i><span>Save Changes</span></>)}
                 </button>

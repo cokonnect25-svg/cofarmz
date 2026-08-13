@@ -140,6 +140,7 @@ await sql`
     await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS crop_type VARCHAR(20) DEFAULT 'grow'`.catch(() => {});
     await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS is_crop_waste BOOLEAN DEFAULT false`.catch(() => {});
     await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS certification_type VARCHAR(50) DEFAULT NULL`.catch(() => {});
+    await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS image_url TEXT`.catch(() => {});
     // Drop restrictive check constraint so buyer crop_type='buy' is allowed
     await sql`ALTER TABLE crops DROP CONSTRAINT IF EXISTS crops_crop_type_check`.catch(() => {});
     results.push("crop_type/is_crop_waste columns ensured, check constraint dropped");

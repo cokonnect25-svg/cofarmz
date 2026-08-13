@@ -18,6 +18,7 @@ async function ensureSchema() {
     crop_type VARCHAR(20) DEFAULT 'grow',
     is_crop_waste BOOLEAN DEFAULT false,
     certificate_url TEXT,
+    image_url TEXT,
     grade VARCHAR(10),
     certification_type VARCHAR(50) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT NOW()
@@ -26,6 +27,7 @@ async function ensureSchema() {
   await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS crop_type VARCHAR(20) DEFAULT 'grow'`.catch(() => {});
   await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS is_crop_waste BOOLEAN DEFAULT false`.catch(() => {});
   await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS certificate_url TEXT`.catch(() => {});
+  await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS image_url TEXT`.catch(() => {});
   await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS grade VARCHAR(10)`.catch(() => {});
   await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS certification_type VARCHAR(50) DEFAULT NULL`.catch(() => {});
   await sql`ALTER TABLE crops DROP CONSTRAINT IF EXISTS crops_crop_type_check`.catch(() => {});
@@ -47,7 +49,7 @@ export async function GET(request: Request) {
       SELECT
         id, crop_name, years_of_experience, expertise_level,
         expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom,
-        is_crop_waste, crop_type, certification_type, certificate_url, grade, created_at
+        is_crop_waste, crop_type, certification_type, certificate_url, image_url, grade, created_at
       FROM crops
       WHERE user_id = ${userId}
       ORDER BY created_at DESC
@@ -65,7 +67,7 @@ export async function POST(request: Request) {
     const {
       user_id, crop_name, years_of_experience, expertise_level,
       expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom,
-      crop_type, is_crop_waste, certificate_url, grade,
+      crop_type, is_crop_waste, certificate_url, image_url, grade,
     } = body;
 
     // BUG FIX 2: normalise certification_type — empty string → null
@@ -105,7 +107,7 @@ export async function POST(request: Request) {
       INSERT INTO crops (
         user_id, crop_name, years_of_experience, expertise_level,
         expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom,
-        crop_type, is_crop_waste, certificate_url, grade, certification_type
+        crop_type, is_crop_waste, certificate_url, image_url, grade, certification_type
       )
       VALUES (
         ${user_id},
@@ -118,6 +120,7 @@ export async function POST(request: Request) {
         ${crop_type || 'grow'},
         ${is_crop_waste ?? false},
         ${certificate_url || null},
+        ${image_url || null},
         ${grade || null},
         ${certification_type}
       )
@@ -139,7 +142,7 @@ export async function PUT(request: Request) {
     const {
       id, crop_name, years_of_experience, expertise_level,
       expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom,
-      crop_type, is_crop_waste, certificate_url, grade,
+      crop_type, is_crop_waste, certificate_url, image_url, grade,
     } = body;
 
     // BUG FIX 2: normalise certification_type — empty string → null
@@ -188,6 +191,7 @@ export async function PUT(request: Request) {
         crop_type             = ${crop_type || 'grow'},
         is_crop_waste         = ${is_crop_waste ?? false},
         certificate_url       = ${certificate_url || null},
+        image_url             = ${image_url || null},
         grade                 = ${grade || null},
         certification_type    = ${certification_type}
       WHERE id = ${parseInt(id)}

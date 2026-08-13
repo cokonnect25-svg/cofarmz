@@ -98,6 +98,7 @@ interface Crop {
   certificate_url?: string | null;
   grade?: string | null;
   certification_type?: string | null;
+  image_url?: string | null;
   // linked data — populated client-side by matching crop_name
   certificates?: Certificate[];
   reels?: Reel[];
@@ -816,6 +817,7 @@ if (Capacitor.isNativePlatform()) {
                         isWaste ? 'border-amber-200 bg-amber-50' : 'border-gray-100 bg-gray-50'
                       } ${isOpen ? 'shadow-md border-green-200' : ''}`}
                     >
+                      {crop.image_url && <img src={crop.image_url} alt={crop.crop_name} className="h-36 w-full object-cover" />}
                       {/* ── Crop Header — always tap to expand ── */}
                       <button
                         className="w-full text-left p-3"
