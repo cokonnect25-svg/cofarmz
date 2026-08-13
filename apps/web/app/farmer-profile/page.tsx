@@ -125,6 +125,14 @@ interface FarmerProduct {
   image_url: string | null;
 }
 
+interface ProfilePost {
+  id: number;
+  content: string;
+  image_url: string | null;
+  audience: string;
+  created_at: string;
+}
+
 const displayProductUnit = (unit: string) => unit === 'litre' ? 'L' : unit;
 
 // ─── Role Config ──────────────────────────────────────────────────────────────
@@ -343,6 +351,7 @@ function FarmerProfileContent() {
   const [crops, setCrops] = useState<Crop[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [products, setProducts] = useState<FarmerProduct[]>([]);
+  const [posts, setPosts] = useState<ProfilePost[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [mounted, setMounted] = useState(false);
   const [expandedCropIdx, setExpandedCropIdx] = useState<number | null>(null);
@@ -421,11 +430,16 @@ function FarmerProfileContent() {
       setFollowing(Array.isArray(data.following) ? data.following : []);
 
       try {
-        const productsRes = await fetch(getApiUrl(`/api/farmer-products?userId=${encodeURIComponent(farmerId)}`));
-        const productsData = await productsRes.json();
+        const [productsRes, postsRes] = await Promise.all([
+          fetch(getApiUrl(`/api/farmer-products?userId=${encodeURIComponent(farmerId)}`)),
+          fetch(getApiUrl(`/api/posts?userId=${encodeURIComponent(farmerId)}&viewerId=${encodeURIComponent(user.id)}`)),
+        ]);
+        const [productsData, postsData] = await Promise.all([productsRes.json(), postsRes.json()]);
         setProducts(productsRes.ok && Array.isArray(productsData) ? productsData : []);
+        setPosts(postsRes.ok && Array.isArray(postsData) ? postsData : []);
       } catch {
         setProducts([]);
+        setPosts([]);
       }
     } catch (e: any) {
       setError(e?.message || 'Unknown error');
@@ -987,6 +1001,13 @@ if (Capacitor.isNativePlatform()) {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {posts.length > 0 && (
+          <div>
+            <SectionHeader title="Posts" count={posts.length} expanded={openSections.has('posts')} onToggle={() => toggleSection('posts')} icon={MessageCircle} color="text-blue-600" />
+            {openSections.has('posts') && <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-4 pt-1 hide-scrollbar">{posts.map(post => <article key={post.id} className="w-[88%] flex-none snap-center overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"><p className="whitespace-pre-wrap p-4 text-sm leading-relaxed text-gray-700">{post.content}</p>{post.image_url && <img src={post.image_url} alt="Post" className="h-52 w-full object-cover" />}<p className="border-t px-4 py-2 text-[10px] font-semibold text-gray-400">{new Date(post.created_at).toLocaleDateString('en-IN')} · {post.audience === 'everyone' ? 'Everyone' : `${post.audience}s only`}</p></article>)}</div>}
           </div>
         )}
 

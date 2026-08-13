@@ -1539,6 +1539,10 @@ const fetchFollowersCounts = async () => {
             </button>
           </div>
 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-4 text-center text-xs">
+  <button onClick={() => router.push('/posts')} className="cursor-pointer hover:bg-green-50 p-2 rounded transition">
+    <p className="font-bold text-lg text-green-700"><i className="ph-bold ph-note-pencil"></i></p>
+    <p className="text-xs text-gray-600">Posts</p>
+  </button>
   <button onClick={() => { if (expandedSection === 'followers') { setExpandedSection(null); } else { setExpandedSection('followers'); fetchFollowers(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
     <p className="font-bold text-lg text-gray-900">{followersCount}</p>
     <p className="text-xs text-gray-600">Followers</p>
