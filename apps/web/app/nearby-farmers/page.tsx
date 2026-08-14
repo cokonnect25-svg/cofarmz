@@ -97,6 +97,73 @@ const COUNTRY_OPTIONS = [
   'Malaysia',
 ];
 
+// ── Online Status Hook (batch check) — same as chat page ───────────────────
+function useOnlineStatuses(userIds: string[]) {
+  const [statuses, setStatuses] = useState<Record<string, { isOnline: boolean; lastSeen: string | null }>>({});
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (userIds.length === 0) return;
+    let shouldReconnect = true;
+
+    const connect = () => {
+      if (!shouldReconnect) return;
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const ws = new WebSocket(`${protocol}//${window.location.host}/api/socket`);
+
+        ws.onopen = () => {
+          ws.send(JSON.stringify({ type: 'subscribe_batch', userIds }));
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'presence_batch') {
+              setStatuses(data.statuses);
+            } else if (data.type === 'presence') {
+              setStatuses(prev => ({
+                ...prev,
+                [data.userId]: { isOnline: data.isOnline, lastSeen: data.lastSeen }
+              }));
+            }
+          } catch (e) {}
+        };
+
+        ws.onclose = () => {
+          if (!shouldReconnect) return;
+          if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = setTimeout(connect, 5000);
+        };
+
+        wsRef.current = ws;
+      } catch (e) {}
+    };
+
+    connect();
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(getApiUrl(`/api/users/online-batch?userIds=${userIds.join(',')}`));
+        if (res.ok) {
+          const data = await res.json();
+          setStatuses(data.statuses || {});
+        }
+      } catch {}
+    }, 15000);
+
+    return () => {
+      shouldReconnect = false;
+      wsRef.current?.close();
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      clearInterval(pollInterval);
+    };
+  }, [userIds.join(',')]);
+
+  return statuses;
+}
+
 function NearbyFarmersContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -205,7 +272,9 @@ const scrollContainerRef = useRef<HTMLDivElement>(null);
 
 const pendingScrollRef = useRef<number | null>(null);
 
-
+// Only track presence for farmers currently loaded — avoids subscribing to huge/unbounded ID lists
+const farmerIds = useMemo(() => farmers.map(f => f.id), [farmers]);
+const onlineStatuses = useOnlineStatuses(farmerIds);
 
   // Always-current ref so fetch closures never use stale filters
   const filtersRef = useRef(filters);
@@ -1156,7 +1225,22 @@ saveStateAndNavigate(`/farmer-profile?id=${farmer.id}`);
                     {/* Header row */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3 flex-1">
-                        <UserAvatar image={farmer.image} name={farmer.name} size={48} className="rounded-full" />
+                        <div className="relative flex-shrink-0">
+<div className="relative flex-shrink-0">
+  <UserAvatar image={farmer.image} name={farmer.name} size={48} className="rounded-full" />
+  <span
+    className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${
+      onlineStatuses[farmer.id]?.isOnline ? 'bg-green-500' : 'bg-gray-300'
+    }`}
+    title={onlineStatuses[farmer.id]?.isOnline ? 'Online' : 'Offline'}
+  />
+</div>  <span
+    className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${
+      onlineStatuses[farmer.id]?.isOnline ? 'bg-green-500' : 'bg-gray-300'
+    }`}
+    title={onlineStatuses[farmer.id]?.isOnline ? 'Online' : 'Offline'}
+  />
+</div>
 <div className="flex-1 min-w-0 overflow-hidden">
   <h3
     className="font-bold text-gray-900 leading-snug break-words overflow-hidden"

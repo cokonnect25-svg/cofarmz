@@ -55,6 +55,9 @@ interface FarmerProfile {
   reviews_count?: number;
   member_since?: string;
   is_verified?: boolean;
+  latitude?: number;
+  longitude?: number;
+  distance?: number;
 }
 
 interface Reel {
@@ -71,6 +74,17 @@ interface Reel {
 function getRealThumbnail(url?: string | null) {
   if (!url) return '';
   return url.includes('via.placeholder.com') ? '' : url;
+}
+
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function getRealProfilePhoto(url?: string | null) {
@@ -364,6 +378,31 @@ function FarmerProfileContent() {
   const SCROLL_KEY = 'nearbyFarmers_scrollY';
   const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
 
+  const [distanceKm, setDistanceKm] = useState<number | null>(null);
+
+useEffect(() => {
+  if (!profile) return;
+
+  // Prefer a server-computed distance if the API already returns one
+  if (typeof profile.distance === 'number' && profile.distance < 9999) {
+    setDistanceKm(profile.distance);
+    return;
+  }
+
+  // Fall back to client-side calc using the location saved by the nearby page
+  if (profile.latitude && profile.longitude) {
+    try {
+      const saved = sessionStorage.getItem('nearbyFarmers_userLocation');
+      if (saved) {
+        const { latitude, longitude } = JSON.parse(saved);
+        if (latitude && longitude) {
+          setDistanceKm(getDistanceKm(latitude, longitude, profile.latitude, profile.longitude));
+        }
+      }
+    } catch {}
+  }
+}, [profile]);
+
   // Manage which sections are open (multi-expand)
   const [openSections, setOpenSections] = useState<Set<string>>(() => {
     const initial = new Set<string>();
@@ -447,6 +486,30 @@ function FarmerProfileContent() {
       setLoading(false);
     }
   }, [farmerId, user]);
+
+
+useEffect(() => {
+  if (!profile) return;
+
+  // Prefer a server-computed distance if the API already returns one
+  if (typeof profile.distance === 'number' && profile.distance < 9999) {
+    setDistanceKm(profile.distance);
+    return;
+  }
+
+  // Fall back to client-side calc using the location saved by the nearby page
+  if (profile.latitude && profile.longitude) {
+    try {
+      const saved = sessionStorage.getItem('nearbyFarmers_userLocation');
+      if (saved) {
+        const { latitude, longitude } = JSON.parse(saved);
+        if (latitude && longitude) {
+          setDistanceKm(getDistanceKm(latitude, longitude, profile.latitude, profile.longitude));
+        }
+      }
+    } catch {}
+  }
+}, [profile]);
 
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => { setProfilePhotoFailed(false); }, [profile?.image]);
@@ -693,6 +756,9 @@ if (Capacitor.isNativePlatform()) {
             <p className="text-sm text-gray-500 flex items-center gap-1 mb-1">
               <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
               {profile.location}
+              {distanceKm !== null && (
+                <span className="text-gray-400">· {Math.round(distanceKm)} km away</span>
+              )}
             </p>
           )}
 
