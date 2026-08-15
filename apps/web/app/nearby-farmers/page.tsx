@@ -15,6 +15,7 @@ const VISIBLE_KEY = 'nearbyFarmers_visibleCount';
 const TYPE_KEY = 'nearbyFarmers_searchType'; 
 const LOCATION_KEY = 'nearbyFarmers_userLocation';
 const FILTERS_KEY = 'nearbyFarmers_filters';
+const SEARCH_KEY = 'nearbyFarmers_searchQuery';
 
 interface FarmerCrop {
   crop_name: string;
@@ -219,7 +220,12 @@ const [searchType, setSearchType] = useState<'farmers' | 'buyers' | 'wastage' | 
 const [supplierType, setSupplierType] = useState<'commodities' | 'equipment'>(
   rawSupplierType === 'equipment' ? 'equipment' : 'commodities'
 );
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => {
+  if (typeof window !== 'undefined') {
+    return sessionStorage.getItem(SEARCH_KEY) || '';
+  }
+  return '';
+});
   const [sortBy, setSortBy]           = useState('nearby');
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [cropFilterSearch, setCropFilterSearch] = useState('');
@@ -408,7 +414,8 @@ const saveStateAndNavigate = (url: string) => {
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
   sessionStorage.setItem(TYPE_KEY, searchType);
-  sessionStorage.setItem(FILTERS_KEY, JSON.stringify(filters)); // ← SAVE FILTERS
+  sessionStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
+  sessionStorage.setItem(SEARCH_KEY, searchQuery); // ← add this
   if (userLocation) {
     sessionStorage.setItem(LOCATION_KEY, JSON.stringify(userLocation));
   }
@@ -1291,7 +1298,8 @@ onClick={e => {
   e.stopPropagation();
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-  sessionStorage.setItem(TYPE_KEY, searchType);  
+  sessionStorage.setItem(TYPE_KEY, searchType);
+  sessionStorage.setItem(SEARCH_KEY, searchQuery);   
   router.push(`/farmer-profile?id=${farmer.id}&tab=followers`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
                         <i className="ph-bold ph-user-circle text-brand-600 text-sm"></i>
@@ -1303,6 +1311,7 @@ onClick={e => {
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
   sessionStorage.setItem(TYPE_KEY, searchType);  
+  sessionStorage.setItem(SEARCH_KEY, searchQuery); 
   router.push(`/farmer-profile?id=${farmer.id}&tab=following`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
                         <i className="ph-bold ph-user-check text-blue-600 text-sm"></i>
@@ -1412,6 +1421,7 @@ onClick={e => {
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
   sessionStorage.setItem(TYPE_KEY, searchType);  
+  sessionStorage.setItem(SEARCH_KEY, searchQuery); 
   saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=equipment`);
 }}
       className="flex items-center gap-1.5 px-3 py-2 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors active:scale-95">
@@ -1423,7 +1433,8 @@ onClick={e => {
   e.stopPropagation();
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-  sessionStorage.setItem(TYPE_KEY, searchType);  
+  sessionStorage.setItem(TYPE_KEY, searchType); 
+  sessionStorage.setItem(SEARCH_KEY, searchQuery);  
   saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=followers`);
 }}
       className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors active:scale-95">
@@ -1438,6 +1449,7 @@ onClick={e => {
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
   sessionStorage.setItem(TYPE_KEY, searchType);  
+  sessionStorage.setItem(SEARCH_KEY, searchQuery);  
   saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=crops`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-shopping-bag text-orange-600 text-sm"></i>
@@ -1448,7 +1460,8 @@ onClick={e => {
   e.stopPropagation();
   sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
   sessionStorage.setItem(VISIBLE_KEY, visibleCount.toString());
-  sessionStorage.setItem(TYPE_KEY, searchType);  
+  sessionStorage.setItem(TYPE_KEY, searchType); 
+  sessionStorage.setItem(SEARCH_KEY, searchQuery);  
   saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=followers`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-users text-purple-600 text-sm"></i>

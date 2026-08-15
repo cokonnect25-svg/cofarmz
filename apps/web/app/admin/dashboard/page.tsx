@@ -391,7 +391,13 @@ export default function AdminDashboard() {
         setAnnScheduledAt("");
         setAnnRepeatHours("");
         setAnnDelivery("now");
-        setAnnSuccess(created.sentImmediately ? "Announcement pushed to all users." : "Announcement scheduled successfully.");
+        setAnnSuccess(
+          created.sentImmediately
+            ? `Announcement pushed to ${created.pushDelivery?.succeeded ?? 0} device(s).`
+            : created.deliveryPending
+              ? "No device accepted the push yet. Delivery is pending and will retry automatically."
+              : "Announcement scheduled successfully."
+        );
         setTimeout(() => setAnnSuccess(""), 4000);
         fetchAnnouncements();
       } else {

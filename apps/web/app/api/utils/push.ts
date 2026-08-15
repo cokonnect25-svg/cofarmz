@@ -10,6 +10,12 @@ type PushPayload = {
   data?: Record<string, string | number | boolean | null | undefined>;
 };
 
+export type PushDeliveryResult = {
+  attempted: number;
+  succeeded: number;
+  failed: number;
+};
+
 const FCM_SCOPE = "https://www.googleapis.com/auth/firebase.messaging";
 
 let cachedAccessToken: { token: string; expiresAt: number } | null = null;
@@ -196,8 +202,24 @@ export async function sendPushToAllUsers(payload: PushPayload) {
       LIMIT 500
     `;
 
-    await Promise.all(rows.map((row: any) => sendToToken(row.token, payload)));
+    const results = await Promise.allSettled(
+      rows.map((row: any) => sendToToken(row.token, payload))
+    );
+    const succeeded = results.filter(
+      (result) => result.status === "fulfilled" && result.value.ok
+    ).length;
+
+    return {
+      attempted: rows.length,
+      succeeded,
+      failed: rows.length - succeeded,
+    } satisfies PushDeliveryResult;
   } catch (error) {
     console.error("Broadcast push notification error:", error);
+    return {
+      attempted: 0,
+      succeeded: 0,
+      failed: 1,
+    } satisfies PushDeliveryResult;
   }
 }

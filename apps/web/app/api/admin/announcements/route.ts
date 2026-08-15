@@ -60,9 +60,9 @@ export async function POST(request: Request) {
     }
 
     const sendImmediately = !scheduledDate || scheduledDate <= new Date();
-    const nextSendAt = sendImmediately
-      ? (repeatHours ? new Date(Date.now() + repeatHours * 60 * 60 * 1000) : null)
-      : scheduledDate;
+    // Immediate deliveries also start as due. They are advanced only after
+    // FCM accepts at least one notification, so transient failures can retry.
+    const nextSendAt = sendImmediately ? new Date() : scheduledDate;
 
     const result = await sql`
       INSERT INTO announcements (
@@ -77,15 +77,17 @@ export async function POST(request: Request) {
         ${scheduledDate},
         ${repeatHours},
         ${nextSendAt},
-        ${sendImmediately ? new Date() : null},
-        ${sendImmediately ? 1 : 0},
+        ${null},
+        0,
         TRUE
       )
       RETURNING *
     `;
 
+    let sentImmediately = false;
+    let pushDelivery = null;
     if (sendImmediately) {
-      await sendPushToAllUsers({
+      pushDelivery = await sendPushToAllUsers({
         title: `Announcement: ${title}`,
         body: body.length > 120 ? `${body.slice(0, 120)}...` : body,
         url: "/notifications",
@@ -96,9 +98,32 @@ export async function POST(request: Request) {
           deliveryNumber: 1,
         },
       });
+
+      if (pushDelivery.succeeded > 0) {
+        sentImmediately = true;
+        const nextRepeatAt = repeatHours
+          ? new Date(Date.now() + repeatHours * 60 * 60 * 1000)
+          : null;
+        await sql`
+          UPDATE announcements
+          SET last_sent_at = NOW(),
+              send_count = 1,
+              next_send_at = ${nextRepeatAt},
+              is_active = ${Boolean(nextRepeatAt)}
+          WHERE id = ${result[0].id}
+        `;
+      }
     }
 
-    return NextResponse.json({ ...result[0], sentImmediately: sendImmediately }, { status: 201 });
+    return NextResponse.json(
+      {
+        ...result[0],
+        sentImmediately,
+        pushDelivery,
+        deliveryPending: sendImmediately && !sentImmediately,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Create announcement error:", error);
     return NextResponse.json({ error: "Failed to create announcement" }, { status: 500 });
