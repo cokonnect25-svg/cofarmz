@@ -487,30 +487,6 @@ useEffect(() => {
     }
   }, [farmerId, user]);
 
-
-useEffect(() => {
-  if (!profile) return;
-
-  // Prefer a server-computed distance if the API already returns one
-  if (typeof profile.distance === 'number' && profile.distance < 9999) {
-    setDistanceKm(profile.distance);
-    return;
-  }
-
-  // Fall back to client-side calc using the location saved by the nearby page
-  if (profile.latitude && profile.longitude) {
-    try {
-      const saved = sessionStorage.getItem('nearbyFarmers_userLocation');
-      if (saved) {
-        const { latitude, longitude } = JSON.parse(saved);
-        if (latitude && longitude) {
-          setDistanceKm(getDistanceKm(latitude, longitude, profile.latitude, profile.longitude));
-        }
-      }
-    } catch {}
-  }
-}, [profile]);
-
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => { setProfilePhotoFailed(false); }, [profile?.image]);
   useEffect(() => { if (mounted && farmerId && user) fetchProfile(); }, [mounted, farmerId, user, fetchProfile]);
@@ -656,6 +632,32 @@ if (Capacitor.isNativePlatform()) {
       }),
     }).catch(() => {});
   };
+
+  const handleOpenMaps = () => {
+  const dest = profile.latitude && profile.longitude
+    ? `${profile.latitude},${profile.longitude}`
+    : profile.location ? encodeURIComponent(profile.location) : null;
+
+  if (!dest) {
+    alert('This user has not set a location yet.');
+    return;
+  }
+
+  // Reuse the same viewer-location key the nearby page saves
+  let origin = '';
+  try {
+    const saved = sessionStorage.getItem('nearbyFarmers_userLocation');
+    if (saved) {
+      const { latitude, longitude } = JSON.parse(saved);
+      if (latitude && longitude) origin = `${latitude},${longitude}`;
+    }
+  } catch {}
+
+  window.open(
+    `https://www.google.com/maps/dir/?api=1${origin ? `&origin=${origin}` : ''}&destination=${dest}`,
+    '_blank'
+  );
+};
   const role = (profile.role as keyof typeof ROLE_CONFIG) || 'farmer';
   const rc = ROLE_CONFIG[role] || ROLE_CONFIG.farmer;
   const RoleIcon = rc.icon;
@@ -810,40 +812,47 @@ if (Capacitor.isNativePlatform()) {
 
           {/* ── Action Buttons ────────────────────────────────────────────── */}
           {!isOwnProfile && (
-            <div className="grid grid-cols-3 gap-2 mt-4">
-              <button
-                onClick={() => router.push(`/messages?ownerId=${profile.id}&ownerName=${encodeURIComponent(profile.name)}`)}
-                className={`${rc.accentBg} text-white py-2.5 rounded-xl font-bold hover:opacity-90 transition flex items-center justify-center gap-2`}
-              >
-                <MessageCircle className="w-4 h-4" />
-                Message
-              </button>
-              <button
-                onClick={() => {
-                  if (profile.can_call && profile.phone) {
-                    trackProfileCall();
-                    window.location.href = `tel:${normalizePhoneNumber(profile.phone)}`;
-                  }
-                  else alert(callUnavailableMessage);
-                }}
-                className={`py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 ${
-                  profile.can_call
-                    ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                    : 'bg-gray-50 text-gray-400 border border-gray-100'
-                }`}
-              >
-                <Phone className="w-4 h-4" />
-                Call
-              </button>
-              <button
-                onClick={() => setShowShareMenu(true)}
-                className="py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 bg-gray-100 text-gray-800 hover:bg-gray-200"
-              >
-                <Share2 className="w-4 h-4" />
-                Share
-              </button>
-            </div>
-          )}
+  <div className="grid grid-cols-4 gap-2 mt-4">
+    <button
+      onClick={() => router.push(`/messages?ownerId=${profile.id}&ownerName=${encodeURIComponent(profile.name)}`)}
+      className={`${rc.accentBg} text-white py-2.5 rounded-xl font-bold hover:opacity-90 transition flex items-center justify-center gap-2`}
+    >
+      <MessageCircle className="w-4 h-4" />
+      Message
+    </button>
+    <button
+      onClick={() => {
+        if (profile.can_call && profile.phone) {
+          trackProfileCall();
+          window.location.href = `tel:${normalizePhoneNumber(profile.phone)}`;
+        }
+        else alert(callUnavailableMessage);
+      }}
+      className={`py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 ${
+        profile.can_call
+          ? 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+          : 'bg-gray-50 text-gray-400 border border-gray-100'
+      }`}
+    >
+      <Phone className="w-4 h-4" />
+      Call
+    </button>
+    <button
+      onClick={handleOpenMaps}
+      className="py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 bg-purple-50 text-purple-700 hover:bg-purple-100"
+    >
+      <MapPin className="w-4 h-4" />
+      Maps
+    </button>
+    <button
+      onClick={() => setShowShareMenu(true)}
+      className="py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 bg-gray-100 text-gray-800 hover:bg-gray-200"
+    >
+      <Share2 className="w-4 h-4" />
+      Share
+    </button>
+  </div>
+)}
         </div>
       </div>
 
