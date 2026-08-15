@@ -906,8 +906,15 @@ if (Capacitor.isNativePlatform()) {
                         isWaste ? 'border-amber-200 bg-amber-50' : 'border-gray-100 bg-gray-50'
                       } ${isOpen ? 'shadow-md border-green-200' : ''}`}
                     >
-                      {crop.image_url && <img src={crop.image_url} alt={crop.crop_name} className="h-36 w-full object-cover" />}
-                      {/* ── Crop Header — always tap to expand ── */}
+                    <div className="h-36 w-full bg-green-50">
+                      {crop.image_url ? (
+                        <img src={crop.image_url} alt={crop.crop_name} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="grid h-full place-items-center">
+                          <Wheat className="h-10 w-10 text-green-200" />
+                        </div>
+                      )}
+                    </div>                      {/* ── Crop Header — always tap to expand ── */}
                       <button
                         className="w-full text-left p-3"
                         onClick={() => setExpandedCropIdx(isOpen ? null : idx)}
