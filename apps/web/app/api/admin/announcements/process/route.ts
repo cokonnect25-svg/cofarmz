@@ -34,8 +34,7 @@ export async function POST(request: Request) {
         AND next_send_at <= NOW()
         AND (expires_at IS NULL OR expires_at > NOW())
       ORDER BY next_send_at
-      LIMIT 20
-    `;
+      LIMIT 20`;
 
     let delivered = 0;
     let failed = 0;
