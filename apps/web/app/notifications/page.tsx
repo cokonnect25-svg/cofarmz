@@ -202,7 +202,8 @@ function NotificationsContent() {
       case 'announcement':    return <Megaphone className="w-5 h-5 text-purple-600" />;
       case 'admin_reel':      return <Video className="w-5 h-5 text-pink-600" />;
       case 'profile_match':
-      case 'profile_match_setup': return <Sprout className="w-5 h-5 text-emerald-600" />;
+      case 'profile_match_setup':
+      case 'profile_completion': return <Sprout className="w-5 h-5 text-emerald-600" />;
       default:                return <Bell className="w-5 h-5 text-gray-500" />;
     }
   };
@@ -216,7 +217,8 @@ function NotificationsContent() {
       case 'announcement':    return 'bg-purple-50';
       case 'admin_reel':      return 'bg-pink-50';
       case 'profile_match':
-      case 'profile_match_setup': return 'bg-emerald-50';
+      case 'profile_match_setup':
+      case 'profile_completion': return 'bg-emerald-50';
       default:                return 'bg-gray-50';
     }
   };

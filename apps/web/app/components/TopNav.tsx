@@ -40,6 +40,7 @@ function timeAgo(dateStr: string) {
 
 function NotifIcon({ type, status }: { type: string; status?: string }) {
   if (type === 'message') return <i className="ph-fill ph-chat-circle text-blue-500 text-lg" />;
+  if (type === 'profile_completion' || type === 'profile_match_setup') return <i className="ph-fill ph-plant text-green-600 text-lg" />;
   if (type === 'booking_new') return <i className="ph-fill ph-calendar-plus text-green-600 text-lg" />;
   if (type === 'booking_update') {
     if (status === 'accepted') return <i className="ph-fill ph-check-circle text-green-600 text-lg" />;
@@ -493,6 +494,21 @@ const handleOpenNotifPanel = () => {
                   {showPlusMenu && (
                     <div className="absolute right-0 top-12 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[10000] overflow-hidden py-1">
                       <button
+                        onClick={() => { setShowPlusMenu(false); router.push('/posts'); }}
+                        className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                          <i className="ph-bold ph-note-pencil text-amber-600 text-base" />
+                        </div>
+                        <div>
+                          <p className="text-[14px] font-bold text-gray-900">New Post</p>
+                          <p className="text-[11px] text-gray-400">Share an update with CoFarmz</p>
+                        </div>
+                      </button>
+
+                      <div className="mx-4 border-t border-gray-100" />
+
+                      <button
                         onClick={() => { setShowPlusMenu(false); router.push('/my-reels?action=upload'); }}
                         className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
                       >
@@ -537,6 +553,21 @@ const handleOpenNotifPanel = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Mobile Messages button */}
+                <Link
+                  href="/chat"
+                  onClick={() => setShowPlusMenu(false)}
+                  className={`md:hidden flex items-center justify-center w-10 h-10 rounded-full transition-colors ${
+                    pathname?.startsWith('/chat')
+                      ? 'bg-amber-50 text-amber-600'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                  title="Messages"
+                  aria-label="Open messages"
+                >
+                  <i className={`${pathname?.startsWith('/chat') ? 'ph-fill' : 'ph-bold'} ph-chat-circle text-[22px]`} />
+                </Link>
               </>
             ) : (
               <div className="flex items-center gap-2">

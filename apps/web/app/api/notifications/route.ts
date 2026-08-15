@@ -241,9 +241,11 @@ const viewerMatchRows = await sql`
       WHEN LOWER(COALESCE(u.role, '')) = 'buyer' OR u.role_id = 2 THEN 'buyer'
       ELSE LOWER(COALESCE(u.role, ''))
     END AS role,
+    COALESCE(u.supplier_types, ARRAY[]::text[]) AS supplier_types,
     u.latitude,
     u.longitude,
-    (SELECT COUNT(*)::int FROM crops c WHERE c.user_id = u.id) AS crop_count
+    (SELECT COUNT(*)::int FROM crops c WHERE c.user_id = u.id) AS crop_count,
+    (SELECT COUNT(*)::int FROM machinery m WHERE m.owner_id = u.id) AS equipment_count
   FROM "user" u
   WHERE u.id = ${userId}
   LIMIT 1
@@ -496,6 +498,49 @@ if (
     time: recommendationTime,
     link: needsCrops ? '/user-profile?addCrop=true' : '/user-profile',
   });
+}
+
+// Persistent role-based profile reminders. A fresh reminder is generated each
+// day until the user adds the listing their role needs. Legacy suppliers with
+// no saved subtype are treated as both commodity and equipment suppliers,
+// which matches the supplier filtering and profile-management behaviour.
+if (viewerMatch?.role === 'supplier') {
+  const supplierTypes: string[] = Array.isArray(viewerMatch.supplier_types)
+    ? viewerMatch.supplier_types
+    : [];
+  const isLegacySupplier = supplierTypes.length === 0;
+  const needsCommodityListing =
+    (isLegacySupplier || supplierTypes.includes('commodities')) &&
+    Number(viewerMatch.crop_count) === 0;
+  const needsEquipmentListing =
+    (isLegacySupplier || supplierTypes.includes('equipment')) &&
+    Number(viewerMatch.equipment_count) === 0;
+
+  if (needsCommodityListing) {
+    notifications.push({
+      id: `profile-completion-crops-${userId}-${recommendationTime.slice(0, 10)}`,
+      type: 'profile_completion',
+      title: 'Add crops to complete your supplier profile',
+      body: 'Show buyers what you supply. Adding your crops helps your profile appear in relevant searches, reach more people, and build a stronger CoFarmz network.',
+      image: null,
+      time: recommendationTime,
+      link: '/user-profile?addCrop=true',
+      persistent: true,
+    });
+  }
+
+  if (needsEquipmentListing) {
+    notifications.push({
+      id: `profile-completion-equipment-${userId}-${recommendationTime.slice(0, 10)}`,
+      type: 'profile_completion',
+      title: 'Add equipment to complete your supplier profile',
+      body: 'List the equipment you provide so nearby users can discover and contact you. A complete profile improves your reach and helps you grow your CoFarmz network.',
+      image: null,
+      time: recommendationTime,
+      link: '/rent-machinery',
+      persistent: true,
+    });
+  }
 }
 
 matchedProfiles.forEach((profile: any, index: number) => {

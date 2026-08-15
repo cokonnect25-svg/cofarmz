@@ -21,7 +21,6 @@ function BottomNavContent() {
     { href: '/',               label: 'Home',     icon: 'ph-house',       activeColor: 'text-emerald-600', activeBg: 'bg-emerald-50',  activeDot: 'bg-emerald-500' },
     { href: '/nearby-farmers', label: 'Nearby',   icon: 'ph-users-three', activeColor: 'text-violet-600',  activeBg: 'bg-violet-50',   activeDot: 'bg-violet-500'  },
     { href: '/machinery-list', label: 'Fleet',    icon: 'ph-tractor',     activeColor: 'text-blue-600',    activeBg: 'bg-blue-50',     activeDot: 'bg-blue-500'    },
-    { href: '/chat',           label: 'Messages', icon: 'ph-chat-circle', activeColor: 'text-amber-600',   activeBg: 'bg-amber-50',    activeDot: 'bg-amber-500'   },
     { href: '/reels',          label: 'Farm Tales',    icon: 'ph-video',       activeColor: 'text-rose-600',    activeBg: 'bg-rose-50',     activeDot: 'bg-rose-500'    },
     { href: '/products',       label: 'Products',  icon: 'ph-storefront', activeColor: 'text-teal-600', activeBg: 'bg-teal-50', activeDot: 'bg-teal-500' },
   ];
