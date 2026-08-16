@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { MapPin, Package, Search, Store, X } from 'lucide-react';
+import { MapPin, Package, Search, Store, X, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getApiUrl } from '@/lib/api';
 import UserAvatar from '@/app/components/UserAvatar';
@@ -29,6 +29,7 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const loadProducts = useCallback(async (term = '') => {
     setLoading(true);
@@ -51,6 +52,21 @@ export default function ProductsPage() {
     return () => window.clearTimeout(timer);
   }, [search, loadProducts]);
 
+  // Lock background scroll while the modal is open, and allow Escape to close it
+  useEffect(() => {
+    if (!selectedProduct) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedProduct(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [selectedProduct]);
+
   return (
     <main className="min-h-screen bg-gray-50 pb-4">
       <section className="border-b border-green-100 bg-gradient-to-br from-green-700 to-emerald-600 px-4 py-6 text-white sm:py-9">
@@ -71,13 +87,23 @@ export default function ProductsPage() {
         : products.length === 0 ? <div className="rounded-3xl border border-dashed border-gray-300 bg-white px-5 py-16 text-center"><Package className="mx-auto mb-3 h-12 w-12 text-gray-300" /><h2 className="text-lg font-black text-gray-900">No products found</h2><p className="mt-1 text-sm text-gray-500">{search ? 'Try another product name, category, seller or location.' : 'Products will appear here after farmers or buyers add them.'}</p></div>
         : <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
           {products.map(product => (
-            <article key={product.id} className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+            <article
+              key={product.id}
+              onClick={() => setSelectedProduct(product)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={event => { if (event.key === 'Enter') setSelectedProduct(product); }}
+              className="min-w-0 cursor-pointer overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
               <div className="aspect-square bg-green-50">{product.image_url ? <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center"><Package className="h-12 w-12 text-green-200" /></div>}</div>
               <div className="p-3 sm:p-4">
                 {product.category && <p className="mb-1 truncate text-[10px] font-black uppercase tracking-wide text-green-700">{product.category}</p>}
                 <h2 className="truncate text-sm font-black text-gray-900 sm:text-base">{product.name}</h2>
                 <p className="mt-1 truncate text-base font-black text-green-700 sm:text-lg">₹{Number(product.price).toLocaleString('en-IN')}<span className="text-[10px] font-semibold text-gray-500"> / {Number(product.quantity || 1).toLocaleString()} {displayUnit(product.unit)}</span></p>
-                <button onClick={() => router.push(`/farmer-profile?id=${product.user_id}`)} className="mt-3 flex w-full min-w-0 items-center gap-2 border-t border-gray-100 pt-3 text-left">
+                <button
+                  onClick={event => { event.stopPropagation(); router.push(`/farmer-profile?id=${product.user_id}`); }}
+                  className="mt-3 flex w-full min-w-0 items-center gap-2 border-t border-gray-100 pt-3 text-left"
+                >
                   <UserAvatar image={product.seller_image || ''} name={product.seller_name || 'Seller'} size={28} />
                   <span className="min-w-0"><span className="block truncate text-[11px] font-bold text-gray-800">{product.seller_name || 'Seller'}</span>{product.seller_location && <span className="flex items-center gap-0.5 truncate text-[9px] text-gray-500"><MapPin className="h-2.5 w-2.5 flex-shrink-0" />{product.seller_location}</span>}</span>
                 </button>
@@ -86,6 +112,72 @@ export default function ProductsPage() {
           ))}
         </div>}
       </section>
+
+      {/* Product detail modal */}
+      {selectedProduct && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+          onClick={() => setSelectedProduct(null)}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="relative">
+              <div className="aspect-square w-full bg-green-50 sm:rounded-t-3xl">
+                {selectedProduct.image_url ? (
+                  <img src={selectedProduct.image_url} alt={selectedProduct.name} className="h-full w-full object-cover sm:rounded-t-3xl" />
+                ) : (
+                  <div className="grid h-full place-items-center"><Package className="h-16 w-16 text-green-200" /></div>
+                )}
+              </div>
+              <button
+                onClick={() => setSelectedProduct(null)}
+                aria-label="Close"
+                className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-gray-700 shadow hover:bg-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-5 sm:p-6">
+              {selectedProduct.category && (
+                <p className="mb-1 text-xs font-black uppercase tracking-wide text-green-700">{selectedProduct.category}</p>
+              )}
+              <h2 className="text-xl font-black text-gray-900">{selectedProduct.name}</h2>
+              <p className="mt-1 text-2xl font-black text-green-700">
+                ₹{Number(selectedProduct.price).toLocaleString('en-IN')}
+                <span className="text-xs font-semibold text-gray-500"> / {Number(selectedProduct.quantity || 1).toLocaleString()} {displayUnit(selectedProduct.unit)}</span>
+              </p>
+
+              {selectedProduct.description && (
+                <p className="mt-4 text-sm leading-relaxed text-gray-600">{selectedProduct.description}</p>
+              )}
+
+              <div className="mt-5 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                <p className="mb-3 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-gray-500">
+                  <User className="h-3.5 w-3.5" /> Listed by
+                </p>
+                <button
+                  onClick={() => router.push(`/farmer-profile?id=${selectedProduct.user_id}`)}
+                  className="flex w-full items-center gap-3 text-left"
+                >
+                  <UserAvatar image={selectedProduct.seller_image || ''} name={selectedProduct.seller_name || 'Seller'} size={44} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold text-gray-900">{selectedProduct.seller_name || 'Seller'}</span>
+                    {selectedProduct.seller_location && (
+                      <span className="flex items-center gap-1 truncate text-xs text-gray-500">
+                        <MapPin className="h-3 w-3 flex-shrink-0" />{selectedProduct.seller_location}
+                      </span>
+                    )}
+                  </span>
+                  <span className="flex-shrink-0 rounded-full bg-green-700 px-3 py-1.5 text-xs font-bold text-white">View profile</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
