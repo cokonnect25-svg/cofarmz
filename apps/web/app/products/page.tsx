@@ -116,11 +116,11 @@ export default function ProductsPage() {
       {/* Product detail modal */}
       {selectedProduct && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+          className="fixed inset-0 z-[200] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
           onClick={() => setSelectedProduct(null)}
         >
           <div
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+            className="mb-[calc(76px+env(safe-area-inset-bottom))] max-h-[calc(90vh-76px-env(safe-area-inset-bottom))] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:mb-0 sm:max-h-[90vh] sm:rounded-3xl"
             onClick={event => event.stopPropagation()}
           >
             <div className="relative">
