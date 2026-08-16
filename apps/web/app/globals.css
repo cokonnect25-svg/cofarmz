@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Shared responsive guardrails for browser and Capacitor webviews. */
+html,
+body {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  overflow-x: clip;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+main {
+  min-width: 0;
+  max-width: 100%;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  overflow-x: clip;
+}
+
+img, video, canvas, svg {
+  max-width: 100%;
+}
+
+p, h1, h2, h3, h4, h5, h6, td, th {
+  overflow-wrap: anywhere;
+}
+
 /* ==========================================
    Mobile (Capacitor) native-feel styles
    ========================================== */
@@ -27,13 +57,10 @@ html {
 
 /* Safe area insets (left/right only — top padding is on each page's root element) */
 body {
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
   background-color: #F4F5F0;
   -webkit-tap-highlight-color: transparent;
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Prevent text selection for native feel */
@@ -281,5 +308,4 @@ main {
 }
 
 /* globals.css */
-
 

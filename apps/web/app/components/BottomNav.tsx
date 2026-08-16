@@ -28,7 +28,7 @@ function BottomNavContent() {
   return (
 <nav
   className="fixed bottom-0 left-0 right-0 z-[60] md:hidden"
-  style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+  style={{ paddingBottom: 'env(safe-area-inset-bottom)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}
 >
       <div className="bg-white/98 backdrop-blur-xl border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
         <div className="flex items-stretch justify-around h-[60px]">
@@ -38,7 +38,7 @@ function BottomNavContent() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="relative flex flex-col items-center justify-center flex-1 py-1.5 gap-0.5 transition-all duration-200 active:scale-90 select-none"
+                className="relative flex min-w-0 flex-col items-center justify-center flex-1 py-1.5 gap-0.5 transition-all duration-200 active:scale-90 select-none"
               >
                 {/* Active indicator bar at top */}
                 {active && (
@@ -55,7 +55,7 @@ function BottomNavContent() {
                 </div>
 
                 {/* Label */}
-                <span className={`text-[9px] font-black tracking-tight leading-none ${
+                <span className={`max-w-full truncate px-0.5 text-[8px] min-[360px]:text-[9px] font-black tracking-tight leading-none ${
                   active ? item.activeColor : 'text-gray-400'
                 }`}>
                   {item.label}

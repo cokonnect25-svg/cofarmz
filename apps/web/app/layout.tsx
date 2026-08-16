@@ -164,7 +164,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <title>CoFarmz</title>
         <link rel="icon" href="/assets/cofarmz-logo.png" type="image/png" />
         <link rel="shortcut icon" href="/assets/cofarmz-logo.png" type="image/png" />

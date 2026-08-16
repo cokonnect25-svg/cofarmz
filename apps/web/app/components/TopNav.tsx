@@ -207,10 +207,10 @@ const handleOpenNotifPanel = () => {
         className="fixed top-0 left-0 right-0 z-[9999] bg-white shadow-sm border-b border-gray-100"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
-        <div className="max-w-7xl mx-auto px-6 h-[64px] flex items-center gap-6">
+        <div className="max-w-7xl mx-auto px-2 min-[360px]:px-3 sm:px-5 xl:px-6 h-[64px] flex items-center gap-1.5 sm:gap-3 xl:gap-6 min-w-0" style={{ paddingLeft: 'max(env(safe-area-inset-left), 0.5rem)', paddingRight: 'max(env(safe-area-inset-right), 0.5rem)' }}>
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
+          <Link href="/" className="flex items-center gap-2 min-w-0 flex-shrink-0" aria-label="CoFarmz home">
             <div className="w-9 h-9 rounded-full bg-green-50 border-2 border-green-200 p-0.5 flex-shrink-0">
               <img
                 src="/assets/cofarmz-logo.png"
@@ -218,16 +218,16 @@ const handleOpenNotifPanel = () => {
                 className="w-full h-full rounded-full object-cover"
               />
             </div>
-            <span className="text-[16px] font-black text-gray-900 tracking-tight">CoFarmz</span>
+            <span className="hidden min-[390px]:block text-[16px] font-black text-gray-900 tracking-tight">CoFarmz</span>
           </Link>
 
           {/* Nav Links — desktop only, centered */}
-          <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
+          <div className="hidden lg:flex items-center gap-0.5 xl:gap-1 flex-1 justify-center min-w-0">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`relative flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-semibold transition-all duration-150 ${
+                className={`relative flex items-center gap-1 px-2 xl:px-3.5 py-2 rounded-lg text-[12px] xl:text-[13px] whitespace-nowrap font-semibold transition-all duration-150 ${
                   isActive(link.href)
                     ? 'text-green-700 bg-green-50'
                     : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
@@ -243,12 +243,12 @@ const handleOpenNotifPanel = () => {
           </div>
 
           {/* Right side — language + actions */}
-          <div className="flex items-center gap-2.5 flex-shrink-0 ml-auto">
+          <div className="flex items-center gap-1 min-[360px]:gap-1.5 sm:gap-2.5 min-w-0 flex-shrink ml-auto">
 
             <GooglePlayBadge compact className="hidden xl:inline-flex" />
 
             {/* Translate */}
-            <div className="flex items-center">
+            <div className="flex items-center min-w-0">
               <select
                 value={selectedLang}
                 onChange={(e) => {
@@ -265,7 +265,8 @@ const handleOpenNotifPanel = () => {
                     }
                   }
                 }}
-                className="text-[12px] font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 cursor-pointer focus:outline-none focus:border-green-500 hover:border-gray-300 transition"
+                aria-label="Choose language"
+                className="w-[42px] min-[390px]:w-[92px] sm:w-auto min-w-0 text-[12px] font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-1 min-[390px]:px-2 py-1.5 cursor-pointer focus:outline-none focus:border-green-500 hover:border-gray-300 transition"
               >
                 <option value="en">🌐 English</option>
                 <option value="hi">हिंदी</option>
@@ -286,7 +287,7 @@ const handleOpenNotifPanel = () => {
                 {/* Desktop Post Reels button */}
                 <Link
                   href="/my-reels?action=upload"
-                  className="hidden md:flex items-center gap-1.5 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-xl text-[13px] font-bold transition-colors shadow-sm"
+                  className="hidden xl:flex items-center gap-1.5 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-xl text-[13px] font-bold transition-colors shadow-sm"
                 >
                   <i className="ph-bold ph-video-camera text-sm" />
                   Post Reels
