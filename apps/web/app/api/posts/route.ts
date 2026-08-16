@@ -14,6 +14,19 @@ async function ensureSchema() {
     updated_at TIMESTAMP DEFAULT NOW()
   )`;
   await sql`CREATE INDEX IF NOT EXISTS profile_posts_user_created_idx ON profile_posts(user_id, created_at DESC)`;
+  await sql`CREATE TABLE IF NOT EXISTS profile_post_likes (
+    post_id INTEGER NOT NULL REFERENCES profile_posts(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    PRIMARY KEY (post_id, user_id)
+  )`;
+  await sql`CREATE TABLE IF NOT EXISTS profile_post_comments (
+    id SERIAL PRIMARY KEY,
+    post_id INTEGER NOT NULL REFERENCES profile_posts(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL,
+    comment TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+  )`;
 }
 
 export async function GET(request: Request) {
@@ -30,7 +43,10 @@ export async function GET(request: Request) {
     const posts = await sql`
       SELECT p.id, p.user_id, p.content, p.image_url, p.audience, p.created_at, p.updated_at,
              u.name AS author_name, u.image AS author_image, u.location AS author_location,
-             LOWER(COALESCE(u.role, '')) AS author_role
+             LOWER(COALESCE(u.role, '')) AS author_role,
+             (SELECT COUNT(*)::int FROM profile_post_likes l WHERE l.post_id = p.id) AS likes,
+             (SELECT COUNT(*)::int FROM profile_post_comments c WHERE c.post_id = p.id) AS comments,
+             EXISTS(SELECT 1 FROM profile_post_likes l WHERE l.post_id = p.id AND l.user_id = ${viewerId || ''}) AS is_liked
       FROM profile_posts p
       JOIN "user" u ON u.id = p.user_id
       WHERE (${userId || ''} = '' OR p.user_id = ${userId || ''})
