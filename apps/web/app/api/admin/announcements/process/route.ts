@@ -45,7 +45,7 @@ export async function POST(request: Request) {
         body: announcement.body.length > 120
           ? `${announcement.body.slice(0, 120)}...`
           : announcement.body,
-        url: "/notifications",
+        url: `/notifications?announcement=${encodeURIComponent(String(announcement.id))}`,
         // A unique tag makes every recurrence appear as a new device
         // notification instead of replacing the first announcement.
         tag: `ann-${announcement.id}-delivery-${deliveryNumber}`,

@@ -90,7 +90,7 @@ export async function POST(request: Request) {
       pushDelivery = await sendPushToAllUsers({
         title: `Announcement: ${title}`,
         body: body.length > 120 ? `${body.slice(0, 120)}...` : body,
-        url: "/notifications",
+        url: `/notifications?announcement=${encodeURIComponent(String(result[0].id))}`,
         tag: `ann-${result[0].id}-delivery-1`,
         data: {
           type: "announcement",

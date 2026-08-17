@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
 import {
@@ -112,6 +112,7 @@ function AnnouncementModal({
 function NotificationsContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [followRequests, setFollowRequests] = useState<FollowRequest[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -119,6 +120,17 @@ function NotificationsContent() {
   const [unreadCount, setUnreadCount] = useState(0);
   // ── NEW: which announcement is expanded ──
   const [expandedAnnouncement, setExpandedAnnouncement] = useState<Notification | null>(null);
+
+  // Native/web push links include the announcement id. Open that announcement
+  // as soon as its notification data has loaded.
+  useEffect(() => {
+    const announcementId = searchParams.get('announcement');
+    if (!announcementId || notifications.length === 0) return;
+    const announcement = notifications.find(
+      (item) => item.type === 'announcement' && item.id === `ann-${announcementId}`
+    );
+    if (announcement) setExpandedAnnouncement(announcement);
+  }, [notifications, searchParams]);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');

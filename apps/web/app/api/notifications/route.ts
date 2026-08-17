@@ -333,7 +333,7 @@ const matchedProfiles = hasMatchProfile ? await sql`
         body: `${booking.renter_name} wants to book ${booking.machinery_name}`,
         image: booking.renter_image,
         time: booking.created_at,
-        link: `/user-profile`,
+        link: `/booking-requests`,
       });
     });
 
@@ -352,7 +352,7 @@ const matchedProfiles = hasMatchProfile ? await sql`
         body: `Your booking for ${booking.machinery_name} was ${statusLabel}`,
         image: booking.owner_image,
         time: booking.updated_at,   // FIX 2: use updated_at as the notification time
-        link: `/user-profile`,
+        link: `/my-reservations`,
         status: booking.status,
       });
     });
@@ -371,7 +371,7 @@ ownerBookingUpdates.forEach((booking: any) => {
     body: `${booking.renter_name} ${booking.status === 'cancelled' ? 'cancelled their' : 'completed a'} booking for ${booking.machinery_name}`,
     image: booking.renter_image,
     time: booking.updated_at,
-    link: `/user-profile`,
+    link: `/booking-requests`,
     status: booking.status,
   });
 });
@@ -398,7 +398,7 @@ announcements.forEach((ann: any) => {
     body: ann.body,
     image: ann.admin_image ?? null,
     time: ann.created_at,
-    link: `/home`,
+    link: `/notifications?announcement=${encodeURIComponent(String(ann.id))}`,
   });
 });
 
@@ -427,7 +427,7 @@ followRequests.forEach((req: any) => {
     body: `${req.name} wants to follow you`,
     image: req.image,
     time: req.created_at,
-    link: `/user-profile`,
+    link: `/notifications`,
     followerId: req.user_id,
   });
 });

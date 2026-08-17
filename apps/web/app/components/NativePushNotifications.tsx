@@ -66,7 +66,7 @@ export default function NativePushNotifications({ userId }: Props) {
 
         await PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
           const url = event.notification.data?.url || '/notifications';
-          router.push(url);
+          router.push(typeof url === 'string' && url.startsWith('/') ? url : '/notifications');
         });
 
         await PushNotifications.register();

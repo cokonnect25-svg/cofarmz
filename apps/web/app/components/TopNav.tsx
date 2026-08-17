@@ -188,7 +188,7 @@ const handleOpenNotifPanel = () => {
 
   const handleNotifClick = (notif: Notification) => {
     setShowNotifPanel(false);
-    router.push(notif.link);
+    router.push(notif.link || '/notifications');
   };
 
   const navLinks = [
@@ -207,7 +207,7 @@ const handleOpenNotifPanel = () => {
         className="fixed top-0 left-0 right-0 z-[9999] bg-white shadow-sm border-b border-gray-100"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
-        <div className="max-w-7xl mx-auto px-2 min-[360px]:px-3 sm:px-5 xl:px-6 h-[64px] flex items-center gap-1.5 sm:gap-3 xl:gap-6 min-w-0" style={{ paddingLeft: 'max(env(safe-area-inset-left), 0.5rem)', paddingRight: 'max(env(safe-area-inset-right), 0.5rem)' }}>
+        <div className="app-bar-inner h-[64px] flex items-center gap-1.5 sm:gap-3 xl:gap-6 min-w-0">
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 min-w-0 flex-shrink-0" aria-label="CoFarmz home">

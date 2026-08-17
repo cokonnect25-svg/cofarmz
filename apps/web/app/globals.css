@@ -16,6 +16,29 @@ body {
   box-sizing: border-box;
 }
 
+/* Keep controls in shared fixed bars anchored to the viewport edges at every
+   display width. Safe-area insets still protect notched mobile devices. */
+.app-bar-inner {
+  width: 100%;
+  min-width: 0;
+  padding-left: max(env(safe-area-inset-left), 0.75rem);
+  padding-right: max(env(safe-area-inset-right), 0.75rem);
+}
+
+@media (min-width: 640px) {
+  .app-bar-inner {
+    padding-left: max(env(safe-area-inset-left), 1.25rem);
+    padding-right: max(env(safe-area-inset-right), 1.25rem);
+  }
+}
+
+@media (min-width: 1280px) {
+  .app-bar-inner {
+    padding-left: max(env(safe-area-inset-left), 1.5rem);
+    padding-right: max(env(safe-area-inset-right), 1.5rem);
+  }
+}
+
 main {
   min-width: 0;
   max-width: 100%;
@@ -308,4 +331,3 @@ main {
 }
 
 /* globals.css */
-
