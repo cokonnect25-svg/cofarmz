@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Capacitor } from '@capacitor/core';
 import { getApiUrl } from '@/lib/api';
 import UserAvatar from '@/app/components/UserAvatar';
+import PostCard, { SocialPost } from '@/app/components/PostCard';
 
 interface Machinery {
   id: string;
@@ -42,19 +43,6 @@ interface UserProfile {
   location: string;
 }
 
-interface ProfilePost {
-  id: number;
-  user_id: string;
-  content: string;
-  image_url: string | null;
-  audience: 'everyone' | 'farmer' | 'buyer';
-  created_at: string;
-  author_name: string;
-  author_image: string | null;
-  author_location: string | null;
-  author_role: string;
-}
-
 const CATEGORIES = [
   { label: 'All', icon: 'ph-squares-four' },
   { label: 'Tractors', icon: 'ph-tractor' },
@@ -83,7 +71,7 @@ function HomePageContent() {
   const [wasteBuyerResults, setWasteBuyerResults] = useState<Farmer[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [farmers, setFarmers] = useState<Farmer[]>([]);
-  const [profilePosts, setProfilePosts] = useState<ProfilePost[]>([]);
+  const [profilePosts, setProfilePosts] = useState<SocialPost[]>([]);
 
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [roleUpdating, setRoleUpdating] = useState(false);
@@ -420,15 +408,7 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
           {profilePosts.length ? (
             <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 hide-scrollbar">
               {profilePosts.map(post => (
-                <article key={post.id} className="w-[88%] max-w-md flex-none snap-center overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-premium sm:w-[420px]">
-                  <button onClick={() => router.push(post.user_id === user?.id ? '/user-profile' : `/farmer-profile?id=${post.user_id}`)} className="flex w-full items-center gap-3 p-4 text-left">
-                    <UserAvatar image={post.author_image || ''} name={post.author_name || 'User'} size={42} />
-                    <span className="min-w-0"><span className="block truncate text-sm font-black text-gray-900">{post.author_name}</span><span className="block text-[10px] font-semibold capitalize text-gray-500">{post.author_role || 'member'} · {new Date(post.created_at).toLocaleDateString('en-IN')}</span></span>
-                  </button>
-                  <p className="line-clamp-5 whitespace-pre-wrap px-4 pb-4 text-sm leading-relaxed text-gray-700">{post.content}</p>
-                  {post.image_url && <img src={post.image_url} alt={`Post by ${post.author_name}`} className="h-56 w-full object-cover" />}
-                  <div className="border-t border-gray-100 px-4 py-3 text-[10px] font-bold text-gray-400">Swipe to see more →</div>
-                </article>
+                <PostCard key={post.id} post={post} currentUserId={user?.id} compact />
               ))}
             </div>
           ) : (
