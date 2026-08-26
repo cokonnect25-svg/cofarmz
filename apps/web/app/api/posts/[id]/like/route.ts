@@ -1,6 +1,21 @@
 import sql from '@/app/api/utils/sql';
 import { NextResponse } from 'next/server';
 
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const postId = Number(id);
+  if (!Number.isInteger(postId)) return NextResponse.json({ error: 'Invalid post' }, { status: 400 });
+  const likers = await sql`
+    SELECT u.id, u.name, u.image, LOWER(COALESCE(u.role, '')) AS role,
+           u.location, l.created_at AS liked_at
+    FROM profile_post_likes l
+    JOIN "user" u ON u.id = l.user_id
+    WHERE l.post_id = ${postId}
+    ORDER BY l.created_at DESC
+  `;
+  return NextResponse.json({ likers });
+}
+
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const postId = Number(id);
