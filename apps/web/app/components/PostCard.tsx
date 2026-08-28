@@ -10,7 +10,7 @@ import { getApiUrl } from '@/lib/api';
 import { buildOpenUrl } from '@/lib/deep-link';
 
 export type SocialPost = { id: number; user_id: string; content: string; image_url: string | null; audience: string; created_at: string; author_name?: string; author_image?: string | null; author_role?: string; likes?: number; comments?: number; is_liked?: boolean };
-type Comment = { id: number; user_id: string; comment: string; created_at: string; name?: string; image?: string | null };
+type Comment = { id: number; user_id: string; comment: string; created_at: string; name?: string; image?: string | null; parent_comment_id?: number | null; likes?: number; is_liked?: boolean };
 type Liker = { id: string; name?: string; image?: string | null; role?: string; location?: string };
 
 export default function PostCard({ post, currentUserId, own, onDelete, compact = false }: { post: SocialPost; currentUserId?: string; own?: boolean; onDelete?: () => void; compact?: boolean }) {
@@ -21,6 +21,7 @@ export default function PostCard({ post, currentUserId, own, onDelete, compact =
   const [commentsCount, setCommentsCount] = useState(Number(post.comments || 0));
   const [comments, setComments] = useState<Comment[]>([]);
   const [draft, setDraft] = useState('');
+  const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [sending, setSending] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [likersOpen, setLikersOpen] = useState(false);
@@ -33,7 +34,7 @@ export default function PostCard({ post, currentUserId, own, onDelete, compact =
   };
   const open = async () => {
     setExpanded(true);
-    const response = await fetch(getApiUrl(`/api/posts/${post.id}/comments`));
+    const response = await fetch(getApiUrl(`/api/posts/${post.id}/comments`), { headers: currentUserId ? { 'x-user-id': currentUserId } : {} });
     if (response.ok) setComments(await response.json());
   };
   const openLikers = async (event?: React.MouseEvent) => {
@@ -52,10 +53,17 @@ export default function PostCard({ post, currentUserId, own, onDelete, compact =
   const comment = async () => {
     if (!currentUserId || !draft.trim() || sending) return;
     setSending(true);
-    const response = await fetch(getApiUrl(`/api/posts/${post.id}/comments`), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: currentUserId, comment: draft }) });
-    if (response.ok) { const data = await response.json(); setComments(v => [...v, data]); setCommentsCount(v => v + 1); setDraft(''); }
+    const response = await fetch(getApiUrl(`/api/posts/${post.id}/comments`), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: currentUserId, comment: draft, parentCommentId: replyTo?.id || null }) });
+    if (response.ok) { const data = await response.json(); setComments(v => [...v, data]); setCommentsCount(v => v + 1); setDraft(''); setReplyTo(null); }
     setSending(false);
   };
+  const beginReply = (item: Comment) => { setReplyTo(item); setDraft(`@${(item.name || 'Member').replace(/\s+/g, '')} `); };
+  const likeComment = async (item: Comment) => {
+    if (!currentUserId) return;
+    const response = await fetch(getApiUrl(`/api/posts/${post.id}/comments/${item.id}/like`), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: currentUserId }) });
+    if (response.ok) { const data = await response.json(); setComments(values => values.map(value => value.id === item.id ? { ...value, likes: data.likes, is_liked: data.liked } : value)); }
+  };
+  const richComment = (text: string) => text.split(/(@[\p{L}\p{N}_.-]+)/gu).map((part, index) => part.startsWith('@') ? <span key={index} className="font-bold text-green-700">{part}</span> : part);
   const shareUrl = buildOpenUrl('/posts', { postId: post.id });
   const shareInside = () => { sessionStorage.setItem('cofarmz_message_draft', `See this CoFarmz post from ${post.author_name || 'a member'}:\n${post.content}\n${shareUrl}`); router.push('/messages'); };
   const shareOutside = async () => {

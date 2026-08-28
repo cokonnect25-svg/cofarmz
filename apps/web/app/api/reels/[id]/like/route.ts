@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextRequest, NextResponse } from "next/server";
+import { addSocialNotification, ensureSocialActivityTables } from '@/app/api/utils/social-notifications';
 
 export async function GET(
   req: NextRequest,
@@ -70,6 +71,7 @@ export async function POST(
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    await ensureSocialActivityTables();
 
     const existing = await sql`
       SELECT id FROM reel_likes WHERE user_id = ${userId} AND reel_id = ${id}
@@ -85,6 +87,8 @@ export async function POST(
         VALUES (${userId}, ${id})
         ON CONFLICT (user_id, reel_id) DO NOTHING
       `;
+      const owners = await sql`SELECT user_id FROM reels WHERE id=${id} LIMIT 1`;
+      await addSocialNotification({ recipientId: owners[0]?.user_id, actorId: userId, type: 'reel_like', reelId: id });
     }
 
     // Always return the real count from DB — single source of truth

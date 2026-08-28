@@ -42,7 +42,14 @@ interface Comment {
   created_at: string;
   name: string;
   image: string;
+  parent_comment_id?: string | null;
+  likes?: number;
+  is_liked?: boolean;
 }
+
+const renderCommentText = (text: string) => text.split(/(@[\p{L}\p{N}_.-]+)/gu).map((part, index) =>
+  part.startsWith('@') ? <span key={index} className="font-bold text-green-700">{part}</span> : part
+);
 
 interface ProfileListItem {
   id: string;
@@ -134,6 +141,7 @@ function ReelsContent() {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [postingComment, setPostingComment] = useState(false);
+  const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [followingLoading, setFollowingLoading] = useState<Set<string>>(new Set());
   const [videoErrors, setVideoErrors] = useState<Set<string>>(new Set());
@@ -480,7 +488,7 @@ const toggleCaption = (reelId: string) => {
   const fetchComments = async (reelId: string) => {
     setCommentsLoading(true);
     try {
-      const res = await fetch(getApiUrl(`/api/reels/${reelId}/comments`));
+      const res = await fetch(getApiUrl(`/api/reels/${reelId}/comments`), { headers: user?.id ? { 'x-user-id': user.id } : {} });
       if (res.ok) {
         const data = await res.json();
         setCurrentReelComments(data);
@@ -510,7 +518,7 @@ const toggleCaption = (reelId: string) => {
             'x-user-id': user.id,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ comment: newComment })
+          body: JSON.stringify({ comment: newComment, parentCommentId: replyTo?.id || null })
         }
       );
 
@@ -521,6 +529,7 @@ const toggleCaption = (reelId: string) => {
           ...currentReelComments
         ]);
         setNewComment('');
+        setReplyTo(null);
         setReels((prev) =>
           prev.map((reel) =>
             reel.id === reels[currentReelIndex].id
@@ -534,6 +543,19 @@ const toggleCaption = (reelId: string) => {
     } finally {
       setPostingComment(false);
     }
+  };
+
+  const handleCommentLike = async (comment: Comment) => {
+    if (!user) return;
+    const res = await fetch(getApiUrl(`/api/reels/${reels[currentReelIndex].id}/comments/${comment.id}/like`), { method: 'POST', headers: { 'x-user-id': user.id } });
+    if (!res.ok) return;
+    const data = await res.json();
+    setCurrentReelComments(items => items.map(item => item.id === comment.id ? { ...item, likes: data.likes, is_liked: data.liked } : item));
+  };
+
+  const beginReply = (comment: Comment) => {
+    setReplyTo(comment);
+    setNewComment(`@${comment.name.replace(/\s+/g, '')} `);
   };
 
   const handleShare = async (e: React.MouseEvent, reel: Reel) => {
@@ -892,7 +914,7 @@ const toggleCaption = (reelId: string) => {
                 </p>
               ) : (
                 currentReelComments.map((comment) => (
-                  <div key={comment.id} className="flex gap-3">
+                  <div key={comment.id} className={`flex gap-3 ${comment.parent_comment_id ? 'ml-10 border-l-2 border-green-100 pl-3' : ''}`}>
                     <button
                       onClick={() => saveStateAndNavigateToProfile(comment.user_id)}
                       className="flex-shrink-0"
@@ -910,17 +932,23 @@ const toggleCaption = (reelId: string) => {
                       >
                         {comment.name}
                       </button>
-                      <p className="text-sm text-gray-700 break-words">{comment.comment}</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {new Date(comment.created_at).toLocaleDateString()}
-                      </p>
+                      <p className="text-sm text-gray-700 break-words">{renderCommentText(comment.comment)}</p>
+                      <div className="mt-1 flex items-center gap-3 text-xs font-semibold text-gray-400">
+                        <span>{new Date(comment.created_at).toLocaleDateString()}</span>
+                        <button onClick={() => beginReply(comment)} className="hover:text-green-700">Reply</button>
+                        <button onClick={() => handleCommentLike(comment)} className={comment.is_liked ? 'text-red-600' : 'hover:text-red-600'}>
+                          {comment.is_liked ? 'Liked' : 'Like'}{comment.likes ? ` (${comment.likes})` : ''}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))
               )}
             </div>
             {user && (
-              <div className="flex-shrink-0 border-t border-gray-100 bg-white px-4 py-3 flex gap-2 items-center">
+              <div className="flex-shrink-0 border-t border-gray-100 bg-white px-4 py-3">
+                {replyTo && <div className="mb-2 flex items-center justify-between rounded-xl bg-green-50 px-3 py-2 text-xs text-green-800"><span>Replying to <b>{replyTo.name}</b></span><button onClick={() => { setReplyTo(null); setNewComment(''); }} aria-label="Cancel reply"><X className="h-4 w-4" /></button></div>}
+                <div className="flex gap-2 items-center">
                 <img
                   src={user.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name || 'U')}&backgroundColor=166534&textColor=ffffff`}
                   alt={user.name}
@@ -952,6 +980,7 @@ const toggleCaption = (reelId: string) => {
                     <Send className="w-4 h-4 text-white" />
                   )}
                 </button>
+                </div>
               </div>
             )}
           </div>

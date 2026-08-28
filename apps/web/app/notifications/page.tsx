@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
 import {
   ArrowLeft, Bell, UserPlus, MessageCircle,
-  Package, Megaphone, Video, ChevronDown, ChevronUp, X, Sprout
+  Package, Megaphone, Video, ChevronDown, ChevronUp, X, Sprout, Heart
 } from 'lucide-react';
 
 interface Notification {
@@ -213,6 +213,14 @@ function NotificationsContent() {
       case 'booking_update':  return <Package className="w-5 h-5 text-amber-600" />;
       case 'announcement':    return <Megaphone className="w-5 h-5 text-purple-600" />;
       case 'admin_reel':      return <Video className="w-5 h-5 text-pink-600" />;
+      case 'reel_like':
+      case 'post_like':       return <Heart className="w-5 h-5 text-red-600" />;
+      case 'reel_comment':
+      case 'reel_reply':
+      case 'reel_mention':
+      case 'post_comment':
+      case 'post_reply':
+      case 'post_mention':    return <MessageCircle className="w-5 h-5 text-green-600" />;
       case 'profile_match':
       case 'profile_match_setup':
       case 'profile_completion': return <Sprout className="w-5 h-5 text-emerald-600" />;

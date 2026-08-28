@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextResponse } from "next/server";
+import { ensureSocialActivityTables } from '@/app/api/utils/social-notifications';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -16,6 +17,13 @@ const sinceDate = since
   : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   try {
+    await ensureSocialActivityTables();
+    const socialActivity = await sql`
+      SELECT n.id,n.type,n.reel_id,n.post_id,n.preview,n.created_at,
+             u.name actor_name,u.image actor_image
+      FROM social_activity_notifications n JOIN "user" u ON u.id=n.actor_id
+      WHERE n.recipient_id=${userId} AND n.created_at>${sinceDate}
+      ORDER BY n.created_at DESC LIMIT 40`;
     // 1. New messages received by this user
     const newMessages = await sql`
       SELECT
@@ -232,6 +240,13 @@ const followedReels = await sql`
   LIMIT 10
 `.catch(() => []);
 
+const followedPosts = await sql`
+  SELECT p.id,p.content,p.image_url,p.created_at,u.id creator_id,u.name creator_name,u.image creator_image
+  FROM profile_posts p JOIN follows f ON f.following_id=p.user_id JOIN "user" u ON u.id=p.user_id
+  WHERE f.user_id=${userId} AND f.status='accepted' AND p.user_id!=${userId} AND p.created_at>${sinceDate}
+  ORDER BY p.created_at DESC LIMIT 10
+`.catch(() => []);
+
 // Crop-based discovery: farmers see buyers, buyers see farmers.
 const viewerMatchRows = await sql`
   SELECT
@@ -309,6 +324,20 @@ const matchedProfiles = hasMatchProfile ? await sql`
 `.catch(() => []) : [];
 
     const notifications: any[] = [];
+
+    const socialLabels: Record<string, string> = {
+      reel_like: 'liked your reel', reel_comment: 'commented on your reel',
+      reel_reply: 'replied to your comment', reel_mention: 'mentioned you in a reel comment',
+      post_like: 'liked your post', post_comment: 'commented on your post',
+      post_reply: 'replied to your comment', post_mention: 'mentioned you in a post comment',
+    };
+    socialActivity.forEach((activity: any) => notifications.push({
+      id: `social-${activity.id}`, type: activity.type,
+      title: `${activity.actor_name} ${socialLabels[activity.type] || 'interacted with your content'}`,
+      body: activity.preview || 'Tap to view the activity', image: activity.actor_image,
+      time: activity.created_at,
+      link: activity.reel_id ? `/reels?reelId=${activity.reel_id}` : `/posts?postId=${activity.post_id}`,
+    }));
 
     newMessages.forEach((msg: any) => {
       notifications.push({
@@ -472,6 +501,14 @@ followedReels.forEach((reel: any) => {
     link: `/reels?reelId=${reel.id}&userId=${reel.creator_id}`,
   });
 });
+
+followedPosts.forEach((post: any) => notifications.push({
+  id: `followed-post-${post.id}`, type: 'followed_post',
+  title: `New post from ${post.creator_name}`,
+  body: post.content?.length > 80 ? `${post.content.slice(0, 80)}...` : (post.content || 'Shared a new post'),
+  image: post.image_url ?? post.creator_image, time: post.created_at,
+  link: `/posts?postId=${post.id}`,
+}));
 
 const recommendationDay = new Date();
 recommendationDay.setUTCHours(0, 0, 0, 0);
