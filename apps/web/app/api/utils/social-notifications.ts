@@ -1,8 +1,16 @@
-import sql from '@/app/api/utils/sql';
+import sql from "@/app/api/utils/sql";
 
 export type SocialActivityType =
-  | 'reel_like' | 'reel_comment' | 'reel_reply' | 'reel_mention'
-  | 'post_like' | 'post_comment' | 'post_reply' | 'post_mention';
+  | "reel_like"
+  | "reel_comment"
+  | "reel_reply"
+  | "reel_mention"
+  | "post_like"
+  | "post_comment"
+  | "post_reply"
+  | "post_mention"
+  | "reel_comment_like"
+  | "post_comment_like";
 
 export async function ensureSocialActivityTables() {
   await sql`CREATE TABLE IF NOT EXISTS social_activity_notifications (
@@ -32,27 +40,56 @@ export async function ensureSocialActivityTables() {
 }
 
 export async function addSocialNotification(input: {
-  recipientId?: string | null; actorId: string; type: SocialActivityType;
-  reelId?: string | number; postId?: string | number; commentId?: string | number; preview?: string;
+  recipientId?: string | null;
+  actorId: string;
+  type: SocialActivityType;
+  reelId?: string | number;
+  postId?: string | number;
+  commentId?: string | number;
+  preview?: string;
 }) {
   if (!input.recipientId || input.recipientId === input.actorId) return;
   await sql`INSERT INTO social_activity_notifications
     (recipient_id, actor_id, type, reel_id, post_id, comment_id, preview)
     VALUES (${input.recipientId}, ${input.actorId}, ${input.type},
-      ${input.reelId ? Number(input.reelId) : null}, ${input.postId ? Number(input.postId) : null},
-      ${input.commentId ? Number(input.commentId) : null}, ${input.preview?.slice(0, 180) || null})`;
+      ${input.reelId ? Number(input.reelId) : null}, ${
+    input.postId ? Number(input.postId) : null
+  },
+      ${input.commentId ? Number(input.commentId) : null}, ${
+    input.preview?.slice(0, 180) || null
+  })`;
 }
 
 export async function notifyMentions(input: {
-  text: string; actorId: string; type: 'reel_mention' | 'post_mention';
-  reelId?: string | number; postId?: string | number; commentId: string | number; exclude?: string[];
+  text: string;
+  actorId: string;
+  type: "reel_mention" | "post_mention";
+  reelId?: string | number;
+  postId?: string | number;
+  commentId: string | number;
+  exclude?: string[];
 }) {
-  const names = Array.from(input.text.matchAll(/@([\p{L}\p{N}_.-]{2,40})/gu), match => match[1].toLowerCase());
+  const names = Array.from(
+    input.text.matchAll(/@([\p{L}\p{N}_.-]{2,40})/gu),
+    (match) => match[1].toLowerCase()
+  );
   if (!names.length) return;
-  const users = await sql`SELECT id FROM "user" WHERE LOWER(REPLACE(name, ' ', '')) = ANY(${names}) LIMIT 20`;
+  const users =
+    await sql`SELECT id FROM "user" WHERE LOWER(REPLACE(name, ' ', '')) = ANY(${names}) LIMIT 20`;
   const excluded = new Set([input.actorId, ...(input.exclude || [])]);
-  await Promise.all(users.filter((u: any) => !excluded.has(String(u.id))).map((u: any) => addSocialNotification({
-    recipientId: String(u.id), actorId: input.actorId, type: input.type,
-    reelId: input.reelId, postId: input.postId, commentId: input.commentId, preview: input.text,
-  })));
+  await Promise.all(
+    users
+      .filter((u: any) => !excluded.has(String(u.id)))
+      .map((u: any) =>
+        addSocialNotification({
+          recipientId: String(u.id),
+          actorId: input.actorId,
+          type: input.type,
+          reelId: input.reelId,
+          postId: input.postId,
+          commentId: input.commentId,
+          preview: input.text,
+        })
+      )
+  );
 }

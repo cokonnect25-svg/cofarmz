@@ -1,7 +1,11 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 import sql from "@/app/api/utils/sql";
 import { NextResponse } from "next/server";
-import { addSocialNotification, ensureSocialActivityTables, notifyMentions } from '@/app/api/utils/social-notifications';
+import {
+  addSocialNotification,
+  ensureSocialActivityTables,
+  notifyMentions,
+} from "@/app/api/utils/social-notifications";
 
 export async function GET(
   request: Request,
@@ -10,7 +14,7 @@ export async function GET(
   try {
     const { id } = await params;
     await ensureSocialActivityTables();
-    const viewerId = request.headers.get('x-user-id') || '';
+    const viewerId = request.headers.get("x-user-id") || "";
 
     const comments = await sql`
       SELECT 
@@ -54,15 +58,28 @@ export async function POST(
 
     await ensureSocialActivityTables();
     const clean = String(comment).trim();
-    if (!clean || clean.length > 1000) return NextResponse.json({ error: 'Comment must be 1-1000 characters' }, { status: 400 });
-    const reelRows = await sql`SELECT user_id FROM reels WHERE id = ${id} LIMIT 1`;
+    if (!clean || clean.length > 1000)
+      return NextResponse.json(
+        { error: "Comment must be 1-1000 characters" },
+        { status: 400 }
+      );
+    const reelRows =
+      await sql`SELECT user_id FROM reels WHERE id = ${id} LIMIT 1`;
     const parentRows = parentCommentId
-      ? await sql`SELECT user_id FROM reel_comments WHERE id = ${Number(parentCommentId)} AND reel_id = ${id} LIMIT 1`
+      ? await sql`SELECT user_id FROM reel_comments WHERE id = ${Number(
+          parentCommentId
+        )} AND reel_id = ${id} LIMIT 1`
       : [];
-    if (parentCommentId && !parentRows.length) return NextResponse.json({ error: 'Reply target not found' }, { status: 404 });
+    if (parentCommentId && !parentRows.length)
+      return NextResponse.json(
+        { error: "Reply target not found" },
+        { status: 404 }
+      );
     const result = await sql`
       INSERT INTO reel_comments (user_id, reel_id, comment, parent_comment_id)
-      VALUES (${userId}, ${id}, ${clean}, ${parentCommentId ? Number(parentCommentId) : null})
+      VALUES (${userId}, ${id}, ${clean}, ${
+      parentCommentId ? Number(parentCommentId) : null
+    })
       RETURNING id, user_id, comment, created_at, parent_comment_id
     `;
 
@@ -81,21 +98,69 @@ export async function POST(
     const commentWithUser = {
       ...result[0],
       name: userInfo[0]?.name || "Unknown",
-      image: userInfo[0]?.image || null, likes: 0, is_liked: false
+      image: userInfo[0]?.image || null,
+      likes: 0,
+      is_liked: false,
     };
 
     const primaryRecipient = parentRows[0]?.user_id || reelRows[0]?.user_id;
-    await addSocialNotification({ recipientId: primaryRecipient, actorId: userId,
-      type: parentCommentId ? 'reel_reply' : 'reel_comment', reelId: id,
-      commentId: result[0].id, preview: clean });
-    await notifyMentions({ text: clean, actorId: userId, type: 'reel_mention', reelId: id,
-      commentId: result[0].id, exclude: [String(primaryRecipient || '')] });
+    await addSocialNotification({
+      recipientId: primaryRecipient,
+      actorId: userId,
+      type: parentCommentId ? "reel_reply" : "reel_comment",
+      reelId: id,
+      commentId: result[0].id,
+      preview: clean,
+    });
+    await notifyMentions({
+      text: clean,
+      actorId: userId,
+      type: "reel_mention",
+      reelId: id,
+      commentId: result[0].id,
+      exclude: [String(primaryRecipient || "")],
+    });
 
     return NextResponse.json(commentWithUser, { status: 201 });
   } catch (error) {
     console.error("Create comment error:", error);
     return NextResponse.json(
       { error: "Failed to create comment" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const userId = request.headers.get("x-user-id");
+    const commentId = Number(
+      new URL(request.url).searchParams.get("commentId")
+    );
+    if (!userId)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!Number.isInteger(commentId))
+      return NextResponse.json({ error: "Invalid comment" }, { status: 400 });
+    await ensureSocialActivityTables();
+    const deleted =
+      await sql`DELETE FROM reel_comments WHERE id=${commentId} AND reel_id=${id} AND user_id=${userId} RETURNING id`;
+    if (!deleted.length)
+      return NextResponse.json(
+        { error: "You can only delete your own comment" },
+        { status: 403 }
+      );
+    await sql`DELETE FROM social_activity_notifications WHERE reel_id=${Number(
+      id
+    )} AND comment_id=${commentId}`;
+    return NextResponse.json({ deleted: true });
+  } catch (error) {
+    console.error("Delete reel comment error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete comment" },
       { status: 500 }
     );
   }

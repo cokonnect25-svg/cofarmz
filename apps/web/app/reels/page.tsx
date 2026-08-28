@@ -1,23 +1,29 @@
-'use client';
+"use client";
 
-import { useAuth } from '@/hooks/useAuth';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, useRef, useCallback, type CSSProperties } from 'react';
-import { Suspense } from 'react';
-import { Heart, MessageCircle, Send, ArrowLeft, X } from 'lucide-react';
-import { getApiUrl } from '@/lib/api';
-import { buildOpenUrl } from '@/lib/deep-link';
-import { Capacitor } from '@capacitor/core';
-import { Share } from '@capacitor/share';
+import { useAuth } from "@/hooks/useAuth";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  type CSSProperties,
+} from "react";
+import { Suspense } from "react";
+import { Heart, MessageCircle, Send, ArrowLeft, X, Trash2 } from "lucide-react";
+import { getApiUrl } from "@/lib/api";
+import { buildOpenUrl } from "@/lib/deep-link";
+import { Capacitor } from "@capacitor/core";
+import { Share } from "@capacitor/share";
 
-const SCROLL_KEY = 'reels_scrollY';
-const INDEX_KEY = 'reels_currentIndex';
-const REEL_ID_KEY = 'reels_currentReelId';
+const SCROLL_KEY = "reels_scrollY";
+const INDEX_KEY = "reels_currentIndex";
+const REEL_ID_KEY = "reels_currentReelId";
 const COLLAPSED_CAPTION_STYLE: CSSProperties = {
-  display: '-webkit-box',
+  display: "-webkit-box",
   WebkitLineClamp: 2,
-  WebkitBoxOrient: 'vertical',
-  overflow: 'hidden',
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden",
 };
 
 interface Reel {
@@ -47,9 +53,16 @@ interface Comment {
   is_liked?: boolean;
 }
 
-const renderCommentText = (text: string) => text.split(/(@[\p{L}\p{N}_.-]+)/gu).map((part, index) =>
-  part.startsWith('@') ? <span key={index} className="font-bold text-green-700">{part}</span> : part
-);
+const renderCommentText = (text: string) =>
+  text.split(/(@[\p{L}\p{N}_.-]+)/gu).map((part, index) =>
+    part.startsWith("@") ? (
+      <span key={index} className="font-bold text-green-700">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
 
 interface ProfileListItem {
   id: string;
@@ -93,9 +106,9 @@ function ReelCaption({
     const captionElement = captionRef.current;
     if (!captionElement) return;
 
-    if (typeof ResizeObserver === 'undefined') {
-      window.addEventListener('resize', measureCaption);
-      return () => window.removeEventListener('resize', measureCaption);
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measureCaption);
+      return () => window.removeEventListener("resize", measureCaption);
     }
 
     const observer = new ResizeObserver(measureCaption);
@@ -121,7 +134,7 @@ function ReelCaption({
           }}
           className="mt-1 text-[14px] font-black text-white/90 underline underline-offset-2 hover:text-green-300"
         >
-          {expanded ? 'Show less' : 'Read more'}
+          {expanded ? "Show less" : "Read more"}
         </button>
       )}
     </div>
@@ -139,11 +152,13 @@ function ReelsContent() {
   const [showComments, setShowComments] = useState(false);
   const [currentReelComments, setCurrentReelComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
-  const [newComment, setNewComment] = useState('');
+  const [newComment, setNewComment] = useState("");
   const [postingComment, setPostingComment] = useState(false);
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
-  const [followingLoading, setFollowingLoading] = useState<Set<string>>(new Set());
+  const [followingLoading, setFollowingLoading] = useState<Set<string>>(
+    new Set()
+  );
   const [videoErrors, setVideoErrors] = useState<Set<string>>(new Set());
   const [isMuted, setIsMuted] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
@@ -160,8 +175,10 @@ function ReelsContent() {
   const [showViewers, setShowViewers] = useState(false);
   const [viewers, setViewers] = useState<ProfileListItem[]>([]);
   const [viewersLoading, setViewersLoading] = useState(false);
-  const [expandedCaptions, setExpandedCaptions] = useState<Set<string>>(new Set());
-  
+  const [expandedCaptions, setExpandedCaptions] = useState<Set<string>>(
+    new Set()
+  );
+
   // Refs for scroll restoration
   const pendingScrollRef = useRef<number | null>(null);
   const pendingIndexRef = useRef<number | null>(null);
@@ -171,15 +188,17 @@ function ReelsContent() {
     if (authLoading) return;
 
     if (!user) {
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
     const fetchReels = async () => {
       try {
-        const filterUserId = searchParams.get('userId');
+        const filterUserId = searchParams.get("userId");
         const apiUrl = filterUserId
-          ? getApiUrl(`/api/reels?userId=${filterUserId}&currentUserId=${user.id}&limit=50`)
+          ? getApiUrl(
+              `/api/reels?userId=${filterUserId}&currentUserId=${user.id}&limit=50`
+            )
           : getApiUrl(`/api/reels?currentUserId=${user.id}&limit=20`);
 
         const res = await fetch(apiUrl);
@@ -195,19 +214,19 @@ function ReelsContent() {
           });
           setLikedReels(likedSet);
           setFollowingUsers(followingSet);
-          
+
           // Check for saved scroll position first
           const savedScroll = sessionStorage.getItem(SCROLL_KEY);
           const savedIndex = sessionStorage.getItem(INDEX_KEY);
           const savedReelId = sessionStorage.getItem(REEL_ID_KEY);
-          
+
           // Clear saved state
           sessionStorage.removeItem(SCROLL_KEY);
           sessionStorage.removeItem(INDEX_KEY);
           sessionStorage.removeItem(REEL_ID_KEY);
-          
-          const targetReelId = searchParams.get('reelId');
-          
+
+          const targetReelId = searchParams.get("reelId");
+
           if (savedScroll && savedIndex && !targetReelId) {
             // Restoring from profile navigation
             isRestoringRef.current = true;
@@ -221,7 +240,8 @@ function ReelsContent() {
             if (idx >= 0) {
               setTimeout(() => {
                 if (scrollContainerRef.current) {
-                  scrollContainerRef.current.scrollTop = idx * scrollContainerRef.current.clientHeight;
+                  scrollContainerRef.current.scrollTop =
+                    idx * scrollContainerRef.current.clientHeight;
                   setCurrentReelIndex(idx);
                 }
               }, 100);
@@ -229,10 +249,13 @@ function ReelsContent() {
           }
         } else {
           const errorData = await res.json();
-          console.error('Error fetching reels:', res.status, errorData);
+          console.error("Error fetching reels:", res.status, errorData);
         }
       } catch (error) {
-        console.error('Error fetching reels:', error instanceof Error ? error.message : String(error));
+        console.error(
+          "Error fetching reels:",
+          error instanceof Error ? error.message : String(error)
+        );
       } finally {
         setLoading(false);
       }
@@ -241,21 +264,21 @@ function ReelsContent() {
     fetchReels();
   }, [user, authLoading, router, searchParams]);
 
-
   // Apply scroll restoration after reels load and videos are ready
   useEffect(() => {
     if (reels.length === 0) return;
-    if (pendingScrollRef.current === null || pendingIndexRef.current === null) return;
+    if (pendingScrollRef.current === null || pendingIndexRef.current === null)
+      return;
 
     const targetScroll = pendingScrollRef.current;
     const targetIndex = pendingIndexRef.current;
-    
+
     pendingScrollRef.current = null;
     pendingIndexRef.current = null;
 
     // Wait for DOM to settle and videos to initialize
     const attempts = [100, 300, 600, 1000];
-    attempts.forEach(delay => {
+    attempts.forEach((delay) => {
       setTimeout(() => {
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollTop = targetScroll;
@@ -270,109 +293,111 @@ function ReelsContent() {
     }, 1200);
   }, [reels, videoReady]);
 
-  const trackView = useCallback(async (reelId: string) => {
-    if (viewedReelsRef.current.has(reelId)) return;
-    viewedReelsRef.current.add(reelId);
+  const trackView = useCallback(
+    async (reelId: string) => {
+      if (viewedReelsRef.current.has(reelId)) return;
+      viewedReelsRef.current.add(reelId);
 
+      try {
+        const res = await fetch(getApiUrl(`/api/reels/${reelId}/view`), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-id": user?.id || "",
+          },
+          body: JSON.stringify({ userId: user?.id }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (typeof data.views === "number") {
+            setReels((prev) =>
+              prev.map((reel) =>
+                reel.id === reelId ? { ...reel, views: data.views } : reel
+              )
+            );
+          }
+        }
+      } catch (err) {
+        console.error("Failed to track view:", err);
+      }
+    },
+    [user?.id]
+  );
+
+  useEffect(() => {
+    videosRef.current.forEach((video, idx) => {
+      if (!video) return;
+      video.muted = isMuted;
+      if (idx === currentReelIndex && videoReady.has(reels[idx]?.id)) {
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+    });
+  }, [currentReelIndex, videoReady, isMuted]);
+
+  const fetchLikers = async (reelId: string) => {
+    setLikersLoading(true);
     try {
-      const res = await fetch(getApiUrl(`/api/reels/${reelId}/view`), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user?.id || '',
-        },
-        body: JSON.stringify({ userId: user?.id }),
-      });
-
+      const res = await fetch(getApiUrl(`/api/reels/${reelId}/like`));
       if (res.ok) {
         const data = await res.json();
-        if (typeof data.views === 'number') {
+        setLikers(data.likers || []);
+      }
+    } catch (err) {
+      console.error("Error fetching likers:", err);
+    } finally {
+      setLikersLoading(false);
+    }
+  };
+
+  const handleShowLikers = (reelId: string) => {
+    setShowLikers(true);
+    fetchLikers(reelId);
+  };
+
+  const fetchViewers = async (reelId: string) => {
+    setViewersLoading(true);
+    try {
+      const res = await fetch(getApiUrl(`/api/reels/${reelId}/view`));
+      if (res.ok) {
+        const data = await res.json();
+        setViewers(data.viewers || []);
+        if (typeof data.count === "number") {
           setReels((prev) =>
             prev.map((reel) =>
-              reel.id === reelId ? { ...reel, views: data.views } : reel
+              reel.id === reelId ? { ...reel, views: data.count } : reel
             )
           );
         }
+      } else {
+        setViewers([]);
       }
     } catch (err) {
-      console.error('Failed to track view:', err);
-    }
-  }, [user?.id]);
-
-useEffect(() => {
-  videosRef.current.forEach((video, idx) => {
-    if (!video) return;
-    video.muted = isMuted;
-    if (idx === currentReelIndex && videoReady.has(reels[idx]?.id)) {
-      video.play().catch(() => {});
-    } else {
-      video.pause();
-    }
-  });
-}, [currentReelIndex, videoReady, isMuted]);
-
-
-const fetchLikers = async (reelId: string) => {
-  setLikersLoading(true);
-  try {
-    const res = await fetch(getApiUrl(`/api/reels/${reelId}/like`));
-    if (res.ok) {
-      const data = await res.json();
-      setLikers(data.likers || []);
-    }
-  } catch (err) {
-    console.error('Error fetching likers:', err);
-  } finally {
-    setLikersLoading(false);
-  }
-};
-
-const handleShowLikers = (reelId: string) => {
-  setShowLikers(true);
-  fetchLikers(reelId);
-};
-
-const fetchViewers = async (reelId: string) => {
-  setViewersLoading(true);
-  try {
-    const res = await fetch(getApiUrl(`/api/reels/${reelId}/view`));
-    if (res.ok) {
-      const data = await res.json();
-      setViewers(data.viewers || []);
-      if (typeof data.count === 'number') {
-        setReels((prev) =>
-          prev.map((reel) =>
-            reel.id === reelId ? { ...reel, views: data.count } : reel
-          )
-        );
-      }
-    } else {
+      console.error("Error fetching viewers:", err);
       setViewers([]);
+    } finally {
+      setViewersLoading(false);
     }
-  } catch (err) {
-    console.error('Error fetching viewers:', err);
-    setViewers([]);
-  } finally {
-    setViewersLoading(false);
-  }
-};
+  };
 
-const handleShowViewers = (reelId: string) => {
-  setShowViewers(true);
-  fetchViewers(reelId);
-};
+  const handleShowViewers = (reelId: string) => {
+    setShowViewers(true);
+    fetchViewers(reelId);
+  };
 
-const toggleCaption = (reelId: string) => {
-  setExpandedCaptions((prev) => {
-    const next = new Set(prev);
-    if (next.has(reelId)) {
-      next.delete(reelId);
-    } else {
-      next.add(reelId);
-    }
-    return next;
-  });
-};
+  const toggleCaption = (reelId: string) => {
+    setExpandedCaptions((prev) => {
+      const next = new Set(prev);
+      if (next.has(reelId)) {
+        next.delete(reelId);
+      } else {
+        next.add(reelId);
+      }
+      return next;
+    });
+  };
 
   const handleLike = async (reelId: string) => {
     if (!user) return;
@@ -396,10 +421,10 @@ const toggleCaption = (reelId: string) => {
 
     try {
       const res = await fetch(getApiUrl(`/api/reels/${reelId}/like`), {
-        method: 'POST',
-        headers: { 'x-user-id': user.id },
+        method: "POST",
+        headers: { "x-user-id": user.id },
       });
-      if (!res.ok) throw new Error('Failed');
+      if (!res.ok) throw new Error("Failed");
       const { liked } = await res.json();
       if (liked === wasLiked) {
         setLikedReels((prev) => {
@@ -441,19 +466,16 @@ const toggleCaption = (reelId: string) => {
 
     try {
       const isCurrentlyFollowing = followingUsers.has(userId);
-      const method = isCurrentlyFollowing ? 'DELETE' : 'POST';
+      const method = isCurrentlyFollowing ? "DELETE" : "POST";
 
-      const res = await fetch(
-        getApiUrl(`/api/follows`),
-        {
-          method,
-          headers: {
-            'x-user-id': user.id,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ followingId: userId })
-        }
-      );
+      const res = await fetch(getApiUrl(`/api/follows`), {
+        method,
+        headers: {
+          "x-user-id": user.id,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ followingId: userId }),
+      });
 
       if (res.ok) {
         setFollowingUsers((prev) => {
@@ -475,7 +497,10 @@ const toggleCaption = (reelId: string) => {
         );
       }
     } catch (error) {
-      console.error('Error toggling follow:', error instanceof Error ? error.message : String(error));
+      console.error(
+        "Error toggling follow:",
+        error instanceof Error ? error.message : String(error)
+      );
     } finally {
       setFollowingLoading((prev) => {
         const newSet = new Set(prev);
@@ -488,13 +513,18 @@ const toggleCaption = (reelId: string) => {
   const fetchComments = async (reelId: string) => {
     setCommentsLoading(true);
     try {
-      const res = await fetch(getApiUrl(`/api/reels/${reelId}/comments`), { headers: user?.id ? { 'x-user-id': user.id } : {} });
+      const res = await fetch(getApiUrl(`/api/reels/${reelId}/comments`), {
+        headers: user?.id ? { "x-user-id": user.id } : {},
+      });
       if (res.ok) {
         const data = await res.json();
         setCurrentReelComments(data);
       }
     } catch (error) {
-      console.error('Error fetching comments:', error instanceof Error ? error.message : String(error));
+      console.error(
+        "Error fetching comments:",
+        error instanceof Error ? error.message : String(error)
+      );
     } finally {
       setCommentsLoading(false);
     }
@@ -513,12 +543,15 @@ const toggleCaption = (reelId: string) => {
       const res = await fetch(
         getApiUrl(`/api/reels/${reels[currentReelIndex].id}/comments`),
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'x-user-id': user.id,
-            'Content-Type': 'application/json'
+            "x-user-id": user.id,
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify({ comment: newComment, parentCommentId: replyTo?.id || null })
+          body: JSON.stringify({
+            comment: newComment,
+            parentCommentId: replyTo?.id || null,
+          }),
         }
       );
 
@@ -526,9 +559,9 @@ const toggleCaption = (reelId: string) => {
         const newCommentData = await res.json();
         setCurrentReelComments([
           { ...newCommentData, name: user.name, image: user.image },
-          ...currentReelComments
+          ...currentReelComments,
         ]);
-        setNewComment('');
+        setNewComment("");
         setReplyTo(null);
         setReels((prev) =>
           prev.map((reel) =>
@@ -539,7 +572,10 @@ const toggleCaption = (reelId: string) => {
         );
       }
     } catch (error) {
-      console.error('Error posting comment:', error instanceof Error ? error.message : String(error));
+      console.error(
+        "Error posting comment:",
+        error instanceof Error ? error.message : String(error)
+      );
     } finally {
       setPostingComment(false);
     }
@@ -547,48 +583,100 @@ const toggleCaption = (reelId: string) => {
 
   const handleCommentLike = async (comment: Comment) => {
     if (!user) return;
-    const res = await fetch(getApiUrl(`/api/reels/${reels[currentReelIndex].id}/comments/${comment.id}/like`), { method: 'POST', headers: { 'x-user-id': user.id } });
+    const res = await fetch(
+      getApiUrl(
+        `/api/reels/${reels[currentReelIndex].id}/comments/${comment.id}/like`
+      ),
+      { method: "POST", headers: { "x-user-id": user.id } }
+    );
     if (!res.ok) return;
     const data = await res.json();
-    setCurrentReelComments(items => items.map(item => item.id === comment.id ? { ...item, likes: data.likes, is_liked: data.liked } : item));
+    setCurrentReelComments((items) =>
+      items.map((item) =>
+        item.id === comment.id
+          ? { ...item, likes: data.likes, is_liked: data.liked }
+          : item
+      )
+    );
   };
 
   const beginReply = (comment: Comment) => {
     setReplyTo(comment);
-    setNewComment(`@${comment.name.replace(/\s+/g, '')} `);
+    setNewComment(`@${comment.name.replace(/\s+/g, "")} `);
+  };
+
+  const deleteComment = async (comment: Comment) => {
+    if (
+      !user ||
+      comment.user_id !== user.id ||
+      !confirm("Delete this comment?")
+    )
+      return;
+    const reelId = reels[currentReelIndex].id;
+    const res = await fetch(
+      getApiUrl(`/api/reels/${reelId}/comments?commentId=${comment.id}`),
+      { method: "DELETE", headers: { "x-user-id": user.id } }
+    );
+    if (!res.ok) return;
+    setCurrentReelComments((items) => {
+      const removed = items.filter(
+        (item) =>
+          item.id === comment.id || item.parent_comment_id === comment.id
+      ).length;
+      setReels((values) =>
+        values.map((reel) =>
+          reel.id === reelId
+            ? { ...reel, comments: Math.max(0, reel.comments - removed) }
+            : reel
+        )
+      );
+      return items.filter(
+        (item) =>
+          item.id !== comment.id && item.parent_comment_id !== comment.id
+      );
+    });
+    if (replyTo?.id === comment.id) {
+      setReplyTo(null);
+      setNewComment("");
+    }
   };
 
   const handleShare = async (e: React.MouseEvent, reel: Reel) => {
     e.stopPropagation();
 
-    const shareUrl = buildOpenUrl('/reels', { reelId: reel.id });
-    const title = reel.name ? `${reel.name} on CoFarmz` : 'CoFarmz Reel';
-    const text = reel.caption || 'Check out this reel on CoFarmz! Tap the link to open CoFarmz app or install it.';
+    const shareUrl = buildOpenUrl("/reels", { reelId: reel.id });
+    const title = reel.name ? `${reel.name} on CoFarmz` : "CoFarmz Reel";
+    const text =
+      reel.caption ||
+      "Check out this reel on CoFarmz! Tap the link to open CoFarmz app or install it.";
 
     if (Capacitor.isNativePlatform()) {
       try {
         await Share.share({ title, text, url: shareUrl });
       } catch (err: any) {
-        setShareToast(`Error: ${err?.message || 'Share failed'}`);
+        setShareToast(`Error: ${err?.message || "Share failed"}`);
         setTimeout(() => setShareToast(null), 4000);
       }
       return;
     }
 
-    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+    if (
+      typeof navigator !== "undefined" &&
+      typeof navigator.share === "function"
+    ) {
       try {
         await navigator.share({ title, text, url: shareUrl });
         return;
       } catch (err: any) {
-        if (err?.name === 'AbortError') return;
+        if (err?.name === "AbortError") return;
       }
     }
 
     try {
       await navigator.clipboard.writeText(shareUrl);
-      setShareToast('🔗 Link copied!');
+      setShareToast("🔗 Link copied!");
     } catch {
-      setShareToast('Sharing not supported');
+      setShareToast("Sharing not supported");
     }
 
     setTimeout(() => setShareToast(null), 2000);
@@ -597,9 +685,12 @@ const toggleCaption = (reelId: string) => {
   // ✅ SAVE scroll position before navigating to profile
   const saveStateAndNavigateToProfile = (userId: string) => {
     if (scrollContainerRef.current) {
-      sessionStorage.setItem(SCROLL_KEY, scrollContainerRef.current.scrollTop.toString());
+      sessionStorage.setItem(
+        SCROLL_KEY,
+        scrollContainerRef.current.scrollTop.toString()
+      );
       sessionStorage.setItem(INDEX_KEY, currentReelIndex.toString());
-      sessionStorage.setItem(REEL_ID_KEY, reels[currentReelIndex]?.id || '');
+      sessionStorage.setItem(REEL_ID_KEY, reels[currentReelIndex]?.id || "");
     }
     router.push(`/farmer-profile?id=${userId}`);
   };
@@ -634,10 +725,16 @@ const toggleCaption = (reelId: string) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 10020 }}>
+    <div
+      className="fixed inset-0 bg-black flex flex-col"
+      style={{ zIndex: 10020 }}
+    >
       {/* Header */}
       <div className="h-12 bg-black border-b border-gray-700 px-4 flex items-center gap-3 z-40">
-        <button onClick={() => router.back()} className="text-white hover:text-gray-300">
+        <button
+          onClick={() => router.back()}
+          className="text-white hover:text-gray-300"
+        >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-lg font-bold text-white">Farm Tales</h1>
@@ -646,15 +743,19 @@ const toggleCaption = (reelId: string) => {
       {/* Reels Container */}
       {reels.length === 0 ? (
         <div className="flex-1 flex items-center justify-center flex-col gap-4">
-          <p className="text-gray-400 text-center text-lg font-semibold">No reels yet</p>
-          <p className="text-gray-500 text-center text-sm px-6">Follow farmers to see their reels or check back later</p>
+          <p className="text-gray-400 text-center text-lg font-semibold">
+            No reels yet
+          </p>
+          <p className="text-gray-500 text-center text-sm px-6">
+            Follow farmers to see their reels or check back later
+          </p>
         </div>
       ) : (
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
           className="w-full h-full overflow-y-scroll snap-y snap-mandatory"
-          style={{ scrollSnapType: 'y mandatory' }}
+          style={{ scrollSnapType: "y mandatory" }}
         >
           {reels.map((reel, idx) => (
             <div
@@ -667,8 +768,12 @@ const toggleCaption = (reelId: string) => {
                   <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mb-4">
                     <i className="ph ph-video-slash text-4xl text-white/50"></i>
                   </div>
-                  <p className="text-white/60 text-sm font-medium">Video unavailable</p>
-                  <p className="text-white/30 text-xs mt-1">This video could not be loaded</p>
+                  <p className="text-white/60 text-sm font-medium">
+                    Video unavailable
+                  </p>
+                  <p className="text-white/30 text-xs mt-1">
+                    This video could not be loaded
+                  </p>
                 </div>
               ) : (
                 <div className="relative w-full h-full max-w-sm md:max-w-md lg:max-w-lg mx-auto overflow-hidden shadow-2xl shadow-green-500/10">
@@ -688,17 +793,17 @@ const toggleCaption = (reelId: string) => {
                         video.currentTime = 0.05;
                       }
                     }}
-                      onSeeked={(e) => {
-                        const video = e.currentTarget;
-                        video.pause();
-                        setVideoReady((prev) => new Set(prev).add(reel.id));
-                        if (idx === currentReelIndex) {
-                          video.play().catch(() => {});
-                        }
-                      }}
-                      onPlay={() => {
-                        trackView(reel.id);
-                      }}
+                    onSeeked={(e) => {
+                      const video = e.currentTarget;
+                      video.pause();
+                      setVideoReady((prev) => new Set(prev).add(reel.id));
+                      if (idx === currentReelIndex) {
+                        video.play().catch(() => {});
+                      }
+                    }}
+                    onPlay={() => {
+                      trackView(reel.id);
+                    }}
                     onError={() => {
                       setVideoErrors((prev) => new Set(prev).add(reel.id));
                     }}
@@ -727,7 +832,10 @@ const toggleCaption = (reelId: string) => {
                 </div>
               )}
 
-              <div className="absolute left-0 right-16 pr-20 md:px-0 md:pr-0 w-full max-w-sm md:max-w-md lg:max-w-lg mx-auto text-white pointer-events-none z-30" style={{ bottom: 'calc(env(safe-area-inset-bottom) + 80px)' }}>
+              <div
+                className="absolute left-0 right-16 pr-20 md:px-0 md:pr-0 w-full max-w-sm md:max-w-md lg:max-w-lg mx-auto text-white pointer-events-none z-30"
+                style={{ bottom: "calc(env(safe-area-inset-bottom) + 80px)" }}
+              >
                 <div className="pointer-events-auto flex flex-col gap-4">
                   {/* ✅ SAVE state and navigate to profile */}
                   <div
@@ -736,7 +844,12 @@ const toggleCaption = (reelId: string) => {
                   >
                     <div className="relative">
                       <img
-                        src={reel.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(reel.name || 'F')}&backgroundColor=166534&textColor=ffffff`}
+                        src={
+                          reel.image ||
+                          `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
+                            reel.name || "F"
+                          )}&backgroundColor=166534&textColor=ffffff`
+                        }
                         alt={reel.name}
                         className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500/50 shadow-lg group-hover:border-white transition-colors"
                       />
@@ -745,12 +858,13 @@ const toggleCaption = (reelId: string) => {
                     <div className="flex flex-col">
                       <div className="flex items-center gap-1.5">
                         <p className="font-black text-[16px] tracking-tight drop-shadow-md">
-                          {reel.name || 'CoFarmz User'}
+                          {reel.name || "CoFarmz User"}
                         </p>
                         <i className="ph-fill ph-check-circle text-blue-400 text-sm"></i>
                       </div>
                       <p className="text-[10px] text-white/70 font-black uppercase tracking-[0.15em] flex items-center gap-1">
-                        Visit Profile <i className="ph-bold ph-caret-right text-[8px] transition-transform group-hover:translate-x-0.5"></i>
+                        Visit Profile{" "}
+                        <i className="ph-bold ph-caret-right text-[8px] transition-transform group-hover:translate-x-0.5"></i>
                       </p>
                     </div>
                   </div>
@@ -766,18 +880,22 @@ const toggleCaption = (reelId: string) => {
               </div>
 
               <button
-                onClick={(e) => { e.stopPropagation(); setIsMuted((prev) => !prev); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMuted((prev) => !prev);
+                }}
                 className="absolute top-4 right-4 z-40 w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center border border-white/20 active:scale-90 transition-transform"
               >
-                {isMuted
-                  ? <i className="ph-fill ph-speaker-slash text-white text-xl" />
-                  : <i className="ph-fill ph-speaker-high text-white text-xl" />
-                }
+                {isMuted ? (
+                  <i className="ph-fill ph-speaker-slash text-white text-xl" />
+                ) : (
+                  <i className="ph-fill ph-speaker-high text-white text-xl" />
+                )}
               </button>
 
               <div
                 className="absolute right-[max(1.5rem,env(safe-area-inset-right))] md:right-[calc(50%-180px)] lg:right-[calc(50%-230px)] w-16 flex flex-col items-center gap-5 text-white z-30"
-                style={{ bottom: 'calc(env(safe-area-inset-bottom) + 88px)' }}
+                style={{ bottom: "calc(env(safe-area-inset-bottom) + 88px)" }}
               >
                 {/* Views */}
                 <button
@@ -791,10 +909,12 @@ const toggleCaption = (reelId: string) => {
                     <i className="ph-fill ph-eye text-[24px] drop-shadow-xl"></i>
                   </div>
                   <span className="max-w-full text-center text-[11px] font-black drop-shadow-xl tracking-tight uppercase">
-                    {reel.views > 999 ? `${(reel.views / 1000).toFixed(1)}k` : reel.views || 0}
+                    {reel.views > 999
+                      ? `${(reel.views / 1000).toFixed(1)}k`
+                      : reel.views || 0}
                   </span>
                 </button>
-                
+
                 {/* Mute / Unmute */}
                 <button
                   onClick={(e) => {
@@ -811,36 +931,43 @@ const toggleCaption = (reelId: string) => {
                     )}
                   </div>
                   <span className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase">
-                    {isMuted ? 'Mute' : 'Sound'}
+                    {isMuted ? "Mute" : "Sound"}
                   </span>
                 </button>
 
-<div className="flex w-16 flex-col items-center gap-1">
-  {/* Heart */}
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      handleLike(reel.id);
-    }}
-    className="w-12 h-12 rounded-full backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-90 group"
-  >
-    <Heart
-      className={`w-6 h-6 transition-colors duration-300 ${likedReels.has(reel.id) ? 'fill-red-500 text-red-500' : 'text-white'}`}
-      strokeWidth={2.5}
-    />
-  </button>
-  
-  {/* Count */}
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      handleShowLikers(reel.id);
-    }}
-    className="max-w-full text-center text-[11px] font-black drop-shadow-xl tracking-tight uppercase hover:text-green-400 transition-colors"
-  >
-    {reel.likes > 999 ? `${(reel.likes / 1000).toFixed(1)}k` : reel.likes} {reel.likes === 1 ? 'like' : 'likes'}
-  </button>
-</div>
+                <div className="flex w-16 flex-col items-center gap-1">
+                  {/* Heart */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleLike(reel.id);
+                    }}
+                    className="w-12 h-12 rounded-full backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-90 group"
+                  >
+                    <Heart
+                      className={`w-6 h-6 transition-colors duration-300 ${
+                        likedReels.has(reel.id)
+                          ? "fill-red-500 text-red-500"
+                          : "text-white"
+                      }`}
+                      strokeWidth={2.5}
+                    />
+                  </button>
+
+                  {/* Count */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleShowLikers(reel.id);
+                    }}
+                    className="max-w-full text-center text-[11px] font-black drop-shadow-xl tracking-tight uppercase hover:text-green-400 transition-colors"
+                  >
+                    {reel.likes > 999
+                      ? `${(reel.likes / 1000).toFixed(1)}k`
+                      : reel.likes}{" "}
+                    {reel.likes === 1 ? "like" : "likes"}
+                  </button>
+                </div>
 
                 {/* Comments */}
                 <button
@@ -848,7 +975,10 @@ const toggleCaption = (reelId: string) => {
                   className="flex w-16 flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-90"
                 >
                   <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl">
-                    <MessageCircle className="w-6 h-6 text-white" strokeWidth={2.5} />
+                    <MessageCircle
+                      className="w-6 h-6 text-white"
+                      strokeWidth={2.5}
+                    />
                   </div>
                   <span className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase">
                     {reel.comments}
@@ -863,7 +993,9 @@ const toggleCaption = (reelId: string) => {
                   <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl">
                     <Send className="w-6 h-6 text-white" strokeWidth={2.5} />
                   </div>
-                  <span className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase">Share</span>
+                  <span className="text-[11px] font-black drop-shadow-xl tracking-tight uppercase">
+                    Share
+                  </span>
                 </button>
               </div>
             </div>
@@ -881,7 +1013,7 @@ const toggleCaption = (reelId: string) => {
       {showComments && (
         <div
           className="fixed inset-0 z-[999] flex flex-col"
-          style={{ paddingBottom: 'calc(60px + env(safe-area-inset-bottom))' }}
+          style={{ paddingBottom: "calc(60px + env(safe-area-inset-bottom))" }}
         >
           <div
             className="flex-1 bg-black/50"
@@ -889,7 +1021,7 @@ const toggleCaption = (reelId: string) => {
           />
           <div
             className="bg-white rounded-t-3xl flex flex-col overflow-hidden"
-            style={{ maxHeight: '70vh' }}
+            style={{ maxHeight: "70vh" }}
           >
             <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 flex-shrink-0" />
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
@@ -914,31 +1046,73 @@ const toggleCaption = (reelId: string) => {
                 </p>
               ) : (
                 currentReelComments.map((comment) => (
-                  <div key={comment.id} className={`flex gap-3 ${comment.parent_comment_id ? 'ml-10 border-l-2 border-green-100 pl-3' : ''}`}>
+                  <div
+                    key={comment.id}
+                    className={`flex gap-3 ${
+                      comment.parent_comment_id
+                        ? "ml-10 border-l-2 border-green-100 pl-3"
+                        : ""
+                    }`}
+                  >
                     <button
-                      onClick={() => saveStateAndNavigateToProfile(comment.user_id)}
+                      onClick={() =>
+                        saveStateAndNavigateToProfile(comment.user_id)
+                      }
                       className="flex-shrink-0"
                     >
                       <img
-                        src={comment.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(comment.name || 'U')}&backgroundColor=166534&textColor=ffffff`}
+                        src={
+                          comment.image ||
+                          `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
+                            comment.name || "U"
+                          )}&backgroundColor=166534&textColor=ffffff`
+                        }
                         alt={comment.name}
                         className="w-8 h-8 rounded-full object-cover"
                       />
                     </button>
                     <div className="flex-1 min-w-0">
                       <button
-                        onClick={() => saveStateAndNavigateToProfile(comment.user_id)}
+                        onClick={() =>
+                          saveStateAndNavigateToProfile(comment.user_id)
+                        }
                         className="font-bold text-sm text-gray-900 hover:text-green-700 transition-colors"
                       >
                         {comment.name}
                       </button>
-                      <p className="text-sm text-gray-700 break-words">{renderCommentText(comment.comment)}</p>
+                      <p className="text-sm text-gray-700 break-words">
+                        {renderCommentText(comment.comment)}
+                      </p>
                       <div className="mt-1 flex items-center gap-3 text-xs font-semibold text-gray-400">
-                        <span>{new Date(comment.created_at).toLocaleDateString()}</span>
-                        <button onClick={() => beginReply(comment)} className="hover:text-green-700">Reply</button>
-                        <button onClick={() => handleCommentLike(comment)} className={comment.is_liked ? 'text-red-600' : 'hover:text-red-600'}>
-                          {comment.is_liked ? 'Liked' : 'Like'}{comment.likes ? ` (${comment.likes})` : ''}
+                        <span>
+                          {new Date(comment.created_at).toLocaleDateString()}
+                        </span>
+                        <button
+                          onClick={() => beginReply(comment)}
+                          className="hover:text-green-700"
+                        >
+                          Reply
                         </button>
+                        <button
+                          onClick={() => handleCommentLike(comment)}
+                          className={
+                            comment.is_liked
+                              ? "text-red-600"
+                              : "hover:text-red-600"
+                          }
+                        >
+                          {comment.is_liked ? "Liked" : "Like"}
+                          {comment.likes ? ` (${comment.likes})` : ""}
+                        </button>
+                        {comment.user_id === user?.id && (
+                          <button
+                            onClick={() => deleteComment(comment)}
+                            className="inline-flex items-center gap-1 text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -947,39 +1121,63 @@ const toggleCaption = (reelId: string) => {
             </div>
             {user && (
               <div className="flex-shrink-0 border-t border-gray-100 bg-white px-4 py-3">
-                {replyTo && <div className="mb-2 flex items-center justify-between rounded-xl bg-green-50 px-3 py-2 text-xs text-green-800"><span>Replying to <b>{replyTo.name}</b></span><button onClick={() => { setReplyTo(null); setNewComment(''); }} aria-label="Cancel reply"><X className="h-4 w-4" /></button></div>}
+                {replyTo && (
+                  <div className="mb-2 flex items-center justify-between rounded-xl bg-green-50 px-3 py-2 text-xs text-green-800">
+                    <span>
+                      Replying to <b>{replyTo.name}</b>
+                    </span>
+                    <button
+                      onClick={() => {
+                        setReplyTo(null);
+                        setNewComment("");
+                      }}
+                      aria-label="Cancel reply"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
                 <div className="flex gap-2 items-center">
-                <img
-                  src={user.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name || 'U')}&backgroundColor=166534&textColor=ffffff`}
-                  alt={user.name}
-                  className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                />
-                <input
-                  type="text"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Add a comment..."
-                  onFocus={() => {
-                    setTimeout(() => {
-                      document.activeElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }, 300);
-                  }}
-                  className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !postingComment) handlePostComment();
-                  }}
-                />
-                <button
-                  onClick={handlePostComment}
-                  disabled={!newComment.trim() || postingComment}
-                  className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center disabled:opacity-40 active:scale-90 transition-transform flex-shrink-0"
-                >
-                  {postingComment ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4 text-white" />
-                  )}
-                </button>
+                  <img
+                    src={
+                      user.image ||
+                      `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
+                        user.name || "U"
+                      )}&backgroundColor=166534&textColor=ffffff`
+                    }
+                    alt={user.name}
+                    className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                  />
+                  <input
+                    type="text"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Add a comment..."
+                    onFocus={() => {
+                      setTimeout(() => {
+                        document.activeElement?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "nearest",
+                        });
+                      }, 300);
+                    }}
+                    className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !postingComment)
+                        handlePostComment();
+                    }}
+                  />
+                  <button
+                    onClick={handlePostComment}
+                    disabled={!newComment.trim() || postingComment}
+                    className="w-9 h-9 rounded-full bg-green-600 flex items-center justify-center disabled:opacity-40 active:scale-90 transition-transform flex-shrink-0"
+                  >
+                    {postingComment ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4 text-white" />
+                    )}
+                  </button>
                 </div>
               </div>
             )}
@@ -987,186 +1185,202 @@ const toggleCaption = (reelId: string) => {
         </div>
       )}
       {/* Viewed By Modal */}
-{showViewers && (
-  <div
-    className="fixed inset-0 z-[999] flex flex-col"
-    style={{ paddingBottom: 'calc(60px + env(safe-area-inset-bottom))' }}
-  >
-    <div
-      className="flex-1 bg-black/50"
-      onClick={() => setShowViewers(false)}
-    />
-    <div
-      className="bg-white rounded-t-3xl flex flex-col overflow-hidden"
-      style={{ maxHeight: '70vh' }}
-    >
-      <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 flex-shrink-0" />
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-        <h2 className="text-lg font-bold text-gray-900">
-          Viewed by {viewers.length > 0 ? `(${viewers.length})` : ''}
-        </h2>
-        <button
-          onClick={() => setShowViewers(false)}
-          className="p-1 hover:bg-gray-100 rounded-full transition"
+      {showViewers && (
+        <div
+          className="fixed inset-0 z-[999] flex flex-col"
+          style={{ paddingBottom: "calc(60px + env(safe-area-inset-bottom))" }}
         >
-          <X className="w-5 h-5 text-gray-600" />
-        </button>
-      </div>
-      <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
-        {viewersLoading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
-          </div>
-        ) : viewers.length === 0 ? (
-          <p className="text-center text-gray-400 py-8 text-sm">
-            No profile views recorded yet.
-          </p>
-        ) : (
-          viewers.map((viewer) => (
-            <div key={viewer.id} className="flex items-center gap-3">
+          <div
+            className="flex-1 bg-black/50"
+            onClick={() => setShowViewers(false)}
+          />
+          <div
+            className="bg-white rounded-t-3xl flex flex-col overflow-hidden"
+            style={{ maxHeight: "70vh" }}
+          >
+            <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 flex-shrink-0" />
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+              <h2 className="text-lg font-bold text-gray-900">
+                Viewed by {viewers.length > 0 ? `(${viewers.length})` : ""}
+              </h2>
               <button
-                onClick={() => {
-                  setShowViewers(false);
-                  saveStateAndNavigateToProfile(viewer.id);
-                }}
-                className="flex-shrink-0"
+                onClick={() => setShowViewers(false)}
+                className="p-1 hover:bg-gray-100 rounded-full transition"
               >
-                <img
-                  src={viewer.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(viewer.name || 'U')}&backgroundColor=166534&textColor=ffffff`}
-                  alt={viewer.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              </button>
-              <div className="flex-1 min-w-0">
-                <button
-                  onClick={() => {
-                    setShowViewers(false);
-                    saveStateAndNavigateToProfile(viewer.id);
-                  }}
-                  className="font-bold text-sm text-gray-900 hover:text-green-700 transition-colors block truncate"
-                >
-                  {viewer.name}
-                </button>
-                {viewer.role && (
-                  <p className="text-xs text-gray-500">{viewer.role}</p>
-                )}
-                {viewer.location && (
-                  <p className="text-xs text-gray-400 truncate">{viewer.location}</p>
-                )}
-                {viewer.viewed_at && (
-                  <p className="text-[11px] text-gray-400 mt-0.5">
-                    Viewed {new Date(viewer.viewed_at).toLocaleDateString('en-IN', {
-                      day: 'numeric',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  setShowViewers(false);
-                  saveStateAndNavigateToProfile(viewer.id);
-                }}
-                className="px-4 py-1.5 rounded-full bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition"
-              >
-                View
+                <X className="w-5 h-5 text-gray-600" />
               </button>
             </div>
-          ))
-        )}
-      </div>
-    </div>
-  </div>
-)}
-
-      {/* Liked By Modal */}
-{showLikers && (
-  <div
-    className="fixed inset-0 z-[999] flex flex-col"
-    style={{ paddingBottom: 'calc(60px + env(safe-area-inset-bottom))' }}
-  >
-    <div
-      className="flex-1 bg-black/50"
-      onClick={() => setShowLikers(false)}
-    />
-    <div
-      className="bg-white rounded-t-3xl flex flex-col overflow-hidden"
-      style={{ maxHeight: '70vh' }}
-    >
-      <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 flex-shrink-0" />
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-        <h2 className="text-lg font-bold text-gray-900">
-          Liked by
-        </h2>
-        <button
-          onClick={() => setShowLikers(false)}
-          className="p-1 hover:bg-gray-100 rounded-full transition"
-        >
-          <X className="w-5 h-5 text-gray-600" />
-        </button>
-      </div>
-      <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
-        {likersLoading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
-          </div>
-        ) : likers.length === 0 ? (
-          <p className="text-center text-gray-400 py-8 text-sm">
-            No likes yet. Be the first!
-          </p>
-        ) : (
-          likers.map((liker) => (
-            <div key={liker.id} className="flex items-center gap-3">
-              <button
-                onClick={() => {
-                  setShowLikers(false);
-                  saveStateAndNavigateToProfile(liker.id);
-                }}
-                className="flex-shrink-0"
-              >
-                <img
-                  src={liker.image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(liker.name || 'U')}&backgroundColor=166534&textColor=ffffff`}
-                  alt={liker.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              </button>
-              <div className="flex-1 min-w-0">
-                <button
-                  onClick={() => {
-                    setShowLikers(false);
-                    saveStateAndNavigateToProfile(liker.id);
-                  }}
-                  className="font-bold text-sm text-gray-900 hover:text-green-700 transition-colors block"
-                >
-                  {liker.name}
-                </button>
-                {liker.role && (
-                  <p className="text-xs text-gray-500">{liker.role}</p>
-                )}
-                {liker.location && (
-                  <p className="text-xs text-gray-400">{liker.location}</p>
-                )}
-              </div>
-              {liker.id !== user?.id && (
-                <button
-                  onClick={() => {
-                    setShowLikers(false);
-                    router.push(`/farmer-profile?id=${liker.id}`);
-                  }}
-                  className="px-4 py-1.5 rounded-full bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition"
-                >
-                  View
-                </button>
+            <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
+              {viewersLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
+                </div>
+              ) : viewers.length === 0 ? (
+                <p className="text-center text-gray-400 py-8 text-sm">
+                  No profile views recorded yet.
+                </p>
+              ) : (
+                viewers.map((viewer) => (
+                  <div key={viewer.id} className="flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        setShowViewers(false);
+                        saveStateAndNavigateToProfile(viewer.id);
+                      }}
+                      className="flex-shrink-0"
+                    >
+                      <img
+                        src={
+                          viewer.image ||
+                          `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
+                            viewer.name || "U"
+                          )}&backgroundColor=166534&textColor=ffffff`
+                        }
+                        alt={viewer.name}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <button
+                        onClick={() => {
+                          setShowViewers(false);
+                          saveStateAndNavigateToProfile(viewer.id);
+                        }}
+                        className="font-bold text-sm text-gray-900 hover:text-green-700 transition-colors block truncate"
+                      >
+                        {viewer.name}
+                      </button>
+                      {viewer.role && (
+                        <p className="text-xs text-gray-500">{viewer.role}</p>
+                      )}
+                      {viewer.location && (
+                        <p className="text-xs text-gray-400 truncate">
+                          {viewer.location}
+                        </p>
+                      )}
+                      {viewer.viewed_at && (
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                          Viewed{" "}
+                          {new Date(viewer.viewed_at).toLocaleDateString(
+                            "en-IN",
+                            {
+                              day: "numeric",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }
+                          )}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowViewers(false);
+                        saveStateAndNavigateToProfile(viewer.id);
+                      }}
+                      className="px-4 py-1.5 rounded-full bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition"
+                    >
+                      View
+                    </button>
+                  </div>
+                ))
               )}
             </div>
-          ))
-        )}
-      </div>
-    </div>
-  </div>
-)}
+          </div>
+        </div>
+      )}
+
+      {/* Liked By Modal */}
+      {showLikers && (
+        <div
+          className="fixed inset-0 z-[999] flex flex-col"
+          style={{ paddingBottom: "calc(60px + env(safe-area-inset-bottom))" }}
+        >
+          <div
+            className="flex-1 bg-black/50"
+            onClick={() => setShowLikers(false)}
+          />
+          <div
+            className="bg-white rounded-t-3xl flex flex-col overflow-hidden"
+            style={{ maxHeight: "70vh" }}
+          >
+            <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1 flex-shrink-0" />
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+              <h2 className="text-lg font-bold text-gray-900">Liked by</h2>
+              <button
+                onClick={() => setShowLikers(false)}
+                className="p-1 hover:bg-gray-100 rounded-full transition"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
+              {likersLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
+                </div>
+              ) : likers.length === 0 ? (
+                <p className="text-center text-gray-400 py-8 text-sm">
+                  No likes yet. Be the first!
+                </p>
+              ) : (
+                likers.map((liker) => (
+                  <div key={liker.id} className="flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        setShowLikers(false);
+                        saveStateAndNavigateToProfile(liker.id);
+                      }}
+                      className="flex-shrink-0"
+                    >
+                      <img
+                        src={
+                          liker.image ||
+                          `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
+                            liker.name || "U"
+                          )}&backgroundColor=166534&textColor=ffffff`
+                        }
+                        alt={liker.name}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <button
+                        onClick={() => {
+                          setShowLikers(false);
+                          saveStateAndNavigateToProfile(liker.id);
+                        }}
+                        className="font-bold text-sm text-gray-900 hover:text-green-700 transition-colors block"
+                      >
+                        {liker.name}
+                      </button>
+                      {liker.role && (
+                        <p className="text-xs text-gray-500">{liker.role}</p>
+                      )}
+                      {liker.location && (
+                        <p className="text-xs text-gray-400">
+                          {liker.location}
+                        </p>
+                      )}
+                    </div>
+                    {liker.id !== user?.id && (
+                      <button
+                        onClick={() => {
+                          setShowLikers(false);
+                          router.push(`/farmer-profile?id=${liker.id}`);
+                        }}
+                        className="px-4 py-1.5 rounded-full bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition"
+                      >
+                        View
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 import sql from "@/app/api/utils/sql";
 import { NextResponse } from "next/server";
-import { ensureSocialActivityTables } from '@/app/api/utils/social-notifications';
+import { ensureSocialActivityTables } from "@/app/api/utils/social-notifications";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -12,9 +12,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Missing userId" }, { status: 400 });
   }
 
-const sinceDate = since
-  ? new Date(new Date(since).getTime() - 60000) // -1 min
-  : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const sinceDate = since
+    ? new Date(new Date(since).getTime() - 60000) // -1 min
+    : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   try {
     await ensureSocialActivityTables();
@@ -91,7 +91,6 @@ const sinceDate = since
       LIMIT 10
     `;
 
-
     const ownerBookingUpdates = await sql`
   SELECT
     r.id,
@@ -136,12 +135,12 @@ const sinceDate = since
     `.catch(() => []);
 
     // Global announcements
-// Global announcements — notify all users
-// In your notifications route — use a fixed 7-day window for admin content
-const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    // Global announcements — notify all users
+    // In your notifications route — use a fixed 7-day window for admin content
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-// New reels posted by admins — always use 7-day window, ignore `since`
-const adminReels = await sql`
+    // New reels posted by admins — always use 7-day window, ignore `since`
+    const adminReels = await sql`
   SELECT r.id, r.caption, r.thumbnail_url, r.created_at,
          u.name AS admin_name, u.image AS admin_image
   FROM reels r
@@ -153,8 +152,8 @@ const adminReels = await sql`
   LIMIT 5
 `.catch(() => []);
 
-// Same fix for announcements
-const announcements = await sql`
+    // Same fix for announcements
+    const announcements = await sql`
   SELECT a.id, a.title, a.body, a.created_at, u.name AS admin_name, u.image AS admin_image
   FROM announcements a
   LEFT JOIN "user" u ON u.id = a.created_by
@@ -165,9 +164,8 @@ const announcements = await sql`
   LIMIT 5
 `.catch(() => []);
 
-
-// Pending follow requests for this user
-const followRequests = await sql`
+    // Pending follow requests for this user
+    const followRequests = await sql`
   SELECT f.user_id, f.created_at, u.name, u.image
   FROM follows f
   JOIN "user" u ON u.id = f.user_id
@@ -178,8 +176,8 @@ const followRequests = await sql`
   LIMIT 10
 `.catch(() => []);
 
-// New content from farmers/buyers the current user follows
-const followedCrops = await sql`
+    // New content from farmers/buyers the current user follows
+    const followedCrops = await sql`
   SELECT
     c.id,
     c.crop_name,
@@ -200,7 +198,7 @@ const followedCrops = await sql`
   LIMIT 10
 `.catch(() => []);
 
-const followedEquipment = await sql`
+    const followedEquipment = await sql`
   SELECT
     m.id,
     m.name,
@@ -220,7 +218,7 @@ const followedEquipment = await sql`
   LIMIT 10
 `.catch(() => []);
 
-const followedReels = await sql`
+    const followedReels = await sql`
   SELECT
     r.id,
     r.caption,
@@ -240,15 +238,15 @@ const followedReels = await sql`
   LIMIT 10
 `.catch(() => []);
 
-const followedPosts = await sql`
+    const followedPosts = await sql`
   SELECT p.id,p.content,p.image_url,p.created_at,u.id creator_id,u.name creator_name,u.image creator_image
   FROM profile_posts p JOIN follows f ON f.following_id=p.user_id JOIN "user" u ON u.id=p.user_id
   WHERE f.user_id=${userId} AND f.status='accepted' AND p.user_id!=${userId} AND p.created_at>${sinceDate}
   ORDER BY p.created_at DESC LIMIT 10
 `.catch(() => []);
 
-// Crop-based discovery: farmers see buyers, buyers see farmers.
-const viewerMatchRows = await sql`
+    // Crop-based discovery: farmers see buyers, buyers see farmers.
+    const viewerMatchRows = await sql`
   SELECT
     u.id,
     CASE
@@ -266,15 +264,16 @@ const viewerMatchRows = await sql`
   LIMIT 1
 `.catch(() => []);
 
-const viewerMatch: any = viewerMatchRows[0] || null;
-const hasMatchProfile =
-  viewerMatch &&
-  ['farmer', 'buyer'].includes(viewerMatch.role) &&
-  Number(viewerMatch.crop_count) > 0 &&
-  viewerMatch.latitude != null &&
-  viewerMatch.longitude != null;
+    const viewerMatch: any = viewerMatchRows[0] || null;
+    const hasMatchProfile =
+      viewerMatch &&
+      ["farmer", "buyer"].includes(viewerMatch.role) &&
+      Number(viewerMatch.crop_count) > 0 &&
+      viewerMatch.latitude != null &&
+      viewerMatch.longitude != null;
 
-const matchedProfiles = hasMatchProfile ? await sql`
+    const matchedProfiles = hasMatchProfile
+      ? await sql`
   WITH viewer_crops AS (
     SELECT DISTINCT LOWER(TRIM(crop_name)) AS normalized_crop
     FROM crops
@@ -289,7 +288,9 @@ const matchedProfiles = hasMatchProfile ? await sql`
         LEAST(1, GREATEST(-1,
           COS(RADIANS(${Number(viewerMatch.latitude)})) *
           COS(RADIANS(u.latitude)) *
-          COS(RADIANS(u.longitude) - RADIANS(${Number(viewerMatch.longitude)})) +
+          COS(RADIANS(u.longitude) - RADIANS(${Number(
+            viewerMatch.longitude
+          )})) +
           SIN(RADIANS(${Number(viewerMatch.latitude)})) *
           SIN(RADIANS(u.latitude))
         ))
@@ -301,8 +302,12 @@ const matchedProfiles = hasMatchProfile ? await sql`
       AND u.latitude IS NOT NULL
       AND u.longitude IS NOT NULL
       AND (
-        (${viewerMatch.role} = 'farmer' AND (LOWER(COALESCE(u.role, '')) = 'buyer' OR u.role_id = 2))
-        OR (${viewerMatch.role} = 'buyer' AND (LOWER(COALESCE(u.role, '')) = 'farmer' OR u.role_id = 1))
+        (${
+          viewerMatch.role
+        } = 'farmer' AND (LOWER(COALESCE(u.role, '')) = 'buyer' OR u.role_id = 2))
+        OR (${
+          viewerMatch.role
+        } = 'buyer' AND (LOWER(COALESCE(u.role, '')) = 'farmer' OR u.role_id = 1))
       )
     GROUP BY u.id, u.name, u.image, u.location, u.latitude, u.longitude
   )
@@ -321,32 +326,47 @@ const matchedProfiles = hasMatchProfile ? await sql`
   SELECT *
   FROM daily_selection
   ORDER BY distance_km ASC, name ASC
-`.catch(() => []) : [];
+`.catch(() => [])
+      : [];
 
     const notifications: any[] = [];
 
     const socialLabels: Record<string, string> = {
-      reel_like: 'liked your reel', reel_comment: 'commented on your reel',
-      reel_reply: 'replied to your comment', reel_mention: 'mentioned you in a reel comment',
-      post_like: 'liked your post', post_comment: 'commented on your post',
-      post_reply: 'replied to your comment', post_mention: 'mentioned you in a post comment',
+      reel_like: "liked your reel",
+      reel_comment: "commented on your reel",
+      reel_reply: "replied to your comment",
+      reel_mention: "mentioned you in a reel comment",
+      post_like: "liked your post",
+      post_comment: "commented on your post",
+      post_reply: "replied to your comment",
+      post_mention: "mentioned you in a post comment",
+      reel_comment_like: "liked your reel comment",
+      post_comment_like: "liked your post comment",
     };
-    socialActivity.forEach((activity: any) => notifications.push({
-      id: `social-${activity.id}`, type: activity.type,
-      title: `${activity.actor_name} ${socialLabels[activity.type] || 'interacted with your content'}`,
-      body: activity.preview || 'Tap to view the activity', image: activity.actor_image,
-      time: activity.created_at,
-      link: activity.reel_id ? `/reels?reelId=${activity.reel_id}` : `/posts?postId=${activity.post_id}`,
-    }));
+    socialActivity.forEach((activity: any) =>
+      notifications.push({
+        id: `social-${activity.id}`,
+        type: activity.type,
+        title: `${activity.actor_name} ${
+          socialLabels[activity.type] || "interacted with your content"
+        }`,
+        body: activity.preview || "Tap to view the activity",
+        image: activity.actor_image,
+        time: activity.created_at,
+        link: activity.reel_id
+          ? `/reels?reelId=${activity.reel_id}`
+          : `/posts?postId=${activity.post_id}`,
+      })
+    );
 
     newMessages.forEach((msg: any) => {
       notifications.push({
         id: `msg-${msg.id}`,
-        type: 'message',
+        type: "message",
         title: msg.sender_name,
         body:
           msg.message.length > 60
-            ? msg.message.substring(0, 60) + '...'
+            ? msg.message.substring(0, 60) + "..."
             : msg.message,
         image: msg.sender_image,
         time: msg.created_at,
@@ -357,8 +377,8 @@ const matchedProfiles = hasMatchProfile ? await sql`
     newBookings.forEach((booking: any) => {
       notifications.push({
         id: `booking-new-${booking.id}`,
-        type: 'booking_new',
-        title: 'New Booking Request',
+        type: "booking_new",
+        title: "New Booking Request",
         body: `${booking.renter_name} wants to book ${booking.machinery_name}`,
         image: booking.renter_image,
         time: booking.created_at,
@@ -368,50 +388,54 @@ const matchedProfiles = hasMatchProfile ? await sql`
 
     bookingUpdates.forEach((booking: any) => {
       const statusLabels: Record<string, string> = {
-        accepted: 'confirmed',
-        rejected: 'declined',
-        cancelled: 'cancelled',
-        completed: 'completed',
+        accepted: "confirmed",
+        rejected: "declined",
+        cancelled: "cancelled",
+        completed: "completed",
       };
       const statusLabel = statusLabels[booking.status] || booking.status;
       notifications.push({
         id: `booking-update-${booking.id}`,
-        type: 'booking_update',
+        type: "booking_update",
         title: `Booking ${statusLabel}`,
         body: `Your booking for ${booking.machinery_name} was ${statusLabel}`,
         image: booking.owner_image,
-        time: booking.updated_at,   // FIX 2: use updated_at as the notification time
+        time: booking.updated_at, // FIX 2: use updated_at as the notification time
         link: `/my-reservations`,
         status: booking.status,
       });
     });
 
     // Owner notifications for cancellations / completions
-ownerBookingUpdates.forEach((booking: any) => {
-  const statusLabels: Record<string, string> = {
-    cancelled: 'cancelled',
-    completed: 'completed',
-  };
-  const statusLabel = statusLabels[booking.status] || booking.status;
-  notifications.push({
-    id: `booking-owner-update-${booking.id}`,
-    type: 'booking_update',
-    title: `Booking ${statusLabel}`,
-    body: `${booking.renter_name} ${booking.status === 'cancelled' ? 'cancelled their' : 'completed a'} booking for ${booking.machinery_name}`,
-    image: booking.renter_image,
-    time: booking.updated_at,
-    link: `/booking-requests`,
-    status: booking.status,
-  });
-});
+    ownerBookingUpdates.forEach((booking: any) => {
+      const statusLabels: Record<string, string> = {
+        cancelled: "cancelled",
+        completed: "completed",
+      };
+      const statusLabel = statusLabels[booking.status] || booking.status;
+      notifications.push({
+        id: `booking-owner-update-${booking.id}`,
+        type: "booking_update",
+        title: `Booking ${statusLabel}`,
+        body: `${booking.renter_name} ${
+          booking.status === "cancelled" ? "cancelled their" : "completed a"
+        } booking for ${booking.machinery_name}`,
+        image: booking.renter_image,
+        time: booking.updated_at,
+        link: `/booking-requests`,
+        status: booking.status,
+      });
+    });
 
     equipmentChanges.forEach((eq: any) => {
       if (!eq.updated_at || new Date(eq.updated_at) <= sinceDate) return;
       notifications.push({
         id: `equip-${eq.id}`,
-        type: 'equipment',
-        title: 'Equipment Status Changed',
-        body: `${eq.name} is now ${eq.is_unavailable ? 'unavailable' : 'available'}`,
+        type: "equipment",
+        title: "Equipment Status Changed",
+        body: `${eq.name} is now ${
+          eq.is_unavailable ? "unavailable" : "available"
+        }`,
         image: null,
         time: eq.updated_at,
         link: `/machinery-details?id=${eq.id}`,
@@ -419,191 +443,219 @@ ownerBookingUpdates.forEach((booking: any) => {
       });
     });
 
-announcements.forEach((ann: any) => {
-  notifications.push({
-    id: `ann-${ann.id}`,
-    type: 'announcement',
-    title: `📢 ${ann.title}`,
-    body: ann.body,
-    image: ann.admin_image ?? null,
-    time: ann.created_at,
-    link: `/notifications?announcement=${encodeURIComponent(String(ann.id))}`,
-  });
-});
-
-adminReels.forEach((reel: any) => {
-  notifications.push({
-    id: `reel-${reel.id}`,
-    type: 'admin_reel',
-    title: `🎬 New Video from ${reel.admin_name}`,
-    body: reel.caption
-      ? reel.caption.length > 60
-        ? reel.caption.substring(0, 60) + '...'
-        : reel.caption
-      : 'Check out the latest video',
-    image: reel.thumbnail_url ?? reel.admin_image ?? null,
-    time: reel.created_at,
-    link: `/reels?id=${reel.id}`,
-  });
-});
-
-
-followRequests.forEach((req: any) => {
-  notifications.push({
-    id: `follow-req-${req.user_id}`,
-    type: 'follow_request',
-    title: 'New Follow Request',
-    body: `${req.name} wants to follow you`,
-    image: req.image,
-    time: req.created_at,
-    link: `/notifications`,
-    followerId: req.user_id,
-  });
-});
-
-followedCrops.forEach((crop: any) => {
-  const label = crop.is_crop_waste ? 'crop waste' : 'crop';
-  notifications.push({
-    id: `followed-crop-${crop.id}`,
-    type: 'followed_crop',
-    title: `New ${label} from ${crop.creator_name}`,
-    body: `${crop.creator_name} added ${crop.crop_name}`,
-    image: crop.creator_image,
-    time: crop.created_at,
-    link: `/farmer-profile?id=${crop.creator_id}`,
-  });
-});
-
-followedEquipment.forEach((equipment: any) => {
-  notifications.push({
-    id: `followed-equipment-${equipment.id}`,
-    type: 'followed_equipment',
-    title: `New equipment from ${equipment.creator_name}`,
-    body: `${equipment.creator_name} added ${equipment.name}`,
-    image: equipment.image_url ?? equipment.creator_image,
-    time: equipment.created_at,
-    link: `/machinery-details?id=${equipment.id}`,
-  });
-});
-
-followedReels.forEach((reel: any) => {
-  notifications.push({
-    id: `followed-reel-${reel.id}`,
-    type: 'followed_reel',
-    title: `New reel from ${reel.creator_name}`,
-    body: reel.caption
-      ? reel.caption.length > 60
-        ? reel.caption.substring(0, 60) + '...'
-        : reel.caption
-      : 'Check out the latest reel',
-    image: reel.thumbnail_url ?? reel.creator_image,
-    time: reel.created_at,
-    link: `/reels?reelId=${reel.id}&userId=${reel.creator_id}`,
-  });
-});
-
-followedPosts.forEach((post: any) => notifications.push({
-  id: `followed-post-${post.id}`, type: 'followed_post',
-  title: `New post from ${post.creator_name}`,
-  body: post.content?.length > 80 ? `${post.content.slice(0, 80)}...` : (post.content || 'Shared a new post'),
-  image: post.image_url ?? post.creator_image, time: post.created_at,
-  link: `/posts?postId=${post.id}`,
-}));
-
-const recommendationDay = new Date();
-recommendationDay.setUTCHours(0, 0, 0, 0);
-const recommendationTime = recommendationDay.toISOString();
-
-if (
-  viewerMatch &&
-  ['farmer', 'buyer'].includes(viewerMatch.role) &&
-  (
-    Number(viewerMatch.crop_count) === 0 ||
-    viewerMatch.latitude == null ||
-    viewerMatch.longitude == null
-  )
-) {
-  const needsCrops = Number(viewerMatch.crop_count) === 0;
-  notifications.push({
-    id: `profile-match-setup-${userId}-${recommendationTime.slice(0, 10)}`,
-    type: 'profile_match_setup',
-    title: needsCrops ? 'Farmers and buyers are connecting directly' : 'Find crop partners near you',
-    body: needsCrops
-      ? `Others are benefiting by contacting ${viewerMatch.role === 'farmer' ? 'buyers' : 'farmers'} directly. Add the crops you ${viewerMatch.role === 'farmer' ? 'grow' : 'want to buy'} to get your matches.`
-      : 'Add your location to discover the closest people matching your crops.',
-    image: null,
-    time: recommendationTime,
-    link: needsCrops ? '/user-profile?addCrop=true' : '/user-profile',
-  });
-}
-
-// Persistent role-based profile reminders. A fresh reminder is generated each
-// day until the user adds the listing their role needs. Legacy suppliers with
-// no saved subtype are treated as both commodity and equipment suppliers,
-// which matches the supplier filtering and profile-management behaviour.
-if (viewerMatch?.role === 'supplier') {
-  const supplierTypes: string[] = Array.isArray(viewerMatch.supplier_types)
-    ? viewerMatch.supplier_types
-    : [];
-  const isLegacySupplier = supplierTypes.length === 0;
-  const needsCommodityListing =
-    (isLegacySupplier || supplierTypes.includes('commodities')) &&
-    Number(viewerMatch.crop_count) === 0;
-  const needsEquipmentListing =
-    (isLegacySupplier || supplierTypes.includes('equipment')) &&
-    Number(viewerMatch.equipment_count) === 0;
-
-  if (needsCommodityListing) {
-    notifications.push({
-      id: `profile-completion-crops-${userId}-${recommendationTime.slice(0, 10)}`,
-      type: 'profile_completion',
-      title: 'Add crops to complete your supplier profile',
-      body: 'Show buyers what you supply. Adding your crops helps your profile appear in relevant searches, reach more people, and build a stronger CoFarmz network.',
-      image: null,
-      time: recommendationTime,
-      link: '/user-profile?addCrop=true',
-      persistent: true,
+    announcements.forEach((ann: any) => {
+      notifications.push({
+        id: `ann-${ann.id}`,
+        type: "announcement",
+        title: `📢 ${ann.title}`,
+        body: ann.body,
+        image: ann.admin_image ?? null,
+        time: ann.created_at,
+        link: `/notifications?announcement=${encodeURIComponent(
+          String(ann.id)
+        )}`,
+      });
     });
-  }
 
-  if (needsEquipmentListing) {
-    notifications.push({
-      id: `profile-completion-equipment-${userId}-${recommendationTime.slice(0, 10)}`,
-      type: 'profile_completion',
-      title: 'Add equipment to complete your supplier profile',
-      body: 'List the equipment you provide so nearby users can discover and contact you. A complete profile improves your reach and helps you grow your CoFarmz network.',
-      image: null,
-      time: recommendationTime,
-      link: '/rent-machinery',
-      persistent: true,
+    adminReels.forEach((reel: any) => {
+      notifications.push({
+        id: `reel-${reel.id}`,
+        type: "admin_reel",
+        title: `🎬 New Video from ${reel.admin_name}`,
+        body: reel.caption
+          ? reel.caption.length > 60
+            ? reel.caption.substring(0, 60) + "..."
+            : reel.caption
+          : "Check out the latest video",
+        image: reel.thumbnail_url ?? reel.admin_image ?? null,
+        time: reel.created_at,
+        link: `/reels?id=${reel.id}`,
+      });
     });
-  }
-}
 
-matchedProfiles.forEach((profile: any, index: number) => {
-  const cropNames = Array.isArray(profile.matched_crops)
-    ? profile.matched_crops.slice(0, 2).join(', ')
-    : 'Your crop';
-  const distance = Number(profile.distance_km);
-  const targetLabel = viewerMatch.role === 'farmer' ? 'buyer' : 'farmer';
+    followRequests.forEach((req: any) => {
+      notifications.push({
+        id: `follow-req-${req.user_id}`,
+        type: "follow_request",
+        title: "New Follow Request",
+        body: `${req.name} wants to follow you`,
+        image: req.image,
+        time: req.created_at,
+        link: `/notifications`,
+        followerId: req.user_id,
+      });
+    });
 
-  notifications.push({
-    id: `profile-match-${userId}-${profile.id}-${recommendationTime.slice(0, 10)}`,
-    type: 'profile_match',
-    title: index === 0
-      ? `${profile.name} is your closest crop match`
-      : `Another ${targetLabel} match: ${profile.name}`,
-    body: `${targetLabel === 'buyer' ? 'Farmers' : 'Buyers'} are benefiting by contacting ${targetLabel}s directly for ${cropNames}. Connect with ${profile.name} · ${distance < 1 ? `${Math.round(distance * 1000)} m` : `${distance.toFixed(1)} km`} away${profile.location ? ` · ${profile.location}` : ''}`,
-    image: profile.image,
-    time: recommendationTime,
-    link: `/farmer-profile?id=${profile.id}`,
-    distanceKm: distance,
-    matchedCrops: profile.matched_crops,
-    targetSearchType: targetLabel === 'buyer' ? 'buyers' : 'farmers',
-  });
-});
+    followedCrops.forEach((crop: any) => {
+      const label = crop.is_crop_waste ? "crop waste" : "crop";
+      notifications.push({
+        id: `followed-crop-${crop.id}`,
+        type: "followed_crop",
+        title: `New ${label} from ${crop.creator_name}`,
+        body: `${crop.creator_name} added ${crop.crop_name}`,
+        image: crop.creator_image,
+        time: crop.created_at,
+        link: `/farmer-profile?id=${crop.creator_id}`,
+      });
+    });
 
+    followedEquipment.forEach((equipment: any) => {
+      notifications.push({
+        id: `followed-equipment-${equipment.id}`,
+        type: "followed_equipment",
+        title: `New equipment from ${equipment.creator_name}`,
+        body: `${equipment.creator_name} added ${equipment.name}`,
+        image: equipment.image_url ?? equipment.creator_image,
+        time: equipment.created_at,
+        link: `/machinery-details?id=${equipment.id}`,
+      });
+    });
 
+    followedReels.forEach((reel: any) => {
+      notifications.push({
+        id: `followed-reel-${reel.id}`,
+        type: "followed_reel",
+        title: `New reel from ${reel.creator_name}`,
+        body: reel.caption
+          ? reel.caption.length > 60
+            ? reel.caption.substring(0, 60) + "..."
+            : reel.caption
+          : "Check out the latest reel",
+        image: reel.thumbnail_url ?? reel.creator_image,
+        time: reel.created_at,
+        link: `/reels?reelId=${reel.id}&userId=${reel.creator_id}`,
+      });
+    });
+
+    followedPosts.forEach((post: any) =>
+      notifications.push({
+        id: `followed-post-${post.id}`,
+        type: "followed_post",
+        title: `New post from ${post.creator_name}`,
+        body:
+          post.content?.length > 80
+            ? `${post.content.slice(0, 80)}...`
+            : post.content || "Shared a new post",
+        image: post.image_url ?? post.creator_image,
+        time: post.created_at,
+        link: `/posts?postId=${post.id}`,
+      })
+    );
+
+    const recommendationDay = new Date();
+    recommendationDay.setUTCHours(0, 0, 0, 0);
+    const recommendationTime = recommendationDay.toISOString();
+
+    if (
+      viewerMatch &&
+      ["farmer", "buyer"].includes(viewerMatch.role) &&
+      (Number(viewerMatch.crop_count) === 0 ||
+        viewerMatch.latitude == null ||
+        viewerMatch.longitude == null)
+    ) {
+      const needsCrops = Number(viewerMatch.crop_count) === 0;
+      notifications.push({
+        id: `profile-match-setup-${userId}-${recommendationTime.slice(0, 10)}`,
+        type: "profile_match_setup",
+        title: needsCrops
+          ? "Farmers and buyers are connecting directly"
+          : "Find crop partners near you",
+        body: needsCrops
+          ? `Others are benefiting by contacting ${
+              viewerMatch.role === "farmer" ? "buyers" : "farmers"
+            } directly. Add the crops you ${
+              viewerMatch.role === "farmer" ? "grow" : "want to buy"
+            } to get your matches.`
+          : "Add your location to discover the closest people matching your crops.",
+        image: null,
+        time: recommendationTime,
+        link: needsCrops ? "/user-profile?addCrop=true" : "/user-profile",
+      });
+    }
+
+    // Persistent role-based profile reminders. A fresh reminder is generated each
+    // day until the user adds the listing their role needs. Legacy suppliers with
+    // no saved subtype are treated as both commodity and equipment suppliers,
+    // which matches the supplier filtering and profile-management behaviour.
+    if (viewerMatch?.role === "supplier") {
+      const supplierTypes: string[] = Array.isArray(viewerMatch.supplier_types)
+        ? viewerMatch.supplier_types
+        : [];
+      const isLegacySupplier = supplierTypes.length === 0;
+      const needsCommodityListing =
+        (isLegacySupplier || supplierTypes.includes("commodities")) &&
+        Number(viewerMatch.crop_count) === 0;
+      const needsEquipmentListing =
+        (isLegacySupplier || supplierTypes.includes("equipment")) &&
+        Number(viewerMatch.equipment_count) === 0;
+
+      if (needsCommodityListing) {
+        notifications.push({
+          id: `profile-completion-crops-${userId}-${recommendationTime.slice(
+            0,
+            10
+          )}`,
+          type: "profile_completion",
+          title: "Add crops to complete your supplier profile",
+          body: "Show buyers what you supply. Adding your crops helps your profile appear in relevant searches, reach more people, and build a stronger CoFarmz network.",
+          image: null,
+          time: recommendationTime,
+          link: "/user-profile?addCrop=true",
+          persistent: true,
+        });
+      }
+
+      if (needsEquipmentListing) {
+        notifications.push({
+          id: `profile-completion-equipment-${userId}-${recommendationTime.slice(
+            0,
+            10
+          )}`,
+          type: "profile_completion",
+          title: "Add equipment to complete your supplier profile",
+          body: "List the equipment you provide so nearby users can discover and contact you. A complete profile improves your reach and helps you grow your CoFarmz network.",
+          image: null,
+          time: recommendationTime,
+          link: "/rent-machinery",
+          persistent: true,
+        });
+      }
+    }
+
+    matchedProfiles.forEach((profile: any, index: number) => {
+      const cropNames = Array.isArray(profile.matched_crops)
+        ? profile.matched_crops.slice(0, 2).join(", ")
+        : "Your crop";
+      const distance = Number(profile.distance_km);
+      const targetLabel = viewerMatch.role === "farmer" ? "buyer" : "farmer";
+
+      notifications.push({
+        id: `profile-match-${userId}-${profile.id}-${recommendationTime.slice(
+          0,
+          10
+        )}`,
+        type: "profile_match",
+        title:
+          index === 0
+            ? `${profile.name} is your closest crop match`
+            : `Another ${targetLabel} match: ${profile.name}`,
+        body: `${
+          targetLabel === "buyer" ? "Farmers" : "Buyers"
+        } are benefiting by contacting ${targetLabel}s directly for ${cropNames}. Connect with ${
+          profile.name
+        } · ${
+          distance < 1
+            ? `${Math.round(distance * 1000)} m`
+            : `${distance.toFixed(1)} km`
+        } away${profile.location ? ` · ${profile.location}` : ""}`,
+        image: profile.image,
+        time: recommendationTime,
+        link: `/farmer-profile?id=${profile.id}`,
+        distanceKm: distance,
+        matchedCrops: profile.matched_crops,
+        targetSearchType: targetLabel === "buyer" ? "buyers" : "farmers",
+      });
+    });
 
     // Sort by time descending
     notifications.sort(
