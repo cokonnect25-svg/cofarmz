@@ -331,19 +331,19 @@ export default function PostCard({
 
       {expanded && (
         <div
-          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 sm:items-center sm:p-5"
+          className="fixed inset-0 z-[10010] flex items-end justify-center bg-black/60 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:items-center sm:p-5"
           onClick={() => setExpanded(false)}
         >
           <section
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white sm:rounded-3xl"
+            className="max-h-[calc(100dvh-env(safe-area-inset-top)-0.75rem)] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-3xl bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-3xl sm:pb-0"
           >
-            <div className="sticky top-0 z-10 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b bg-white px-4 py-3">
+            <div className="sticky top-0 z-20 flex items-center gap-3 border-b bg-white/95 px-4 py-3 shadow-sm backdrop-blur">
               <Owner detail />
               <button
                 onClick={() => setExpanded(false)}
                 aria-label="Close post details"
-                className="rounded-full bg-gray-100 p-2"
+                className="flex-shrink-0 rounded-full bg-gray-100 p-2 hover:bg-gray-200"
               >
                 <X className="h-5 w-5" />
               </button>
