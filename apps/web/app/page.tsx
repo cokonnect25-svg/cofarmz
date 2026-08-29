@@ -403,7 +403,7 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
         {/* Profile posts — manual swipe carousel, intentionally no auto-scroll */}
         <section className="mb-10">
           <div className="mb-4">
-            <div><h2 className="text-2xl font-black text-gray-900">Community Posts</h2><p className="mt-1 text-xs font-semibold text-gray-500">Updates shared for you</p></div>
+            <div><h2 className="text-2xl font-black text-gray-900">Posts</h2><p className="mt-1 text-xs font-semibold text-gray-500">Updates shared for you</p></div>
           </div>
           {profilePosts.length ? (
             <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 hide-scrollbar">
