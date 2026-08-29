@@ -1,0 +1,15 @@
+{
+  "name": "cofarmz",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix apps/web run dev",
+    "dev:web": "npm --prefix apps/web run dev:web",
+    "build": "npm --prefix apps/web run build",
+    "build:web": "npm --prefix apps/web run build",
+    "start": "npm --prefix apps/web run start",
+    "android:build": "npm --prefix apps/web run mobile:build",
+    "android:sync": "npm --prefix apps/web run mobile:sync",
+    "android:run": "npm --prefix apps/web run mobile:android"
+  }
+}
