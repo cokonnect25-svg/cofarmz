@@ -43,34 +43,36 @@ type Liker = {
 };
 
 const orderCommentsByThread = (comments: Comment[]) => {
-  const commentIds = new Set(comments.map((comment) => comment.id));
-  const repliesByParent = new Map<number, Comment[]>();
+  const commentIds = new Set(comments.map((comment) => String(comment.id)));
+  const repliesByParent = new Map<string, Comment[]>();
 
   comments.forEach((comment) => {
     if (
       comment.parent_comment_id == null ||
-      !commentIds.has(comment.parent_comment_id)
+      !commentIds.has(String(comment.parent_comment_id))
     )
       return;
-    const replies = repliesByParent.get(comment.parent_comment_id) || [];
+    const parentId = String(comment.parent_comment_id);
+    const replies = repliesByParent.get(parentId) || [];
     replies.push(comment);
-    repliesByParent.set(comment.parent_comment_id, replies);
+    repliesByParent.set(parentId, replies);
   });
 
   const ordered: Comment[] = [];
-  const visited = new Set<number>();
+  const visited = new Set<string>();
   const addThread = (comment: Comment) => {
-    if (visited.has(comment.id)) return;
-    visited.add(comment.id);
+    const commentId = String(comment.id);
+    if (visited.has(commentId)) return;
+    visited.add(commentId);
     ordered.push(comment);
-    (repliesByParent.get(comment.id) || []).forEach(addThread);
+    (repliesByParent.get(commentId) || []).forEach(addThread);
   };
 
   comments
     .filter(
       (comment) =>
         comment.parent_comment_id == null ||
-        !commentIds.has(comment.parent_comment_id)
+        !commentIds.has(String(comment.parent_comment_id))
     )
     .forEach(addThread);
   comments.forEach(addThread);
