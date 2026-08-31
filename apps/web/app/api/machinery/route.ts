@@ -3,6 +3,7 @@ import sql from "@/app/api/utils/sql";
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { normalizePhoneNumber } from "@/lib/phone";
+import { sendPushToFollowers } from "@/app/api/utils/push";
 
 export async function GET(request: Request) {
   try {
@@ -174,6 +175,15 @@ export async function POST(request: Request) {
     `;
 
     console.log('Machinery created successfully:', result[0]);
+    const creators = await sql`SELECT name FROM "user" WHERE id=${owner_id} LIMIT 1`;
+    await sendPushToFollowers(owner_id, {
+      title: `New equipment from ${creators[0]?.name || "a member"}`,
+      body: `${creators[0]?.name || "A member"} added ${name.trim()}`,
+      image: image_url || null,
+      url: `/machinery-details?id=${result[0].id}`,
+      tag: `followed-equipment-${result[0].id}`,
+      data: { type: "followed_equipment", machineryId: result[0].id },
+    });
     return NextResponse.json(result[0], { status: 201 });
   } catch (error: any) {
     console.error("Error creating machinery:", error.message || error);

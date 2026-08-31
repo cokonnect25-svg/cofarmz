@@ -53,6 +53,41 @@ interface Comment {
   is_liked?: boolean;
 }
 
+const orderCommentsByThread = (comments: Comment[]) => {
+  const commentIds = new Set(comments.map((comment) => comment.id));
+  const repliesByParent = new Map<string, Comment[]>();
+
+  comments.forEach((comment) => {
+    if (
+      comment.parent_comment_id == null ||
+      !commentIds.has(comment.parent_comment_id)
+    )
+      return;
+    const replies = repliesByParent.get(comment.parent_comment_id) || [];
+    replies.push(comment);
+    repliesByParent.set(comment.parent_comment_id, replies);
+  });
+
+  const ordered: Comment[] = [];
+  const visited = new Set<string>();
+  const addThread = (comment: Comment) => {
+    if (visited.has(comment.id)) return;
+    visited.add(comment.id);
+    ordered.push(comment);
+    (repliesByParent.get(comment.id) || []).forEach(addThread);
+  };
+
+  comments
+    .filter(
+      (comment) =>
+        comment.parent_comment_id == null ||
+        !commentIds.has(comment.parent_comment_id)
+    )
+    .forEach(addThread);
+  comments.forEach(addThread);
+  return ordered;
+};
+
 const renderCommentText = (text: string) =>
   text.split(/(@[\p{L}\p{N}_.-]+)/gu).map((part, index) =>
     part.startsWith("@") ? (
@@ -557,9 +592,9 @@ function ReelsContent() {
 
       if (res.ok) {
         const newCommentData = await res.json();
-        setCurrentReelComments([
+        setCurrentReelComments((comments) => [
           { ...newCommentData, name: user.name, image: user.image },
-          ...currentReelComments,
+          ...comments,
         ]);
         setNewComment("");
         setReplyTo(null);
@@ -1045,7 +1080,7 @@ function ReelsContent() {
                   No comments yet. Be the first!
                 </p>
               ) : (
-                currentReelComments.map((comment) => (
+                orderCommentsByThread(currentReelComments).map((comment) => (
                   <div
                     key={comment.id}
                     className={`flex gap-3 ${

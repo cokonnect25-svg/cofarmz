@@ -1,4 +1,5 @@
 import sql from "@/app/api/utils/sql";
+import { sendPushToUser } from "@/app/api/utils/push";
 
 export type SocialActivityType =
   | "reel_like"
@@ -58,6 +59,28 @@ export async function addSocialNotification(input: {
       ${input.commentId ? Number(input.commentId) : null}, ${
     input.preview?.slice(0, 180) || null
   })`;
+
+  const actors = await sql`SELECT name FROM "user" WHERE id=${input.actorId} LIMIT 1`;
+  const actorName = actors[0]?.name || "Someone";
+  const labels: Record<SocialActivityType, string> = {
+    reel_like: "liked your reel",
+    reel_comment: "commented on your reel",
+    reel_reply: "replied to your comment",
+    reel_mention: "mentioned you in a reel comment",
+    post_like: "liked your post",
+    post_comment: "commented on your post",
+    post_reply: "replied to your comment",
+    post_mention: "mentioned you in a post comment",
+    reel_comment_like: "liked your reel comment",
+    post_comment_like: "liked your post comment",
+  };
+  await sendPushToUser(input.recipientId, {
+    title: `${actorName} ${labels[input.type]}`,
+    body: input.preview?.slice(0, 180) || "Tap to view the activity",
+    url: input.reelId ? `/reels?reelId=${input.reelId}` : `/posts?postId=${input.postId}`,
+    tag: `social-${input.type}-${input.commentId || input.reelId || input.postId}`,
+    data: { type: input.type },
+  });
 }
 
 export async function notifyMentions(input: {

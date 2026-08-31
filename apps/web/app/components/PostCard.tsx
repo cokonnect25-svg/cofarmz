@@ -42,6 +42,41 @@ type Liker = {
   location?: string;
 };
 
+const orderCommentsByThread = (comments: Comment[]) => {
+  const commentIds = new Set(comments.map((comment) => comment.id));
+  const repliesByParent = new Map<number, Comment[]>();
+
+  comments.forEach((comment) => {
+    if (
+      comment.parent_comment_id == null ||
+      !commentIds.has(comment.parent_comment_id)
+    )
+      return;
+    const replies = repliesByParent.get(comment.parent_comment_id) || [];
+    replies.push(comment);
+    repliesByParent.set(comment.parent_comment_id, replies);
+  });
+
+  const ordered: Comment[] = [];
+  const visited = new Set<number>();
+  const addThread = (comment: Comment) => {
+    if (visited.has(comment.id)) return;
+    visited.add(comment.id);
+    ordered.push(comment);
+    (repliesByParent.get(comment.id) || []).forEach(addThread);
+  };
+
+  comments
+    .filter(
+      (comment) =>
+        comment.parent_comment_id == null ||
+        !commentIds.has(comment.parent_comment_id)
+    )
+    .forEach(addThread);
+  comments.forEach(addThread);
+  return ordered;
+};
+
 export default function PostCard({
   post,
   currentUserId,
@@ -375,7 +410,7 @@ export default function PostCard({
               </h3>
               <div className="space-y-4">
                 {comments.length ? (
-                  comments.map((c) => (
+                  orderCommentsByThread(comments).map((c) => (
                     <div
                       key={c.id}
                       className={`flex gap-3 ${

@@ -191,6 +191,23 @@ export async function sendPushToUser(userId: string, payload: PushPayload) {
   }
 }
 
+export async function sendPushToFollowers(creatorId: string, payload: PushPayload) {
+  if (!creatorId) return;
+  try {
+    const followers = await sql`
+      SELECT DISTINCT user_id FROM follows
+      WHERE following_id = ${creatorId} AND status = 'accepted' AND user_id != ${creatorId}
+    `;
+    await Promise.all(
+      followers.map((follower: any) =>
+        sendPushToUser(String(follower.user_id), payload)
+      )
+    );
+  } catch (error) {
+    console.error("Follower push notification error:", error);
+  }
+}
+
 export async function sendPushToAllUsers(payload: PushPayload) {
   try {
     await ensurePushTokenTable();

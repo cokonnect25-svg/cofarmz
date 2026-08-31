@@ -1,5 +1,6 @@
 import sql from '@/app/api/utils/sql';
 import { NextResponse } from 'next/server';
+import { sendPushToFollowers } from '@/app/api/utils/push';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,6 +72,15 @@ export async function POST(request: Request) {
     if (content.length > 3000) return NextResponse.json({ error: 'Post text must be 3000 characters or less' }, { status: 400 });
     await ensureSchema();
     const result = await sql`INSERT INTO profile_posts (user_id, content, image_url, audience) VALUES (${userId}, ${content}, ${body.image_url || null}, ${audience}) RETURNING *`;
+    const creators = await sql`SELECT name FROM "user" WHERE id=${userId} LIMIT 1`;
+    await sendPushToFollowers(userId, {
+      title: `New post from ${creators[0]?.name || 'a member'}`,
+      body: content.slice(0, 180),
+      image: body.image_url || null,
+      url: `/posts?postId=${result[0].id}`,
+      tag: `followed-post-${result[0].id}`,
+      data: { type: 'followed_post', postId: result[0].id },
+    });
     return NextResponse.json(result[0], { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Failed to create post' }, { status: 500 });

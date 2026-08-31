@@ -1,5 +1,6 @@
 import sql from "@/app/api/utils/sql";
 import { sendCropMatchPushes } from "@/app/api/utils/crop-match-push";
+import { sendPushToFollowers } from "@/app/api/utils/push";
 import { NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
@@ -128,6 +129,15 @@ export async function POST(request: Request) {
     `;
 
     await sendCropMatchPushes(user_id, trimmedCropName);
+    const creators = await sql`SELECT name FROM "user" WHERE id=${user_id} LIMIT 1`;
+    await sendPushToFollowers(user_id, {
+      title: `New ${is_crop_waste ? "crop waste" : "crop"} from ${creators[0]?.name || "a member"}`,
+      body: `${creators[0]?.name || "A member"} added ${trimmedCropName}`,
+      image: image_url || null,
+      url: `/farmer-profile?id=${user_id}`,
+      tag: `followed-crop-${result[0].id}`,
+      data: { type: "followed_crop", cropId: result[0].id },
+    });
 
     return NextResponse.json(result[0]);
   } catch (error: any) {

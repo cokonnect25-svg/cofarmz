@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextResponse } from "next/server";
+import { sendPushToFollowers } from "@/app/api/utils/push";
 
 export async function GET(request: Request) {
   try {
@@ -143,6 +144,16 @@ export async function POST(request: Request) {
       VALUES (${reelId}, ${userId}, ${videoUrl}, ${caption || null}, ${thumbnailUrl || null})
       RETURNING *
     `;
+
+    const creators = await sql`SELECT name FROM "user" WHERE id=${userId} LIMIT 1`;
+    await sendPushToFollowers(userId, {
+      title: `New reel from ${creators[0]?.name || "a member"}`,
+      body: caption?.slice(0, 180) || "Check out their latest reel",
+      image: thumbnailUrl || null,
+      url: `/reels?reelId=${result[0].id}&userId=${userId}`,
+      tag: `followed-reel-${result[0].id}`,
+      data: { type: "followed_reel", reelId: result[0].id },
+    });
 
     return NextResponse.json(result[0], { status: 201 });
   } catch (error) {
