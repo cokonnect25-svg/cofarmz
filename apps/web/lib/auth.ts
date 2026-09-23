@@ -41,6 +41,7 @@ trustedOrigins: Array.from(new Set([
   "http://localhost:3000",
   "http://localhost:8080",
   "https://cofarmz.com",
+  "https://www.cofarmz.com",
   "https://cofarmz-backend-866114557322.asia-south1.run.app",
   "capacitor://localhost",
   "com.cofarmz.com://",

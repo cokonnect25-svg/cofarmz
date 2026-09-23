@@ -482,6 +482,7 @@ export default function AdminDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        <a href="/digital-fpos" className="block p-4 bg-green-50 border border-green-200 rounded-xl font-bold text-green-800">Manage Digital FPOs and farmer assignments</a>
 
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
           <div className="flex items-center justify-between gap-3 mb-5">

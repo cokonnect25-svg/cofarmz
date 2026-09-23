@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextResponse } from "next/server";
-import { sendPushToAllUsers } from "@/app/api/utils/push";
+import { deliverAnnouncement } from "@/lib/fpo-announcements";
+import { requireActor, fpoError, FpoError } from '@/lib/fpo-access';
 
 const ALLOWED_REPEAT_HOURS = new Set([1, 3, 6, 12]);
 
@@ -15,25 +16,34 @@ async function ensureAnnouncementScheduleColumns() {
   await sql`CREATE INDEX IF NOT EXISTS idx_announcements_next_send ON announcements(next_send_at) WHERE is_active = TRUE`;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const actor = await requireActor(request);
     await ensureAnnouncementScheduleColumns();
     const rows = await sql`
       SELECT * FROM announcements
-      WHERE expires_at IS NULL OR expires_at > NOW()
+      WHERE (expires_at IS NULL OR expires_at > NOW()) AND (group_id IS NULL OR can_receive_fpo_message(${actor.id},group_id)) AND (scheduled_at IS NULL OR scheduled_at<=now())
       ORDER BY created_at DESC
       LIMIT 20
     `;
     return NextResponse.json(rows);
   } catch (error) {
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    return fpoError(error);
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const actor = await requireActor(request,true);
     await ensureAnnouncementScheduleColumns();
-    const { title, body, createdBy, expiresAt, scheduledAt, repeatIntervalHours } = await request.json();
+    const { title, body, expiresAt, scheduledAt, repeatIntervalHours, groupId = null } = await request.json();
+    const createdBy = actor.id;
+    if (groupId) {
+      if (!/^[0-9a-f-]{36}$/i.test(groupId)) throw new FpoError('Invalid group');
+      const [group] = await sql`SELECT g.id FROM farmer_groups g JOIN digital_fpos f ON f.id=g.digital_fpo_id WHERE g.id=${groupId} AND f.status='active'`;
+      if (!group) throw new FpoError('Active group required');
+    }
+    if (typeof title !== 'string' || typeof body !== 'string' || title.length>200 || body.length>10000) throw new FpoError('Invalid announcement');
     if (!title || !body || !createdBy) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
@@ -66,10 +76,11 @@ export async function POST(request: Request) {
 
     const result = await sql`
       INSERT INTO announcements (
-        title, body, created_by, expires_at, scheduled_at, repeat_interval_hours,
+        group_id, title, body, created_by, expires_at, scheduled_at, repeat_interval_hours,
         next_send_at, last_sent_at, send_count, is_active
       )
       VALUES (
+        ${groupId},
         ${title},
         ${body},
         ${createdBy},
@@ -87,7 +98,7 @@ export async function POST(request: Request) {
     let sentImmediately = false;
     let pushDelivery = null;
     if (sendImmediately) {
-      pushDelivery = await sendPushToAllUsers({
+      pushDelivery = await deliverAnnouncement(groupId, {
         title: `Announcement: ${title}`,
         body: body.length > 120 ? `${body.slice(0, 120)}...` : body,
         url: `/notifications?announcement=${encodeURIComponent(String(result[0].id))}`,
@@ -126,16 +137,17 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("Create announcement error:", error);
-    return NextResponse.json({ error: "Failed to create announcement" }, { status: 500 });
+    return fpoError(error);
   }
 }
 
 export async function DELETE(request: Request) {
   try {
+    await requireActor(request,true);
     const { id } = await request.json();
     await sql`DELETE FROM announcements WHERE id = ${id}`;
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    return fpoError(error);
   }
 }

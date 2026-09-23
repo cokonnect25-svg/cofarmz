@@ -11,7 +11,9 @@
     "static": "next build",
     "mobile:build": "node scripts/mobile-build.js",
     "mobile:sync": "npx cap sync",
-    "mobile:android": "npx cap run android"
+    "mobile:android": "npx cap run android",
+    "test:fpo": "node tests/fpo.integration.cjs",
+    "migrate:fpo": "node scripts/migrate-fpos.cjs"
   },
   "dependencies": {
     "20": "^3.1.9",

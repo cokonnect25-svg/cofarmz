@@ -1,5 +1,6 @@
 'use client';
 
+import MyDigitalFpo from '@/components/MyDigitalFpo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChangeEvent, useEffect, useState, Suspense, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -1396,6 +1397,7 @@ const fetchFollowersCounts = async () => {
         </div>
       </div>
 
+      {userRole === 'farmer' && <MyDigitalFpo/>}
       {/* Profile header */}
       <div className="bg-white border-b">
         <div className="h-24 bg-gradient-to-r from-green-500 to-green-600"></div>

@@ -1,3 +1,5 @@
+import { requireActor, fpoError } from '@/lib/fpo-access';
+import { assignFarmer } from '@/lib/fpo-assignment';
 import { NextResponse } from "next/server";
 import sql from "@/app/api/utils/sql";
 import { sendPushToUser } from "@/app/api/utils/push";
@@ -41,11 +43,13 @@ async function isAdmin(userId: string) {
 
 export async function GET(request: Request) {
   try {
+    const actor = await requireActor(request);
     await ensureSchema();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
     const adminId = searchParams.get("adminId");
 
+    if ((adminId && adminId !== actor.id) || (userId && userId !== actor.id)) return NextResponse.json({error:"Forbidden"},{status:403});
     if (adminId) {
       if (!(await isAdmin(adminId))) {
         return NextResponse.json({ error: "Admin access required" }, { status: 403 });
@@ -75,14 +79,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ request: rows[0] || null, canRequest: rows.length === 0 });
   } catch (error) {
     console.error("Role request GET error:", error);
-    return NextResponse.json({ error: "Failed to load role request" }, { status: 500 });
+    return fpoError(error);
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const actor = await requireActor(request);
     await ensureSchema();
     const { userId, requestedRole } = await request.json();
+    if(userId !== actor.id) return NextResponse.json({error:"Forbidden"},{status:403});
     if (!userId || !ALLOWED_ROLES.has(requestedRole)) {
       return NextResponse.json({ error: "A valid user and role are required" }, { status: 400 });
     }
@@ -130,14 +136,16 @@ export async function POST(request: Request) {
       );
     }
     console.error("Role request POST error:", error);
-    return NextResponse.json({ error: "Failed to submit role request" }, { status: 500 });
+    return fpoError(error);
   }
 }
 
 export async function PATCH(request: Request) {
   try {
+    const actor = await requireActor(request);
     await ensureSchema();
     const { adminId, requestId, action } = await request.json();
+    if(adminId !== actor.id) return NextResponse.json({error:"Forbidden"},{status:403});
     if (!adminId || !requestId || !["approved", "rejected"].includes(action)) {
       return NextResponse.json({ error: "Invalid review request" }, { status: 400 });
     }
@@ -158,11 +166,13 @@ export async function PATCH(request: Request) {
     const roleId = pending[0].requested_role === "farmer" ? 1 : 2;
     if (action === "approved") {
       await sql.begin(async (transaction) => {
+        const [u] = await transaction`SELECT district_id FROM "user" WHERE id=${pending[0].user_id} FOR UPDATE`;
         await transaction`
           UPDATE "user"
-          SET role = ${pending[0].requested_role}, role_id = ${roleId}, role_confirmed = true
+          SET role = ${pending[0].requested_role}, role_id = ${roleId}, role_confirmed = true, "updatedAt"=now()
           WHERE id = ${pending[0].user_id}
         `;
+        await assignFarmer(transaction,pending[0].user_id,u.district_id,'profile_update');
         await transaction`
           UPDATE role_change_requests
           SET status = 'approved', reviewed_by = ${adminId}, reviewed_at = NOW()
@@ -190,6 +200,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ success: true, status: action });
   } catch (error) {
     console.error("Role request PATCH error:", error);
-    return NextResponse.json({ error: "Failed to review role request" }, { status: 500 });
+    return fpoError(error);
   }
 }

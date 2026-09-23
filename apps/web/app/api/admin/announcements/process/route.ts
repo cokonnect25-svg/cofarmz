@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import sql from "@/app/api/utils/sql";
-import { sendPushToAllUsers } from "@/app/api/utils/push";
+import { deliverAnnouncement } from "@/lib/fpo-announcements";
 
 export async function POST(request: Request) {
   const configuredSecret = process.env.ANNOUNCEMENT_SCHEDULER_SECRET;
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     let failed = 0;
     for (const announcement of due) {
       const deliveryNumber = Number(announcement.send_count || 0) + 1;
-      const result = await sendPushToAllUsers({
+      const result = await deliverAnnouncement(announcement.group_id, {
         title: `Announcement: ${announcement.title}`,
         body: announcement.body.length > 120
           ? `${announcement.body.slice(0, 120)}...`

@@ -1,5 +1,6 @@
 'use client';
 
+import DistrictSelect from '@/components/DistrictSelect';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,6 +8,8 @@ import { getApiUrl } from '@/lib/api';
 
 function SelectRoleContent() {
   const router = useRouter();
+  const [state,setState]=useState('');
+  const [district,setDistrict]=useState('');
   const { user, loading } = useAuth();
   const [selecting, setSelecting] = useState(false);
   const [error, setError] = useState('');
@@ -38,13 +41,14 @@ const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'fpo') =
       setError('Please choose Commodities Supplier, Equipment Supplier, or both.');
       return;
     }
+    if (role === 'farmer' && (!state || !district)) {setError('Select State and District before choosing Farmer');return;}
     setSelecting(true);
     setError('');
     try {
       const res = await fetch(getApiUrl('/api/users/profile'), {
-        method: 'POST',
+        method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, email: user.email, role, supplier_types: role === 'supplier' ? supplierTypes : [] }),
+        body: JSON.stringify({ userId: user.id, email: user.email, role, state, district, supplier_types: role === 'supplier' ? supplierTypes : [] }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -91,6 +95,7 @@ const handleSelectRole = async (role: 'farmer' | 'buyer' | 'supplier' | 'fpo') =
 
         <div className="px-6 py-5">
 
+          <DistrictSelect state={state} district={district} onChange={(s,d)=>{setState(s);setDistrict(d);}}/>
           {/* Terms & Conditions */}
           <div className="bg-gray-50 rounded-2xl p-4 mb-4 border border-gray-100">
             <p className="text-xs font-black text-gray-700 uppercase tracking-widest mb-3">Terms & Conditions</p>

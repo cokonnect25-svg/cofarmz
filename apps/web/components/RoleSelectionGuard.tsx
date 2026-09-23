@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { getApiUrl } from '@/lib/api';
 import { useAuth } from "@/hooks/useAuth";
 import { usePathname, useRouter } from "next/navigation";
 
 export function RoleSelectionGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [mounted, setMounted] = React.useState(false);
@@ -36,6 +37,14 @@ export function RoleSelectionGuard({ children }: { children: React.ReactNode }) 
       router.replace('/login');
     }
   }, [mounted, isAuthenticated, loading, isPublicRoute, router]);
+
+  useEffect(() => {
+    if (!mounted || loading || !user || isPublicRoute || normalizedPathname === '/select-role') return;
+    let cancelled=false;
+    fetch(getApiUrl(`/api/users/profile?userId=${encodeURIComponent(user.id)}`),{credentials:'include',cache:'no-store'})
+      .then(r=>r.ok?r.json():null).then(p=>{if(!cancelled && p?.role_confirmed===false) router.replace('/select-role');}).catch(()=>{});
+    return ()=>{cancelled=true;};
+  },[mounted,loading,user?.id,isPublicRoute,normalizedPathname,router]);
 
   // Prevent hydration mismatch: always render null or children initially
   // On the client, after mount, we can show the spinner if needed

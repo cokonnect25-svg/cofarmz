@@ -1,3 +1,4 @@
+import { requireActor, fpoError } from '@/lib/fpo-access';
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
@@ -7,7 +8,9 @@ import { ensurePushTokenTable } from "@/app/api/utils/push";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const userId = request.headers.get("x-user-id") || body.userId;
+    const actor = await requireActor(request);
+    const userId = actor.id;
+    if(body.userId && body.userId !== userId) return NextResponse.json({error:"Forbidden"},{status:403});
     const { token, platform = "android", deviceId = null } = body;
 
     if (!userId || !token) {
@@ -31,14 +34,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Save push token error:", error);
-    return NextResponse.json({ error: "Failed to save push token" }, { status: 500 });
+    return fpoError(error);
   }
 }
 
 export async function DELETE(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const userId = request.headers.get("x-user-id") || body.userId;
+    const actor = await requireActor(request);
+    const userId = actor.id;
+    if(body.userId && body.userId !== userId) return NextResponse.json({error:"Forbidden"},{status:403});
     const token = body.token;
 
     if (!userId) {
@@ -64,6 +69,6 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Disable push token error:", error);
-    return NextResponse.json({ error: "Failed to disable push token" }, { status: 500 });
+    return fpoError(error);
   }
 }

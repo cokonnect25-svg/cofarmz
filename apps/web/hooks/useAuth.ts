@@ -3,6 +3,7 @@
 import { useSession, authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getApiUrl } from '@/lib/api';
 import { Capacitor } from "@capacitor/core";
 
 const MOBILE_USER_KEY = "cofarmz_mobile_user";
@@ -127,8 +128,10 @@ async function signUp(
   password: string,
   name: string,
   role: 'farmer' | 'buyer' | 'supplier' | 'fpo' | 'superadmin' = 'farmer',
-  supplierTypes: Array<'commodities' | 'equipment'> = []
+  supplierTypes: Array<'commodities' | 'equipment'> = [],
+  location: {state:string;district:string} = {state:'',district:''}
 ) {
+  if(role==='farmer' && (!location.state || !location.district)) throw new Error('State and District are required');
   const result = await authClient.signUp.email({ email, password, name });
   if (result.error) throw new Error(result.error.message || "Failed to create account");
 
@@ -136,7 +139,8 @@ async function signUp(
   if (result.data?.user?.id) {
     try {
       const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || '').replace(/\/$/, '');
-      await fetch(`${backendUrl}/api/users/profile`, {
+      const profileResponse = await fetch(getApiUrl('/api/users/profile'), {
+        credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -144,11 +148,14 @@ async function signUp(
           email: result.data.user.email,
           role,
           supplier_types: role === 'supplier' ? supplierTypes : [],
+          state: location.state, district: location.district,
           role_confirmed: true,   // skip the role modal on home page
         }),
       });
+      if(!profileResponse.ok) throw new Error('Profile setup failed');
     } catch (err) {
-      console.error('Failed to save role after signup:', err);
+      window.location.assign('/select-role');
+      throw new Error('Account created. Complete your farmer location on the setup page.');
     }
   }
 

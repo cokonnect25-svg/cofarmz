@@ -1,0 +1,3925 @@
+{
+  "retrieved_at": "2026-09-23",
+  "districts": [
+    {
+      "state": "Andaman and Nicobar Islands",
+      "district": "Nicobars",
+      "source": "https://igod.gov.in/sg/AN/E042/organizations"
+    },
+    {
+      "state": "Andaman and Nicobar Islands",
+      "district": "North And Middle Andaman",
+      "source": "https://igod.gov.in/sg/AN/E042/organizations"
+    },
+    {
+      "state": "Andaman and Nicobar Islands",
+      "district": "South Andamans",
+      "source": "https://igod.gov.in/sg/AN/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Alluri Sitharama Raju",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Anakapalli",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Ananthapuramu",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Annamayya",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Bapatla",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Chittoor",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Dr. B.R. Ambedkar Konaseema",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "East Godavari",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Eluru",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Guntur",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Kakinada",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Krishna",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Kurnool",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Markapuram",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Nandyal",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Ntr",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Palnadu",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Parvathipuram Manyam",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Polavaram",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Prakasam",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Sri Potti Sriramulu Nellore",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Sri Sathya Sai",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Srikakulam",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Tirupati",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Visakhapatnam",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Vizianagaram",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "West Godavari",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Andhra Pradesh",
+      "district": "Y.S.R. Kadapa",
+      "source": "https://igod.gov.in/sg/AP/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Anjaw",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Bichom",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Changlang",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Dibang Valley",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "East Kameng",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "East Siang",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Kamle",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Keyi Panyor",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Kra Daadi",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Kurung Kumey",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Leparada",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Lohit",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Longding",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Lower Dibang Valley",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Lower Siang",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Lower Subansiri",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Namsai",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Pakke Kessang",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Papum Pare",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Shi Yomi",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Siang",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Tawang",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Tirap",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Upper Siang",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "Upper Subansiri",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "West Kameng",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Arunachal Pradesh",
+      "district": "West Siang",
+      "source": "https://igod.gov.in/sg/AR/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Bajali",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Baksa",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Barpeta",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Biswanath",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Bongaigaon",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Cachar",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Charaideo",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Chirang",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Darrang",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Dhemaji",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Dhubri",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Dibrugarh",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Dima Hasao",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Goalpara",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Golaghat",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Hailakandi",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Hojai",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Jorhat",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Kamrup",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Kamrup Metro",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Karbi Anglong",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Kokrajhar",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Lakhimpur",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Majuli",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Marigaon",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Nagaon",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Nalbari",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Sivasagar",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Sonitpur",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "South Salmara Mancachar",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Sribhumi",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Tamulpur",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Tinsukia",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "Udalguri",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Assam",
+      "district": "West Karbi Anglong",
+      "source": "https://igod.gov.in/sg/AS/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Araria",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Arwal",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Aurangabad",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Banka",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Begusarai",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Bhagalpur",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Bhojpur",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Buxar",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Darbhanga",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Gaya",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Gopalganj",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Jamui",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Jehanabad",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Kaimur (Bhabua)",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Katihar",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Khagaria",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Kishanganj",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Lakhisarai",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Madhepura",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Madhubani",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Munger",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Muzaffarpur",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Nalanda",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Nawada",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Pashchim Champaran",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Patna",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Purbi Champaran",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Purnia",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Rohtas",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Saharsa",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Samastipur",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Saran",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Sheikhpura",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Sheohar",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Sitamarhi",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Siwan",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Supaul",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Bihar",
+      "district": "Vaishali",
+      "source": "https://igod.gov.in/sg/BR/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Balod",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Balodabazar-Bhatapara",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Balrampur-Ramanujganj",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Bastar",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Bemetara",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Bijapur",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Bilaspur",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Dakshin Bastar Dantewada",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Dhamtari",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Durg",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Gariyaband",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Gaurela-Pendra-Marwahi",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Janjgir-Champa",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Jashpur",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Kabeerdham",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Khairagarh-Chhuikhadan-Gandai",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Kondagaon",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Korba",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Korea",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Mahasamund",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Manendragarh-Chirmiri-Bharatpur(M C B)",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Mohla-Manpur-Ambagarh Chouki",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Mungeli",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Narayanpur",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Raigarh",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Raipur",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Rajnandgaon",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Sakti",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Sarangarh-Bilaigarh",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Sukma",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Surajpur",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Surguja",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chhattisgarh",
+      "district": "Uttar Bastar Kanker",
+      "source": "https://igod.gov.in/sg/CG/E042/organizations"
+    },
+    {
+      "state": "Chandigarh",
+      "district": "Chandigarh",
+      "source": "https://igod.gov.in/sg/CH/E042/organizations"
+    },
+    {
+      "state": "Delhi",
+      "district": "Central",
+      "source": "https://igod.gov.in/sg/DL/E042/organizations"
+    },
+    {
+      "state": "Delhi",
+      "district": "Central North",
+      "source": "https://igod.gov.in/sg/DL/E042/organizations"
+    },
+    {
+      "state": "Delhi",
+      "district": "East",
+      "source": "https://igod.gov.in/sg/DL/E042/organizations"
+    },
+    {
+      "state": "Delhi",
+      "district": "New Delhi",
+      "source": "https://igod.gov.in/sg/DL/E042/organizations"
+    },
+    {
+      "state": "Delhi",
+      "district": "North",
+      "source": "https://igod.gov.in/sg/DL/E042/organizations"
+    },
+    {
+      "state": "Delhi",
+      "district": "North East",
+      "source": "https://igod.gov.in/sg/DL/E042/organizations"
+    },
+    {
+      "state": "Delhi",
+      "district": "North West",
+      "source": "https://igod.gov.in/sg/DL/E042/organizations"
+    },
+    {
+      "state": "Delhi",
+      "district": "Old Delhi",
+      "source": "https://igod.gov.in/sg/DL/E042/organizations"
+    },
+    {
+      "state": "Delhi",
+      "district": "Outer North",
+      "source": "https://igod.gov.in/sg/DL/E042/organizations"
+    },
+    {
+      "state": "Delhi",
+      "district": "South",
+      "source": "https://igod.gov.in/sg/DL/E042/organizations"
+    },
+    {
+      "state": "Delhi",
+      "district": "South East",
+      "source": "https://igod.gov.in/sg/DL/E042/organizations"
+    },
+    {
+      "state": "Delhi",
+      "district": "South West",
+      "source": "https://igod.gov.in/sg/DL/E042/organizations"
+    },
+    {
+      "state": "Delhi",
+      "district": "West",
+      "source": "https://igod.gov.in/sg/DL/E042/organizations"
+    },
+    {
+      "state": "Goa",
+      "district": "Kushavati",
+      "source": "https://igod.gov.in/sg/GA/E042/organizations"
+    },
+    {
+      "state": "Goa",
+      "district": "North Goa",
+      "source": "https://igod.gov.in/sg/GA/E042/organizations"
+    },
+    {
+      "state": "Goa",
+      "district": "South Goa",
+      "source": "https://igod.gov.in/sg/GA/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Ahmedabad",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Amreli",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Anand",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Arvalli",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Banas Kantha",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Bharuch",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Bhavnagar",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Botad",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Chhotaudepur",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Dahod",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Dangs",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Devbhumi Dwarka",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Gandhinagar",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Gir Somnath",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Jamnagar",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Junagadh",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Kachchh",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Kheda",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Mahesana",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Mahisagar",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Morbi",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Narmada",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Navsari",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Panch Mahals",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Patan",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Porbandar",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Rajkot",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Sabar Kantha",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Surat",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Surendranagar",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Tapi",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Vadodara",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Valsad",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Gujarat",
+      "district": "Vav-Tharad",
+      "source": "https://igod.gov.in/sg/GJ/E042/organizations"
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Bilaspur",
+      "source": "https://igod.gov.in/sg/HP/E042/organizations"
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Chamba",
+      "source": "https://igod.gov.in/sg/HP/E042/organizations"
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Hamirpur",
+      "source": "https://igod.gov.in/sg/HP/E042/organizations"
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Kangra",
+      "source": "https://igod.gov.in/sg/HP/E042/organizations"
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Kinnaur",
+      "source": "https://igod.gov.in/sg/HP/E042/organizations"
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Kullu",
+      "source": "https://igod.gov.in/sg/HP/E042/organizations"
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Lahaul And Spiti",
+      "source": "https://igod.gov.in/sg/HP/E042/organizations"
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Mandi",
+      "source": "https://igod.gov.in/sg/HP/E042/organizations"
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Shimla",
+      "source": "https://igod.gov.in/sg/HP/E042/organizations"
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Sirmaur",
+      "source": "https://igod.gov.in/sg/HP/E042/organizations"
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Solan",
+      "source": "https://igod.gov.in/sg/HP/E042/organizations"
+    },
+    {
+      "state": "Himachal Pradesh",
+      "district": "Una",
+      "source": "https://igod.gov.in/sg/HP/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Ambala",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Bhiwani",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Charkhi Dadri",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Faridabad",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Fatehabad",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Gurugram",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Hansi",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Hisar",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Jhajjar",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Jind",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Kaithal",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Karnal",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Kurukshetra",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Mahendragarh",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Nuh",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Palwal",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Panchkula",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Panipat",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Rewari",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Rohtak",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Sirsa",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Sonipat",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Haryana",
+      "district": "Yamunanagar",
+      "source": "https://igod.gov.in/sg/HR/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Bokaro",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Chatra",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Deoghar",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Dhanbad",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Dumka",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "East Singhbum",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Garhwa",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Giridih",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Godda",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Gumla",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Hazaribagh",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Jamtara",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Khunti",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Koderma",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Latehar",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Lohardaga",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Pakur",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Palamu",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Ramgarh",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Ranchi",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Sahebganj",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Saraikela Kharsawan",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "Simdega",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jharkhand",
+      "district": "West Singhbhum",
+      "source": "https://igod.gov.in/sg/JH/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Anantnag",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Bandipora",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Baramulla",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Budgam",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Doda",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Ganderbal",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Jammu",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Kathua",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Kishtwar",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Kulgam",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Kupwara",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Poonch",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Pulwama",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Rajouri",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Ramban",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Reasi",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Samba",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Shopian",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Srinagar",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Jammu and Kashmir",
+      "district": "Udhampur",
+      "source": "https://igod.gov.in/sg/JK/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Bagalkote",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Ballari",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Belagavi",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Bengaluru Rural",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Bengaluru South",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Bengaluru Urban",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Bidar",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Chamarajanagar",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Chikkaballapura",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Chikkamagaluru",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Chitradurga",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Dakshina Kannada",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Davanagere",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Dharwad",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Gadag",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Hassan",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Haveri",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Kalaburagi",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Kodagu",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Kolar",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Koppal",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Mandya",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Mysuru",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Raichur",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Shivamogga",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Tumakuru",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Udupi",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Uttara Kannada",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Vijayanagara",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Vijayapura",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Karnataka",
+      "district": "Yadgir",
+      "source": "https://igod.gov.in/sg/KA/E042/organizations"
+    },
+    {
+      "state": "Kerala",
+      "district": "Alappuzha",
+      "source": "https://igod.gov.in/sg/KL/E042/organizations"
+    },
+    {
+      "state": "Kerala",
+      "district": "Ernakulam",
+      "source": "https://igod.gov.in/sg/KL/E042/organizations"
+    },
+    {
+      "state": "Kerala",
+      "district": "Idukki",
+      "source": "https://igod.gov.in/sg/KL/E042/organizations"
+    },
+    {
+      "state": "Kerala",
+      "district": "Kannur",
+      "source": "https://igod.gov.in/sg/KL/E042/organizations"
+    },
+    {
+      "state": "Kerala",
+      "district": "Kasaragod",
+      "source": "https://igod.gov.in/sg/KL/E042/organizations"
+    },
+    {
+      "state": "Kerala",
+      "district": "Kollam",
+      "source": "https://igod.gov.in/sg/KL/E042/organizations"
+    },
+    {
+      "state": "Kerala",
+      "district": "Kottayam",
+      "source": "https://igod.gov.in/sg/KL/E042/organizations"
+    },
+    {
+      "state": "Kerala",
+      "district": "Kozhikode",
+      "source": "https://igod.gov.in/sg/KL/E042/organizations"
+    },
+    {
+      "state": "Kerala",
+      "district": "Malappuram",
+      "source": "https://igod.gov.in/sg/KL/E042/organizations"
+    },
+    {
+      "state": "Kerala",
+      "district": "Palakkad",
+      "source": "https://igod.gov.in/sg/KL/E042/organizations"
+    },
+    {
+      "state": "Kerala",
+      "district": "Pathanamthitta",
+      "source": "https://igod.gov.in/sg/KL/E042/organizations"
+    },
+    {
+      "state": "Kerala",
+      "district": "Thiruvananthapuram",
+      "source": "https://igod.gov.in/sg/KL/E042/organizations"
+    },
+    {
+      "state": "Kerala",
+      "district": "Thrissur",
+      "source": "https://igod.gov.in/sg/KL/E042/organizations"
+    },
+    {
+      "state": "Kerala",
+      "district": "Wayanad",
+      "source": "https://igod.gov.in/sg/KL/E042/organizations"
+    },
+    {
+      "state": "Ladakh",
+      "district": "Kargil",
+      "source": "https://igod.gov.in/sg/LA/E042/organizations"
+    },
+    {
+      "state": "Ladakh",
+      "district": "Leh Ladakh",
+      "source": "https://igod.gov.in/sg/LA/E042/organizations"
+    },
+    {
+      "state": "Lakshadweep",
+      "district": "Lakshadweep District",
+      "source": "https://igod.gov.in/sg/LD/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Ahilyanagar",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Akola",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Amravati",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Beed",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Bhandara",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Buldhana",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Chandrapur",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Chhatrapati Sambhajinagar",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Dharashiv",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Dhule",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Gadchiroli",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Gondia",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Hingoli",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Jalgaon",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Jalna",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Kolhapur",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Latur",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Mumbai",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Mumbai Suburban",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Nagpur",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Nanded",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Nandurbar",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Nashik",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Palghar",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Parbhani",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Pune",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Raigad",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Ratnagiri",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Sangli",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Satara",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Sindhudurg",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Solapur",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Thane",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Wardha",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Washim",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Maharashtra",
+      "district": "Yavatmal",
+      "source": "https://igod.gov.in/sg/MH/E042/organizations"
+    },
+    {
+      "state": "Meghalaya",
+      "district": "East Garo Hills",
+      "source": "https://igod.gov.in/sg/ML/E042/organizations"
+    },
+    {
+      "state": "Meghalaya",
+      "district": "East Jaintia Hills",
+      "source": "https://igod.gov.in/sg/ML/E042/organizations"
+    },
+    {
+      "state": "Meghalaya",
+      "district": "East Khasi Hills",
+      "source": "https://igod.gov.in/sg/ML/E042/organizations"
+    },
+    {
+      "state": "Meghalaya",
+      "district": "Eastern West Khasi Hills",
+      "source": "https://igod.gov.in/sg/ML/E042/organizations"
+    },
+    {
+      "state": "Meghalaya",
+      "district": "North Garo Hills",
+      "source": "https://igod.gov.in/sg/ML/E042/organizations"
+    },
+    {
+      "state": "Meghalaya",
+      "district": "Ri Bhoi",
+      "source": "https://igod.gov.in/sg/ML/E042/organizations"
+    },
+    {
+      "state": "Meghalaya",
+      "district": "South Garo Hills",
+      "source": "https://igod.gov.in/sg/ML/E042/organizations"
+    },
+    {
+      "state": "Meghalaya",
+      "district": "South West Garo Hills",
+      "source": "https://igod.gov.in/sg/ML/E042/organizations"
+    },
+    {
+      "state": "Meghalaya",
+      "district": "South West Khasi Hills",
+      "source": "https://igod.gov.in/sg/ML/E042/organizations"
+    },
+    {
+      "state": "Meghalaya",
+      "district": "West Garo Hills",
+      "source": "https://igod.gov.in/sg/ML/E042/organizations"
+    },
+    {
+      "state": "Meghalaya",
+      "district": "West Jaintia Hills",
+      "source": "https://igod.gov.in/sg/ML/E042/organizations"
+    },
+    {
+      "state": "Meghalaya",
+      "district": "West Khasi Hills",
+      "source": "https://igod.gov.in/sg/ML/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Bishnupur",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Chandel",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Churachandpur",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Imphal East",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Imphal West",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Jiribam",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Kakching",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Kamjong",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Kangpokpi",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Noney",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Pherzawl",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Senapati",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Tamenglong",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Tengnoupal",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Thoubal",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Manipur",
+      "district": "Ukhrul",
+      "source": "https://igod.gov.in/sg/MN/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Agar-Malwa",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Alirajpur",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Anuppur",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Ashoknagar",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Balaghat",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Barwani",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Betul",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Bhind",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Bhopal",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Burhanpur",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Chhatarpur",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Chhindwara",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Damoh",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Datia",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Dewas",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Dhar",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Dindori",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Guna",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Gwalior",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Harda",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Indore",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Jabalpur",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Jhabua",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Katni",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Khandwa (East Nimar)",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Khargone (West Nimar)",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "MAUGANJ",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Maihar",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Mandla",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Mandsaur",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Morena",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Narmadapuram",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Narsimhapur",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Neemuch",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Niwari",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Pandhurna",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Panna",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Raisen",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Rajgarh",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Ratlam",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Rewa",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Sagar",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Satna",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Sehore",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Seoni",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Shahdol",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Shajapur",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Sheopur",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Shivpuri",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Sidhi",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Singrauli",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Tikamgarh",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Ujjain",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Umaria",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Madhya Pradesh",
+      "district": "Vidisha",
+      "source": "https://igod.gov.in/sg/MP/E042/organizations"
+    },
+    {
+      "state": "Mizoram",
+      "district": "Aizawl",
+      "source": "https://igod.gov.in/sg/MZ/E042/organizations"
+    },
+    {
+      "state": "Mizoram",
+      "district": "Champhai",
+      "source": "https://igod.gov.in/sg/MZ/E042/organizations"
+    },
+    {
+      "state": "Mizoram",
+      "district": "Hnahthial",
+      "source": "https://igod.gov.in/sg/MZ/E042/organizations"
+    },
+    {
+      "state": "Mizoram",
+      "district": "Khawzawl",
+      "source": "https://igod.gov.in/sg/MZ/E042/organizations"
+    },
+    {
+      "state": "Mizoram",
+      "district": "Kolasib",
+      "source": "https://igod.gov.in/sg/MZ/E042/organizations"
+    },
+    {
+      "state": "Mizoram",
+      "district": "Lawngtlai",
+      "source": "https://igod.gov.in/sg/MZ/E042/organizations"
+    },
+    {
+      "state": "Mizoram",
+      "district": "Lunglei",
+      "source": "https://igod.gov.in/sg/MZ/E042/organizations"
+    },
+    {
+      "state": "Mizoram",
+      "district": "Mamit",
+      "source": "https://igod.gov.in/sg/MZ/E042/organizations"
+    },
+    {
+      "state": "Mizoram",
+      "district": "Saitual",
+      "source": "https://igod.gov.in/sg/MZ/E042/organizations"
+    },
+    {
+      "state": "Mizoram",
+      "district": "Serchhip",
+      "source": "https://igod.gov.in/sg/MZ/E042/organizations"
+    },
+    {
+      "state": "Mizoram",
+      "district": "Siaha",
+      "source": "https://igod.gov.in/sg/MZ/E042/organizations"
+    },
+    {
+      "state": "Dadra and Nagar Haveli and Daman and Diu",
+      "district": "Dadra And Nagar Haveli",
+      "source": "https://igod.gov.in/sg/ND/E042/organizations"
+    },
+    {
+      "state": "Dadra and Nagar Haveli and Daman and Diu",
+      "district": "Daman",
+      "source": "https://igod.gov.in/sg/ND/E042/organizations"
+    },
+    {
+      "state": "Dadra and Nagar Haveli and Daman and Diu",
+      "district": "Diu",
+      "source": "https://igod.gov.in/sg/ND/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Chumoukedima",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Dimapur",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Kiphire",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Kohima",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Longleng",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Meluri",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Mokokchung",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Mon",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Niuland",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Noklak",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Peren",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Phek",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Shamator",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Tseminyu",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Tuensang",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Wokha",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Nagaland",
+      "district": "Zunheboto",
+      "source": "https://igod.gov.in/sg/NL/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Anugola",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Balangir",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Baleshwar",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Baragada",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Bhadrak",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Boudh",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Debagada",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Dhenkanal",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Gajapati",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Ganjam",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Jagatsinghapur",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Jajpur",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Jharsuguda",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Kalahandi",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Kandhamala",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Kataka",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Kendrapada",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Kendujhar",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Khordha",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Koraput",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Malkangiri",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Mayurbhanj",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Nabarangpur",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Nayagada",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Nuapada",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Puri",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Rayagada",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Sambalpur",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Subarnapur",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Odisha",
+      "district": "Sundaragada",
+      "source": "https://igod.gov.in/sg/OD/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Amritsar",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Barnala",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Bathinda",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Faridkot",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Fatehgarh Sahib",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Fazilka",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Ferozepur",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Gurdaspur",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Hoshiarpur",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Jalandhar",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Kapurthala",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Ludhiana",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Malerkotla",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Mansa",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Moga",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Pathankot",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Patiala",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Rupnagar",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "S.A.S Nagar",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Sangrur",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Shahid Bhagat Singh Nagar",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Sri Muktsar Sahib",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Punjab",
+      "district": "Tarn Taran",
+      "source": "https://igod.gov.in/sg/PB/E042/organizations"
+    },
+    {
+      "state": "Puducherry",
+      "district": "Karaikal",
+      "source": "https://igod.gov.in/sg/PY/E042/organizations"
+    },
+    {
+      "state": "Puducherry",
+      "district": "Puducherry",
+      "source": "https://igod.gov.in/sg/PY/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Ajmer",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Alwar",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Balotra",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Banswara",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Baran",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Barmer",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Beawar",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Bharatpur",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Bhilwara",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Bikaner",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Bundi",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Chittorgarh",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Churu",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Dausa",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Deeg",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Dholpur",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Didwana-Kuchaman",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Dungarpur",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Ganganagar",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Hanumangarh",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Jaipur",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Jaisalmer",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Jalore",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Jhalawar",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Jhunjhunu",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Jodhpur",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Karauli",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Khairthal-Tijara",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Kota",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Kotputli-Behror",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Nagaur",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Pali",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Phalodi",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Pratapgarh",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Rajsamand",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Salumbar",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Sawai Madhopur",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Sikar",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Sirohi",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Tonk",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Rajasthan",
+      "district": "Udaipur",
+      "source": "https://igod.gov.in/sg/RJ/E042/organizations"
+    },
+    {
+      "state": "Sikkim",
+      "district": "Gangtok",
+      "source": "https://igod.gov.in/sg/SK/E042/organizations"
+    },
+    {
+      "state": "Sikkim",
+      "district": "Gyalshing",
+      "source": "https://igod.gov.in/sg/SK/E042/organizations"
+    },
+    {
+      "state": "Sikkim",
+      "district": "Mangan",
+      "source": "https://igod.gov.in/sg/SK/E042/organizations"
+    },
+    {
+      "state": "Sikkim",
+      "district": "Namchi",
+      "source": "https://igod.gov.in/sg/SK/E042/organizations"
+    },
+    {
+      "state": "Sikkim",
+      "district": "Pakyong",
+      "source": "https://igod.gov.in/sg/SK/E042/organizations"
+    },
+    {
+      "state": "Sikkim",
+      "district": "Soreng",
+      "source": "https://igod.gov.in/sg/SK/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Ariyalur",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Chengalpattu",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Chennai",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Coimbatore",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Cuddalore",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Dharmapuri",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Dindigul",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Erode",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Kallakurichi",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Kancheepuram",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Kanniyakumari",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Karur",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Krishnagiri",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Madurai",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Mayiladuthurai",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Nagapattinam",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Namakkal",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Perambalur",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Pudukkottai",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Ramanathapuram",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Ranipet",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Salem",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Sivaganga",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Tenkasi",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Thanjavur",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "The Nilgiris",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Theni",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Thiruvallur",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Thiruvarur",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Thoothukkudi",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Tiruchirappalli",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Tirunelveli",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Tirupathur",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Tiruppur",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Tiruvannamalai",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Vellore",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Viluppuram",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tamil Nadu",
+      "district": "Virudhunagar",
+      "source": "https://igod.gov.in/sg/TN/E042/organizations"
+    },
+    {
+      "state": "Tripura",
+      "district": "Dhalai",
+      "source": "https://igod.gov.in/sg/TR/E042/organizations"
+    },
+    {
+      "state": "Tripura",
+      "district": "Gomati",
+      "source": "https://igod.gov.in/sg/TR/E042/organizations"
+    },
+    {
+      "state": "Tripura",
+      "district": "Khowai",
+      "source": "https://igod.gov.in/sg/TR/E042/organizations"
+    },
+    {
+      "state": "Tripura",
+      "district": "North Tripura",
+      "source": "https://igod.gov.in/sg/TR/E042/organizations"
+    },
+    {
+      "state": "Tripura",
+      "district": "Sepahijala",
+      "source": "https://igod.gov.in/sg/TR/E042/organizations"
+    },
+    {
+      "state": "Tripura",
+      "district": "South Tripura",
+      "source": "https://igod.gov.in/sg/TR/E042/organizations"
+    },
+    {
+      "state": "Tripura",
+      "district": "Unakoti",
+      "source": "https://igod.gov.in/sg/TR/E042/organizations"
+    },
+    {
+      "state": "Tripura",
+      "district": "West Tripura",
+      "source": "https://igod.gov.in/sg/TR/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Adilabad",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Bhadradri Kothagudem",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Hanumakonda",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Hyderabad",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Jagitial",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Jangoan",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Jayashankar Bhupalapally",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Jogulamba Gadwal",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Kamareddy",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Karimnagar",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Khammam",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Kumuram Bheem Asifabad",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Mahabubabad",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Mahabubnagar",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Mancherial",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Medak",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Medchal Malkajgiri",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Mulugu",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Nagarkurnool",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Nalgonda",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Narayanpet",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Nirmal",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Nizamabad",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Peddapalli",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Rajanna Sircilla",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Ranga Reddy",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Sangareddy",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Siddipet",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Suryapet",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Vikarabad",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Wanaparthy",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Warangal",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Telangana",
+      "district": "Yadadri Bhuvanagiri",
+      "source": "https://igod.gov.in/sg/TS/E042/organizations"
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Almora",
+      "source": "https://igod.gov.in/sg/UK/E042/organizations"
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Bageshwar",
+      "source": "https://igod.gov.in/sg/UK/E042/organizations"
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Chamoli",
+      "source": "https://igod.gov.in/sg/UK/E042/organizations"
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Champawat",
+      "source": "https://igod.gov.in/sg/UK/E042/organizations"
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Dehradun",
+      "source": "https://igod.gov.in/sg/UK/E042/organizations"
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Haridwar",
+      "source": "https://igod.gov.in/sg/UK/E042/organizations"
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Nainital",
+      "source": "https://igod.gov.in/sg/UK/E042/organizations"
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Pauri Garhwal",
+      "source": "https://igod.gov.in/sg/UK/E042/organizations"
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Pithoragarh",
+      "source": "https://igod.gov.in/sg/UK/E042/organizations"
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Rudraprayag",
+      "source": "https://igod.gov.in/sg/UK/E042/organizations"
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Tehri Garhwal",
+      "source": "https://igod.gov.in/sg/UK/E042/organizations"
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Udham Singh Nagar",
+      "source": "https://igod.gov.in/sg/UK/E042/organizations"
+    },
+    {
+      "state": "Uttarakhand",
+      "district": "Uttarkashi",
+      "source": "https://igod.gov.in/sg/UK/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Agra",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Aligarh",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Ambedkar Nagar",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Amethi",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Amroha",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Auraiya",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Ayodhya",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Azamgarh",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Baghpat",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Bahraich",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Ballia",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Balrampur",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Banda",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Bara Banki",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Bareilly",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Basti",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Bhadohi",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Bijnor",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Budaun",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Bulandshahr",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Chandauli",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Chitrakoot",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Deoria",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Etah",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Etawah",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Farrukhabad",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Fatehpur",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Firozabad",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Gautam Buddha Nagar",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Ghaziabad",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Ghazipur",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Gonda",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Gorakhpur",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Hamirpur",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Hapur",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Hardoi",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Hathras",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Jalaun",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Jaunpur",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Jhansi",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Kannauj",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Kanpur Dehat",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Kanpur Nagar",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Kasganj",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Kaushambi",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Kheri",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Kushinagar",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Lalitpur",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Lucknow",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Mahoba",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Mahrajganj",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Mainpuri",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Mathura",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Mau",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Meerut",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Mirzapur",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Moradabad",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Muzaffarnagar",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Pilibhit",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Pratapgarh",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Prayagraj",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Rae Bareli",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Rampur",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Saharanpur",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Sambhal",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Sant Kabir Nagar",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Shahjahanpur",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Shamli",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Shrawasti",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Siddharthnagar",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Sitapur",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Sonbhadra",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Sultanpur",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Unnao",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "Uttar Pradesh",
+      "district": "Varanasi",
+      "source": "https://igod.gov.in/sg/UP/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Alipurduar",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Bankura",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Birbhum",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Cooch Behar",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Dakshin Dinajpur",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Darjeeling",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Hooghly",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Howrah",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Jalpaiguri",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Jhargram",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Kalimpong",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Kolkata",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Malda",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Murshidabad",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Nadia",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "North 24 Parganas",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Paschim Bardhaman",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Paschim Medinipur",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Purba Bardhaman",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Purba Medinipur",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Purulia",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "South 24 Parganas",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    },
+    {
+      "state": "West Bengal",
+      "district": "Uttar Dinajpur",
+      "source": "https://igod.gov.in/sg/WB/E042/organizations"
+    }
+  ]
+}

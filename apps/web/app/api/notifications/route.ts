@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic";
+import { requireActor, fpoError } from '@/lib/fpo-access';
 import sql from "@/app/api/utils/sql";
 import { NextResponse } from "next/server";
 import { ensureSocialActivityTables } from "@/app/api/utils/social-notifications";
@@ -17,6 +18,8 @@ export async function GET(request: Request) {
     : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   try {
+    const actor = await requireActor(request);
+    if (actor.id !== userId) return NextResponse.json({error:'Forbidden'},{status:403});
     await ensureSocialActivityTables();
     const socialActivity = await sql`
       SELECT n.id,n.type,n.reel_id,n.post_id,n.preview,n.created_at,
@@ -158,6 +161,7 @@ export async function GET(request: Request) {
   FROM announcements a
   LEFT JOIN "user" u ON u.id = a.created_by
   WHERE a.created_at > ${sevenDaysAgo}   -- ← fixed 7-day window
+    AND (a.group_id IS NULL OR can_receive_fpo_message(${userId},a.group_id))
     AND (a.expires_at IS NULL OR a.expires_at > NOW())
     AND (a.scheduled_at IS NULL OR a.last_sent_at IS NOT NULL)
   ORDER BY a.created_at DESC
@@ -677,6 +681,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Notifications error:", error);
-    return NextResponse.json({ notifications: [], unreadCount: 0 });
+    return fpoError(error);
   }
 }

@@ -161,7 +161,7 @@ async function sendToToken(token: string, payload: PushPayload) {
 }
 
 export async function sendPushToUser(userId: string, payload: PushPayload) {
-  if (!userId) return;
+  if (!userId) return {attempted:0,succeeded:0,failed:0};
 
   try {
     await ensurePushTokenTable();
@@ -174,7 +174,7 @@ export async function sendPushToUser(userId: string, payload: PushPayload) {
       LIMIT 5
     `;
 
-    await Promise.all(
+    const results = await Promise.all(
       rows.map(async (row: any) => {
         const result = await sendToToken(row.token, payload);
         if (result.status === 404 || result.status === 400) {
@@ -184,10 +184,13 @@ export async function sendPushToUser(userId: string, payload: PushPayload) {
             WHERE token = ${row.token}
           `.catch(() => {});
         }
+        return result.ok;
       })
     );
+    return {attempted:rows.length,succeeded:results.filter(Boolean).length,failed:results.filter(x=>!x).length};
   } catch (error) {
     console.error("Push notification error:", error);
+    return {attempted:0,succeeded:0,failed:1};
   }
 }
 

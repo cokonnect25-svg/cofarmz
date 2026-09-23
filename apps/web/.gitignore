@@ -6,3 +6,8 @@ node_modules/
 dist/
 build/
 
+
+# Local Digital FPO verification artifacts
+.fpo-test-db/
+fpo-*.log
+.next-fpo/

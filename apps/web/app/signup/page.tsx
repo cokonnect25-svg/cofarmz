@@ -1,5 +1,6 @@
 'use client';
 
+import DistrictSelect from '@/components/DistrictSelect';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,6 +12,8 @@ export default function SignupPage() {
   const router = useRouter();
   const { signUp, loading } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [state,setState]=useState('');
+  const [district,setDistrict]=useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,9 +48,10 @@ export default function SignupPage() {
     if (!agreedToTerms) { setError('Please agree to the Terms of Service.'); return; }
     if (userType === 'supplier' && supplierTypes.length === 0) { setError('Please choose Commodities Supplier, Equipment Supplier, or both.'); return; }
 
+    if (userType === 'farmer' && (!state || !district)) {setError('Select State and District');return;}
     setIsLoading(true);
     try {
-      await signUp(email, password, name, userType, supplierTypes);
+      await signUp(email, password, name, userType, supplierTypes, {state,district});
       // Redirect to select-role which shows full Terms & Conditions and lets user pick their role
       window.location.replace('/select-role');
     } catch (err: any) {
@@ -177,6 +181,7 @@ export default function SignupPage() {
             </div>
           )}
 
+          {userType === 'farmer' && <DistrictSelect state={state} district={district} onChange={(s,d)=>{setState(s);setDistrict(d);}}/>}
           <form onSubmit={handleSignUp} className="space-y-4">
             {/* Account Type */}
             <div>

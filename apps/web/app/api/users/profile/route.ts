@@ -1,3 +1,5 @@
+import { requireActor, fpoError, FpoError, rejectAssignmentInput } from '@/lib/fpo-access';
+import { assignFarmer, prepareLocation } from '@/lib/fpo-assignment';
 import sql from "@/app/api/utils/sql";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -79,97 +81,38 @@ if (!userProfile.role && userProfile.role_id) {
 }
 
 export async function POST(request: Request) {
-  const errors: string[] = [];
   try {
+    const actor = await requireActor(request);
     const body = await request.json();
-    const { email, role, userId } = body;
+    if (body.address !== undefined && body.location === undefined) body.location = body.address;
+    rejectAssignmentInput(body);
+    if (body.userId && body.userId !== actor.id) throw new FpoError('Forbidden',403);
+    const role = body.role;
+    if (!['farmer','buyer','supplier','fpo'].includes(role)) throw new FpoError('Invalid role');
     const supplierTypes = role === 'supplier' ? normalizeSupplierTypes(body.supplier_types) : [];
-
-const allowedRoles = ['farmer', 'buyer', 'supplier', 'fpo', 'superadmin'];
-
-if (!role || !allowedRoles.includes(role)) {
-  return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
-}
-    if (role === 'supplier' && supplierTypes.length === 0) {
-      return NextResponse.json({ error: 'Select at least one supplier type' }, { status: 400 });
-    }
-    if (!email && !userId) {
-      return NextResponse.json({ error: 'email or userId is required' }, { status: 400 });
-    }
-
-    // Ensure roles table + columns exist
-    try {
-      await sql`CREATE TABLE IF NOT EXISTS roles (id SERIAL PRIMARY KEY, name VARCHAR(50) NOT NULL UNIQUE, display_name VARCHAR(100) NOT NULL)`;
-
-await sql`
-  INSERT INTO roles (id, name, display_name)
-  VALUES 
-    (1, 'farmer',     'Farmer'),
-    (2, 'buyer',      'Buyer'),
-    (3, 'supplier',   'Supplier'),
-    (4, 'fpo',        'Farmer Produce Organization'),
-    (5, 'superadmin', 'Super Admin')
-  ON CONFLICT (id) DO NOTHING
-`;
-      await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'buyer'`;
-      await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role_id INTEGER`;
-      await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS supplier_types TEXT[] DEFAULT ARRAY[]::TEXT[]`;
-    } catch (e: any) { errors.push('setup: ' + e.message); }
-
-    const roleRow = await sql`
-  SELECT id FROM roles WHERE name = ${role}
-`;
-
-if (roleRow.length === 0) {
-  return NextResponse.json({ error: 'Role not found in DB' }, { status: 400 });
-}
-
-const roleId = roleRow[0].id;
-    let result: any[] = [];
-
-    // Try by userId first (most reliable), then email
-    const whereClause = userId ? sql`WHERE id = ${userId}` : sql`WHERE email = ${email}`;
-
-    // Also ensure role_confirmed column exists
-    try {
-      await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role_confirmed BOOLEAN DEFAULT false`;
-    } catch (e: any) { errors.push('role_confirmed col: ' + e.message); }
-
-    const currentUsers = userId
-      ? await sql`SELECT role, role_confirmed FROM "user" WHERE id = ${userId} LIMIT 1`
-      : await sql`SELECT role, role_confirmed FROM "user" WHERE email = ${email} LIMIT 1`;
-    if (currentUsers[0]?.role_confirmed === true) {
-      return NextResponse.json(
-        { error: 'Your role is already confirmed. Submit the one-time role-change request from your profile.' },
-        { status: 403 }
-      );
-    }
-
-    try {
-      result = await sql`UPDATE "user" SET role = ${role}, role_id = ${roleId}, supplier_types = ${supplierTypes}::text[], role_confirmed = true ${whereClause} RETURNING id, email, role, role_id, supplier_types`;
-    } catch (e: any) {
-      errors.push('update1: ' + e.message);
-      try {
-        result = await sql`UPDATE "user" SET role = ${role}, role_confirmed = true ${whereClause} RETURNING id, email, role`;
-      } catch (e2: any) {
-        errors.push('update2: ' + e2.message);
-      }
-    }
-
-    if (result.length === 0) {
-      return NextResponse.json({ error: 'User not found', debug: errors }, { status: 404 });
-    }
-
-    return NextResponse.json({ ...result[0], debug: errors });
-  } catch (error: any) {
-    console.error('Profile POST error:', error);
-    return NextResponse.json({ error: error.message, debug: errors }, { status: 500 });
-  }
+    if (role === 'supplier' && !supplierTypes.length) throw new FpoError('Select at least one supplier type');
+    const location = role === 'farmer' ? await prepareLocation(body,{},true) : null;
+    const result = await sql.begin(async tx => {
+      const [u] = await tx`SELECT * FROM "user" WHERE id=${actor.id} FOR UPDATE`;
+      if (u.role_confirmed) throw new FpoError('Your role is already confirmed',403);
+      const [r] = await tx`SELECT id FROM roles WHERE name=${role}`;
+      if (!r) throw new FpoError('Role is not configured');
+      const [updated] = await tx`UPDATE "user" SET role=${role},role_id=${r.id},supplier_types=${supplierTypes}::text[],role_confirmed=true,district_id=${location?.district?.id || null},"updatedAt"=now() WHERE id=${actor.id} RETURNING id,email,role,role_id,supplier_types`;
+      if (location) await assignFarmer(tx,actor.id,location.district.id,'registration');
+      return updated;
+    });
+    return NextResponse.json(result);
+  } catch(error) { return fpoError(error); }
 }
 
 export async function PUT(request: Request) {
   try {
-    const { userId, name, email, phone, location, gender, age, bio, latitude, longitude, supplier_types, calling_enabled } = await request.json();
+    const actor = await requireActor(request);
+    const body = await request.json();
+    if (body.address !== undefined && body.location === undefined) body.location = body.address;
+    rejectAssignmentInput(body);
+    const { userId, name, email, phone, location, gender, age, bio, latitude, longitude, supplier_types, calling_enabled } = body;
+    if (userId !== actor.id) throw new FpoError('Forbidden',403);
 
     if (!userId) {
       return NextResponse.json(
@@ -188,7 +131,7 @@ export async function PUT(request: Request) {
     await sql`ALTER TABLE "user" ADD COLUMN IF NOT EXISTS bio TEXT`.catch(() => { });
 
     const currentUserRows = await sql`
-      SELECT role, role_id
+      SELECT *
       FROM "user"
       WHERE id = ${userId}
       LIMIT 1
@@ -201,6 +144,7 @@ export async function PUT(request: Request) {
       );
     }
 
+    const resolved = await prepareLocation(body,currentUserRows[0]);
     const currentRole =
       currentUserRows[0].role ||
       (currentUserRows[0].role_id === 3 ? "supplier" : null);
@@ -247,16 +191,19 @@ export async function PUT(request: Request) {
     const updates: string[] = [];
     const values: any[] = [];
 
+    if (body.image !== undefined) {
+      updates.push(`image = $${values.length + 1}`); values.push(body.image);
+    }
     if (name !== undefined) {
-      updates.push(`name = $${updates.length + 1}`);
+      updates.push(`name = $${values.length + 1}`);
       values.push(name);
     }
     if (email !== undefined) {
-      updates.push(`email = $${updates.length + 1}`);
+      updates.push(`email = $${values.length + 1}`);
       values.push(email);
     }
     if (phone !== undefined) {
-      updates.push(`phone = $${updates.length + 1}`);
+      updates.push(`phone = $${values.length + 1}`);
       values.push(normalizedPhone?.value || null);
 
       if (normalizePhone(currentPhone || "").lookup !== normalizedPhone?.lookup) {
@@ -265,27 +212,27 @@ export async function PUT(request: Request) {
       }
     }
     if (location !== undefined) {
-      updates.push(`location = $${updates.length + 1}`);
+      updates.push(`location = $${values.length + 1}`);
       values.push(location);
     }
     if (gender !== undefined) {
-      updates.push(`gender = $${updates.length + 1}`);
+      updates.push(`gender = $${values.length + 1}`);
       values.push(gender);
     }
     if (age !== undefined) {
-      updates.push(`age = $${updates.length + 1}`);
+      updates.push(`age = $${values.length + 1}`);
       values.push(age ? parseInt(age) : null);
     }
     if (bio !== undefined) {
-      updates.push(`bio = $${updates.length + 1}`);
+      updates.push(`bio = $${values.length + 1}`);
       values.push(String(bio).trim().slice(0, 150) || null);
     }
     if (latitude !== undefined) {
-      updates.push(`latitude = $${updates.length + 1}`);
+      updates.push(`latitude = $${values.length + 1}`);
       values.push(latitude);
     }
     if (longitude !== undefined) {
-      updates.push(`longitude = $${updates.length + 1}`);
+      updates.push(`longitude = $${values.length + 1}`);
       values.push(longitude);
     }
     if (supplier_types !== undefined) {
@@ -296,14 +243,21 @@ export async function PUT(request: Request) {
           { status: 400 }
         );
       }
-      updates.push(`supplier_types = $${updates.length + 1}::text[]`);
+      updates.push(`supplier_types = $${values.length + 1}::text[]`);
       values.push(currentRole === "supplier" ? supplierTypes : []);
     }
     if (calling_enabled !== undefined) {
-      updates.push(`calling_enabled = $${updates.length + 1}`);
+      updates.push(`calling_enabled = $${values.length + 1}`);
       values.push(Boolean(calling_enabled));
     }
 
+    if (location !== undefined && location !== currentUserRows[0].location && latitude === undefined && longitude === undefined) {
+      updates.push('latitude = NULL', 'longitude = NULL');
+    }
+    if (resolved) {
+      updates.push(`district_id = $${values.length + 1}`);
+      values.push(resolved.district?.id || null);
+    }
     if (updates.length === 0) {
       return NextResponse.json(
         { error: "No fields to update" },
@@ -318,7 +272,12 @@ export async function PUT(request: Request) {
     const query = `UPDATE "user" SET ${updates.join(", ")}, "updatedAt" = NOW() WHERE id = $${values.length} RETURNING id`;
 
     // Execute update using unsafe for dynamic SQL
-    await sql.unsafe(query, values);
+    await sql.begin(async tx => {
+      const [locked] = await tx`SELECT * FROM "user" WHERE id=${userId} FOR UPDATE`;
+      if (new Date(locked.updatedAt).getTime() !== new Date(currentUserRows[0].updatedAt).getTime()) throw new FpoError('Profile changed; please retry',409);
+      await tx.unsafe(query, values);
+      if (resolved) await assignFarmer(tx,userId,resolved.district?.id || null,resolved.source,resolved.reason);
+    });
 
     // Fetch updated user with role information
     const result = await sql`
@@ -346,9 +305,6 @@ export async function PUT(request: Request) {
     return NextResponse.json(result[0]);
   } catch (error) {
     console.error("Profile update error:", error);
-    return NextResponse.json(
-      { error: "Failed to update profile" },
-      { status: 500 }
-    );
+    return fpoError(error);
   }
 }
