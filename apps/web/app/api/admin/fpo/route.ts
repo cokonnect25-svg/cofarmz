@@ -1,12 +1,12 @@
 import sql from '@/app/api/utils/sql';
 import { NextResponse } from 'next/server';
-import { requireActor, fpoError, FpoError } from '@/lib/fpo-access';
+import { requireActor, requireFpoReviewer, fpoError, FpoError } from '@/lib/fpo-access';
 import { validateDistrict } from '@/lib/fpo-location';
 import { assignFarmer, processFarmer } from '@/lib/fpo-assignment';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
-    await requireActor(request,true);
+    await requireFpoReviewer(request);
     const q = new URL(request.url).searchParams;
     const after = q.get('after') || '';
     const group = q.get('group') || null;

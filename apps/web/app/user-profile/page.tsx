@@ -1398,6 +1398,7 @@ const fetchFollowersCounts = async () => {
       </div>
 
       {userRole === 'farmer' && <MyDigitalFpo/>}
+      {['admin','superadmin','super_admin'].includes(userRole) && <a href="/digital-fpos" className="block m-4 p-4 rounded-xl bg-green-50 text-green-800 font-semibold">Digital FPO groups: messages, members and details</a>}
       {/* Profile header */}
       <div className="bg-white border-b">
         <div className="h-24 bg-gradient-to-r from-green-500 to-green-600"></div>

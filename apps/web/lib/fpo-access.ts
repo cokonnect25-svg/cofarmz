@@ -6,6 +6,12 @@ export class FpoError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }
 export const isSuperAdmin = (role: unknown) => ['superadmin', 'super_admin'].includes(String(role));
+export const canReviewFpos = (role: unknown) => role === 'admin' || isSuperAdmin(role);
+export async function requireFpoReviewer(request: Request) {
+  const actor = await requireActor(request);
+  if (!canReviewFpos(actor.role)) throw new FpoError('Admin access required', 403);
+  return actor;
+}
 export async function requireActor(request: Request, admin = false) {
   if (!['GET','HEAD','OPTIONS'].includes(request.method) && !request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) {
     throw new FpoError('JSON request required',415);

@@ -306,7 +306,8 @@ export default function AdminDashboard() {
     fetch(getApiUrl(`/api/users/profile?userId=${user.id}`))
       .then((r) => r.json())
       .then((profile) => {
-        if (profile.role === "superadmin" || profile.role_id === 5) {
+        if (profile.role === "admin") { router.replace("/digital-fpos"); return; }
+        if (profile.role === "superadmin" || profile.role === "super_admin" || profile.role_id === 5) {
           setVerified("ok");
         } else {
           setVerified("denied");

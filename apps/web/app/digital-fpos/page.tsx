@@ -3,6 +3,7 @@ import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {useAuth} from '@/hooks/useAuth';
 import {getApiUrl} from '@/lib/api';
+import AdminFpoGroup from '@/components/AdminFpoGroup';
 import DistrictSelect from '@/components/DistrictSelect';
 
 async function api(path:string,body?:any,method='POST') {
@@ -27,7 +28,7 @@ export default function DigitalFposPage() {
     <Link href="/user-profile" className="text-green-700 underline">Back to profile</Link>
     <h1 className="text-2xl font-bold text-green-900">Digital FPOs</h1>
     {error&&<p role="alert" className="bg-red-50 text-red-700 p-3 rounded-xl">{error}</p>}{notice&&<p role="status" className="bg-green-50 p-3">{notice}</p>}
-    <section className="bg-green-50 border border-green-200 rounded-2xl p-5"><h2 className="text-lg font-bold">My Digital FPO</h2><p className="break-words">{data.mine?.name||'Not Assigned'}</p><p>{data.mine?.district} {data.mine?.state}</p><p>{data.mine?.assignment_status?.replaceAll('_',' ')||'Location Required'}</p>{data.mine?.name&&<p className="break-words">Group: {data.mine.name}</p>}
+    {!data.can_review&&<><section className="bg-green-50 border border-green-200 rounded-2xl p-5"><h2 className="text-lg font-bold">My Digital FPO</h2><p className="break-words">{data.mine?.name||'Not Assigned'}</p><p>{data.mine?.district} {data.mine?.state}</p><p>{data.mine?.assignment_status?.replaceAll('_',' ')||'Location Required'}</p>{data.mine?.name&&<p className="break-words">Group: {data.mine.name}</p>}
       <DistrictSelect state={state} district={district} onChange={(s,d)=>{setState(s);setDistrict(d);}}/>
       <button disabled={busy||!district} onClick={()=>run(async()=>{await api('/api/users/profile',{userId:user.id,state,district},'PUT');setNotice('Location and assignment updated');})} className="bg-green-600 text-white rounded-xl px-4 py-2 disabled:opacity-50">Update my district</button>
     </section>
@@ -35,9 +36,11 @@ export default function DigitalFposPage() {
       {!!messages.messages.length&&<button className="text-green-700 underline" disabled={busy} onClick={()=>run(async()=>{await api('/api/digital-fpos/messages',{});})}>Mark as read</button>}
       {!messages.messages.length&&<p className="mt-3">No group updates.</p>}{messages.messages.map((m:any)=><article key={m.id} className="border-t py-3 mt-2"><h3 className="font-semibold">{m.title}</h3><p className="whitespace-pre-wrap">{m.body}</p><time className="text-xs text-gray-500">{new Date(m.created_at).toLocaleString()}</time></article>)}
     </section>
-    <section><h2 className="text-lg font-bold">Other Digital FPOs</h2><p className="text-sm mb-3">Explore profiles. Viewing a profile does not join its group.</p><div className="grid sm:grid-cols-2 gap-3">{data.fpos.map((f:any)=><button key={f.id} className="text-left p-4 border rounded-2xl hover:bg-green-50" onClick={()=>run(async()=>setSelected(await api(`/api/digital-fpos/${f.id}`)))}><strong className="break-words">{f.name}</strong><p>{f.district}, {f.state}</p><p>{f.farmer_count} farmers · {f.status}{data.mine?.digital_fpo_id===f.id?' · My FPO':''}</p></button>)}</div></section>
-    {selected&&<section className="border rounded-2xl p-5"><h2 className="font-bold break-words">{selected.name}</h2><p>{selected.district}, {selected.state}</p><p>Status: {selected.status}</p><p className="break-words">Group: {selected.group_name}</p><button onClick={()=>setSelected(null)} className="underline">Close profile</button></section>}
-    {data.can_manage&&<section className="border border-green-300 rounded-2xl p-5 space-y-4"><h2 className="font-bold text-xl">Super Admin · Digital FPO management</h2><p>Select State and District above to create an FPO or correct an assignment.</p>
+    </>}
+    <section><h2 className="text-lg font-bold">{data.can_review ? "All Digital FPO groups" : "Other Digital FPOs"}</h2><p className="text-sm mb-3">Explore profiles. Viewing a profile does not join its group.</p><div className="grid sm:grid-cols-2 gap-3">{data.fpos.map((f:any)=><button key={f.id} className="text-left p-4 border rounded-2xl hover:bg-green-50" onClick={()=>run(async()=>setSelected(await api(`/api/digital-fpos/${f.id}`)))}><strong className="break-words">{f.name}</strong><p>{f.district}, {f.state}</p><p>{f.farmer_count} farmers · {f.status}{data.mine?.digital_fpo_id===f.id?' · My FPO':''}</p></button>)}</div></section>
+    {selected&&<section className="border rounded-2xl p-5"><h2 className="font-bold break-words">{selected.name}</h2><p>{selected.district}, {selected.state}</p><p>Status: {selected.status}</p><p className="break-words">Group: {selected.group_name}</p><button onClick={()=>setSelected(null)} className="underline">Close profile</button>{data.can_review&&<AdminFpoGroup key={selected.group_id} groupId={selected.group_id}/>}</section>}
+    {data.can_manage&&<section className="border border-green-300 rounded-2xl p-5 space-y-4"><h2 className="font-bold text-xl">Super Admin · Digital FPO management</h2><p>Select State and District to create an FPO or correct an assignment.</p>
+      <DistrictSelect state={state} district={district} onChange={(s,d)=>{setState(s);setDistrict(d);}}/>
       <button disabled={busy||!district} className="bg-green-700 text-white px-4 py-2 rounded-xl disabled:opacity-50" onClick={()=>run(async()=>{await api('/api/digital-fpos',{state,district});setNotice('FPO and group created. Run assignment processing to enroll pending farmers.');})}>Create Digital FPO</button>
       {selected&&<div className="space-x-3"><button className="underline" disabled={busy} onClick={()=>run(async()=>{const f=await api('/api/digital-fpos',{id:selected.id,status:selected.status==='active'?'inactive':'active'},'PATCH');setSelected({...selected,...f});})}>{selected.status==='active'?'Deactivate':'Activate'} selected FPO</button><button className="underline" onClick={()=>run(()=>listFarmers(`group=${selected.group_id}`))}>View assigned farmers</button></div>}
       <button className="block underline text-green-800" disabled={busy} onClick={()=>run(()=>listFarmers('pending=true'))}>Farmers Pending Assignment</button>

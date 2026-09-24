@@ -51,7 +51,9 @@ async function user(id,role='farmer',confirmed=true,location=null,lat=null,lng=n
     next_send_at timestamptz,last_sent_at timestamptz,send_count int default 0,is_active boolean default true);`);
   const migration=fs.readFileSync(path.join(root,'migrations/20260923_digital_fpos.sql'),'utf8');
   const reserved=await db.reserve();
-  try { await reserved.unsafe(migration); await reserved.unsafe(migration); } finally {reserved.release();}
+  try { await reserved.unsafe(migration); await reserved.unsafe(migration);
+    const reviewerMigration=fs.readFileSync(path.join(root,'migrations/20260923_fpo_admin_review.sql'),'utf8');
+    await reserved.unsafe(reviewerMigration);await reserved.unsafe(reviewerMigration); } finally {reserved.release();}
   for(const district of ['Madurai','Chennai']) await db`INSERT INTO fpo_districts(state,district,source) VALUES('Tamil Nadu',${district},'fixture')`;
   await user('admin','superadmin'); await user('new-m','buyer',false);await user('new-c','buyer',false);await user('invalid','buyer',false);
   const fpos=route('digital-fpos');const profiles=route('users/profile');
@@ -176,6 +178,40 @@ async function user(id,role='farmer',confirmed=true,location=null,lat=null,lng=n
     const res=await profiles.PUT(request('coords',{userId:'coords',name:'Updated farmer',location:'Old address',latitude:9.9,longitude:78.1},'PUT'));
     assert.equal(res.status,200);
     assert.equal((await db`SELECT group_id FROM farmer_fpo_assignments WHERE farmer_id='coords'`)[0].group_id,madurai.group_id);
+  });
+  await user('reviewer','admin');
+  await test('Admin can discover active and inactive FPOs without management capability',async()=>{
+    await fpos.PATCH(request('admin',{id:chennai.id,status:'inactive'},'PATCH'));
+    const d=await (await fpos.GET(request('reviewer',null,'GET'))).json();
+    assert.equal(d.can_review,true);assert.equal(d.can_manage,false);assert(d.fpos.some(f=>f.id===chennai.id));assert.equal(d.fpos.find(f=>f.id===chennai.id).farmer_count,2);
+    assert.equal((await route('digital-fpos/[id]').GET(request('reviewer',null,'GET'),{params:Promise.resolve({id:chennai.id})})).status,200);
+  });
+  await test('Admin can review any group members and messages; farmers cannot',async()=>{
+    for(const group of [madurai,chennai]) {
+      const req=request('reviewer',null,'GET','/api/admin/fpo/messages?group='+group.group_id);
+      const r=await route('admin/fpo/messages').GET(req);assert.equal(r.status,200);
+      const d=await r.json();assert(d.messages.length>0);assert.equal(d.group.id,group.group_id);
+      const people=await route('admin/fpo').GET(request('reviewer',null,'GET','/api/admin/fpo?group='+group.group_id));
+      assert.equal(people.status,200);assert((await people.json()).farmers.every(f=>f.group_id===group.group_id));
+    }
+    assert.equal((await route('admin/fpo/messages').GET(request('coords',null,'GET','/api/admin/fpo/messages?group='+chennai.group_id))).status,403);
+    assert.equal((await route('admin/fpo').GET(request('coords',null,'GET'))).status,403);
+    assert.equal((await route('admin/fpo/messages').GET(request(null,null,'GET','/api/admin/fpo/messages?group='+madurai.group_id))).status,401);
+    assert.equal((await db`SELECT * FROM farmer_fpo_assignments WHERE farmer_id='reviewer'`).length,0);
+  });
+  await test('Admin review never grants create, update, assignment or publishing permissions',async()=>{
+    assert.equal((await fpos.POST(request('reviewer',{state:'Tamil Nadu',district:'Coimbatore'}))).status,403);
+    assert.equal((await fpos.PATCH(request('reviewer',{id:chennai.id,status:'active'},'PATCH'))).status,403);
+    assert.equal((await route('admin/fpo').POST(request('reviewer',{action:'assign',farmer_id:'coords',state:'Tamil Nadu',district:'Chennai'}))).status,403);
+    assert.equal((await announcements.POST(request('reviewer',{title:'No',body:'No',groupId:madurai.group_id}))).status,403);
+  });
+  await test('Admin message history paginates and includes expired announcements',async()=>{
+    await db`INSERT INTO announcements(title,body,created_by,group_id,expires_at) SELECT 'Archived '||n,'History','admin',${madurai.group_id},now()-interval '1 day' FROM generate_series(1,51) n`;
+    const first=await (await route('admin/fpo/messages').GET(request('reviewer',null,'GET','/api/admin/fpo/messages?group='+madurai.group_id))).json();
+    const second=await (await route('admin/fpo/messages').GET(request('reviewer',null,'GET','/api/admin/fpo/messages?group='+madurai.group_id+'&offset='+first.next))).json();
+    assert.equal(first.messages.length,50);assert.equal(first.next,50);assert.equal(second.next,null);
+    assert(first.messages.some(m=>m.title.startsWith('Archived')));
+    assert.equal(new Set([...first.messages,...second.messages].map(m=>m.id)).size,first.messages.length+second.messages.length);
   });
   console.log(`${passed} integration tests passed`);
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await db.unsafe('DROP SCHEMA IF EXISTS fpo_integration CASCADE');await db.end();});

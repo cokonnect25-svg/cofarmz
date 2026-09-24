@@ -8,11 +8,11 @@ The new relationship is `fpo_districts -> digital_fpos -> farmer_groups -> farme
 
 Existing announcements are extended with nullable `group_id`. Null retains global announcement behavior. Scoped announcements provide the group message feed, in-app notifications, unread counts, and push. The existing person-to-person messaging system is unchanged; the application has no group chat to extend.
 
-`superadmin` is the existing production role spelling. Server authorization also recognizes `super_admin`, but not the ordinary `admin` or `fpo` role. Self-registration can no longer choose an admin role. Authorization uses Better Auth's verified session and a current database role lookup, never a caller's `userId`, `adminId`, or `x-user-id` as proof of identity.
+`superadmin` is the existing production role spelling. Server authorization also recognizes `super_admin`, but not the ordinary `admin` or `fpo` role for management. Ordinary `admin` accounts have read-only review access to all FPO profiles, group members and message history, including inactive FPOs and expired/scheduled announcements. Self-registration can no longer choose an admin role. Authorization uses Better Auth's verified session and a current database role lookup, never a caller's `userId`, `adminId`, or `x-user-id` as proof of identity.
 
 ## Database migration
 
-New file: `migrations/20260923_digital_fpos.sql`.
+Migration files: `migrations/20260923_digital_fpos.sql` and `migrations/20260923_fpo_admin_review.sql`. The migration command runs both. The second permits and registers a distinct `admin` role, without promoting any account. Existing trusted account provisioning must explicitly assign that role; signup cannot select it.
 
 Adds catalogue, FPO, group, assignment and message-read tables; adds `user.district_id` and `announcements.group_id`; creates foreign keys, normalized location uniqueness, unique FPO-per-district/group-per-FPO constraints, membership consistency trigger, access predicate and query indexes.
 
@@ -57,7 +57,8 @@ Imports are additive: existing IDs/assignments are preserved. District renames, 
 | `/api/digital-fpos` | POST, PATCH | Super Admin create or activate/deactivate |
 | `/api/digital-fpos/:id` | GET | Signed-in permitted public profile; no private content or membership mutation |
 | `/api/digital-fpos/messages` | GET, POST | Own active group feed/unread count; mark own accessible updates read |
-| `/api/admin/fpo` | GET | Super Admin farmer list, `pending=true`, optional `group`, cursor `after` |
+| `/api/admin/fpo/messages` | GET | Admin/Super Admin read-only group history; required `group`, optional `offset`; 50 messages per page |
+| `/api/admin/fpo` | GET | Admin/Super Admin farmer list, `pending=true`, optional `group`, cursor `after` |
 | `/api/admin/fpo` | POST | Super Admin `action: assign` or `action: process` |
 | `/api/users/profile` | POST, PUT | Secured role completion and automatic transactional assignment |
 | `/api/users/:id` | PUT | Delegates to the same protected profile update |
@@ -75,7 +76,7 @@ Processing body: `{ "action":"process", "after":"", "dry_run":true }`. It handle
 
 `/signup` and `/select-role` have dependent selectors. New accounts remain in role setup until their role is confirmed. OAuth users complete the same setup. Farmer profiles include “My Digital FPO” with a link to `/digital-fpos`.
 
-`/digital-fpos` contains own association, district update, private group updates/read count, discoverable FPO profiles, and a server-authorized management section. The admin dashboard links to it. Super Admin can create FPOs, open profiles, activate/deactivate, view farmer counts and group members, page through pending farmers, correct assignments, preview/process existing farmers, and post group announcements.
+`/digital-fpos` contains own association, district update, private group updates/read count, discoverable FPO profiles, a read-only Admin group overview on each selected FPO, and a separate Super Admin management section. The Super Admin dashboard links to it; ordinary admins visiting that dashboard are directed to the FPO page. Super Admin can create FPOs, open profiles, activate/deactivate, view farmer counts and group members, page through pending farmers, correct assignments, preview/process existing farmers, and post group announcements.
 
 Rollout order:
 
@@ -88,7 +89,7 @@ Rollout order:
 
 ## Communication access
 
-The shared PostgreSQL predicate `can_receive_fpo_message(user_id, group_id)` requires a current farmer role, assigned membership, matching user/assignment/FPO district, and active FPO. The feed, inbox and announcement query use it. Discovery never calls assignment. No client query parameter can grant membership.
+The shared PostgreSQL predicate `can_receive_fpo_message(user_id, group_id)` requires a current farmer role, assigned membership, matching user/assignment/FPO district, and active FPO. The feed, inbox and announcement query use it. Discovery never calls assignment. The separate administrative review endpoint authorizes Admin/Super Admin sessions and can view every group without enrollment. It does not alter farmer access, unread counts, push recipients, or membership. No client query parameter can grant membership.
 
 Immediate and scheduled push use the same filtered recipient service. It rechecks and locks membership/FPO while submitting each recipient, preventing concurrent reassignment/deactivation from changing eligibility mid-submit. Notifications contain only a generic update notice, with no group name/private body, because an already-delivered OS notification cannot be recalled after a move. Opening the app fetches the content with a new membership check. Push failure leaves the existing announcement scheduler retry behavior in place. Global announcements retain their existing global delivery.
 
@@ -109,7 +110,7 @@ Browser auth now uses the current website origin, matching the protected APIs. C
 
 `npm run test:fpo` executes real PostgreSQL integration tests against localhost port 55439 by default (override `FPO_TEST_DATABASE_URL` with a loopback URL). It creates and drops only the `fpo_integration` schema; do not point it at a shared development instance using that schema. Better Auth session lookup, geocoder, and FCM are fixtures; route authorization and assignment/delivery SQL are real. These tests do not certify Google OAuth, provider accuracy, or live FCM delivery.
 
-The test suite covers 25 scenarios: registration/validation; both resolution paths; missing location and later updates; dry runs; reruns; uniqueness; discovery without membership; cross-group feed/unread/push isolation; admin/identity spoofing; district moves; deactivation/reactivation; missing FPO; invalid coordinates; rollback; scheduled delivery; and unchanged-location profile edits.
+The test suite covers 29 scenarios: registration/validation; both resolution paths; missing location and later updates; dry runs; reruns; uniqueness; discovery without membership; cross-group feed/unread/push isolation; admin/identity spoofing; district moves; deactivation/reactivation; missing FPO; invalid coordinates; rollback; scheduled delivery; unchanged-location profile edits; admin visibility, read-only authorization, member isolation and historical-message pagination.
 
 Production build completed successfully. Scoped FPO lint completed with no errors. Full project type checking has pre-existing failures in generated Android artifacts and unrelated pages (MapPicker, machinery-list, nearby-farmers, rent-machinery, top-picks); no diagnostics were reported for the changed FPO/API/auth files. The existing Next config ignores type/lint errors during build, so a passing build is not presented as a passing full type check. In-app browser verification was unavailable; visual and real-auth end-to-end checks remain to be performed before production rollout.
 
