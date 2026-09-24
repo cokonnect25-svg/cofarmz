@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowUpRight, Building2, MapPin, MessageSquare, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { getApiUrl } from "@/lib/api";
@@ -483,7 +485,25 @@ export default function AdminDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        <a href="/digital-fpos" className="block p-4 bg-green-50 border border-green-200 rounded-xl font-bold text-green-800">Manage Digital FPOs and farmer assignments</a>
+        <section aria-labelledby="fpo-management-title" className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 shrink-0 bg-green-50 rounded-xl flex items-center justify-center text-green-600"><Building2 size={22} aria-hidden="true"/></div>
+              <div>
+                <h2 id="fpo-management-title" className="text-lg font-black text-gray-900">Digital FPO Management</h2>
+                <p className="text-xs text-gray-400 font-semibold mt-0.5">Manage district communities, tagged farmers and group announcements.</p>
+              </div>
+            </div>
+            <Link href="/digital-fpos" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-black text-white hover:bg-green-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2">Manage FPOs<ArrowUpRight size={17} aria-hidden="true"/></Link>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            {[
+              {icon:MapPin,title:'District FPOs',description:'Create one FPO and farmer group for each district.'},
+              {icon:Users,title:'Farmer assignments',description:'Review members and resolve pending profile locations.'},
+              {icon:MessageSquare,title:'Group announcements',description:'Send updates to farmers in a selected FPO.'},
+            ].map(({icon:Icon,title,description})=><div key={title} className="flex items-start gap-3 rounded-xl bg-gray-50 p-4"><Icon size={17} className="mt-0.5 shrink-0 text-green-600" aria-hidden="true"/><div><h3 className="text-xs font-black text-gray-700">{title}</h3><p className="mt-1 text-xs leading-relaxed text-gray-500">{description}</p></div></div>)}
+          </div>
+        </section>
 
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
           <div className="flex items-center justify-between gap-3 mb-5">
@@ -549,7 +569,7 @@ export default function AdminDashboard() {
             <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-xl">📢</div>
             <div>
               <h2 className="text-lg font-black text-gray-900">Global Announcement</h2>
-              <p className="text-xs text-gray-400 font-semibold">Posted announcements appear in all users' notifications</p>
+              <p className="text-xs text-gray-400 font-semibold">Posted announcements appear in all user notifications</p>
             </div>
           </div>
 
