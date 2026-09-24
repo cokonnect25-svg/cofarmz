@@ -179,11 +179,21 @@ async function user(id,role='farmer',confirmed=true,location=null,lat=null,lng=n
     assert.equal(res.status,200);
     assert.equal((await db`SELECT group_id FROM farmer_fpo_assignments WHERE farmer_id='coords'`)[0].group_id,madurai.group_id);
   });
+  await test('Farmer discovery exposes public profiles without group or member details',async()=>{
+    const data=await (await fpos.GET(request('coords',null,'GET'))).json();
+    assert.equal(data.can_create,false);
+    for(const fpo of data.fpos) {
+      assert.deepEqual(Object.keys(fpo).sort(),['district','id','name','state','status']);
+      const profile=await (await route('digital-fpos/[id]').GET(request('coords',null,'GET'),{params:Promise.resolve({id:fpo.id})})).json();
+      assert.deepEqual(Object.keys(profile).sort(),['district','id','name','state','status']);
+    }
+    assert.equal((await fpos.POST(request('coords',{state:'Tamil Nadu',district:'Coimbatore'}))).status,403);
+  });
   await user('reviewer','admin');
   await test('Admin can discover active and inactive FPOs without management capability',async()=>{
     await fpos.PATCH(request('admin',{id:chennai.id,status:'inactive'},'PATCH'));
     const d=await (await fpos.GET(request('reviewer',null,'GET'))).json();
-    assert.equal(d.can_review,true);assert.equal(d.can_manage,false);assert(d.fpos.some(f=>f.id===chennai.id));assert.equal(d.fpos.find(f=>f.id===chennai.id).farmer_count,2);
+    assert.equal(d.can_review,true);assert.equal(d.can_create,true);assert.equal(d.can_manage,false);assert(d.fpos.some(f=>f.id===chennai.id));assert.equal(d.fpos.find(f=>f.id===chennai.id).farmer_count,2);
     assert.equal((await route('digital-fpos/[id]').GET(request('reviewer',null,'GET'),{params:Promise.resolve({id:chennai.id})})).status,200);
   });
   await test('Admin can review any group members and messages; farmers cannot',async()=>{
@@ -199,8 +209,8 @@ async function user(id,role='farmer',confirmed=true,location=null,lat=null,lng=n
     assert.equal((await route('admin/fpo/messages').GET(request(null,null,'GET','/api/admin/fpo/messages?group='+madurai.group_id))).status,401);
     assert.equal((await db`SELECT * FROM farmer_fpo_assignments WHERE farmer_id='reviewer'`).length,0);
   });
-  await test('Admin review never grants create, update, assignment or publishing permissions',async()=>{
-    assert.equal((await fpos.POST(request('reviewer',{state:'Tamil Nadu',district:'Coimbatore'}))).status,403);
+  await test('Admin can create FPOs but cannot update, assign or publish',async()=>{
+    assert.equal((await fpos.POST(request('reviewer',{state:'Tamil Nadu',district:'Coimbatore'}))).status,201);
     assert.equal((await fpos.PATCH(request('reviewer',{id:chennai.id,status:'active'},'PATCH'))).status,403);
     assert.equal((await route('admin/fpo').POST(request('reviewer',{action:'assign',farmer_id:'coords',state:'Tamil Nadu',district:'Chennai'}))).status,403);
     assert.equal((await announcements.POST(request('reviewer',{title:'No',body:'No',groupId:madurai.group_id}))).status,403);

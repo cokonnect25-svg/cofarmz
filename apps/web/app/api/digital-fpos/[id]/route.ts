@@ -12,6 +12,6 @@ export async function GET(request: Request, {params}: {params: Promise<{id:strin
       WHERE f.id=${id} AND (f.status='active' OR ${canReviewFpos(actor.role)})`;
     if (!fpo) throw new FpoError('FPO not found',404);
     // No messages or member personal information are included in public profiles.
-    return NextResponse.json(fpo);
+    return NextResponse.json(canReviewFpos(actor.role) ? fpo : {id:fpo.id,name:fpo.name,state:fpo.state,district:fpo.district,status:fpo.status});
   } catch(e) { return fpoError(e); }
 }

@@ -8,7 +8,7 @@ The new relationship is `fpo_districts -> digital_fpos -> farmer_groups -> farme
 
 Existing announcements are extended with nullable `group_id`. Null retains global announcement behavior. Scoped announcements provide the group message feed, in-app notifications, unread counts, and push. The existing person-to-person messaging system is unchanged; the application has no group chat to extend.
 
-`superadmin` is the existing production role spelling. Server authorization also recognizes `super_admin`, but not the ordinary `admin` or `fpo` role for management. Ordinary `admin` accounts have read-only review access to all FPO profiles, group members and message history, including inactive FPOs and expired/scheduled announcements. Self-registration can no longer choose an admin role. Authorization uses Better Auth's verified session and a current database role lookup, never a caller's `userId`, `adminId`, or `x-user-id` as proof of identity.
+`superadmin` is the existing production role spelling. Server authorization also recognizes `super_admin`, and ordinary `admin` accounts can create Digital FPOs. The `fpo` role cannot create them. Ordinary `admin` accounts also have review access to all FPO profiles, group members and message history, including inactive FPOs and expired/scheduled announcements. Self-registration can no longer choose an admin role. Authorization uses Better Auth's verified session and a current database role lookup, never a caller's `userId`, `adminId`, or `x-user-id` as proof of identity.
 
 ## Database migration
 
@@ -41,7 +41,7 @@ Imports are additive: existing IDs/assignments are preserved. District renames, 
 
 - New farmer setup requires State and District validated against the server catalogue. Role confirmation, saved location and assignment are one transaction.
 - An active configured FPO assigns its corresponding group. Missing FPO means `pending_fpo`; inactive FPO means `inactive_fpo`; no resolvable location means `pending_location` with a reason.
-- Farmers never create FPOs automatically. Only Super Admin creation inserts the FPO and its single group atomically.
+- Farmers never create FPOs automatically. Only Admin/Super Admin creation inserts the FPO and its single group atomically.
 - Explicit profile State/District changes are validated and authoritative. Location-only changes resolve coordinates first, then address when coordinates are unavailable. The existing `location` column is reused as address; profile writes also accept `address` as an alias. Editing only address clears old coordinates so a stale coordinate pair cannot override the new address.
 - Updating location replaces the single assignment in the same transaction as the profile. Failure rolls both back. If the new district has no active FPO, old group access is revoked and the farmer becomes pending.
 - Existing-farmer processing uses coordinates first, otherwise address. A provider failure or ambiguous/unknown district is recorded as pending. Existing validated registration/manual/profile district selections are preserved on reruns.
@@ -54,7 +54,7 @@ Imports are additive: existing IDs/assignments are preserved. District renames, 
 |---|---|---|
 | `/api/fpo-locations` | GET | Public State/District selector catalogue |
 | `/api/digital-fpos` | GET | Signed-in discovery, own assignment, manager capability |
-| `/api/digital-fpos` | POST, PATCH | Super Admin create or activate/deactivate |
+| `/api/digital-fpos` | POST, PATCH | Admin/Super Admin create; Super Admin activate/deactivate |
 | `/api/digital-fpos/:id` | GET | Signed-in permitted public profile; no private content or membership mutation |
 | `/api/digital-fpos/messages` | GET, POST | Own active group feed/unread count; mark own accessible updates read |
 | `/api/admin/fpo/messages` | GET | Admin/Super Admin read-only group history; required `group`, optional `offset`; 50 messages per page |
@@ -74,9 +74,11 @@ Processing body: `{ "action":"process", "after":"", "dry_run":true }`. It handle
 
 ## UI and Super Admin steps
 
-`/signup` and `/select-role` have dependent selectors. New accounts remain in role setup until their role is confirmed. OAuth users complete the same setup. Farmer profiles include “My Digital FPO” with a link to `/digital-fpos`.
+`/signup` and `/select-role` have dependent selectors. New accounts remain in role setup until their role is confirmed. OAuth users complete the same setup. Farmer profiles include “My Digital FPO” with a link to `/chat`.
 
-`/digital-fpos` contains own association, district update, private group updates/read count, discoverable FPO profiles, a read-only Admin group overview on each selected FPO, and a separate Super Admin management section. The Super Admin dashboard links to it; ordinary admins visiting that dashboard are directed to the FPO page. Super Admin can create FPOs, open profiles, activate/deactivate, view farmer counts and group members, page through pending farmers, correct assignments, preview/process existing farmers, and post group announcements.
+Farmers discover district Digital FPOs in the FPOs tab at `/nearby-farmers?type=fpo`. Public profiles expose only ID, name, district, state and status. `/chat` shows only their assigned active FPO group's announcement feed, unread count and mark-as-read action. Farmer replies are not supported by this announcement feed. District changes remain available through profile editing.
+
+`/digital-fpos` provides Admin/Super Admin creation and review of FPO groups and tagged farmers. Super Admin retains activation, assignment processing/corrections and publishing. Farmer visits show only the public directory.
 
 Rollout order:
 
@@ -119,3 +121,10 @@ Production build completed successfully. Scoped FPO lint completed with no error
 New: `migrations/20260923_digital_fpos.sql`, `data/fpo-districts.json`, `lib/fpo-{access,location,assignment,announcements}.ts`, `components/{DistrictSelect,MyDigitalFpo}.tsx`, `app/digital-fpos/page.tsx`, API routes listed above under `digital-fpos`, `admin/fpo`, `fpo-locations`, `scripts/{inspect-fpo-schema.cjs,migrate-fpos.cjs,refresh-fpo-districts.py}`, `tests/{fpo.integration.cjs,eslint.fpo.cjs}`, and this runbook.
 
 Updated: profile/announcement/notification/push-token/role-change routes, push helper, signup/select-role/profile/admin pages, `RoleSelectionGuard`, `useAuth`, auth client/trusted origins, package scripts and local verification ignores. Pre-existing edits to root `cloudbuild.yaml` and `README.md` were left untouched.
+
+
+## Digital FPO interface
+
+Farmer discovery follows the app's brand colors and card layout, with district display names, search, a state filter, an own-FPO badge and a public profile detail view. Registered FPO names remain available in profile details. The assigned group appears as an expandable conversation card in Messages, with unread updates and a mark-all-read action. Profile cards explain pending location, pending FPO and inactive assignment states.
+
+Administrative management includes FPO/active/tagged-farmer totals, search and status filters, an expandable creation form and separate tagged-farmer/announcement views. Server capabilities continue to control creation, review and Super Admin operations. UI changes do not change assignment rules or add farmer message publishing.

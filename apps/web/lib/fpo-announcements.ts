@@ -11,7 +11,7 @@ export async function deliverAnnouncement(groupId: string | null, payload: Param
         WHERE a.farmer_id=${member.farmer_id} AND a.group_id=${groupId} AND can_receive_fpo_message(a.farmer_id,a.group_id) FOR SHARE OF u,a,f`;
       if (!a) return null;
       // Push contains no private content. Opening the app fetches it after membership validation.
-      return sendPushToUser(a.farmer_id, { title:'CoFarmz', body:'You have a new group update', url:'/digital-fpos', tag:payload.tag, data:{type:'fpo_update'} });
+      return sendPushToUser(a.farmer_id, { title:'CoFarmz', body:'You have a new group update', url:'/chat', tag:payload.tag, data:{type:'fpo_update'} });
     });
     if (delivery) { result.attempted += delivery.attempted; result.succeeded += delivery.succeeded; result.failed += delivery.failed; }
   }

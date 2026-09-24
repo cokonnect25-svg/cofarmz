@@ -1,5 +1,6 @@
 'use client';
 
+import FarmerFpo from '@/components/FarmerFpo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useRef, Suspense, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -207,7 +208,7 @@ const initialType =
   rawType === 'buyers'     ? 'buyers'   :
   rawType === 'wastage'    ? 'wastage'  :
   rawType === 'supplier'   ? 'supplier' :
-  rawType === 'fpo'        ? 'fpo'      :
+  (rawType === 'fpo' || rawType === 'fpos')        ? 'fpo'      :
   rawType === 'farmers'    ? 'farmers'  :
   savedType === 'farmers'  ? 'farmers'  :
   savedType === 'buyers'   ? 'buyers'   :
@@ -610,6 +611,7 @@ const fetchNearbyFarmers = async (
   type: 'farmers' | 'buyers' | 'wastage' | 'supplier' | 'fpo' = 'farmers',
   overrideFilters?: typeof filters,
 ) => {
+    if(type === 'fpo') {setLoadingFarmers(false);return;}
     // Use explicitly-passed filters first, then the always-current ref
     const f = overrideFilters ?? filtersRef.current;
     if (!latitude || !longitude || (latitude === 0 && longitude === 0)) {
@@ -816,6 +818,7 @@ onClick={() => {
   </div>
 )}
 
+          {searchType !== 'fpo' && <>
           {/* Search */}
           <div className="relative mb-4">
             <input
@@ -831,8 +834,10 @@ onClick={() => {
           {locationError && (
             <div className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">{locationError}</div>
           )}
+          </>}
         </header>
 
+        {searchType === 'fpo' ? <FarmerFpo mode="directory"/> : <>
         {/* Filter modal */}
         {showFilter && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={() => setShowFilter(false)}>
@@ -1520,6 +1525,7 @@ onClick={e => {
             );
           })()}
         </section>
+        </>}
       </div>
     </>
   );

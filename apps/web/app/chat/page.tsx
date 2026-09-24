@@ -1,5 +1,6 @@
 'use client';
 
+import FarmerFpo from '@/components/FarmerFpo';
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -518,6 +519,7 @@ const res = await fetch(getApiUrl(`/api/messages/conversations`), {
           </div>
         </header>
 
+        <FarmerFpo mode="group"/>
         {/* Conversations List */}
         <div className="divide-y divide-gray-100">
           {loadingConversations ? (

@@ -1,6 +1,6 @@
 import sql from '@/app/api/utils/sql';
 import { NextResponse } from 'next/server';
-import { requireActor, isSuperAdmin, canReviewFpos, fpoError, FpoError } from '@/lib/fpo-access';
+import { requireActor, requireFpoReviewer, isSuperAdmin, canReviewFpos, fpoError, FpoError } from '@/lib/fpo-access';
 import { fpoName, validateDistrict } from '@/lib/fpo-location';
 export const dynamic = 'force-dynamic';
 
@@ -19,12 +19,12 @@ export async function GET(request: Request) {
       const [access] = await sql`SELECT can_receive_fpo_message(${actor.id},${mine.group_id}) AS allowed`;
       if (!access.allowed) mine.assignment_status = 'inactive_fpo';
     }
-    return NextResponse.json({ fpos: rows, mine: mine || null, can_manage: isSuperAdmin(actor.role), can_review: canReviewFpos(actor.role) });
+    return NextResponse.json({ fpos: canReviewFpos(actor.role) ? rows : rows.map(({id,name,state,district,status}) => ({id,name,state,district,status})), can_create: canReviewFpos(actor.role), mine: mine || null, can_manage: isSuperAdmin(actor.role), can_review: canReviewFpos(actor.role) });
   } catch (e) { return fpoError(e); }
 }
 export async function POST(request: Request) {
   try {
-    const actor = await requireActor(request,true);
+    const actor = await requireFpoReviewer(request);
     const body = await request.json();
     const district = await validateDistrict(body.state,body.district);
     const result = await sql.begin(async tx => {
