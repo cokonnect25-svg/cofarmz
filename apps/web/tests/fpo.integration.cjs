@@ -59,7 +59,7 @@ async function user(id,role='farmer',confirmed=true,location=null,lat=null,lng=n
   const fpos=route('digital-fpos');const profiles=route('users/profile');
   const assignment=require('../lib/fpo-assignment.ts');
   let madurai,chennai;
-  await test('Only Super Admin can create an FPO',async()=>{
+  await test('Only administrative accounts can create an FPO',async()=>{
     assert.equal((await fpos.POST(request(null,{state:'Tamil Nadu',district:'Madurai'}))).status,401);
     assert.equal((await fpos.POST(request('new-m',{state:'Tamil Nadu',district:'Madurai'}))).status,403);
     const r=await fpos.POST(request('admin',{state:'Tamil Nadu',district:'Madurai'}));assert.equal(r.status,201);madurai=await r.json();
@@ -93,8 +93,8 @@ async function user(id,role='farmer',confirmed=true,location=null,lat=null,lng=n
   const nativeFetch=global.fetch;let urls=[];
   global.fetch=async url=>{urls.push(String(url));const address={country_code:'in',state:'Tamil Nadu',state_district:'Madurai district'};return Response.json(String(url).includes('/reverse')?{address}:[{address}]);};
   await user('coords','farmer',true,'Old address',9.9,78.1);await user('address','farmer',true,'Madurai Tamil Nadu');await user('missing');
-  await test('Legacy coordinates take precedence over address',async()=>{const a=await assignment.processFarmer('coords');assert.equal(a.assignment_source,'latitude_longitude');assert.equal(a.group_id,madurai.group_id);assert(urls.at(-1).includes('/reverse'));});
-  await test('Legacy address resolves when coordinates absent',async()=>{const a=await assignment.processFarmer('address');assert.equal(a.assignment_source,'address');assert.equal(a.group_id,madurai.group_id);assert(urls.at(-1).includes('/search'));});
+  await test('Legacy uses saved profile address, ignoring coordinates',async()=>{const a=await assignment.processFarmer('coords');assert.equal(a.assignment_source,'address');assert.equal(a.group_id,madurai.group_id);assert(urls.at(-1).includes('/search'));assert(urls.at(-1).includes('Old+address'));});
+  await test('Saved district and state text resolves without a geocoder',async()=>{const a=await assignment.processFarmer('address');assert.equal(a.assignment_source,'address');assert.equal(a.group_id,madurai.group_id);});
   await test('No usable location stays pending without guessing',async()=>{const a=await assignment.processFarmer('missing');assert.equal(a.assignment_status,'pending_location');assert.equal(a.group_id,null);});
   await test('Dry run does not create assignments',async()=>{await user('preview');await assignment.processFarmer('preview',true);assert.equal((await db`SELECT * FROM farmer_fpo_assignments WHERE farmer_id='preview'`).length,0);});
   await test('Pending farmer gains membership after location update',async()=>{assert.equal((await profiles.PUT(request('missing',{userId:'missing',state:'Tamil Nadu',district:'Madurai'},'PUT'))).status,200);assert.equal((await db`SELECT group_id FROM farmer_fpo_assignments WHERE farmer_id='missing'`)[0].group_id,madurai.group_id);});
@@ -222,6 +222,62 @@ async function user(id,role='farmer',confirmed=true,location=null,lat=null,lng=n
     assert.equal(first.messages.length,50);assert.equal(first.next,50);assert.equal(second.next,null);
     assert(first.messages.some(m=>m.title.startsWith('Archived')));
     assert.equal(new Set([...first.messages,...second.messages].map(m=>m.id)).size,first.messages.length+second.messages.length);
+  });
+  await test('Saved profile addresses match without geocoder and ambiguous districts stay pending',async()=>{
+    delete process.env.FPO_GEOCODER_URL;
+    await user('profile-text','farmer',true,'Madurai, Tamil Nadu, India',13.08,80.27);
+    const result=await assignment.processFarmer('profile-text');
+    assert.equal(result.group_id,madurai.group_id);assert.equal(result.assignment_source,'address');
+    await user('ambiguous-text','farmer',true,'Madurai, Chennai, Tamil Nadu');
+    assert.equal((await assignment.processFarmer('ambiguous-text')).assignment_status,'pending_location');
+    await user('gps-only','farmer',true,null,9.9,78.1);
+    assert.equal((await assignment.processFarmer('gps-only')).assignment_status,'pending_location');
+    await user('partial-place','farmer',true,'Maduraiwest, Tamil Nadu');
+    assert.equal((await assignment.processFarmer('partial-place')).assignment_status,'pending_location');
+  });
+  await test('GPS and nearby-style updates cannot move an assigned farmer; saved district updates can',async()=>{
+    const r=await profiles.PUT(request('profile-text',{userId:'profile-text',latitude:13.08,longitude:80.28,location:'Chennai, Tamil Nadu'},'PUT'));
+    assert.equal(r.status,200);assert.equal((await db`SELECT group_id FROM farmer_fpo_assignments WHERE farmer_id='profile-text'`)[0].group_id,madurai.group_id);
+    assert.equal((await assignment.processFarmer('profile-text')).group_id,madurai.group_id);
+    await fpos.PATCH(request('admin',{id:chennai.id,status:'active'},'PATCH'));
+    const move=await profiles.PUT(request('profile-text',{userId:'profile-text',state:'Tamil Nadu',district:'Chennai'},'PUT'));
+    assert.equal(move.status,200);const profile=await move.json();assert.equal(profile.district,'Chennai');assert.equal(profile.state,'Tamil Nadu');
+    assert.equal((await db`SELECT group_id FROM farmer_fpo_assignments WHERE farmer_id='profile-text'`)[0].group_id,chennai.group_id);
+  });
+  await test('Saved district without assignment is preserved and FPO creation enrolls pending profiles',async()=>{
+    await db`INSERT INTO fpo_districts(state,district,source) VALUES('Tamil Nadu','Salem','fixture')`;
+    const [district]=await db`SELECT id FROM fpo_districts WHERE district='Salem'`;
+    await user('saved-district','farmer',true,'Unresolvable village');
+    await db`UPDATE "user" SET district_id=${district.id} WHERE id='saved-district'`;
+    const preview=await assignment.processFarmer('saved-district',true);assert.equal(preview.assignment_status,'pending_fpo');
+    assert.equal((await db`SELECT * FROM farmer_fpo_assignments WHERE farmer_id='saved-district'`).length,0);
+    await assignment.processFarmer('saved-district');
+    const response=await fpos.POST(request('reviewer',{state:'Tamil Nadu',district:'Salem'}));assert.equal(response.status,201);
+    const created=await response.json();assert.equal(created.assigned_count,1);
+    const [membership]=await db`SELECT * FROM farmer_fpo_assignments WHERE farmer_id='saved-district'`;assert.equal(membership.group_id,created.group_id);
+  });
+  await test('Concurrent profile district change is never overwritten by backfill',async()=>{
+    await user('concurrent-profile','farmer',true,'Village without district');
+    process.env.FPO_GEOCODER_URL='https://geocoder.test/';
+    global.fetch=async()=>{
+      const changed=await profiles.PUT(request('concurrent-profile',{userId:'concurrent-profile',state:'Tamil Nadu',district:'Chennai'},'PUT'));assert.equal(changed.status,200);
+      return Response.json([{address:{country_code:'in',state:'Tamil Nadu',state_district:'Madurai'}}]);
+    };
+    try {await assert.rejects(()=>assignment.processFarmer('concurrent-profile'),/Profile changed/);}
+    finally {global.fetch=nativeFetch;delete process.env.FPO_GEOCODER_URL;}
+    assert.equal((await db`SELECT group_id FROM farmer_fpo_assignments WHERE farmer_id='concurrent-profile'`)[0].group_id,chennai.group_id);
+  });
+  await test('GPS-only profile updates do not infer a new district',async()=>{
+    const response=await profiles.PUT(request('gps-only',{userId:'gps-only',latitude:13.08,longitude:80.27},'PUT'));
+    assert.equal(response.status,200);
+    const [record]=await db`SELECT * FROM farmer_fpo_assignments WHERE farmer_id='gps-only'`;
+    assert.equal(record.group_id,null);assert.equal(record.district_id,null);
+  });
+  await test('Profile read exposes saved State and District for editing',async()=>{
+    const req=request('profile-text',null,'GET','/api/users/profile?userId=profile-text');
+    req.nextUrl=new URL(req.url);
+    const response=await profiles.GET(req);assert.equal(response.status,200);
+    const data=await response.json();assert.equal(data.state,'Tamil Nadu');assert.equal(data.district,'Chennai');
   });
   console.log(`${passed} integration tests passed`);
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await db.unsafe('DROP SCHEMA IF EXISTS fpo_integration CASCADE');await db.end();});

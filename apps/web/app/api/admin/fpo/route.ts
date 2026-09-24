@@ -38,9 +38,10 @@ export async function POST(request: Request) {
     if (body.action !== 'process') throw new FpoError('Invalid action');
     const after = String(body.after || '');
     const batch = await sql`SELECT id FROM "user" WHERE role='farmer' AND id>${after} ORDER BY id LIMIT 10`;
+    const catalogue = await sql`SELECT id,state,district FROM fpo_districts`;
     const results = [];
     for (const u of batch) {
-      try { results.push(await processFarmer(u.id,body.dry_run !== false)); }
+      try { results.push(await processFarmer(u.id,body.dry_run !== false,catalogue)); }
       catch (e) { results.push({ farmer_id:u.id, error: e instanceof FpoError ? e.message : 'Processing failed; retry this farmer' }); }
     }
     return NextResponse.json({ results, next: batch.length === 10 ? batch[batch.length-1].id : null });

@@ -2,9 +2,8 @@ import { auth } from '@/lib/auth';
 import sql from '@/app/api/utils/sql';
 import { NextResponse } from 'next/server';
 
-export class FpoError extends Error {
-  constructor(message: string, public status = 400) { super(message); }
-}
+import { FpoError } from './fpo-error';
+export { FpoError } from './fpo-error';
 export const isSuperAdmin = (role: unknown) => ['superadmin', 'super_admin'].includes(String(role));
 export const canReviewFpos = (role: unknown) => role === 'admin' || isSuperAdmin(role);
 export async function requireFpoReviewer(request: Request) {

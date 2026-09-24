@@ -13,6 +13,8 @@
     "mobile:sync": "npx cap sync",
     "mobile:android": "npx cap run android",
     "test:fpo": "node tests/fpo.integration.cjs",
+    "backfill:fpo": "node scripts/backfill-fpo-profiles.cjs",
+    "diagnose:fpo": "node scripts/diagnose-fpo-assignments.cjs",
     "migrate:fpo": "node scripts/migrate-fpos.cjs"
   },
   "dependencies": {

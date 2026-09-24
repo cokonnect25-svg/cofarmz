@@ -1,6 +1,7 @@
 import sql from '@/app/api/utils/sql';
 import { NextResponse } from 'next/server';
 import { requireActor, requireFpoReviewer, isSuperAdmin, canReviewFpos, fpoError, FpoError } from '@/lib/fpo-access';
+import { enrollSavedDistrict } from '@/lib/fpo-assignment';
 import { fpoName, validateDistrict } from '@/lib/fpo-location';
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +31,8 @@ export async function POST(request: Request) {
     const result = await sql.begin(async tx => {
       const [fpo] = await tx`INSERT INTO digital_fpos(district_id,name,created_by) VALUES(${district.id},${fpoName(district.district,district.state)},${actor.id}) RETURNING *`;
       const [group] = await tx`INSERT INTO farmer_groups(digital_fpo_id) VALUES(${fpo.id}) RETURNING id`;
-      return { ...fpo, group_id: group.id };
+      const assigned_count = await enrollSavedDistrict(tx,district.id,group.id);
+      return { ...fpo, group_id: group.id, assigned_count };
     });
     return NextResponse.json(result,{status:201});
   } catch (e) { return fpoError(e); }

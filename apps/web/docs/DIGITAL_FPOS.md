@@ -39,14 +39,30 @@ Imports are additive: existing IDs/assignments are preserved. District renames, 
 
 ## Assignment behavior
 
-- New farmer setup requires State and District validated against the server catalogue. Role confirmation, saved location and assignment are one transaction.
-- An active configured FPO assigns its corresponding group. Missing FPO means `pending_fpo`; inactive FPO means `inactive_fpo`; no resolvable location means `pending_location` with a reason.
-- Farmers never create FPOs automatically. Only Admin/Super Admin creation inserts the FPO and its single group atomically.
-- Explicit profile State/District changes are validated and authoritative. Location-only changes resolve coordinates first, then address when coordinates are unavailable. The existing `location` column is reused as address; profile writes also accept `address` as an alias. Editing only address clears old coordinates so a stale coordinate pair cannot override the new address.
-- Updating location replaces the single assignment in the same transaction as the profile. Failure rolls both back. If the new district has no active FPO, old group access is revoked and the farmer becomes pending.
-- Existing-farmer processing uses coordinates first, otherwise address. A provider failure or ambiguous/unknown district is recorded as pending. Existing validated registration/manual/profile district selections are preserved on reruns.
-- Processing snapshots and row locks avoid overwriting a profile changed during geocoding. Failed/conflicting records appear in the batch report and can be retried.
-- Role-change approval updates assignment in its transaction. Users who cease being farmers lose access. Deactivation blocks reads/push immediately while retaining the association; reactivation restores eligible members. Processing an inactive membership may mark it pending, in which case rerun processing after activation.
+- Membership is based on the saved **profile State/District** (`user.district_id`), not current GPS, map searches, or Nearby results. It remains stable until an explicit profile State/District update or admin correction.
+- New farmer setup requires a validated State and District. Existing farmers can select both in the profile edit form; the profile read/update responses include their saved selection.
+- Existing profiles without a district ID are matched using their saved `location` text against the district catalogue. Full district and state names must match, or the entire address must be a unique district name. Partial names and ambiguous matches remain pending. No nearest-district guesses or device-coordinate fallback are used.
+- If configured, `FPO_GEOCODER_URL` can resolve saved addresses that cannot be matched locally. It uses address search only. No location is sent to an unconfigured public service.
+- Saved district IDs are preserved during repeated processing, even without an existing assignment row. A coordinate-only update never changes membership. An address-only edit does not override an existing saved district: farmers must explicitly change State/District when moving home districts.
+- An active configured FPO assigns its corresponding group. Missing FPO means `pending_fpo`; inactive FPO means `inactive_fpo`; unresolved profile address means `pending_location` with a reason.
+- Only Admin/Super Admin can create Digital FPOs. Creation inserts one FPO/group and enrolls farmers whose saved district already matches, in the same transaction. It does not guess unresolved addresses or create other districts' FPOs.
+- Explicit State/District changes replace the single membership atomically. Old group access is revoked. Transactions roll back both profile and assignment on failure.
+- Backfill rechecks and locks each profile before writing, rejecting concurrent profile changes. Failures can be retried; reruns cannot create duplicate memberships.
+- Role changes maintain membership eligibility. Deactivation blocks reads/push immediately. Processing an inactive FPO may mark memberships pending; rerun after reactivation.
+
+### Existing farmer backfill
+
+From `apps/web`, using the intended database configuration:
+
+```sh
+npm run diagnose:fpo
+npm run backfill:fpo
+npm run backfill:fpo -- --apply
+```
+
+The diagnostic and default backfill are read-only and print aggregate counts, not personal profiles or credentials. Review preview totals before applying. `--apply` writes resolved district IDs and memberships, and records pending reasons for unresolved farmers. It never creates FPOs, changes roles, sends announcements, or edits address/GPS fields. Farmer rows are processed in separate transactions and can safely be retried after interruption. The script uses the same matching and assignment functions as the APIs.
+
+Super Admin can also use **Preview all farmers** or **Assign from saved profiles** in Digital FPO management. This processes all pages in batches of ten, shows assigned/pending/error counts, and can stop after a batch. Keep the page open. Create missing district FPOs through the admin interface; farmers with those saved districts are enrolled on creation. Farmers with incomplete addresses must save their State/District, or receive a reviewed admin correction.
 
 ## APIs
 
@@ -86,7 +102,7 @@ Rollout order:
 2. Deploy and configure authentication URLs on both hosts (below).
 3. Sign in with an existing authorized Super Admin account. No admin is seeded by this feature.
 4. Create Digital FPOs for the districts you support.
-5. Configure a geocoder suitable for the volume; preview batches and review pending reasons.
+5. Preview saved-profile matches and review pending reasons. An approved address geocoder is optional for unresolved text addresses.
 6. Process batches, inspecting failures. Rerun safely after corrections or creation of missing FPOs.
 
 ## Communication access
@@ -104,7 +120,7 @@ Optional **server-only** geocoder configuration:
 - `FPO_GEOCODER_URL`: HTTPS base URL of an approved Nominatim-compatible service with `/reverse` and `/search`. Configure a service whose permitted request rate supports the ten-record sequential batches. Do not point bulk processing at the public Nominatim service without checking its policy.
 - `FPO_GEOCODER_TOKEN`: optional bearer token for that service.
 
-No provider configured means coordinate/address-only farmers remain pending with an explicit reason; explicit validated State/District selection still works. Geocoding is never performed in the browser or silently sent to an unconfigured third party.
+No provider configured still allows exact district/state matches in saved addresses. Unresolved or missing addresses remain pending; explicit validated profile State/District selection always works. FPO assignment geocoding runs server-side and never uses an unconfigured third party.
 
 Browser auth now uses the current website origin, matching the protected APIs. Configure **Netlify** `BETTER_AUTH_URL=https://cofarmz.com` and **Cloud Run** its own service URL. Keep `NEXT_PUBLIC_BACKEND_URL` pointing to Cloud Run for the native app. Ensure Google OAuth permits the applicable `/api/auth/callback/google` redirect URL on each host. Users with a session only on the old Cloud Run origin may need to sign in again on `cofarmz.com`; cookies cannot be shared between unrelated domains. Both deployments must use the intended database and auth configuration.
 
@@ -112,7 +128,7 @@ Browser auth now uses the current website origin, matching the protected APIs. C
 
 `npm run test:fpo` executes real PostgreSQL integration tests against localhost port 55439 by default (override `FPO_TEST_DATABASE_URL` with a loopback URL). It creates and drops only the `fpo_integration` schema; do not point it at a shared development instance using that schema. Better Auth session lookup, geocoder, and FCM are fixtures; route authorization and assignment/delivery SQL are real. These tests do not certify Google OAuth, provider accuracy, or live FCM delivery.
 
-The test suite covers 29 scenarios: registration/validation; both resolution paths; missing location and later updates; dry runs; reruns; uniqueness; discovery without membership; cross-group feed/unread/push isolation; admin/identity spoofing; district moves; deactivation/reactivation; missing FPO; invalid coordinates; rollback; scheduled delivery; unchanged-location profile edits; admin visibility, read-only authorization, member isolation and historical-message pagination.
+The integration suite covers profile-only assignment and static membership alongside: registration/validation; local address matching and configured address geocoding; missing location and later updates; dry runs; reruns; uniqueness; discovery without membership; cross-group feed/unread/push isolation; admin/identity spoofing; district moves; deactivation/reactivation; missing FPO; invalid coordinates; rollback; scheduled delivery; unchanged-location profile edits; admin visibility, read-only authorization, member isolation and historical-message pagination.
 
 Production build completed successfully. Scoped FPO lint completed with no errors. Full project type checking has pre-existing failures in generated Android artifacts and unrelated pages (MapPicker, machinery-list, nearby-farmers, rent-machinery, top-picks); no diagnostics were reported for the changed FPO/API/auth files. The existing Next config ignores type/lint errors during build, so a passing build is not presented as a passing full type check. In-app browser verification was unavailable; visual and real-auth end-to-end checks remain to be performed before production rollout.
 
@@ -128,3 +144,9 @@ Updated: profile/announcement/notification/push-token/role-change routes, push h
 Farmer discovery follows the app's brand colors and card layout, with district display names, search, a state filter, an own-FPO badge and a public profile detail view. Registered FPO names remain available in profile details. The assigned group appears as an expandable conversation card in Messages, with unread updates and a mark-all-read action. Profile cards explain pending location, pending FPO and inactive assignment states.
 
 Administrative management includes FPO/active/tagged-farmer totals, search and status filters, an expandable creation form and separate tagged-farmer/announcement views. Server capabilities continue to control creation, review and Super Admin operations. UI changes do not change assignment rules or add farmer message publishing.
+
+## Assignment diagnosis (2026-09-24)
+
+Aggregate read-only inspection found 2,283 farmers, zero saved district IDs, 2,263 farmers not yet processed, and 20 pending location records. The server had no address geocoder configured and only one active Digital FPO. With saved-profile catalogue matching, the preview resolved 413 farmers: 101 for the existing Hyderabad FPO and 312 awaiting creation of their district FPOs. Another 1,870 require profile clarification (706 missing addresses; 1,164 without a clear catalogue match). These are diagnostic snapshot counts, not guarantees about future data.
+
+The reviewed backfill was applied on 2026-09-24: all 2,283 farmers were processed without errors. Verification found 413 saved district IDs, 101 assigned farmers eligible for their group feed, 312 pending FPO creation, 1,870 pending profile clarification, and zero membership/profile/FPO district mismatches. No Digital FPOs were created by the backfill. Deploy the application changes to keep future assignment behavior tied to saved profile State/District and enable automatic enrollment on FPO creation.

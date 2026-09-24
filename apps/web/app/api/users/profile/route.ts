@@ -43,10 +43,11 @@ export async function GET(request: NextRequest) {
     // if role_confirmed hasn't been added to the schema in production yet.
     const result = await sql`
       SELECT
-        u.*,
+        u.*, d.state, d.district,
         r.display_name as role_display_name,
         r.permissions as role_permissions
       FROM "user" u
+      LEFT JOIN fpo_districts d ON d.id = u.district_id
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE u.id = ${userId}
     `;
@@ -287,10 +288,11 @@ export async function PUT(request: Request) {
         u.calling_enabled,
         u.role_id,
         u.supplier_types,
-        u.role,
+        u.role, u.district_id, d.state, d.district, u.latitude, u.longitude,
         r.display_name as role_display_name,
         r.permissions as role_permissions
       FROM "user" u
+      LEFT JOIN fpo_districts d ON d.id = u.district_id
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE u.id = ${userId}
     `;

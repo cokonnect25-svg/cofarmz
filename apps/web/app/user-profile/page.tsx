@@ -1,5 +1,6 @@
 'use client';
 
+import DistrictSelect from '@/components/DistrictSelect';
 import MyDigitalFpo from '@/components/MyDigitalFpo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChangeEvent, useEffect, useState, Suspense, useRef, useCallback } from 'react';
@@ -573,7 +574,7 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
   const [selectedReel, setSelectedReel] = useState<any | null>(null);
   const [selectedCrop, setSelectedCrop] = useState<FarmerCrop | null>(null);
   const [editForm, setEditForm] = useState({
-    name: '', email: '', phone: '', location: '', gender: '', age: '', bio: '',
+    name: '', email: '', phone: '', location: '', gender: '', age: '', bio: '', state: '', district: '',
     latitude: null as number | null, longitude: null as number | null,
     calling_enabled: true,
   });
@@ -1116,7 +1117,7 @@ const fetchFollowersCounts = async () => {
       const nextCountryCode = getCountryCodeFromPhone(p.phone, locationCountryCode);
       const displayPhone = p.phone ? getLocalPhoneNumber(p.phone, nextCountryCode) : '';
       setEditPhoneCountryCode(nextCountryCode);
-      setEditForm({ name: p.name || user.name || '', email: p.email || user.email || '', phone: displayPhone, location: p.location || '', gender: p.gender || '', age: p.age ? String(p.age) : '', bio: p.bio || '', latitude: p.latitude || null, longitude: p.longitude || null, calling_enabled: p.calling_enabled !== false });
+      setEditForm({ state: p.state || '', district: p.district || '', name: p.name || user.name || '', email: p.email || user.email || '', phone: displayPhone, location: p.location || '', gender: p.gender || '', age: p.age ? String(p.age) : '', bio: p.bio || '', latitude: p.latitude || null, longitude: p.longitude || null, calling_enabled: p.calling_enabled !== false });
       setShowEditModal(true);
     }
   };
@@ -1139,6 +1140,7 @@ const fetchFollowersCounts = async () => {
     if (!emailRegex.test(editForm.email)) { alert('Enter a valid email'); return; }
     if (!isValidLocalPhoneNumber(editForm.phone, editPhoneCountryCode) || !isValidPhoneNumber(editForm.phone, editPhoneCountryCode)) { alert(getPhoneLengthMessage(editPhoneCountryCode)); return; }
     if (userRole === 'supplier' && supplierTypes.length === 0) { alert('Please choose Commodities Supplier, Equipment Supplier, or both.'); return; }
+    if(userRole === 'farmer' && (!editForm.state || !editForm.district)) { alert('Please select your profile State and District for your Digital FPO.'); return; }
     setIsUpdatingProfile(true);
     try {
       const response = await fetch(getApiUrl(`/api/users/profile`), {
@@ -1150,6 +1152,7 @@ const fetchFollowersCounts = async () => {
           email: editForm.email,
           phone: normalizedEditPhone,
           location: editForm.location,
+          ...(userRole === 'farmer' ? { state: editForm.state, district: editForm.district } : {}),
           gender: editForm.gender || null,
           age: editForm.age ? parseInt(editForm.age) : null,
           bio: editForm.bio,
@@ -1397,7 +1400,7 @@ const fetchFollowersCounts = async () => {
         </div>
       </div>
 
-      {userRole === 'farmer' && <MyDigitalFpo/>}
+      {userRole === 'farmer' && <MyDigitalFpo key={`${profileData?.district_id || ''}:${profileData?.district || ''}`}/>}
       {['admin','superadmin','super_admin'].includes(userRole) && <a href="/digital-fpos" className="block m-4 p-4 rounded-xl bg-green-50 text-green-800 font-semibold">Digital FPO groups: messages, members and details</a>}
       {/* Profile header */}
       <div className="bg-white border-b">
@@ -2294,11 +2297,12 @@ const fetchFollowersCounts = async () => {
                 </span>
               </label>
               <div>
+                {userRole==='farmer'&&<div className="mb-5 rounded-xl border border-green-100 bg-green-50 p-4"><h3 className="font-bold text-green-900">Home district for Digital FPO</h3><p className="mt-1 mb-3 text-xs text-gray-600">Your saved State and District determine your FPO group. Nearby searches and current GPS location do not change it. Update these fields when your home district changes.</p><DistrictSelect state={editForm.state} district={editForm.district} onChange={(state,district)=>setEditForm(p=>({...p,state,district}))}/></div>}
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Location</label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     {profileLocationSearching && <div className="absolute right-3 top-2.5 w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin z-10"></div>}
-                    <input type="text" placeholder="Type city or address..." value={editForm.location} onChange={e => { const val = e.target.value; setEditForm(p => ({ ...p, location: val })); setProfileLocationSuggestions([]); if (profileLocationTimeout.current) clearTimeout(profileLocationTimeout.current); if (val.trim().length < 3) return; profileLocationTimeout.current = setTimeout(async () => { setProfileLocationSearching(true); try { const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&addressdetails=1&limit=5&countrycodes=in`, { headers: { 'Accept-Language': 'en' } }); const data = await res.json(); setProfileLocationSuggestions(Array.isArray(data) ? data : []); } catch { setProfileLocationSuggestions([]); } finally { setProfileLocationSearching(false); } }, 400); }} autoComplete="off" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm" />
+                    <input type="text" placeholder="Type city or address..." value={editForm.location} onChange={e => { const val = e.target.value; setEditForm(p => ({ ...p, location: val, latitude: null, longitude: null })); setProfileLocationSuggestions([]); if (profileLocationTimeout.current) clearTimeout(profileLocationTimeout.current); if (val.trim().length < 3) return; profileLocationTimeout.current = setTimeout(async () => { setProfileLocationSearching(true); try { const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&addressdetails=1&limit=5&countrycodes=in`, { headers: { 'Accept-Language': 'en' } }); const data = await res.json(); setProfileLocationSuggestions(Array.isArray(data) ? data : []); } catch { setProfileLocationSuggestions([]); } finally { setProfileLocationSearching(false); } }, 400); }} autoComplete="off" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm" />
                     {profileLocationSuggestions.length > 0 && (
                       <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50">
                         {profileLocationSuggestions.map((item, i) => { const addr = item.address || {}; const parts = [addr.village || addr.suburb || addr.town || addr.city_district || addr.city, addr.state_district || addr.county, addr.state].filter(Boolean); const label = parts.length > 0 ? parts.join(', ') : item.display_name; return (<button key={i} type="button" onMouseDown={() => { setEditForm(f => ({ ...f, location: label, latitude: parseFloat(item.lat), longitude: parseFloat(item.lon) })); setProfileLocationSuggestions([]); }} onTouchEnd={() => { setEditForm(f => ({ ...f, location: label, latitude: parseFloat(item.lat), longitude: parseFloat(item.lon) })); setProfileLocationSuggestions([]); }} className="w-full text-left px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50 active:bg-gray-100 flex items-center gap-2 border-b border-gray-50 last:border-0"><i className="ph ph-map-pin text-green-600 flex-shrink-0"></i><span className="truncate">{label}</span></button>); })}
