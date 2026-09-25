@@ -39,6 +39,16 @@ Imports are additive: existing IDs/assignments are preserved. District renames, 
 
 ## Assignment behavior
 
+### Create every catalogue district and assign farmers
+
+Super Admin can open `/digital-fpos` and select **Create all district FPOs and assign farmers**. This creates a Digital FPO and group for every imported catalogue district, including districts without farmers, then automatically runs saved-profile assignment across all farmer batches. Existing FPO IDs, names, creators and activation status are preserved. Repeated and concurrent provisioning cannot create duplicate FPOs or groups.
+
+Keep the page open until processing completes. Stopping or closing the page retains completed work; rerun the operation to process everyone again. Creation is transactional; each farmer assignment is a separate retryable transaction. Errors and unresolved locations are reported separately. Missing or ambiguous locations remain pending, and inactive FPOs remain inactive. No announcements are sent.
+
+New registrations and explicit profile district changes continue to assign automatically to the provisioned active FPO. After importing newly added catalogue districts, rerun this operation to create their FPOs. This is an admin-triggered workflow, not a background scheduler.
+
+The Super Admin-only `POST /api/admin/fpo` action `{ "action":"provision" }` creates missing catalogue FPOs/groups and returns `districts`, `created`, `existing`, and `groups_created`. The UI then invokes the existing paginated `process` action with `dry_run:false` until finished. Provisioning alone does not process memberships; API clients must also run those batches. The existing preview checks current FPOs without provisioning new ones.
+
 - Membership is based on the saved **profile State/District** (`user.district_id`), not current GPS, map searches, or Nearby results. It remains stable until an explicit profile State/District update or admin correction.
 - New farmer setup requires a validated State and District. Existing farmers can select both in the profile edit form; the profile read/update responses include their saved selection.
 - Existing profiles without a district ID are matched using their saved `location` text against the district catalogue. Full district and state names must match, or the entire address must be a unique district name. Partial names and ambiguous matches remain pending. No nearest-district guesses or device-coordinate fallback are used.
@@ -101,7 +111,7 @@ Rollout order:
 1. Apply schema/catalogue migration.
 2. Deploy and configure authentication URLs on both hosts (below).
 3. Sign in with an existing authorized Super Admin account. No admin is seeded by this feature.
-4. Create Digital FPOs for the districts you support.
+4. Use **Create all district FPOs and assign farmers** to provision the entire catalogue and process saved profiles, or create individual districts manually.
 5. Preview saved-profile matches and review pending reasons. An approved address geocoder is optional for unresolved text addresses.
 6. Process batches, inspecting failures. Rerun safely after corrections or creation of missing FPOs.
 
@@ -131,6 +141,47 @@ Browser auth now uses the current website origin, matching the protected APIs. C
 The integration suite covers profile-only assignment and static membership alongside: registration/validation; local address matching and configured address geocoding; missing location and later updates; dry runs; reruns; uniqueness; discovery without membership; cross-group feed/unread/push isolation; admin/identity spoofing; district moves; deactivation/reactivation; missing FPO; invalid coordinates; rollback; scheduled delivery; unchanged-location profile edits; admin visibility, read-only authorization, member isolation and historical-message pagination.
 
 Production build completed successfully. Scoped FPO lint completed with no errors. Full project type checking has pre-existing failures in generated Android artifacts and unrelated pages (MapPicker, machinery-list, nearby-farmers, rent-machinery, top-picks); no diagnostics were reported for the changed FPO/API/auth files. The existing Next config ignores type/lint errors during build, so a passing build is not presented as a passing full type check. In-app browser verification was unavailable; visual and real-auth end-to-end checks remain to be performed before production rollout.
+
+## Proposed Digital FPO manager access (not yet implemented)
+
+Provide a **Digital FPO sign in** entry using the existing Better Auth login. After authentication, the server checks an active manager assignment and opens the assigned district dashboard. Selecting a login option never grants a role. Public signup and the existing self-selected `fpo` role must not grant district management access.
+
+Use named individual accounts with an FPO-scoped `manager` permission in a new `digital_fpo_managers` table (`id`, `user_id`, `digital_fpo_id`, `status`, `granted_by`, `created_at`, `revoked_at`). Enforce uniqueness on `(user_id, digital_fpo_id)`. This permission is separate from the user's marketplace role, allowing an existing farmer or FPO account to manage a district without changing their existing profile. Multiple named managers can serve one FPO; each action remains attributable to a person.
+
+### Manager dashboard and scope
+
+- Show the assigned FPO, district, active farmer count, paginated farmer list, farmer profile detail, and announcement history.
+- Initially expose name, profile image, bio, State/District and membership status. Add contact details only after agreeing which fields managers need; do not return credentials, precise coordinates, or unrelated account data.
+- Check the authenticated manager grant, active FPO, and farmer's current matching district/group on every list, detail and publishing request. Return private, non-cacheable responses. A farmer moving districts immediately leaves the old manager's scope.
+- Derive the announcement target from the manager's authorized FPO. Reject global publishing and other FPO IDs. Reuse the existing group announcement delivery filters and retry mechanism.
+- Start with immediate announcements. Scheduled/repeating manager announcements require a delivery-time grant check and cancellation policy when the author loses access.
+- Super Admin grants and revokes manager access. Managers cannot assign themselves districts, change farmer memberships, activate FPOs, or create other managers. Revoking the grant blocks subsequent manager requests even if the user's ordinary login session remains active.
+- Record invitations, grant changes and announcement authorship in an audit trail. Do not log passwords or invitation/reset links.
+
+### Recommended account onboarding and passwords
+
+1. Super Admin opens an FPO and invites a named manager by email. Creating all catalogue FPOs does not create shared district passwords or grant anyone manager access.
+2. Issue an expiring, single-use invitation bound to the email and FPO. Store only a hash of the invitation token; support revocation and replacement. A proposed expiry is 24 hours.
+3. The recipient signs in or creates their own account through Better Auth. Require proof of the invited email before granting access. Existing users retain their password and marketplace role.
+4. Consume the invitation and create the manager grant atomically. Reject expired, revoked, reused or mismatched-email invitations.
+5. Managers choose their own password. Super Admin can resend onboarding or recovery links but cannot retrieve passwords. Use Better Auth password hashing, reset-token handling, change-password verification and session revocation.
+6. Provide password change and forgot-password screens backed by a real transactional email service. Rate-limit invitation and recovery requests and return the same recovery response for existing and unknown emails.
+
+An alternative onboarding flow is Super Admin assigning an existing verified account directly. The choice between invitations and existing-account assignment is awaiting product input; email delivery configuration is required for invitations and password recovery.
+
+### Existing password recovery issue to fix before rollout
+
+Inspection on 2026-09-25 found that `app/api/auth/forgot-password/route.ts` simulates delivery by logging reset links even in production. `app/api/auth/reset-password/route.ts` writes a bcrypt hash to `user.password`, while `lib/auth.ts` enables Better Auth email/password authentication. Replace this parallel recovery implementation with the installed Better Auth version's supported recovery flow and configure real email delivery. Do not treat the current success response as evidence of a delivered recovery email or working Better Auth password reset.
+
+Reference: [Better Auth email/password configuration](https://better-auth.com/docs/reference/options) and [account password changes](https://better-auth.com/docs/concepts/users-accounts).
+
+### Implementation and verification sequence
+
+1. Add manager grants, invitation and audit migrations without granting existing accounts access.
+2. Implement server scope checks, Super Admin grant/invitation endpoints, manager farmer/profile endpoints and immediate group publishing.
+3. Integrate supported password recovery and configured email delivery; add invitation acceptance and manager login/dashboard screens.
+4. Test cross-district list/detail/publishing denial, public-role self-promotion denial, inactive/revoked grants, farmer moves, invitation expiry/reuse/email mismatch, recovery delivery failures, actual credential login after reset, and session revocation.
+5. Apply migrations and deploy, then invite managers. This proposal does not modify production permissions or send invitations.
 
 ## Files
 

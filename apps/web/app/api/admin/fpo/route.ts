@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { requireActor, requireFpoReviewer, fpoError, FpoError } from '@/lib/fpo-access';
 import { validateDistrict } from '@/lib/fpo-location';
 import { assignFarmer, processFarmer } from '@/lib/fpo-assignment';
+import { provisionCatalogue } from '@/lib/fpo-provision';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
@@ -23,8 +24,9 @@ export async function GET(request: Request) {
 }
 export async function POST(request: Request) {
   try {
-    await requireActor(request,true);
+    const actor = await requireActor(request,true);
     const body = await request.json();
+    if (body.action === 'provision') return NextResponse.json(await provisionCatalogue(actor.id));
     if (body.action === 'assign') {
       const district = await validateDistrict(body.state,body.district);
       const result = await sql.begin(async tx => {

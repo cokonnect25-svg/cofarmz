@@ -279,5 +279,27 @@ async function user(id,role='farmer',confirmed=true,location=null,lat=null,lng=n
     const response=await profiles.GET(req);assert.equal(response.status,200);
     const data=await response.json();assert.equal(data.state,'Tamil Nadu');assert.equal(data.district,'Chennai');
   });
+  await test('Catalogue provisioning requires Super Admin and preserves existing FPOs',async()=>{
+    const adminRoute=route('admin/fpo');
+    for(const [actor,status] of [[null,401],['new-m',403],['reviewer',403]])
+      assert.equal((await adminRoute.POST(request(actor,{action:'provision'}))).status,status);
+    await db`INSERT INTO fpo_districts(state,district,source) VALUES('Tamil Nadu','Empty district','fixture'),('Tamil Nadu','Bulk district','fixture')`;
+    const [district]=await db`SELECT id FROM fpo_districts WHERE district='Bulk district'`;
+    await user('bulk-farmer');await db`UPDATE "user" SET district_id=${district.id} WHERE id='bulk-farmer'`;
+    await db`UPDATE digital_fpos SET status='inactive' WHERE id=${madurai.id}`;
+    const before=await db`SELECT * FROM digital_fpos ORDER BY id`;
+    const responses=await Promise.all([1,2].map(()=>adminRoute.POST(request('admin',{action:'provision'}))));
+    for(const response of responses)assert.equal(response.status,200,await response.text());
+    const [counts]=await db`SELECT (SELECT count(*) FROM fpo_districts)::int districts,(SELECT count(*) FROM digital_fpos)::int fpos,(SELECT count(*) FROM farmer_groups)::int groups`;
+    assert.equal(counts.districts,counts.fpos);assert.equal(counts.fpos,counts.groups);
+    for(const old of before)assert.deepEqual((await db`SELECT * FROM digital_fpos WHERE id=${old.id}`)[0],old);
+    const rerun=await (await adminRoute.POST(request('admin',{action:'provision'}))).json();assert.equal(rerun.created,0);assert.equal(rerun.groups_created,0);
+    const assigned=await assignment.processFarmer('bulk-farmer');assert.equal(assigned.assignment_status,'assigned');
+    assert.equal(String(assigned.district_id),String(district.id));
+    assert.equal((await assignment.processFarmer('gps-only')).assignment_status,'pending_location');
+    await user('future-bulk','buyer',false);
+    assert.equal((await profiles.POST(request('future-bulk',{userId:'future-bulk',role:'farmer',state:'Tamil Nadu',district:'Bulk district'}))).status,200);
+    assert.equal((await db`SELECT group_id FROM farmer_fpo_assignments WHERE farmer_id='future-bulk'`)[0].group_id,assigned.group_id);
+  });
   console.log(`${passed} integration tests passed`);
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await db.unsafe('DROP SCHEMA IF EXISTS fpo_integration CASCADE');await db.end();});
