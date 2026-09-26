@@ -39,6 +39,18 @@ Imports are additive: existing IDs/assignments are preserved. District renames, 
 
 ## Assignment behavior
 
+### Automatic assignment worker
+
+Profile registration and district/address updates assign farmers immediately. Saving an unresolved address now retries matching even when its text is unchanged, so newly imported taluk/mandal/locality mappings can take effect.
+
+For existing untagged farmers, run `npm run auto:fpo` as a supervised background worker with the backend's `DATABASE_URL`. It performs an immediate sweep and retries every 15 minutes (configure `FPO_ASSIGNMENT_INTERVAL_SECONDS`, 60–86400 seconds). For a scheduled job, use `npm run auto:fpo:once` at the desired interval instead. Deploy this separately from the request-serving Cloud Run service; an in-process timer on a request-scaled service is not a reliable scheduler. These commands apply assignments, rather than previewing them.
+
+Apply the FPO migrations and import the locality catalogue first using the commands below. The worker uses the same exact-name district/taluk/tehsil/mandal/village matching and configured resolver as profile saves. It processes missing, pending or inconsistent assignments in batches, preserves saved district selections, and skips already assigned consistent profiles. Missing FPOs stay pending; inactive FPOs are not activated. Once the district FPO or new locality mapping is available, a subsequent sweep can complete tagging. Ambiguous addresses remain pending for correction.
+
+A database advisory lock prevents overlapping worker sweeps. Profile row locks and concurrent-edit checks protect changes made during matching. Errors are retried next sweep; SIGINT/SIGTERM stops after the current farmer. Logs contain aggregate counts only. The worker must be deployed or scheduled to enable continuous tagging; adding the code does not start a production process.
+
+Verification: `node tests/fpo-automation.cjs` covers batching, retry isolation, overlap protection, graceful stopping, unchanged-address resolution, and saved-district/GPS protections.
+
 ### Taluk, tehsil and mandal addresses
 
 Saved addresses can now resolve through reviewed subdistrict-to-district mappings. For example, `omalur ,tamilnadu` resolves to Salem, Tamil Nadu. Full State names written without spaces (such as `Tamilnadu`) are accepted. Subdistrict inference requires a State; partial place names, multiple parent districts, and conflicting district/taluk information remain pending. An explicitly saved district ID remains authoritative.

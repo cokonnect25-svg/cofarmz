@@ -35,7 +35,9 @@ export async function prepareLocation(body: any, current: any, registration = fa
   }
   // Explicit saved district is authoritative. GPS-only writes never change FPO membership.
   if (current.district_id) return null;
-  if ('location' in body && String(body.location || '') !== String(current.location || '')) {
+  // Retry unresolved saved addresses even when the text has not changed:
+  // a new locality mapping may now identify the district.
+  if ('location' in body) {
     return resolveLegacyLocation({ location: body.location });
   }
   return null;

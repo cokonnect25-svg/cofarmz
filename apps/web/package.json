@@ -15,6 +15,8 @@
     "test:fpo": "node tests/fpo.integration.cjs",
     "test:fpo-localities": "node tests/fpo.localities.cjs",
     "backfill:fpo": "node scripts/backfill-fpo-profiles.cjs",
+    "auto:fpo": "node scripts/auto-assign-fpos.cjs",
+    "auto:fpo:once": "node scripts/auto-assign-fpos.cjs --once",
     "diagnose:fpo": "node scripts/diagnose-fpo-assignments.cjs",
     "migrate:fpo": "node scripts/migrate-fpos.cjs",
     "import:fpo-localities": "node scripts/import-fpo-localities.cjs"
