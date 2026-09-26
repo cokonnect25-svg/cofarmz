@@ -11,3 +11,4 @@ build/
 .fpo-test-db/
 fpo-*.log
 .next-fpo/
+.fpo-location-download/

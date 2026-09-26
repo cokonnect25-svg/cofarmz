@@ -1,0 +1,74 @@
+{
+  "snapshot_date": "2026-05-31",
+  "retrieved_at": "2026-09-25",
+  "origin": "https://lgdirectory.gov.in/downloadDirectory.do",
+  "mirror": "https://ramseraph.github.io/opendata/lgd/",
+  "archive_base": "https://github.com/ramSeraph/opendata/releases/download/lgd-archive-extra1/",
+  "archive_files": [
+    "subdistricts.May2026.7z",
+    "villages.May2026.7z",
+    "statewise_ulbs_coverage.May2026.7z"
+  ],
+  "sources": [
+    {
+      "file": "subdistricts.31May2026.csv",
+      "sha256": "7e046df2b4c6d3e8646bd76c06b0df62a3cb0b8cfe4ca674445262afc8fe17ad"
+    },
+    {
+      "file": "villages.31May2026.csv",
+      "sha256": "2e17edb5fa358ace5ee9a933e9c24a9894ae8e08be11d0132473fc3421b19ec3"
+    },
+    {
+      "file": "statewise_ulbs_coverage.31May2026.csv",
+      "sha256": "ec0d5ce4609934999729eff392af1eb503ab5fd7bc5ddf048e334abab06ceaf2"
+    }
+  ],
+  "records": 861077,
+  "kinds": {
+    "village": 848868,
+    "town": 5119,
+    "subdistrict": 7090
+  },
+  "states": {
+    "Andaman and Nicobar Islands": 570,
+    "Andhra Pradesh": 19152,
+    "Arunachal Pradesh": 5740,
+    "Assam": 30854,
+    "Bihar": 74820,
+    "Chandigarh": 2,
+    "Chhattisgarh": 41224,
+    "Dadra and Nagar Haveli and Daman and Diu": 115,
+    "Delhi": 411,
+    "Goa": 455,
+    "Gujarat": 19784,
+    "Haryana": 7429,
+    "Himachal Pradesh": 43431,
+    "Jammu and Kashmir": 7197,
+    "Jharkhand": 43289,
+    "Karnataka": 32101,
+    "Kerala": 3504,
+    "Ladakh": 267,
+    "Lakshadweep": 37,
+    "Madhya Pradesh": 68794,
+    "Maharashtra": 90401,
+    "Manipur": 3976,
+    "Meghalaya": 7294,
+    "Mizoram": 962,
+    "Nagaland": 1821,
+    "Odisha": 54148,
+    "Puducherry": 270,
+    "Punjab": 13535,
+    "Rajasthan": 61280,
+    "Sikkim": 512,
+    "Tamil Nadu": 21165,
+    "Telangana": 23337,
+    "Tripura": 1839,
+    "Uttar Pradesh": 121890,
+    "Uttarakhand": 17980,
+    "West Bengal": 41491
+  },
+  "districts": 784,
+  "sha256": "454401395439dd5994969eec1a753d6a3f969b097aeeff0fb55743208a5fd9cf",
+  "limitations": "Dated mirrored LGD snapshot, not a live official feed. Includes recorded villages, subdistricts and urban local bodies; not every street, colony, hamlet or spelling. Boundary changes after the snapshot need review.",
+  "district_alias_source": "https://odisha.gov.in/en/about-us/districts"
+}

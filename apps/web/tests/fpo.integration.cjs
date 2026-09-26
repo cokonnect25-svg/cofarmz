@@ -55,6 +55,13 @@ async function user(id,role='farmer',confirmed=true,location=null,lat=null,lng=n
     const reviewerMigration=fs.readFileSync(path.join(root,'migrations/20260923_fpo_admin_review.sql'),'utf8');
     await reserved.unsafe(reviewerMigration);await reserved.unsafe(reviewerMigration); } finally {reserved.release();}
   for(const district of ['Madurai','Chennai']) await db`INSERT INTO fpo_districts(state,district,source) VALUES('Tamil Nadu',${district},'fixture')`;
+  const subdistrictConnection=await db.reserve();
+  try {
+    const migration=fs.readFileSync(path.join(root,'migrations/20260925_fpo_subdistricts.sql'),'utf8');
+    await subdistrictConnection.unsafe(migration);await subdistrictConnection.unsafe(migration);
+    const localities=fs.readFileSync(path.join(root,'migrations/20260925_fpo_localities.sql'),'utf8');
+    await subdistrictConnection.unsafe(localities);await subdistrictConnection.unsafe(localities);
+  } finally { subdistrictConnection.release(); }
   await user('admin','superadmin'); await user('new-m','buyer',false);await user('new-c','buyer',false);await user('invalid','buyer',false);
   const fpos=route('digital-fpos');const profiles=route('users/profile');
   const assignment=require('../lib/fpo-assignment.ts');
@@ -300,6 +307,67 @@ async function user(id,role='farmer',confirmed=true,location=null,lat=null,lng=n
     await user('future-bulk','buyer',false);
     assert.equal((await profiles.POST(request('future-bulk',{userId:'future-bulk',role:'farmer',state:'Tamil Nadu',district:'Bulk district'}))).status,200);
     assert.equal((await db`SELECT group_id FROM farmer_fpo_assignments WHERE farmer_id='future-bulk'`)[0].group_id,assigned.group_id);
+  });
+  await test('Taluk and state resolve through the directory, with conflicts kept pending',async()=>{
+    const location=require('../lib/fpo-location.ts');
+    const catalogue=await db`SELECT id,state,district FROM fpo_districts`;
+    const m=catalogue.find(d=>d.district==='Madurai'),c=catalogue.find(d=>d.district==='Chennai');
+    const mappings=[{district_id:m.id,name:'Melur'},{district_id:m.id,name:'Shared Taluk'},{district_id:c.id,name:'Shared Taluk'}];
+    assert.equal(location.matchProfileAddress('Melur Taluk, Tamil Nadu',catalogue,mappings).district.id,m.id);
+    assert.equal(location.matchProfileAddress('Melur',catalogue,mappings).district,null);
+    assert.equal(location.matchProfileAddress('NotMelur, Tamil Nadu',catalogue,mappings).district,null);
+    assert.equal(location.matchProfileAddress('Melur, Chennai, Tamil Nadu',catalogue,mappings).ambiguous,true);
+    assert.equal(location.matchProfileAddress('Shared Taluk, Tamil Nadu',catalogue,mappings).ambiguous,true);
+    assert.equal(location.matchProfileAddress('Melur, Madurai, Tamil Nadu',catalogue,mappings).district.id,m.id);
+    await db`INSERT INTO fpo_subdistricts(district_id,name,source) VALUES(${m.id},'Melur','fixture')`;
+    await user('taluk-farmer','farmer',true,'Melur Taluk, Tamil Nadu');
+    const preview=await assignment.processFarmer('taluk-farmer',true);assert.equal(preview.district.id,m.id);
+    assert.equal((await db`SELECT district_id FROM "user" WHERE id='taluk-farmer'`)[0].district_id,null);
+    await assignment.processFarmer('taluk-farmer');
+    assert.equal((await db`SELECT district_id FROM "user" WHERE id='taluk-farmer'`)[0].district_id,m.id);
+    await db`UPDATE "user" SET district_id=${c.id} WHERE id='taluk-farmer'`;
+    assert.equal((await assignment.processFarmer('taluk-farmer')).district_id,c.id);
+  });
+  await test('Bundled Omalur mapping resolves the exact saved address omalur ,tamilnadu',async()=>{
+    const directory=JSON.parse(fs.readFileSync(path.join(root,'data/fpo-subdistricts.json'),'utf8'));
+    for(const entry of directory.districts){
+      const [parent]=await db`SELECT id FROM fpo_districts WHERE state=${entry.state} AND district=${entry.district}`;
+      assert(parent);
+      for(const name of entry.names)await db`INSERT INTO fpo_subdistricts(district_id,name,source) VALUES(${parent.id},${name},${entry.source}) ON CONFLICT DO NOTHING`;
+    }
+    await user('omalur-farmer','farmer',true,'omalur ,tamilnadu');
+    const preview=await assignment.processFarmer('omalur-farmer',true);
+    assert.equal(preview.district.district,'Salem');assert.equal(preview.assignment_status,'assigned');
+    const applied=await assignment.processFarmer('omalur-farmer');assert.equal(applied.group_id,preview.group_id);
+    const repeated=await assignment.processFarmer('omalur-farmer');assert.equal(repeated.group_id,applied.group_id);
+    const location=require('../lib/fpo-location.ts');
+    const catalogue=await db`SELECT id,state,district FROM fpo_districts`;
+    const mappings=await db`SELECT district_id,name FROM fpo_subdistricts`;
+    assert.equal(location.matchProfileAddress('Omalur Taluk, Tamil Nadu',catalogue,mappings).district.district,'Salem');
+    assert.equal(location.matchProfileAddress('Omalur, Chennai, Tamilnadu',catalogue,mappings).ambiguous,true);
+    assert.equal(location.matchProfileAddress('Omalur, Tamilnadux',catalogue,mappings).district,null);
+  });
+  await test('Repeated locality names require agreeing district or taluk evidence',async()=>{
+    const location=require('../lib/fpo-location.ts');
+    const catalogue=await db`SELECT id,state,district FROM fpo_districts`;
+    const salem=catalogue.find(d=>d.district==='Salem'),chennai=catalogue.find(d=>d.district==='Chennai');
+    const places=[{district_id:salem.id,name:'Shared Village'},{district_id:chennai.id,name:'Shared Village'},
+      {district_id:salem.id,name:'Omalur'},{district_id:chennai.id,name:'Other Locality'}];
+    assert.equal(location.matchProfileAddress('Shared Village, Tamil Nadu',catalogue,places).ambiguous,true);
+    assert.equal(location.matchProfileAddress('Shared Village, Omalur, Tamil Nadu',catalogue,places).district.id,salem.id);
+    assert.equal(location.matchProfileAddress('Shared Village, Chennai, Tamil Nadu',catalogue,places).district.id,chennai.id);
+    assert.equal(location.matchProfileAddress('Omalur, Other Locality, Tamil Nadu',catalogue,places).ambiguous,true);
+    assert.equal(location.matchProfileAddress('Omalur, Salem, Chennai, Tamil Nadu',catalogue,places).ambiguous,true);
+    assert.equal(location.matchProfileAddress('Shared Village',catalogue,places).district,null);
+    assert.equal(location.addressPhrases('a '.repeat(81)).length,0);
+    assert.notEqual(location.addressWords('कला'),location.addressWords('कल'));
+    await db`INSERT INTO fpo_localities(district_id,kind,code,name,name_key,source)
+      VALUES(${salem.id},'village','999001','Indexed Village','indexed village','fixture')`;
+    await user('indexed-locality','farmer',true,'Indexed Village, Tamilnadu');
+    const preview=await assignment.processFarmer('indexed-locality',true);
+    assert.equal(preview.district.id,salem.id);
+    const applied=await assignment.processFarmer('indexed-locality');
+    assert.equal(applied.assignment_status,'assigned');assert.equal(applied.group_id,preview.group_id);
   });
   console.log(`${passed} integration tests passed`);
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await db.unsafe('DROP SCHEMA IF EXISTS fpo_integration CASCADE');await db.end();});

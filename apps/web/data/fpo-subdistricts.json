@@ -1,0 +1,10 @@
+{
+  "retrieved_at": "2026-09-25",
+  "coverage": "Salem district only; not a nationwide subdistrict directory",
+  "districts": [{
+    "state": "Tamil Nadu",
+    "district": "Salem",
+    "source": "https://salem.nic.in/about-district/administrative-setup/revenue-administration/",
+    "names": ["Salem", "Salem West", "Salem South", "Yercaud", "Valapaddy", "Attur", "Pethanaickenpalayam", "Gangavalli", "Thalaivasal", "Sankari", "Edappadi", "Mettur", "Omalur", "Kadayampatti"]
+  }]
+}

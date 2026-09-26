@@ -39,6 +39,45 @@ Imports are additive: existing IDs/assignments are preserved. District renames, 
 
 ## Assignment behavior
 
+### Taluk, tehsil and mandal addresses
+
+Saved addresses can now resolve through reviewed subdistrict-to-district mappings. For example, `omalur ,tamilnadu` resolves to Salem, Tamil Nadu. Full State names written without spaces (such as `Tamilnadu`) are accepted. Subdistrict inference requires a State; partial place names, multiple parent districts, and conflicting district/taluk information remain pending. An explicitly saved district ID remains authoritative.
+
+Apply `npm run migrate:fpo -- --apply` **before deploying this change**. It installs `migrations/20260925_fpo_subdistricts.sql` and imports `data/fpo-subdistricts.json`. Then preview and rerun the existing saved-profile backfill to tag previously unresolved farmers. The migration itself does not change profiles or memberships.
+
+The small `fpo-subdistricts.json` mapping retains the 14 taluks listed by the [Salem district revenue administration](https://salem.nic.in/about-district/administrative-setup/revenue-administration/), retrieved 2026-09-25. The separate nationwide directory below extends this across all States/UTs. Include duplicate names in all applicable parent districts rather than choosing one arbitrarily. Unknown spellings remain unresolved unless a reviewed alias is imported or the configured geocoder resolves them.
+
+Imports are additive. Boundary changes and removed/renamed subdistricts require reviewed database corrections; merely removing a JSON entry does not remove its database mapping.
+
+### Nationwide subdistricts, villages and urban localities
+
+`data/fpo-localities.jsonl.gz` contains a **31 May 2026** LGD snapshot with **861,077 name records**, including local-language aliases: 7,090 subdistrict records, 848,868 village-name records and 5,119 urban-local-body parent/name records. These are not counts of unique settlements. Parent mapping covers **all 36 States/UTs and all 784 districts** in the existing catalogue. The JSON manifest records coverage, raw-file hashes, compressed-file checksum and source links.
+
+The originating source is the [Local Government Directory](https://lgdirectory.gov.in/downloadDirectory.do). The dated exports were downloaded from the [public LGD archive](https://ramseraph.github.io/opendata/lgd/), not directly from a live government API. Archives are `subdistricts.May2026.7z`, `villages.May2026.7z` and `statewise_ulbs_coverage.May2026.7z` under the manifest's archive URL. Extract only the named `31May2026.csv` files. Reviewed alternate Odisha district spellings and the merged Dadra/Nagar Haveli/Daman/Diu State name are reconciled explicitly; no fuzzy district mapping is performed.
+
+Deployment order, from `apps/web`:
+
+```sh
+npm run migrate:fpo -- --apply
+npm run import:fpo-localities
+npm run import:fpo-localities -- --apply
+# Deploy the application, then preview and process existing farmers:
+npm run backfill:fpo
+npm run backfill:fpo -- --apply
+```
+
+Migration adds `fpo_localities` and its indexed lookup; **apply it before deploying**. The default import is offline validation only. Applying the import transactionally replaces only the `lgd:` directory source; concurrent imports serialize, and a missing database parent rolls the replacement back. Existing custom subdistrict mappings remain. This operation does not change farmer profiles, FPOs or memberships. Memberships change only through the existing assignment flow. The compressed data is used by the import script, not downloaded by browser clients.
+
+Matching requires a recognized State plus an exact whole-name locality, taluk/tehsil/mandal, or district. A repeated village name remains pending unless another matching district/taluk/locality narrows it to one district. Conflicting evidence stays pending. Place names that occur only inside the State name do not count as separate district evidence. Combining marks in native-script names are preserved; the State must still match its catalogue English name (spaced or unspaced). Explicit saved district IDs continue to take precedence.
+
+Each address queries only indexed matching phrases within its State. The service does not scan or load the full directory for each farmer. Names missing from the directory can use the configured address geocoder; no unconfigured public geocoder receives profile data.
+
+Coverage means a directory is available across all States/UTs, **not that every street, colony, informal hamlet, landmark, spelling or recent boundary change is covered**. This is a dated snapshot; review subsequent changes before replacing it. PIN codes alone and nearby GPS positions are not district evidence.
+
+Rebuild from reviewed downloaded CSVs using `python scripts/build-fpo-localities.py --input .fpo-location-download --date 31May2026`. Review the manifest/data diff before importing a replacement. The builder rejects unknown parent districts and missing State/UT coverage. For a different archive month, verify/update the archive-base provenance in the builder.
+
+`npm run test:fpo-localities` imports the complete snapshot into the dedicated local `fpo_localities_integration` schema, checks State/UT lookups, reruns the import, and verifies rollback on an unmatched parent. It refuses non-loopback databases and drops only its own test schema.
+
 ### Create every catalogue district and assign farmers
 
 Super Admin can open `/digital-fpos` and select **Create all district FPOs and assign farmers**. This creates a Digital FPO and group for every imported catalogue district, including districts without farmers, then automatically runs saved-profile assignment across all farmer batches. Existing FPO IDs, names, creators and activation status are preserved. Repeated and concurrent provisioning cannot create duplicate FPOs or groups.
