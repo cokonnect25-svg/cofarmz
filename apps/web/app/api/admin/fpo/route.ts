@@ -13,13 +13,19 @@ export async function GET(request: Request) {
     const group = q.get('group') || null;
     if (group && !/^[0-9a-f-]{36}$/i.test(group)) throw new FpoError('Invalid group');
     const rows = await sql`SELECT u.id,u.name,u.location,u.latitude,u.longitude,d.state,d.district,
+      CASE WHEN ${q.get('details') === 'true'} THEN jsonb_build_object(
+        'email',u.email,'phone',u.phone,'gender',to_jsonb(u)->>'gender',
+        'age',to_jsonb(u)->>'age','bio',to_jsonb(u)->>'bio',
+        'email_verified',to_jsonb(u)->>'emailVerified','phone_verified',to_jsonb(u)->>'phone_verified',
+        'created_at',to_jsonb(u)->>'createdAt','updated_at',to_jsonb(u)->>'updatedAt'
+      ) ELSE NULL END AS profile_details,
       CASE WHEN a.group_id IS NOT NULL AND NOT can_receive_fpo_message(u.id,a.group_id) THEN 'inactive_fpo' ELSE COALESCE(a.assignment_status,'pending_location') END AS assignment_status,a.reason,a.assignment_source,a.group_id
       FROM "user" u LEFT JOIN farmer_fpo_assignments a ON a.farmer_id=u.id LEFT JOIN fpo_districts d ON d.id=u.district_id
       WHERE u.role='farmer' AND u.id>${after}
         AND (${group}::uuid IS NULL OR a.group_id=${group}::uuid)
         AND (${q.get('pending') === 'true'}=false OR a.group_id IS NULL OR NOT can_receive_fpo_message(u.id,a.group_id))
       ORDER BY u.id LIMIT 100`;
-    return NextResponse.json({ farmers:rows, next: rows.length === 100 ? rows[rows.length-1].id : null });
+    return NextResponse.json({ farmers:rows, next: rows.length === 100 ? rows[rows.length-1].id : null }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch(e) { return fpoError(e); }
 }
 export async function POST(request: Request) {

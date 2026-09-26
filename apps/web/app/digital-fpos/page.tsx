@@ -8,6 +8,7 @@ import FpoBackfill from '@/components/FpoBackfill';
 import AdminFpoGroup from '@/components/AdminFpoGroup';
 import FarmerFpo from '@/components/FarmerFpo';
 import DistrictSelect from '@/components/DistrictSelect';
+import FpoPdfExport from '@/components/FpoPdfExport';
 
 async function api(path:string,body?:any,method='POST') {
   const r=await fetch(getApiUrl(path),{credentials:'include',cache:'no-store',...(body?{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});
@@ -38,6 +39,7 @@ export default function DigitalFposPage() {
   return <main className="max-w-4xl mx-auto p-4 pb-24 space-y-5 text-gray-800">
     <Link href={data.can_manage?"/admin/dashboard":"/user-profile"} className="inline-flex items-center gap-2 text-sm font-bold text-gray-500"><ArrowLeft size={18}/>{data.can_manage?"Back to dashboard":"Back to profile"}</Link>
     <header><p className="text-xs font-bold uppercase tracking-widest text-brand-700">Community management</p><h1 className="mt-1 text-3xl font-black text-gray-900">Digital FPOs</h1><p className="mt-2 text-sm text-gray-500">Manage district communities and keep track of farmer assignments.</p></header>
+    <FpoPdfExport/>
     <details className="group rounded-2xl border border-gray-100 bg-white shadow-sm">
       <summary className="flex cursor-pointer list-none items-center gap-2 p-5 text-sm font-bold text-gray-800 [&::-webkit-details-marker]:hidden"><CircleHelp size={18} className="text-green-600"/>How to use this page<ChevronRight size={16} className="ml-auto transition-transform group-open:rotate-90"/></summary>
       <div className="border-t border-gray-100 p-5"><p className="mb-4 text-sm leading-relaxed text-gray-500">Start by creating a district FPO, then open its card to review farmers and announcements. Farmers join according to their saved profile State/District.</p>

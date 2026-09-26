@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { getApiUrl } from '@/lib/api';
+import FpoPdfExport from '@/components/FpoPdfExport';
 
 export default function AdminFpoGroup({groupId}: {groupId:string}) {
   const [tab,setTab]=useState<'members'|'messages'>('members');
@@ -39,12 +41,25 @@ export default function AdminFpoGroup({groupId}: {groupId:string}) {
   return <div className="mt-4 space-y-4 border-t pt-4">
     <h3 className="font-bold text-brand-900">Group overview</h3>
     <p className="text-sm text-gray-600">Review tagged farmers and the announcement history for this district.</p>
+    <FpoPdfExport groupId={groupId}/>
     {error&&<p role="alert" className="text-red-700">{error}</p>}
     {busy&&<p role="status">Loading group information...</p>}
     <div className="flex gap-2 rounded-xl bg-gray-50 p-1">{(['members','messages'] as const).map(t=><button key={t} onClick={()=>setTab(t)} aria-pressed={tab===t} className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold transition ${tab===t?'bg-white text-brand-700 shadow-sm':'text-gray-500'}`}>{t==='members'?'Tagged farmers':'Announcements'}</button>)}</div>
     {tab==='members'&&<section><h4 className="sr-only">Tagged farmers</h4>
       {!busy&&!members.length&&<p>No assigned farmers.</p>}
-      <ul className="divide-y">{members.map(m=><li key={m.id} className="py-3"><span className="font-medium">{m.name}</span><p className="mt-1 text-xs text-gray-500">{m.district}, {m.state} · {m.assignment_status.replaceAll('_',' ')}</p></li>)}</ul>
+      <ul className="divide-y">{members.map(m=><li key={m.id}>
+        <Link
+          href={`/farmer-profile?id=${encodeURIComponent(m.id)}`}
+          className="flex items-center justify-between gap-3 rounded-lg px-2 py-3 transition hover:bg-green-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
+          aria-label={`View ${m.name}'s profile`}
+        >
+          <div className="min-w-0">
+            <span className="font-medium text-green-800">{m.name}</span>
+            <p className="mt-1 text-xs text-gray-500">{m.district}, {m.state} · {m.assignment_status.replaceAll('_',' ')}</p>
+          </div>
+          <span className="shrink-0 text-xs font-semibold text-green-700">View profile <span aria-hidden="true">→</span></span>
+        </Link>
+      </li>)}</ul>
       {nextMember!==null&&<button disabled={busy} className="underline text-green-800" onClick={()=>more('members')}>Load more members</button>}
     </section>}
     {tab==='messages'&&<section><h4 className="sr-only">Group messages</h4>

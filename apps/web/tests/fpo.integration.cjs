@@ -210,9 +210,19 @@ async function user(id,role='farmer',confirmed=true,location=null,lat=null,lng=n
       const d=await r.json();assert(d.messages.length>0);assert.equal(d.group.id,group.group_id);
       const people=await route('admin/fpo').GET(request('reviewer',null,'GET','/api/admin/fpo?group='+group.group_id));
       assert.equal(people.status,200);assert((await people.json()).farmers.every(f=>f.group_id===group.group_id));
+      const detailed=await route('admin/fpo').GET(request('reviewer',null,'GET','/api/admin/fpo?details=true&group='+group.group_id));
+      assert.equal(detailed.status,200);assert.equal(detailed.headers.get('cache-control'),'private, no-store');
+      const exported=(await detailed.json()).farmers;assert(exported.length>0);
+      for(const farmer of exported){
+        const [saved]=await db`SELECT email,phone FROM "user" WHERE id=${farmer.id}`;
+        assert.equal(farmer.profile_details.email,saved.email);assert.equal(farmer.profile_details.phone,saved.phone);
+        assert(!('password' in farmer.profile_details));
+      }
     }
     assert.equal((await route('admin/fpo/messages').GET(request('coords',null,'GET','/api/admin/fpo/messages?group='+chennai.group_id))).status,403);
     assert.equal((await route('admin/fpo').GET(request('coords',null,'GET'))).status,403);
+    assert.equal((await route('admin/fpo').GET(request('coords',null,'GET','/api/admin/fpo?details=true'))).status,403);
+    assert.equal((await route('admin/fpo').GET(request(null,null,'GET','/api/admin/fpo?details=true'))).status,401);
     assert.equal((await route('admin/fpo/messages').GET(request(null,null,'GET','/api/admin/fpo/messages?group='+madurai.group_id))).status,401);
     assert.equal((await db`SELECT * FROM farmer_fpo_assignments WHERE farmer_id='reviewer'`).length,0);
   });
