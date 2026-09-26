@@ -13,12 +13,13 @@ function load(name, dependencies) {
   return mod.exports;
 }
 (async () => {
-  let acquired = true, released = 0, unlocked = 0, queried = 0;
+  let acquired = true, released = 0, unlocked = 0, queried = 0, mappingsReady = true;
   let batches = [[{ id: 'a' }, { id: 'b' }], [{ id: 'c' }], []];
   const processed = [], cursors = [];
   const connection = async strings => strings.join('').includes('try_advisory') ? [{ acquired }] : (unlocked++, []);
   connection.release = () => released++;
   const db = async (strings, ...values) => {
+    if (strings.join('').includes('to_regclass')) return [{ subdistricts: mappingsReady, localities: mappingsReady }];
     if (strings.join('').includes('FROM fpo_districts')) return [{ id: 'district' }];
     queried++; cursors.push(values[0]); return batches.shift();
   };
@@ -31,7 +32,12 @@ function load(name, dependencies) {
       return { assignment_status: id === 'a' ? 'assigned' : 'pending_location' };
     } },
   });
-  const result = await reconcileFpoAssignments();
+  const progress = [];
+  const result = await reconcileFpoAssignments(() => false, message => progress.push(message));
+  assert.equal(progress[0], 'Connecting to database');
+  assert(progress.some(message => message.includes('Matching batch')));
+  assert(progress.some(message => message.includes('assignment_error')));
+  assert.equal(progress.at(-1), 'Assignment sweep complete');
   assert.deepEqual(processed, ['a', 'b', 'c']);
   assert.deepEqual(cursors, ['', 'b', 'c']);
   assert.equal(result.assigned, 1); assert.equal(result.pending_location, 1); assert.equal(result.errors, 1);
@@ -42,6 +48,9 @@ function load(name, dependencies) {
   acquired = true;
   await reconcileFpoAssignments(() => true);
   assert.equal(queried, 3); assert.equal(unlocked, 2); assert.equal(released, 3);
+  mappingsReady = false;
+  await assert.rejects(reconcileFpoAssignments(), error => error.code === 'FPO_SETUP_REQUIRED');
+  assert.equal(queried, 3); assert.equal(unlocked, 3); assert.equal(released, 4);
   let resolved = 0;
   const { prepareLocation } = load('fpo-assignment', {
     '@/app/api/utils/sql': {}, './fpo-error': { FpoError: Error },

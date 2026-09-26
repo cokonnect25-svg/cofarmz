@@ -8,6 +8,10 @@ const sql=require('postgres')(process.env.DATABASE_URL,{ssl:{rejectUnauthorized:
   const tables=await tx`SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('fpo_districts','digital_fpos','farmer_fpo_assignments')`;
   console.log('FPO tables:',tables.map(x=>x.table_name).join(', '));
   if(tables.length!==3)return;
+  const [mappingTables]=await tx`SELECT to_regclass('fpo_subdistricts') IS NOT NULL AS subdistricts,to_regclass('fpo_localities') IS NOT NULL AS localities`;
+  console.log('Location mapping tables:',mappingTables);
+  if(mappingTables.subdistricts)console.log('Subdistrict mappings:',await tx`SELECT count(*)::int AS records FROM fpo_subdistricts`);
+  if(mappingTables.localities)console.log('Locality mappings:',await tx`SELECT count(*)::int AS records FROM fpo_localities`);
   console.log('District catalogue:',await tx`SELECT count(*)::int AS districts FROM fpo_districts`);
   console.log('FPOs:',await tx`SELECT status,count(*)::int AS count FROM digital_fpos GROUP BY status`);
   console.log('Farmer profile coverage:',await tx`SELECT count(*)::int AS farmers,count(*) FILTER(WHERE district_id IS NOT NULL)::int AS saved_district,count(*) FILTER(WHERE length(trim(coalesce(location,'')))>0)::int AS saved_address FROM "user" WHERE role='farmer'`);
