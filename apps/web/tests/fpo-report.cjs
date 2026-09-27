@@ -55,6 +55,11 @@ const last = { id: 'last', name: '<script>alert("x")</script> రైతు क�
   for (const value of ['farmer@example.com', '+91 9876543210', '42', 'female', 'Village &lt;North&gt;', 'admin manual', 'Saved district', '<dd>0</dd>', '<dd>No</dd>', '<dd>Yes</dd>', '&lt;img']) assert(detailed.includes(value), value);
   assert(!detailed.includes('<img'));
   assert(html.includes('Not provided'));
+  const preview = renderFpoReport(overall.fpos, overall.farmers, false, new Date('2026-09-27T00:00:00Z'), false);
+  assert(preview.includes('101 tagged farmers'));
+  assert(!preview.includes('onclick='), 'Embedded preview uses the parent print control');
+  assert(!preview.includes('<div class="toolbar">'));
+  assert(html.includes('onclick="window.print()"'), 'Standalone report retains its print control');
   if (process.argv.includes('--preview')) {
     const dir = path.resolve(__dirname, '../tmp/pdfs');
     fs.mkdirSync(dir, { recursive: true });

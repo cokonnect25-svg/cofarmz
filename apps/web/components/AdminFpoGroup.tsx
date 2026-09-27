@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import FpoAdminInbox from '@/components/FpoAdminInbox';
 import { getApiUrl } from '@/lib/api';
 import FpoPdfExport from '@/components/FpoPdfExport';
 
@@ -67,5 +68,6 @@ export default function AdminFpoGroup({groupId}: {groupId:string}) {
       {messages.map(m=><article key={m.id} className="border border-gray-100 bg-gray-50/50 rounded-2xl p-4 my-3"><h5 className="font-semibold">{m.title}</h5><p className="whitespace-pre-wrap break-words">{m.body}</p><p className="text-xs text-gray-500">{m.sender_name||'Former admin'} · {new Date(m.created_at).toLocaleString()}</p>{m.scheduled_at&&<p className="text-xs">Scheduled: {new Date(m.scheduled_at).toLocaleString()}</p>}{m.expires_at&&<p className="text-xs">Expires: {new Date(m.expires_at).toLocaleString()}</p>}</article>)}
       {nextMessage!==null&&<button disabled={busy} className="underline text-green-800" onClick={()=>more('messages')}>Load older messages</button>}
     </section>}
+    <FpoAdminInbox key={groupId} groupId={groupId}/>
   </div>;
 }

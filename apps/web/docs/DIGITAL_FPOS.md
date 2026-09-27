@@ -254,3 +254,21 @@ Administrative management includes FPO/active/tagged-farmer totals, search and s
 Aggregate read-only inspection found 2,283 farmers, zero saved district IDs, 2,263 farmers not yet processed, and 20 pending location records. The server had no address geocoder configured and only one active Digital FPO. With saved-profile catalogue matching, the preview resolved 413 farmers: 101 for the existing Hyderabad FPO and 312 awaiting creation of their district FPOs. Another 1,870 require profile clarification (706 missing addresses; 1,164 without a clear catalogue match). These are diagnostic snapshot counts, not guarantees about future data.
 
 The reviewed backfill was applied on 2026-09-24: all 2,283 farmers were processed without errors. Verification found 413 saved district IDs, 101 assigned farmers eligible for their group feed, 312 pending FPO creation, 1,870 pending profile clarification, and zero membership/profile/FPO district mismatches. No Digital FPOs were created by the backfill. Deploy the application changes to keep future assignment behavior tied to saved profile State/District and enable automatic enrollment on FPO creation.
+
+
+## Private farmer enquiries to FPO admins
+
+Farmers can open any active Digital FPO profile in the directory and use **Message FPO admin**. Messages are stored separately from announcements in `fpo_admin_inbox`; they are never broadcast to farmer groups. The existing assigned-FPO announcement feed is unchanged.
+
+The current application has a shared Admin/Super Admin review team, not individual district manager grants. Only those reviewers can read the **Private admin inbox** within each district FPO popup. The sender identity comes from the authenticated session. Non-farmer sends, inactive targets and invalid/empty messages are rejected. Messages are limited to 5,000 characters, and the admin inbox has pagination and refresh. This is an enquiry inbox, without admin replies or push notifications.
+
+Apply `migrations/20260927_fpo_admin_inbox.sql` before deploying this feature (also included in `npm run migrate:fpo -- --apply`). The migration has not been applied by this code change. Verify with `node tests/fpo-contact.cjs`; perform authenticated farmer/admin browser checks after migration.
+
+
+## Digital FPO profile actions
+
+Profiles show **Call**, **Message**, and **Map**. Call opens the saved public phone number in the dialer. Message opens the private admin enquiry form for farmers. Map opens Google Maps using saved coordinates, or the saved office address when coordinates are absent. No district-centre location is assumed. Missing phone/location details leave the relevant action disabled and grey, with an explanation. Zero coordinates are valid.
+
+Admin/Super Admin can open a district FPO popup and expand **Edit FPO contact and location** to add or clear these public details. The authenticated profile PATCH endpoint permits only reviewers and validates phone format, address length, coordinate pairs and ranges. It does not update FPO status or assignments.
+
+Apply `migrations/20260927_fpo_profile.sql` before deploying profile editing; it is included in `npm run migrate:fpo -- --apply`. This code change does not apply the migration. Validation checks: `node tests/fpo-profile-actions.cjs`.

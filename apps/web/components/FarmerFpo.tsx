@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import FpoProfileActions from '@/components/FpoProfileActions';
+import type { FpoContact } from '@/lib/fpo-profile';
 import { ArrowLeft, ArrowUpRight, Building2, CheckCheck, ChevronRight, MapPin, MessageCircle, RefreshCw, Search, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
 
-type Profile = { id: string; name: string; state: string; district: string; status: string };
+type Profile = FpoContact & { id: string; name: string; state: string; district: string; status: string };
 type Assignment = { name: string; digital_fpo_id: string; assignment_status: string; district: string; state: string };
 type Update = { id: string; title: string; body: string; created_at: string };
 async function request(path: string, read = false, signal?: AbortSignal) {
@@ -103,6 +105,7 @@ export default function FarmerFpo({ mode }: { mode: 'directory' | 'group' }) {
     <article className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-soft">
       <div className="bg-brand-700 p-6 text-white"><Building2 size={32} className="mb-5"/><p className="text-xs font-bold uppercase tracking-widest text-brand-100">CoFarmz Digital FPO</p><h2 ref={profileHeading} tabIndex={-1} className="mt-2 text-2xl font-black outline-none">{title(selected)}</h2><p className="mt-2 flex items-center gap-1 text-sm text-brand-100"><MapPin size={15}/>{selected.district}, {selected.state}</p></div>
       <div className="space-y-5 p-6"><span className="inline-flex rounded-full bg-brand-50 px-3 py-1 text-xs font-bold capitalize text-brand-700">{selected.status}</span><div><h3 className="font-bold text-gray-900">About this FPO</h3><p className="mt-2 text-sm leading-relaxed text-gray-500">The CoFarmz Digital FPO for farmers in {selected.district}, {selected.state}. Assigned farmers receive district group announcements in Messages.</p></div><div className="rounded-xl bg-gray-50 p-3"><p className="text-xs text-gray-500">Registered name</p><p className="mt-1 break-words text-sm font-medium text-gray-700">{selected.name}</p></div>
+        <FpoProfileActions key={selected.id} profile={selected} canMessage={user?.role === 'farmer' && selected.status === 'active'}/>
         {mine?.digital_fpo_id === selected.id && mine.assignment_status === 'assigned' && <Link href="/chat" className="flex items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 py-3 text-sm font-bold text-white"><MessageCircle size={18}/>Open my group</Link>}
       </div>
     </article>

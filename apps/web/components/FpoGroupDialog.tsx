@@ -3,8 +3,9 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 
-export default function FpoGroupDialog({ title, onClose, children }: {
+export default function FpoGroupDialog({ title, onClose, children, closeLabel = 'Close FPO members' }: {
   title: string;
+  closeLabel?: string;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -29,7 +30,7 @@ export default function FpoGroupDialog({ title, onClose, children }: {
     <div className="flex max-h-[90dvh] flex-col">
       <header className="flex shrink-0 items-center justify-between gap-4 border-b border-gray-100 px-5 py-4">
         <h2 id="fpo-dialog-title" className="min-w-0 break-words text-xl font-bold">{title}</h2>
-        <button type="button" autoFocus onClick={onClose} aria-label="Close FPO members"
+        <button type="button" autoFocus onClick={onClose} aria-label={closeLabel}
           className="flex shrink-0 items-center gap-1 rounded-lg px-3 py-2 text-sm font-bold text-gray-600 hover:bg-gray-100 focus-visible:outline-brand-700"><X size={18}/>Close</button>
       </header>
       <div className="overflow-y-auto overscroll-contain p-5">{children}</div>

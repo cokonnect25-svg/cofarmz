@@ -79,7 +79,7 @@ function renderFarmer(farmer: ReportFarmer, index: number) {
   return `<article class="farmer"><h3>${index + 1}. ${escapeHtml(farmer.name || 'Unnamed farmer')}</h3><dl>${fields.map(([label, value]) => `<div class="field"><dt>${label}</dt><dd>${escapeHtml(value == null || value === '' ? 'Not provided' : value)}</dd></div>`).join('')}</dl></article>`;
 }
 
-export function renderFpoReport(fpos: ReportFpo[], farmers: ReportFarmer[], districtOnly: boolean, generatedAt = new Date()) {
+export function renderFpoReport(fpos: ReportFpo[], farmers: ReportFarmer[], districtOnly: boolean, generatedAt = new Date(), showToolbar = true) {
   const title = districtOnly ? `${fpos[0]?.district || 'District'} Digital FPO` : 'All Digital FPOs';
   const grouped = new Map<string, ReportFarmer[]>();
   for (const farmer of farmers) {
@@ -97,7 +97,7 @@ export function renderFpoReport(fpos: ReportFpo[], farmers: ReportFarmer[], dist
     .farmer{margin:14px 0;border:1px solid #d4ded7;break-inside:avoid}.farmer h3{margin:0;padding:10px 14px;background:#edf5ef;font-size:15px;overflow-wrap:anywhere;break-after:avoid}.farmer dl{margin:0;padding:6px 14px}.field{display:grid;grid-template-columns:145px minmax(0,1fr);gap:12px;padding:5px 0;border-bottom:1px solid #edf1ee;break-inside:avoid}.field:last-child{border:0}dt{font-weight:bold}dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}.empty{padding:14px;border:1px solid #d4ded7}
     @page{size:A4 portrait;margin:15mm} @media print{body{background:white;font-size:11px}main{max-width:none;margin:0;padding:0}.toolbar{display:none}h1{font-size:23px}h2{font-size:16px}table{font-size:10px}th,td{padding:7px}.district+.district{break-before:page}}
   </style></head><body><main>
-  <div class="toolbar"><button type="button" onclick="window.print()">Save as PDF / Print</button><p>Select <strong>Save as PDF</strong> in the print dialog to download this report.</p></div>
+  ${showToolbar ? '<div class="toolbar"><button type="button" onclick="window.print()">Save as PDF / Print</button><p>Select <strong>Save as PDF</strong> in the print dialog to download this report.</p></div>' : ''}
   <h1>${escapeHtml(title)}</h1><p class="muted">CoFarmz - district communities and assigned farmers</p>
   <p class="muted">Generated: ${escapeHtml(generatedAt.toLocaleString('en-IN'))}</p>
   <div class="summary"><strong>${fpos.length} Digital FPO${fpos.length === 1 ? '' : 's'} | ${farmers.length} tagged farmers</strong><p>Includes active and inactive FPO memberships. Farmers without an FPO assignment are excluded.${districtOnly ? '' : ' Covers all districts, regardless of directory search or status filters.'}</p></div>
