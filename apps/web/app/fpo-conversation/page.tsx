@@ -36,14 +36,14 @@ function Conversation() {
     const timer=setInterval(()=>{if(document.visibilityState==='visible'&&offset===0)setVersion(v=>v+1);},15000);
     return ()=>clearInterval(timer);
   },[offset]);
-  if(loading)return <p className="p-6">Loading…</p>;
+  if(loading)return <p className="p-6">Loadingâ€¦</p>;
   if(!user)return <Link href="/login" className="block p-6">Sign in to view your conversation</Link>;
   return <main className="mx-auto max-w-2xl space-y-4 p-5 pb-28">
     <Link href="/chat" className="text-brand-700 font-bold">? Messages</Link>
     <h1 className="text-xl font-bold">{thread?.name||'FPO conversation'}</h1>
     {reviewer&&thread&&<p className="text-sm text-gray-500">Conversation with {thread.farmer_name}</p>}
     <button disabled={busy} onClick={()=>{setOffset(0);setVersion(v=>v+1);}} className="text-sm font-bold text-brand-700">Refresh conversation</button>
-    {busy&&<p role="status" className="text-sm text-gray-500">Updating…</p>}
+    {busy&&<p role="status" className="text-sm text-gray-500">Updatingâ€¦</p>}
     {error&&<p role="alert" className="text-red-700">{error}</p>}
     {next!==null&&<button disabled={busy} onClick={()=>setOffset(next)} className="block text-sm text-brand-700">Load older messages</button>}
     <div className="space-y-3">{[...messages].reverse().map(m=><article key={m.id} className={`max-w-[90%] rounded-2xl p-4 ${m.from_fpo===reviewer?'ml-auto bg-brand-50':'bg-gray-100'}`}><p className="text-xs font-bold text-brand-700">{m.from_fpo?'FPO admin':reviewer?thread?.farmer_name:'You'}</p><p className="whitespace-pre-wrap break-words mt-1">{m.body}</p><time className="text-xs text-gray-500">{new Date(m.created_at).toLocaleString()}</time></article>)}</div>
@@ -54,8 +54,8 @@ function Conversation() {
         const data=await r.json();if(!r.ok)throw new Error(data.error||'Unable to send message');
         setBody('');setOffset(0);setVersion(v=>v+1);
       }catch(e){setSendError(e instanceof Error?e.message:'Unable to send message');}finally{setSending(false);}
-    }}><label className="block text-sm font-bold">Message<textarea required maxLength={5000} value={body} disabled={sending} onChange={e=>setBody(e.target.value)} className="mt-1 block w-full rounded-xl border p-3" rows={3}/></label><button disabled={sending||!body.trim()} className="rounded-xl bg-brand-700 px-5 py-3 text-white disabled:opacity-50">{sending?'Sending…':'Send message'}</button>{sendError&&<p role="alert" className="text-red-700">{sendError}</p>}</form>}
+    }}><label className="block text-sm font-bold">Message<textarea required maxLength={5000} value={body} disabled={sending} onChange={e=>setBody(e.target.value)} className="mt-1 block w-full rounded-xl border p-3" rows={3}/></label><button disabled={sending||!body.trim()} className="rounded-xl bg-brand-700 px-5 py-3 text-white disabled:opacity-50">{sending?'Sendingâ€¦':'Send message'}</button>{sendError&&<p role="alert" className="text-red-700">{sendError}</p>}</form>}
     {thread&&thread.status!=='active'&&<p className="text-sm text-gray-500">This FPO is inactive. Your conversation history is still available.</p>}
   </main>;
 }
-export default function FpoConversationPage(){return <Suspense fallback={<p className="p-6">Loading…</p>}><Conversation/></Suspense>;}
+export default function FpoConversationPage(){return <Suspense fallback={<p className="p-6">Loadingâ€¦</p>}><Conversation/></Suspense>;}
