@@ -1,4 +1,5 @@
 import { auth } from '@/lib/auth';
+import { getSignedCookieUser } from '@/lib/session-user';
 import sql from '@/app/api/utils/sql';
 import { NextResponse } from 'next/server';
 
@@ -16,8 +17,9 @@ export async function requireActor(request: Request, admin = false) {
     throw new FpoError('JSON request required',415);
   }
   const session = await auth.api.getSession({ headers: request.headers });
-  if (!session?.user?.id) throw new FpoError('Sign in required', 401);
-  const [actor] = await sql`SELECT id,role FROM "user" WHERE id=${session.user.id}`;
+  const userId = session?.user?.id || (await getSignedCookieUser(request.headers))?.id;
+  if (!userId) throw new FpoError('Sign in required', 401);
+  const [actor] = await sql`SELECT id,role FROM "user" WHERE id=${userId}`;
   if (!actor) throw new FpoError('Sign in required', 401);
   if (admin && !isSuperAdmin(actor.role)) throw new FpoError('Super Admin access required', 403);
   return actor;
