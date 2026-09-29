@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const ts = require('typescript');
 const Module = require('node:module');
-let native = true, failCookie = false, sent;
+let native = true, failCookie = false, sent, storedToken = null;
 global.window = { location: { origin: 'https://backend.example' } };
 global.fetch = async (url, options) => { sent = { url, options }; return { ok: true }; };
 const mod = new Module('fpo-fetch-test', module);
@@ -15,6 +15,7 @@ mod.require = name => {
       return { 'cofarmz.session_token': 'signed%2Btoken' };
     } },
   };
+  if (name === '@/lib/mobile-credential') return { getMobileCredential: () => storedToken };
   if (name === '@/lib/api') return { getApiUrl: path => 'https://backend.example' + path };
   return require(name);
 };
@@ -34,6 +35,12 @@ mod._compile(ts.transpileModule(fs.readFileSync('lib/fpo-fetch.ts', 'utf8'), { c
   native = true; failCookie = true;
   await fpoFetch('/api/digital-fpos');
   assert.equal(sent.options.credentials, 'include');
+  storedToken = 'signed-login-token';
+  await fpoFetch('/api/digital-fpos');
+  assert.equal(sent.options.headers.get('Authorization'), 'Bearer signed-login-token');
+  native = false;
+  await fpoFetch('/api/digital-fpos');
+  assert.equal(sent.options.headers.get('Authorization'), null);
   await assert.rejects(fpoFetch('https://untrusted.example/api/'), /Expected an API path/);
   console.log('PASS: Android signed credential forwarding, web cookies, plugin fallback, request preservation, external URL rejection');
 })().catch(e => { console.error(e); process.exitCode = 1; });

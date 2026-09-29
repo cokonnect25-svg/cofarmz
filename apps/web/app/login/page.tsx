@@ -118,7 +118,7 @@ const handleGoogleSignIn = async () => {
       }
 
       if (data.user) {
-        storeMobileSession(data.user);
+        storeMobileSession(data.user, data.signedToken);
         await fetch(getApiUrl('/api/analytics'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

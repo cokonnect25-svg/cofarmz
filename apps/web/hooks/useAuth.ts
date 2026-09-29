@@ -5,12 +5,19 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getApiUrl } from '@/lib/api';
 import { Capacitor } from "@capacitor/core";
+import { storeMobileCredential, clearMobileCredential } from '@/lib/mobile-credential';
+import { clearFpoCache } from '@/lib/fpo-cache';
 
 const MOBILE_USER_KEY = "cofarmz_mobile_user";
 const MOBILE_EXPIRY_KEY = "cofarmz_mobile_expiry";
 
-export function storeMobileSession(user: any) {
+export function storeMobileSession(user: any, signedToken?: string | null) {
   if (typeof window === "undefined") return;
+  let sameUser = false;
+  try { sameUser = JSON.parse(localStorage.getItem(MOBILE_USER_KEY) || 'null')?.id === user.id; } catch {}
+  if (!sameUser) clearFpoCache();
+  // Profile updates must not erase the credential saved at login.
+  if (signedToken !== undefined || !sameUser) storeMobileCredential(signedToken || undefined);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   localStorage.setItem(MOBILE_USER_KEY, JSON.stringify(user));
   localStorage.setItem(MOBILE_EXPIRY_KEY, expiresAt);
@@ -18,6 +25,8 @@ export function storeMobileSession(user: any) {
 
 export function clearMobileSession() {
   if (typeof window === "undefined") return;
+  clearMobileCredential();
+  clearFpoCache();
   localStorage.removeItem(MOBILE_USER_KEY);
   localStorage.removeItem(MOBILE_EXPIRY_KEY);
 }
@@ -117,7 +126,7 @@ export function useAuth() {
     const result = await authClient.signIn.email({ email, password });
     if (result.error) throw new Error(result.error.message || "Invalid email or password");
     if (isMobile && result.data?.user) {
-      storeMobileSession(result.data.user);
+      storeMobileSession(result.data.user, null);
       setMobileUser(result.data.user);
     }
     return result;
@@ -160,7 +169,7 @@ async function signUp(
   }
 
   if (isMobile && result.data?.user) {
-    storeMobileSession({ ...result.data.user, role, supplier_types: supplierTypes });
+    storeMobileSession({ ...result.data.user, role, supplier_types: supplierTypes }, null);
     setMobileUser({ ...result.data.user, role, supplier_types: supplierTypes });
   }
   return result;
