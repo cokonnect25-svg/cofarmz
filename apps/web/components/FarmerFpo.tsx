@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import FpoGroupChat from '@/components/FpoGroupChat';
 import FpoProfileActions from '@/components/FpoProfileActions';
 import type { FpoContact } from '@/lib/fpo-profile';
 import { ArrowLeft, ArrowUpRight, Building2, CheckCheck, ChevronRight, MapPin, MessageCircle, RefreshCw, Search, X } from 'lucide-react';
@@ -27,6 +28,7 @@ export default function FarmerFpo({ mode }: { mode: 'directory' | 'group' }) {
   const [mine, setMine] = useState<Assignment | null>(null);
   const [selected, setSelected] = useState<Profile | null>(null);
   const [open, setOpen] = useState(false);
+  useEffect(()=>{if(new URLSearchParams(window.location.search).get('fpoGroup')==='1')setOpen(true);},[]);
   const [messages, setMessages] = useState<Update[]>([]);
   const [unread, setUnread] = useState(0);
   const [error, setError] = useState('');
@@ -93,6 +95,7 @@ export default function FarmerFpo({ mode }: { mode: 'directory' | 'group' }) {
         <ChevronRight size={18} className={`shrink-0 text-gray-400 transition ${open ? 'rotate-90' : ''}`}/>
       </button>
       {open && <div id="fpo-group-feed" className="border-t border-brand-100 bg-brand-50/50 p-4">
+        <FpoGroupChat key={`${userId}:${mine.digital_fpo_id}`} fpoId={mine.digital_fpo_id} userId={userId}/>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-gray-500">Announcements from your FPO</p>{unread > 0 && <button disabled={marking} onClick={async () => { setMarking(true); try { await request('/api/digital-fpos/messages', true); setUnread(0); } catch(e) { setError(e instanceof Error ? e.message : 'Unable to mark as read'); } finally { setMarking(false); } }} className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 disabled:opacity-50"><CheckCheck size={15}/>{marking ? 'Updating...' : 'Mark all read'}</button>}</div>
         {!messages.length && <div className="py-6 text-center"><MessageCircle className="mx-auto mb-2 text-brand-500"/><p className="font-bold text-gray-800">Your group is ready</p><p className="mt-1 text-sm text-gray-500">New FPO announcements will appear here.</p></div>}
         <div className="max-h-[55dvh] space-y-3 overflow-y-auto">{messages.map(m => <article key={m.id} className="rounded-2xl rounded-tl-sm border border-gray-100 bg-white p-4"><h3 className="font-bold text-gray-900">{m.title}</h3><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-600">{m.body}</p><time dateTime={m.created_at} className="mt-3 block text-[11px] text-gray-400">{new Date(m.created_at).toLocaleString()}</time></article>)}</div>
@@ -105,7 +108,7 @@ export default function FarmerFpo({ mode }: { mode: 'directory' | 'group' }) {
     <article className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-soft">
       <div className="bg-brand-700 p-6 text-white"><Building2 size={32} className="mb-5"/><p className="text-xs font-bold uppercase tracking-widest text-brand-100">CoFarmz Digital FPO</p><h2 ref={profileHeading} tabIndex={-1} className="mt-2 text-2xl font-black outline-none">{title(selected)}</h2><p className="mt-2 flex items-center gap-1 text-sm text-brand-100"><MapPin size={15}/>{selected.district}, {selected.state}</p></div>
       <div className="space-y-5 p-6"><span className="inline-flex rounded-full bg-brand-50 px-3 py-1 text-xs font-bold capitalize text-brand-700">{selected.status}</span><div><h3 className="font-bold text-gray-900">About this FPO</h3><p className="mt-2 text-sm leading-relaxed text-gray-500">The CoFarmz Digital FPO for farmers in {selected.district}, {selected.state}. Assigned farmers receive district group announcements in Messages.</p></div><div className="rounded-xl bg-gray-50 p-3"><p className="text-xs text-gray-500">Registered name</p><p className="mt-1 break-words text-sm font-medium text-gray-700">{selected.name}</p></div>
-        <FpoProfileActions key={selected.id} profile={selected} canMessage={user?.role === 'farmer' && selected.status === 'active'}/>
+        <FpoProfileActions groupMessage={mine?.digital_fpo_id === selected.id && mine.assignment_status === "assigned"} key={selected.id} profile={selected} canMessage={user?.role === 'farmer' && selected.status === 'active'}/>
         {mine?.digital_fpo_id === selected.id && mine.assignment_status === 'assigned' && <Link href="/chat" className="flex items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 py-3 text-sm font-bold text-white"><MessageCircle size={18}/>Open my group</Link>}
       </div>
     </article>

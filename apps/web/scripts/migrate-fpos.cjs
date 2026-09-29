@@ -11,6 +11,8 @@ const sql = require('postgres')(process.env.DATABASE_URL, {ssl:{rejectUnauthoriz
   await sql.unsafe(fs.readFileSync(path.join(__dirname,'../migrations/20260925_fpo_localities.sql'),'utf8'));
   await sql.unsafe(fs.readFileSync(path.join(__dirname,'../migrations/20260927_fpo_admin_inbox.sql'),'utf8'));
   await sql.unsafe(fs.readFileSync(path.join(__dirname,'../migrations/20260927_fpo_profile.sql'),'utf8'));
+  await sql.unsafe(fs.readFileSync(path.join(__dirname,'../migrations/20260930_fpo_conversations.sql'),'utf8'));
+  await sql.unsafe(fs.readFileSync(path.join(__dirname,'../migrations/20260930_fpo_group_chat.sql'),'utf8'));
   const catalogue = JSON.parse(fs.readFileSync(path.join(__dirname,'../data/fpo-districts.json'),'utf8'));
   await sql.begin(async tx => {
     for (const d of catalogue.districts) {

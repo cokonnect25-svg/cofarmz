@@ -28,9 +28,9 @@ export async function GET(request: Request) {
     const offset = Number(params.get('offset') || 0);
     if (!group || !uuid.test(group)) throw new FpoError('Valid group required');
     if (!Number.isSafeInteger(offset) || offset < 0) throw new FpoError('Invalid offset');
-    const rows = await sql`SELECT m.id,m.body,m.created_at,u.name AS sender_name,m.sender_id
+    const rows = await sql`SELECT m.id,m.digital_fpo_id,m.body,m.created_at,u.name AS sender_name,m.sender_id
       FROM fpo_admin_inbox m JOIN farmer_groups g ON g.digital_fpo_id=m.digital_fpo_id
-      JOIN "user" u ON u.id=m.sender_id WHERE g.id=${group}
+      JOIN "user" u ON u.id=m.sender_id WHERE g.id=${group} AND m.recipient_id IS NULL
       ORDER BY m.created_at DESC,m.id DESC LIMIT 51 OFFSET ${offset}`;
     return NextResponse.json({ messages: rows.slice(0,50), next: rows.length > 50 ? offset + 50 : null }, { headers });
   } catch (e) { return fpoError(e); }

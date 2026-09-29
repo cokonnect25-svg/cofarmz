@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fpoFetch } from '@/lib/fpo-fetch';
-type Message = { id: string; body: string; sender_id: string; sender_name: string; created_at: string };
+type Message = { id: string; body: string; sender_id: string; sender_name: string; created_at: string; digital_fpo_id: string };
 export default function FpoAdminInbox({ groupId }: { groupId: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [next, setNext] = useState<number | null>(null);
@@ -26,7 +26,7 @@ export default function FpoAdminInbox({ groupId }: { groupId: string }) {
     {busy && <p role="status">Loading messages...</p>}
     {error && <p role="alert" className="text-red-700">{error}</p>}
     {!busy && !error && !messages.length && <p className="text-sm text-gray-500">No farmer enquiries yet.</p>}
-    {messages.map(message => <article key={message.id} className="rounded-xl bg-gray-50 p-4"><Link href={`/farmer-profile?id=${encodeURIComponent(message.sender_id)}`} className="font-bold text-brand-700">{message.sender_name}</Link><p className="mt-2 whitespace-pre-wrap break-words text-sm">{message.body}</p><time className="mt-2 block text-xs text-gray-500">{new Date(message.created_at).toLocaleString()}</time></article>)}
+    {messages.map(message => <article key={message.id} className="rounded-xl bg-gray-50 p-4"><Link href={`/farmer-profile?id=${encodeURIComponent(message.sender_id)}`} className="font-bold text-brand-700">{message.sender_name}</Link><p className="mt-2 whitespace-pre-wrap break-words text-sm">{message.body}</p><time className="mt-2 block text-xs text-gray-500">{new Date(message.created_at).toLocaleString()}</time><Link className="mt-2 block text-sm font-bold text-brand-700" href={`/fpo-conversation?fpoId=${encodeURIComponent(message.digital_fpo_id)}&farmerId=${encodeURIComponent(message.sender_id)}`}>Open conversation / Reply</Link></article>)}
     {next !== null && <button disabled={busy} onClick={() => error ? setVersion(v => v + 1) : setOffset(next)} className="text-sm font-bold text-brand-700">{error ? 'Retry' : 'Load older enquiries'}</button>}
   </section>;
 }

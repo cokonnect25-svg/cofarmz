@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Phone, MapPin, MessageCircle } from 'lucide-react';
 import { fpoMapUrl, type FpoContact } from '@/lib/fpo-profile';
 import FpoContactAdmin from '@/components/FpoContactAdmin';
-export default function FpoProfileActions({ profile, canMessage }: { profile: FpoContact & { id: string }; canMessage: boolean }) {
+export default function FpoProfileActions({ profile, canMessage, groupMessage = false }: { profile: FpoContact & { id: string }; canMessage: boolean; groupMessage?: boolean }) {
   const [open, setOpen] = useState(false);
   const map = fpoMapUrl(profile);
   const phone = profile.contact_phone?.replace(/[^+0-9]/g, '');
@@ -16,6 +16,6 @@ export default function FpoProfileActions({ profile, canMessage }: { profile: Fp
     </div>
     {(!phone || !map) && <p className="text-xs text-gray-500">{!phone && 'Phone number not added. '}{!map && 'Office location not added.'}</p>}
     {profile.office_address && <p className="text-sm text-gray-600">{profile.office_address}</p>}
-    {open && canMessage && <FpoContactAdmin fpoId={profile.id}/>}
+    {open && canMessage && <FpoContactAdmin fpoId={profile.id} groupMessage={groupMessage}/>}
   </section>;
 }
