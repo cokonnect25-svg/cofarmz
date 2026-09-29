@@ -7,14 +7,20 @@ export async function getSignedCookieUser(headers: Headers) {
   const secret = process.env.BETTER_AUTH_SECRET;
   if (!secret) return null;
   const cookies = (headers.get('cookie') || '').split(';');
+  const values: string[] = [];
+  const bearer = headers.get('authorization')?.match(/^Bearer (\S+)$/i)?.[1];
+  if (bearer) values.push(bearer);
   for (const name of [
     '__Secure-cofarmz.session_token', '__Host-cofarmz.session_token', 'cofarmz.session_token',
     '__Secure-better-auth.session_token', '__Host-better-auth.session_token', 'better-auth.session_token',
   ]) {
     const cookie = cookies.find(value => value.trim().startsWith(`${name}=`));
     if (!cookie) continue;
+    values.push(cookie.trim().slice(name.length + 1));
+  }
+  for (const rawValue of values) {
     let value: string;
-    try { value = decodeURIComponent(cookie.trim().slice(name.length + 1)); }
+    try { value = decodeURIComponent(rawValue); }
     catch { continue; }
     const dot = value.lastIndexOf('.');
     if (dot <= 0) continue;

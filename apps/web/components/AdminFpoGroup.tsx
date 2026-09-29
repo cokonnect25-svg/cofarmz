@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import FpoAdminInbox from '@/components/FpoAdminInbox';
-import { getApiUrl } from '@/lib/api';
+import { fpoFetch } from '@/lib/fpo-fetch';
 import FpoPdfExport from '@/components/FpoPdfExport';
 
 export default function AdminFpoGroup({groupId}: {groupId:string}) {
@@ -19,8 +19,8 @@ export default function AdminFpoGroup({groupId}: {groupId:string}) {
     async function load() {
       try {
         const responses=await Promise.all([
-          fetch(getApiUrl(`/api/admin/fpo/messages?group=${groupId}`),{credentials:'include',cache:'no-store',signal:controller.signal}),
-          fetch(getApiUrl(`/api/admin/fpo?group=${groupId}`),{credentials:'include',cache:'no-store',signal:controller.signal}),
+          fpoFetch(`/api/admin/fpo/messages?group=${groupId}`,{credentials:'include',cache:'no-store',signal:controller.signal}),
+          fpoFetch(`/api/admin/fpo?group=${groupId}`,{credentials:'include',cache:'no-store',signal:controller.signal}),
         ]);
         const [chat,people]=await Promise.all(responses.map(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.error||'Unable to load group');return d;}));
         setMessages(chat.messages);setNextMessage(chat.next);setMembers(people.farmers);setNextMember(people.next);
@@ -33,7 +33,7 @@ export default function AdminFpoGroup({groupId}: {groupId:string}) {
     setBusy(true);setError('');
     try {
       const path=kind==='messages'?`/api/admin/fpo/messages?group=${groupId}&offset=${nextMessage}`:`/api/admin/fpo?group=${groupId}&after=${encodeURIComponent(nextMember||'')}`;
-      const r=await fetch(getApiUrl(path),{credentials:'include',cache:'no-store'});
+      const r=await fpoFetch(path,{credentials:'include',cache:'no-store'});
       const d=await r.json();if(!r.ok)throw new Error(d.error||'Unable to load group');
       if(kind==='messages'){setMessages(old=>[...old,...d.messages]);setNextMessage(d.next);}
       else{setMembers(old=>[...old,...d.farmers]);setNextMember(d.next);}

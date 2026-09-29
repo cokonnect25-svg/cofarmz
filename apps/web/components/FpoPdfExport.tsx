@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import FpoGroupDialog from '@/components/FpoGroupDialog';
 import { Download } from 'lucide-react';
-import { getApiUrl } from '@/lib/api';
+import { fpoFetch } from '@/lib/fpo-fetch';
 import { loadFpoReport, renderFpoReport } from '@/lib/fpo-report';
 
 export default function FpoPdfExport({ groupId }: { groupId?: string }) {
@@ -18,7 +18,7 @@ export default function FpoPdfExport({ groupId }: { groupId?: string }) {
     setBusy(true);
     try {
       const read = async (path: string) => {
-        const response = await fetch(getApiUrl(path), { credentials: 'include', cache: 'no-store' });
+        const response = await fpoFetch(path, { credentials: 'include', cache: 'no-store' });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Unable to prepare PDF report');
         return data;

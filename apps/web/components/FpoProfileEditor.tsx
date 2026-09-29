@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { getApiUrl } from '@/lib/api';
+import { fpoFetch } from '@/lib/fpo-fetch';
 import type { FpoContact } from '@/lib/fpo-profile';
 export default function FpoProfileEditor({ profile, onSaved }: { profile: FpoContact & { id: string }; onSaved: (contact: FpoContact) => void }) {
   const [phone, setPhone] = useState(profile.contact_phone || '');
@@ -13,7 +13,7 @@ export default function FpoProfileEditor({ profile, onSaved }: { profile: FpoCon
     <form className="mt-3 space-y-3" onChange={() => setSaved(false)} onSubmit={async event => {
       event.preventDefault(); if (busy) return; setBusy(true); setError(''); setSaved(false);
       try {
-        const response = await fetch(getApiUrl(`/api/digital-fpos/${profile.id}`), { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contact_phone: phone, office_address: address, latitude: latitude.trim() ? Number(latitude) : null, longitude: longitude.trim() ? Number(longitude) : null }) });
+        const response = await fpoFetch(`/api/digital-fpos/${profile.id}`, { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contact_phone: phone, office_address: address, latitude: latitude.trim() ? Number(latitude) : null, longitude: longitude.trim() ? Number(longitude) : null }) });
         const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Unable to save profile');
         onSaved(data); setSaved(true);
       } catch (e) { setError(e instanceof Error ? e.message : 'Unable to save profile'); } finally { setBusy(false); }

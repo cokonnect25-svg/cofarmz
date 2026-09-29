@@ -27,9 +27,12 @@ const headers = cookie => new Headers({ cookie });
   const before = calls;
   for (const value of ['valid-token', '%ZZ', signed + 'tampered']) assert.equal(await getSignedCookieUser(headers(`cofarmz.session_token=${value}`)), null);
   assert.equal(calls, before);
+  assert.equal((await getSignedCookieUser(new Headers({ authorization: `Bearer ${signed}` }))).id, 'farmer');
+  assert.equal(await getSignedCookieUser(new Headers({ authorization: `Bearer ${signed}tampered` })), null);
   assert.equal(await getSignedCookieUser(new Headers({ 'x-user-id': 'farmer' })), null);
   rows = []; // Expired/revoked sessions are filtered by the database.
   assert.equal(await getSignedCookieUser(headers(`cofarmz.session_token=${signed}`)), null);
+  assert.equal(await getSignedCookieUser(new Headers({ authorization: `Bearer ${signed}` })), null);
   let session = null;
   rows = [{ id: 'farmer', role: 'farmer' }];
   const { requireActor } = load('lib/fpo-access.ts', {
@@ -41,6 +44,7 @@ const headers = cookie => new Headers({ cookie });
   });
   const request = cookie => new Request('http://localhost/api/digital-fpos', { headers: headers(cookie) });
   assert.equal((await requireActor(request(`cofarmz.session_token=${signed}`))).id, 'farmer');
+  assert.equal((await requireActor(new Request('http://localhost/api/digital-fpos', { headers: { authorization: `Bearer ${signed}` } }))).id, 'farmer');
   await assert.rejects(requireActor(request(`cofarmz.session_token=${signed}`), true), e => e.status === 403);
   await assert.rejects(requireActor(request('')), e => e.status === 401);
   session = { user: { id: 'farmer' } };

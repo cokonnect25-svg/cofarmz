@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { getApiUrl } from '@/lib/api';
+import { fpoFetch } from '@/lib/fpo-fetch';
 
 export default function FpoContactAdmin({ fpoId }: { fpoId: string }) {
   const [body, setBody] = useState('');
@@ -12,7 +12,7 @@ export default function FpoContactAdmin({ fpoId }: { fpoId: string }) {
     if (busy) return;
     setBusy(true); setError(''); setSent(false);
     try {
-      const response = await fetch(getApiUrl('/api/digital-fpos/contact'), { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fpoId, body }) });
+      const response = await fpoFetch('/api/digital-fpos/contact', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fpoId, body }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Unable to send message');
       setBody(''); setSent(true);

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getApiUrl } from '@/lib/api';
+import { fpoFetch } from '@/lib/fpo-fetch';
 type Message = { id: string; body: string; sender_id: string; sender_name: string; created_at: string };
 export default function FpoAdminInbox({ groupId }: { groupId: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -13,7 +13,7 @@ export default function FpoAdminInbox({ groupId }: { groupId: string }) {
   useEffect(() => {
     const controller = new AbortController();
     setBusy(true); setError('');
-    fetch(getApiUrl(`/api/digital-fpos/contact?group=${encodeURIComponent(groupId)}&offset=${offset}`), { credentials: 'include', cache: 'no-store', signal: controller.signal })
+    fpoFetch(`/api/digital-fpos/contact?group=${encodeURIComponent(groupId)}&offset=${offset}`, { credentials: 'include', cache: 'no-store', signal: controller.signal })
       .then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Unable to load inbox'); return data; })
       .then(data => { if (!controller.signal.aborted) { setMessages(old => offset ? [...old, ...data.messages] : data.messages); setNext(data.next); } })
       .catch(e => { if (!controller.signal.aborted) setError(e.message); })

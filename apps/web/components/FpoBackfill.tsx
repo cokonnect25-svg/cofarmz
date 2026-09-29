@@ -1,6 +1,6 @@
 ﻿'use client';
 import {useEffect,useRef,useState} from 'react';
-import {getApiUrl} from '@/lib/api';
+import { fpoFetch } from '@/lib/fpo-fetch';
 
 type Summary={processed:number;assigned:number;pending_fpo:number;pending_location:number;inactive_fpo:number;errors:number};
 const empty=():Summary=>({processed:0,assigned:0,pending_fpo:0,pending_location:0,inactive_fpo:0,errors:0});
@@ -19,13 +19,13 @@ export default function FpoBackfill({onComplete}:{onComplete:()=>Promise<void>})
   try{
    if(provision){
     setMode('Creating district FPOs');
-    const response=await fetch(getApiUrl('/api/admin/fpo'),{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'provision'})});
+    const response=await fpoFetch('/api/admin/fpo',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'provision'})});
     const data=await response.json();if(!response.ok)throw new Error(data.error||'Unable to create district FPOs');
     if(mounted.current){setProvisioned(`${data.districts} districts covered: ${data.created} FPOs created, ${data.existing} existing FPOs preserved.`);setMode('Assignment');}
    }
    if(stop.current)return;
    do{
-    const response:Response=await fetch(getApiUrl('/api/admin/fpo'),{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'process',after:cursor,dry_run:dryRun})});
+    const response:Response=await fpoFetch('/api/admin/fpo',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'process',after:cursor,dry_run:dryRun})});
     const data:{results:any[];next:string|null;error?:string}=await response.json();if(!response.ok)throw new Error(data.error||'Unable to process farmers');
     for(const row of data.results){totals.processed++;if(row.error)totals.errors++;else if(row.assignment_status in totals)totals[row.assignment_status as keyof Summary]++;}
     if(mounted.current){setSummary({...totals});setRows(data.results);}

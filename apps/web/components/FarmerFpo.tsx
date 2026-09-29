@@ -6,13 +6,13 @@ import FpoProfileActions from '@/components/FpoProfileActions';
 import type { FpoContact } from '@/lib/fpo-profile';
 import { ArrowLeft, ArrowUpRight, Building2, CheckCheck, ChevronRight, MapPin, MessageCircle, RefreshCw, Search, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { getApiUrl } from '@/lib/api';
+import { fpoFetch } from '@/lib/fpo-fetch';
 
 type Profile = FpoContact & { id: string; name: string; state: string; district: string; status: string };
 type Assignment = { name: string; digital_fpo_id: string; assignment_status: string; district: string; state: string };
 type Update = { id: string; title: string; body: string; created_at: string };
 async function request(path: string, read = false, signal?: AbortSignal) {
-  const response = await fetch(getApiUrl(path), { credentials: 'include', cache: 'no-store', signal,
+  const response = await fpoFetch(path, { credentials: 'include', cache: 'no-store', signal,
     ...(read ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' } : {}) });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || 'Unable to load Digital FPOs');

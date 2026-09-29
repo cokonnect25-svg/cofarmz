@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {ArrowLeft, Building2, ChevronRight, CircleHelp, Plus, Search, Users} from 'lucide-react';
 import {useAuth} from '@/hooks/useAuth';
-import {getApiUrl} from '@/lib/api';
+import { fpoFetch } from '@/lib/fpo-fetch';
 import FpoBackfill from '@/components/FpoBackfill';
 import AdminFpoGroup from '@/components/AdminFpoGroup';
 import FpoProfileEditor from '@/components/FpoProfileEditor';
@@ -13,7 +13,7 @@ import DistrictSelect from '@/components/DistrictSelect';
 import FpoPdfExport from '@/components/FpoPdfExport';
 
 async function api(path:string,body?:any,method='POST') {
-  const r=await fetch(getApiUrl(path),{credentials:'include',cache:'no-store',...(body?{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});
+  const r=await fpoFetch(path,{credentials:'include',cache:'no-store',...(body?{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});
   const data=await r.json();if(!r.ok)throw new Error(data.error||'Request failed');return data;
 }
 export default function DigitalFposPage() {

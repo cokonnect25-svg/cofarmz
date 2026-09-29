@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Building2, ChevronRight, MapPin, MessageCircle } from 'lucide-react';
-import { getApiUrl } from '@/lib/api';
+import { fpoFetch } from '@/lib/fpo-fetch';
 
 export default function MyDigitalFpo() {
   const [mine,setMine]=useState<any>(null);
@@ -12,7 +12,7 @@ export default function MyDigitalFpo() {
   useEffect(()=>{
     const controller=new AbortController();
     setLoading(true);setError('');
-    fetch(getApiUrl('/api/digital-fpos'),{credentials:'include',cache:'no-store',signal:controller.signal})
+    fpoFetch('/api/digital-fpos',{credentials:'include',cache:'no-store',signal:controller.signal})
       .then(async r=>{if(!r.ok)throw new Error('Unable to load your Digital FPO');const data=await r.json();if(!controller.signal.aborted)setMine(data.mine);})
       .catch(e=>{if(!controller.signal.aborted)setError(e.message);})
       .finally(()=>{if(!controller.signal.aborted)setLoading(false);});
