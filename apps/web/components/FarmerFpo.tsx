@@ -21,13 +21,13 @@ async function request(path: string, read = false, signal?: AbortSignal) {
 }
 const title = (fpo: { district?: string; name?: string }) => fpo.district ? `${fpo.district} Digital FPO` : fpo.name || 'My Digital FPO';
 
-export default function FarmerFpo({ mode }: { mode: 'directory' | 'group' }) {
+export default function FarmerFpo({ mode }: { mode: 'directory' | 'group' | 'thread' }) {
   const { user } = useAuth();
   const userId = user?.id;
   const [fpos, setFpos] = useState<Profile[]>([]);
   const [mine, setMine] = useState<Assignment | null>(null);
   const [selected, setSelected] = useState<Profile | null>(null);
-  const [open, setOpen] = useState(mode === 'group');
+  const [open, setOpen] = useState(mode !== 'directory');
   useEffect(()=>{if(new URLSearchParams(window.location.search).get('fpoGroup')==='1')setOpen(true);},[]);
   const [messages, setMessages] = useState<Update[]>([]);
   const [unread, setUnread] = useState(0);
@@ -58,7 +58,7 @@ export default function FarmerFpo({ mode }: { mode: 'directory' | 'group' }) {
         // The farmer chat must remain available if the announcement feed fails.
         let feed = { messages: [], unread: 0 };
         let feedError = '';
-        if (mode === 'group' && data.mine?.assignment_status === 'assigned') {
+        if (mode !== 'directory' && data.mine?.assignment_status === 'assigned') {
           try { feed = await request('/api/digital-fpos/messages', false, controller.signal); }
           catch { feedError = 'Announcements could not be refreshed.'; }
         }
@@ -73,7 +73,7 @@ export default function FarmerFpo({ mode }: { mode: 'directory' | 'group' }) {
       } finally { fetching = false; if (!controller.signal.aborted) setLoading(false); }
     }
     load();
-    const timer = mode === 'group' ? setInterval(load, 30000) : null;
+    const timer = mode !== 'directory' ? setInterval(load, 30000) : null;
     return () => { controller.abort(); profileRequest.current += 1; if (timer) clearInterval(timer); };
   }, [userId, mode, retry]);
 
@@ -92,23 +92,14 @@ export default function FarmerFpo({ mode }: { mode: 'directory' | 'group' }) {
   if (!userId) return null;
   if (loading) return <div role="status" aria-label="Loading Digital FPOs" className="mx-6 my-4 space-y-3 animate-pulse"><div className="h-24 rounded-2xl bg-brand-50"/><div className="h-4 w-1/2 rounded bg-gray-100"/></div>;
   const errorBanner = error && <div role="alert" className="rounded-2xl bg-red-50 p-4 text-sm text-red-700"><p>{error}</p><button onClick={() => setRetry(n => n + 1)} className="mt-2 inline-flex items-center gap-2 font-bold"><RefreshCw size={16}/>Try again</button></div>;
-  if (mode === 'group') {
+  if (mode !== 'directory') {
     if (error) return <div className="mx-6 my-3">{errorBanner}</div>;
     if (!mine || mine.assignment_status !== 'assigned') return <section className="mx-6 mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-5"><h2 className="font-bold">Your FPO group is not available yet</h2><p className="mt-2 text-sm">{mine?.assignment_status==='inactive_fpo' ? 'Your saved FPO membership is not currently eligible for group access. Ask your admin to check the FPO status and your district assignment.' : mine?.assignment_status==='pending_fpo' ? 'Your district is saved, but an FPO group has not been assigned yet.' : 'No active FPO assignment was returned for your account. Check your saved state and district in your profile.'}</p><div className="mt-3 flex gap-4"><Link href="/user-profile" className="text-sm font-bold text-brand-700">Check my profile</Link><button onClick={()=>setRetry(n=>n+1)} className="text-sm font-bold text-brand-700">Refresh assignment</button></div></section>;
-    return <section className="mx-6 mb-4 overflow-hidden rounded-2xl border border-brand-100 bg-white shadow-soft">
-      <button onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="fpo-group-feed" className="flex w-full items-center gap-3 p-4 text-left hover:bg-brand-50 transition">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-100 text-brand-700"><Building2 size={24}/></span>
-        <span className="min-w-0 flex-1"><span className="text-[10px] font-bold uppercase tracking-widest text-brand-700">My FPO farmer group</span><span className="block truncate font-bold text-gray-900">{title(mine)}</span><span className="block truncate text-xs text-gray-500">All farmers tagged to this FPO can chat here</span></span>
-        {unread > 0 && <span aria-label={`${unread} unread updates`} className="rounded-full bg-brand-600 px-2 py-0.5 text-xs font-bold text-white">{unread}</span>}
-        <ChevronRight size={18} className={`shrink-0 text-gray-400 transition ${open ? 'rotate-90' : ''}`}/>
-      </button>
-      {open && <div id="fpo-group-feed" className="border-t border-brand-100 bg-brand-50/50 p-4">
-        <FpoGroupChat key={`${userId}:${mine.digital_fpo_id}`} fpoId={mine.digital_fpo_id} userId={userId} replyTo={replyTo} onClearReply={() => setReplyTo(null)}/>
-        {announcementError && <p role="status" className="mb-2 text-xs text-gray-500">{announcementError}</p>}
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-gray-500">Announcements from your FPO</p>{unread > 0 && <button disabled={marking} onClick={async () => { setMarking(true); try { await request('/api/digital-fpos/messages', true); setUnread(0); } catch(e) { setAnnouncementError(e instanceof Error ? e.message : 'Unable to mark as read'); } finally { setMarking(false); } }} className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 disabled:opacity-50"><CheckCheck size={15}/>{marking ? 'Updating...' : 'Mark all read'}</button>}</div>
-        {!messages.length && <div className="py-6 text-center"><MessageCircle className="mx-auto mb-2 text-brand-500"/><p className="font-bold text-gray-800">Your group is ready</p><p className="mt-1 text-sm text-gray-500">New FPO announcements will appear here.</p></div>}
-        <div className="max-h-[55dvh] space-y-3 overflow-y-auto">{messages.map(m => <article key={m.id} className="rounded-2xl rounded-tl-sm border border-gray-100 bg-white p-4"><h3 className="font-bold text-gray-900">{m.title}</h3><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-600">{m.body}</p><time dateTime={m.created_at} className="mt-3 block text-[11px] text-gray-400">{new Date(m.created_at).toLocaleString()}</time><button onClick={() => setReplyTo({ title: m.title, sequence: Date.now() })} className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-brand-700"><MessageCircle size={16}/>Reply in group</button></article>)}</div>
-      </div>}
+    if(mode === 'group') return <Link href="/fpo-group" className="flex items-center gap-3 border-b border-gray-100 px-6 py-4 hover:bg-gray-50"><span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700"><Building2 size={26}/></span><span className="min-w-0 flex-1"><strong className="block truncate text-gray-900">{title(mine)}</strong><span className="block truncate text-sm text-gray-500">Farmer group ? Tap to chat</span></span>{unread>0&&<span className="rounded-full bg-brand-600 px-2 py-1 text-xs text-white">{unread}</span>}<ChevronRight size={18} className="text-gray-400"/></Link>;
+    return <section className="flex h-full min-h-0 flex-col bg-[#efeae2]">
+      <header className="flex shrink-0 items-center gap-3 bg-brand-700 px-4 py-3 text-white"><Link href="/chat" aria-label="Back to Messages"><ArrowLeft size={24}/></Link><span className="rounded-full bg-white/20 p-2"><Building2 size={24}/></span><div className="min-w-0"><h1 className="truncate font-bold">{title(mine)}</h1><p className="text-xs text-white/80">Farmers in your assigned FPO</p></div></header>
+      {announcementError&&<p className="px-4 text-xs text-gray-500">{announcementError}</p>}
+      <FpoGroupChat key={`${userId}:${mine.digital_fpo_id}`} fpoId={mine.digital_fpo_id} userId={userId} announcements={messages}/>
     </section>;
   }
 
