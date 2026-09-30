@@ -520,7 +520,7 @@ const res = await fetch(getApiUrl(`/api/messages/conversations`), {
           </div>
         </header>
 
-        <FarmerFpo mode="group"/>
+        <FarmerFpo key={user?.id} mode="group"/>
         <FpoConversations key={user?.id} query={searchQuery}/>
         {/* Conversations List */}
         <div className="divide-y divide-gray-100">
