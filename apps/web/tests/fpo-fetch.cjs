@@ -36,6 +36,10 @@ mod._compile(ts.transpileModule(fs.readFileSync('lib/fpo-fetch.ts', 'utf8'), { c
   await fpoFetch('/api/digital-fpos');
   assert.equal(sent.options.credentials, 'include');
   storedToken = 'signed-login-token';
+  await fpoFetch('/api/notifications?userId=farmer-a&since=2026-09-30T12%3A00%3A00Z', { cache: 'no-store' });
+  assert.equal(sent.options.headers.get('Authorization'), 'Bearer signed-login-token');
+  assert.equal(sent.options.credentials, 'include');
+  assert.equal(sent.options.cache, 'no-store');
   await fpoFetch('/api/digital-fpos');
   assert.equal(sent.options.headers.get('Authorization'), 'Bearer signed-login-token');
   native = false;

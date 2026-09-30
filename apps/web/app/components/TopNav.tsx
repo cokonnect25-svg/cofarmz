@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { getApiUrl } from '@/lib/api';
+import { fpoFetch as authenticatedFetch } from '@/lib/fpo-fetch';
 import { Bell } from 'lucide-react';
 import UserAvatar from '@/app/components/UserAvatar';
 import GooglePlayBadge from '@/app/components/GooglePlayBadge';
@@ -119,7 +120,7 @@ const [pendingCount, setPendingCount] = useState(0);
     const seenAt = localStorage.getItem(NOTIF_SEEN_KEY) || oneDayAgo;
 
     try {
-      const res = await fetch(getApiUrl(`/api/notifications?userId=${user.id}&since=${seenAt}`));
+      const res = await authenticatedFetch(`/api/notifications?userId=${encodeURIComponent(user.id)}&since=${encodeURIComponent(seenAt)}`, { cache: 'no-store' });
       if (!res.ok) return;
 
       const data = await res.json();

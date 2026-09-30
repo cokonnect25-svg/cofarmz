@@ -28,6 +28,9 @@ export function fpoError(error: unknown) {
   if (error instanceof FpoError) return NextResponse.json({ error: error.message }, { status: error.status });
   if ((error as {code?: string})?.code === '23505') return NextResponse.json({ error: 'This district already has a Digital FPO' }, { status: 409 });
   console.error('Digital FPO operation failed', error);
+  if (['42P01', '42703', '42883'].includes((error as {code?: string})?.code || '')) {
+    return NextResponse.json({ error: 'FPO chat setup is incomplete. Please ask your administrator to update the FPO database.', code: 'FPO_SCHEMA_NOT_READY' }, { status: 503 });
+  }
   return NextResponse.json({ error: 'Unable to complete Digital FPO operation' }, { status: 500 });
 }
 export function rejectAssignmentInput(body: Record<string, unknown>) {
