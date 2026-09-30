@@ -520,6 +520,7 @@ const res = await fetch(getApiUrl(`/api/messages/conversations`), {
           </div>
         </header>
 
+        <a href="/fpo-group" className="mx-6 mb-4 flex items-center justify-between rounded-2xl bg-green-700 p-5 text-white shadow-sm"><span><strong className="block text-lg">My FPO farmer group</strong><span className="text-sm text-green-100">Open group chat, messages and announcements</span></span><span aria-hidden="true">&rarr;</span></a>
         <FarmerFpo key={user?.id} mode="group"/>
         <FpoConversations key={user?.id} query={searchQuery}/>
         {/* Conversations List */}

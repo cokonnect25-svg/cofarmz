@@ -52,6 +52,6 @@ export default function MyDigitalFpo() {
       {cached&&<p role="status" className="mt-2 text-xs text-gray-500">Saved FPO details{error?' ? could not refresh.': ' ? refreshing?'}</p>}
       {cached&&error&&<button onClick={()=>setRetry(n=>n+1)} className="mt-2 text-xs font-bold text-brand-700">Refresh details</button>}
     </div></div>
-    {!loading&&(!error||cached)&&<div className="flex flex-wrap gap-3 border-t border-brand-50 px-5 py-3">{assigned&&<Link href="/chat?fpoGroup=1" className="inline-flex items-center gap-1.5 text-sm font-bold text-brand-700"><MessageCircle size={16}/>Open group<ChevronRight size={15}/></Link>}<Link href="/nearby-farmers?type=fpo" className="ml-auto inline-flex items-center gap-1 text-sm font-medium text-gray-500">Explore FPOs<ChevronRight size={15}/></Link></div>}
+    {!loading&&(!error||cached)&&<div className="flex flex-wrap gap-3 border-t border-brand-50 px-5 py-3">{assigned&&<Link href="/fpo-group" className="inline-flex items-center gap-1.5 text-sm font-bold text-brand-700"><MessageCircle size={16}/>Open group<ChevronRight size={15}/></Link>}<Link href="/nearby-farmers?type=fpo" className="ml-auto inline-flex items-center gap-1 text-sm font-medium text-gray-500">Explore FPOs<ChevronRight size={15}/></Link></div>}
   </section>;
 }

@@ -24,7 +24,7 @@ export default function FpoContactAdmin({ fpoId, groupMessage = false }: { fpoId
     <p className="text-sm text-gray-500">{groupMessage ? 'All farmers tagged to your FPO can see and reply to this message.' : 'Your message goes privately to the admin team for this FPO. Other farmers cannot see it.'}</p>
     <label className="block text-sm font-medium">Message<textarea required maxLength={5000} disabled={busy} value={body} onChange={e => { setBody(e.target.value); setSent(false); }} rows={4} className="mt-2 w-full rounded-xl border border-gray-200 p-3" placeholder="Write your question or request..." /></label>
     <button disabled={busy || !body.trim()} className="rounded-xl bg-brand-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{busy ? 'Sending...' : groupMessage ? 'Send to group' : 'Send to admin'}</button>
-    {sent && <p role="status" className="text-sm text-green-700">Message sent. <Link className="underline font-bold" href={groupMessage ? "/chat?fpoGroup=1" : `/fpo-conversation?fpoId=${encodeURIComponent(fpoId)}`}>Open conversation</Link></p>}
+    {sent && <p role="status" className="text-sm text-green-700">Message sent. <Link className="underline font-bold" href={groupMessage ? "/fpo-group" : `/fpo-conversation?fpoId=${encodeURIComponent(fpoId)}`}>Open conversation</Link></p>}
     {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
   </form>;
 }
