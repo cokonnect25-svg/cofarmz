@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 import { Phone, MapPin, MessageCircle } from 'lucide-react';
 import { fpoMapUrl, type FpoContact } from '@/lib/fpo-profile';
 import FpoContactAdmin from '@/components/FpoContactAdmin';
@@ -11,11 +12,11 @@ export default function FpoProfileActions({ profile, canMessage, groupMessage = 
   return <section className="space-y-3">
     <div className="grid grid-cols-3 gap-3">
       {phone ? <a href={`tel:${phone}`} className={style}><Phone size={20}/>Call</a> : <button disabled title="Phone number not added" className={style}><Phone size={20}/>Call</button>}
-      <button disabled={!canMessage} aria-expanded={open} onClick={() => setOpen(!open)} className={style}><MessageCircle size={20}/>Message</button>
+      <>{groupMessage && canMessage ? <Link href="/fpo-group" className={style}><MessageCircle size={20}/>Open group</Link> : <button disabled={!canMessage} aria-expanded={open} onClick={() => setOpen(!open)} className={style}><MessageCircle size={20}/>Message</button>}</>
       {map ? <a href={map} target="_blank" rel="noopener noreferrer" className={style}><MapPin size={20}/>Map</a> : <button disabled title="Office location not added" className={style}><MapPin size={20}/>Map</button>}
     </div>
     {(!phone || !map) && <p className="text-xs text-gray-500">{!phone && 'Phone number not added. '}{!map && 'Office location not added.'}</p>}
     {profile.office_address && <p className="text-sm text-gray-600">{profile.office_address}</p>}
-    {open && canMessage && <FpoContactAdmin fpoId={profile.id} groupMessage={groupMessage}/>}
+    {open && canMessage && !groupMessage && <FpoContactAdmin fpoId={profile.id}/>}
   </section>;
 }
