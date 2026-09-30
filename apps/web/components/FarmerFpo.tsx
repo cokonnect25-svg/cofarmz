@@ -31,6 +31,8 @@ export default function FarmerFpo({ mode }: { mode: 'directory' | 'group' }) {
   useEffect(()=>{if(new URLSearchParams(window.location.search).get('fpoGroup')==='1')setOpen(true);},[]);
   const [messages, setMessages] = useState<Update[]>([]);
   const [unread, setUnread] = useState(0);
+  const [replyTo, setReplyTo] = useState<{ title: string; sequence: number } | null>(null);
+  useEffect(() => { setReplyTo(null); }, [userId, mine?.digital_fpo_id]);
   const [announcementError, setAnnouncementError] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -101,11 +103,11 @@ export default function FarmerFpo({ mode }: { mode: 'directory' | 'group' }) {
         <ChevronRight size={18} className={`shrink-0 text-gray-400 transition ${open ? 'rotate-90' : ''}`}/>
       </button>
       {open && <div id="fpo-group-feed" className="border-t border-brand-100 bg-brand-50/50 p-4">
-        <FpoGroupChat key={`${userId}:${mine.digital_fpo_id}`} fpoId={mine.digital_fpo_id} userId={userId}/>
+        <FpoGroupChat key={`${userId}:${mine.digital_fpo_id}`} fpoId={mine.digital_fpo_id} userId={userId} replyTo={replyTo} onClearReply={() => setReplyTo(null)}/>
         {announcementError && <p role="status" className="mb-2 text-xs text-gray-500">{announcementError}</p>}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-gray-500">Announcements from your FPO</p>{unread > 0 && <button disabled={marking} onClick={async () => { setMarking(true); try { await request('/api/digital-fpos/messages', true); setUnread(0); } catch(e) { setAnnouncementError(e instanceof Error ? e.message : 'Unable to mark as read'); } finally { setMarking(false); } }} className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 disabled:opacity-50"><CheckCheck size={15}/>{marking ? 'Updating...' : 'Mark all read'}</button>}</div>
         {!messages.length && <div className="py-6 text-center"><MessageCircle className="mx-auto mb-2 text-brand-500"/><p className="font-bold text-gray-800">Your group is ready</p><p className="mt-1 text-sm text-gray-500">New FPO announcements will appear here.</p></div>}
-        <div className="max-h-[55dvh] space-y-3 overflow-y-auto">{messages.map(m => <article key={m.id} className="rounded-2xl rounded-tl-sm border border-gray-100 bg-white p-4"><h3 className="font-bold text-gray-900">{m.title}</h3><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-600">{m.body}</p><time dateTime={m.created_at} className="mt-3 block text-[11px] text-gray-400">{new Date(m.created_at).toLocaleString()}</time></article>)}</div>
+        <div className="max-h-[55dvh] space-y-3 overflow-y-auto">{messages.map(m => <article key={m.id} className="rounded-2xl rounded-tl-sm border border-gray-100 bg-white p-4"><h3 className="font-bold text-gray-900">{m.title}</h3><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-600">{m.body}</p><time dateTime={m.created_at} className="mt-3 block text-[11px] text-gray-400">{new Date(m.created_at).toLocaleString()}</time><button onClick={() => setReplyTo({ title: m.title, sequence: Date.now() })} className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-brand-700"><MessageCircle size={16}/>Reply in group</button></article>)}</div>
       </div>}
     </section>;
   }

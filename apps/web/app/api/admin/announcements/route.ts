@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 import sql from "@/app/api/utils/sql";
 import { NextResponse } from "next/server";
 import { deliverAnnouncement } from "@/lib/fpo-announcements";
-import { requireActor, fpoError, FpoError } from '@/lib/fpo-access';
+import { requireActor, canReviewFpos, isSuperAdmin, fpoError, FpoError } from '@/lib/fpo-access';
 
 const ALLOWED_REPEAT_HOURS = new Set([1, 3, 6, 12]);
 
@@ -34,9 +34,10 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const actor = await requireActor(request,true);
-    await ensureAnnouncementScheduleColumns();
+    const actor = await requireActor(request);
     const { title, body, expiresAt, scheduledAt, repeatIntervalHours, groupId = null } = await request.json();
+    if (!isSuperAdmin(actor.role) && !(canReviewFpos(actor.role) && typeof groupId === 'string' && groupId)) throw new FpoError('Admin group publishing access required',403);
+    await ensureAnnouncementScheduleColumns();
     const createdBy = actor.id;
     if (groupId) {
       if (!/^[0-9a-f-]{36}$/i.test(groupId)) throw new FpoError('Invalid group');

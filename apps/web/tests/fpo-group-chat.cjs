@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typ
 let actor={id:'farmer-a',role:'farmer'},rows=[],queries=[];
 class FpoError extends Error{constructor(m,status=400){super(m);this.status=status;}}
 const m=new Module('group-test',module);
-m.require=n=>n==='@/app/api/utils/sql'?{default:async(p,...v)=>{queries.push({sql:p.join('?'),values:v});return rows.shift()||[];}}:n==='@/lib/fpo-access'?{FpoError,requireActor:async()=>{if(!actor)throw new FpoError('Sign in',401);return actor;},fpoError:e=>({status:e.status||500})}:n==='next/server'?{NextResponse:{json:(data,o={})=>({data,status:o.status||200,headers:o.headers})}}:require(n);
+m.require=n=>n==='@/app/api/utils/sql'?{default:async(p,...v)=>{queries.push({sql:p.join('?'),values:v});return rows.shift()||[];}}:n==='@/lib/fpo-access'?{FpoError,canReviewFpos:r=>['admin','superadmin','super_admin'].includes(r),requireActor:async()=>{if(!actor)throw new FpoError('Sign in',401);return actor;},fpoError:e=>({status:e.status||500})}:n==='next/server'?{NextResponse:{json:(data,o={})=>({data,status:o.status||200,headers:o.headers})}}:require(n);
 m._compile(ts.transpileModule(fs.readFileSync('app/api/digital-fpos/group-chat/route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,'group-test');
 const id='12345678-1234-1234-1234-123456789abc';
 const get=q=>m.exports.GET(new Request('http://localhost/?'+q));
@@ -18,11 +18,22 @@ const post=b=>m.exports.POST(new Request('http://localhost/',{method:'POST',head
   assert(queries.every(q=>q.values.includes('farmer-a')));
   rows=[[{id:'saved'}]];queries=[];
   assert.equal((await post({fpoId:id,body:' Hello ',sender_id:'spoof',group_id:'other'})).status,201);
-  assert.deepEqual(queries[0].values,['farmer-a','Hello',id,'farmer-a']);
+  assert.deepEqual(queries[0].values,['farmer-a','Hello',id,false,'farmer-a']);
   assert(queries[0].sql.includes('can_receive_fpo_message'));
   for(const body of ['',123,'x'.repeat(5001)])assert.equal((await post({fpoId:id,body})).status,400);
   assert.equal((await post(null)).status,400);
   assert.equal((await get(`fpoId=${id}&offset=-1`)).status,400);
+  actor={id:'admin-a',role:'admin'};rows=[[{id:'g'}],[{id:'older-message'}]];queries=[];
+  const older=await get(`fpoId=${id}&offset=100`);
+  assert.equal(older.status,200);assert.equal(older.data.messages[0].id,'older-message');
+  assert(queries.every(q=>q.values.includes(true)));assert.equal(queries[1].values.at(-1),100);
+  rows=[[{id:'admin-message'}]];queries=[];
+  assert.equal((await post({fpoId:id,body:'Admin reply'})).status,201);
+  assert.deepEqual(queries[0].values,['admin-a','Admin reply',id,true,'admin-a']);
+  assert(queries[0].sql.includes("f.status='active'"));
+  actor={id:'buyer',role:'buyer'};rows=[];queries=[];
+  assert.equal((await post({fpoId:id,body:'Not allowed'})).status,403);
+  assert(queries[0].values.includes(false));
   actor=null;assert.equal((await get(`fpoId=${id}`)).status,401);
   console.log('PASS: group read/write membership gates, authenticated sender, other-group rejection, pagination and validation');
 })().catch(e=>{console.error(e);process.exitCode=1;});
