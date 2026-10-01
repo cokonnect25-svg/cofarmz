@@ -247,6 +247,7 @@ const handleGoogleSignIn = async () => {
           <div className="mb-6">
             <h1 className="text-2xl lg:text-3xl font-black text-gray-900 mb-1">Welcome back</h1>
             <p className="text-gray-500 text-xs lg:text-sm">Sign in to your CoFarmz account</p>
+            <a href="/fpo/login" className="mt-2 inline-block text-sm font-bold text-green-700 underline">Digital FPO manager login</a>
           </div>
           {/* Error */}
           {error && (

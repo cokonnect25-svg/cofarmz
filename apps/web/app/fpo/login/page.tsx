@@ -1,0 +1,10 @@
+'use client';
+import {useState} from 'react';
+import Link from 'next/link';
+import {authClient} from '@/lib/auth-client';
+import {fpoFetch} from '@/lib/fpo-fetch';
+export default function FpoLogin(){
+ const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');try{const result=await authClient.signIn.email({email:email.trim(),password});if(result.error)throw new Error(result.error.message||'Unable to sign in');const r=await fpoFetch('/api/fpo/manager',{cache:'no-store'});if(!r.ok){await authClient.signOut();throw new Error('This account is not an assigned FPO manager. Contact your admin.');}window.location.assign('/fpo/dashboard');}catch(e:any){setError(e.message);}finally{setBusy(false);}}
+ return <main className="mx-auto max-w-md space-y-5 p-6 py-12"><h1 className="text-3xl font-bold text-green-800">Digital FPO login</h1><p>Use the email and temporary password provided by your admin. You will be asked to set your own password.</p><form onSubmit={submit} className="space-y-4">{error&&<p role="alert" className="text-red-700">{error}</p>}<label className="block">Login email<input required type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} className="block w-full rounded border p-3"/></label><label className="block">Password<input required type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} className="block w-full rounded border p-3"/></label><button disabled={busy} className="w-full rounded bg-green-700 p-3 text-white disabled:opacity-50">{busy?'Signing in…':'Sign in to FPO'}</button></form><p className="text-sm">Forgot your password? Ask your admin to reset your FPO temporary password.</p><Link href="/login" className="block underline">Regular account login</Link></main>;
+}

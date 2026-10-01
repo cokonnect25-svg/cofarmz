@@ -20,7 +20,7 @@ export function RoleSelectionGuard({ children }: { children: React.ReactNode }) 
   
   // Publicly accessible paths that don't need login
   const publicPaths = [
-    '/login', '/signup', '/forgot-password', '/reset-password',
+    '/fpo/login', '/login', '/signup', '/forgot-password', '/reset-password',
     '/auth-callback', '/terms', '/privacy', '/help', '/about'
   ];
   const isPublicRoute = publicPaths.includes(normalizedPathname);
@@ -34,9 +34,9 @@ export function RoleSelectionGuard({ children }: { children: React.ReactNode }) 
 
     // If not logged in, go to login page
     if (!isAuthenticated) {
-      router.replace('/login');
+      router.replace(normalizedPathname.startsWith('/fpo/') ? '/fpo/login' : '/login');
     }
-  }, [mounted, isAuthenticated, loading, isPublicRoute, router]);
+  }, [mounted, isAuthenticated, loading, isPublicRoute, normalizedPathname, router]);
 
   useEffect(() => {
     if (!mounted || loading || !user || isPublicRoute || normalizedPathname === '/select-role') return;

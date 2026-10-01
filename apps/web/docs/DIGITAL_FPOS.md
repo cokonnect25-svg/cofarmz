@@ -209,7 +209,17 @@ Use named individual accounts with an FPO-scoped `manager` permission in a new `
 - Super Admin grants and revokes manager access. Managers cannot assign themselves districts, change farmer memberships, activate FPOs, or create other managers. Revoking the grant blocks subsequent manager requests even if the user's ordinary login session remains active.
 - Record invitations, grant changes and announcement authorship in an audit trail. Do not log passwords or invitation/reset links.
 
-### Recommended account onboarding and passwords
+### Implemented FPO manager credentials (2026-10-01)
+
+Apply `migrations/20261001_fpo_manager_accounts.sql` to the deployed database before using this feature. The existing `npm run migrate:fpo -- --apply` runner now includes it; that runner also reapplies the existing FPO migrations and catalogue imports.
+
+Admin and Super Admin: open `/digital-fpos`, select an FPO card, and use **FPO login credentials**. Enter a separate manager email and select **Create FPO login**. Copy the login URL, email and temporary password to share privately. The password is shown only in that response and is never stored in plaintext. Closing the panel loses it; **Reset temporary password** generates another and revokes existing Better Auth sessions. Existing user emails cannot be taken over by this flow. One manager account is supported per FPO.
+
+Managers sign in at `/fpo/login` and open `/fpo/dashboard`. They must replace the temporary password before accessing the assigned farmer list. Password changes sign them out; they then sign in with the new password. The dashboard selects only their linked FPO and lists assigned farmer names; inactive FPOs do not expose that list. This initial dashboard does not grant admin operations, announcements, or chat access. No email delivery is configured by this feature; admins copy and share credentials themselves. Manager access is controlled by the account link, not a self-selected marketplace role.
+
+Run `node tests/fpo-manager.cjs` for the focused authorization and password-flow tests. These use mocked database responses and real Better Auth hashing; they do not replace a deployed database and browser smoke test.
+
+### Earlier recommended account onboarding and passwords
 
 1. Super Admin opens an FPO and invites a named manager by email. Creating all catalogue FPOs does not create shared district passwords or grant anyone manager access.
 2. Issue an expiring, single-use invitation bound to the email and FPO. Store only a hash of the invitation token; support revocation and replacement. A proposed expiry is 24 hours.
