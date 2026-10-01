@@ -247,7 +247,6 @@ const handleGoogleSignIn = async () => {
           <div className="mb-6">
             <h1 className="text-2xl lg:text-3xl font-black text-gray-900 mb-1">Welcome back</h1>
             <p className="text-gray-500 text-xs lg:text-sm">Sign in to your CoFarmz account</p>
-            <a href="/fpo/login" className="mt-2 inline-block text-sm font-bold text-green-700 underline">Digital FPO manager login</a>
           </div>
           {/* Error */}
           {error && (
@@ -372,6 +371,24 @@ const handleGoogleSignIn = async () => {
               Create one free
             </button>
           </p>
+
+          <a
+            href="/fpo/login"
+            className="group mt-6 flex items-center gap-3 rounded-2xl border border-green-100 bg-green-50/60 p-4 transition-colors hover:border-green-200 hover:bg-green-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-green-100 bg-white text-green-700 shadow-sm" aria-hidden="true">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4M9 9h.01M15 9h.01M9 13h.01M15 13h.01" />
+              </svg>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-gray-900">Digital FPO manager login</span>
+              <span className="mt-0.5 block text-xs leading-relaxed text-gray-500">Access your district FPO with your assigned account.</span>
+            </span>
+            <svg className="h-5 w-5 shrink-0 text-green-700 transition-transform motion-safe:group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
 
           <div className="mt-8 p-4 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm">
   <p className="text-green-50 text-sm mb-2">
