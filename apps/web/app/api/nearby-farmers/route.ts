@@ -23,10 +23,22 @@ export async function GET(request: NextRequest) {
     const countryFilter = searchParams.get("country") || null;
     const currentUserId  = searchParams.get("currentUserId") || request.headers.get("x-user-id");
 
-    const crops     = (searchParams.get("crops")    ?.split(",").filter(Boolean) ?? []).map(c => c.trim().toLowerCase());
+    let crops     = (searchParams.get("crops")    ?.split(",").filter(Boolean) ?? []).map(c => c.trim().toLowerCase());
     const grades    = (searchParams.get("grades")   ?.split(",").filter(Boolean) ?? []).map(g => g.trim().toLowerCase());
     const certTypes = (searchParams.get("certTypes")?.split(",").filter(Boolean) ?? []).map(c => c.trim().toLowerCase());
     const equipment = (searchParams.get("equipment")?.split(",").filter(Boolean) ?? []);
+
+    // Read saved crops here so category switches use the correct profile matches.
+    const matchProfile = searchParams.get("matchProfile") === "true";
+    if (matchProfile && currentUserId && crops.length === 0 && searchType !== "fpo" && supplierType !== "equipment") {
+      const profileCrops = await sql`SELECT crop_name, is_crop_waste FROM crops WHERE user_id = ${currentUserId}`;
+      const regular = (profileCrops as any[]).filter(c => !c.is_crop_waste);
+      const waste = (profileCrops as any[]).filter(c => c.is_crop_waste);
+      const selected = showWasteBuyers || searchType === "wastage"
+        ? (waste.length ? waste : regular)
+        : regular;
+      crops = Array.from(new Set(selected.map(c => String(c.crop_name || '').trim().toLowerCase()).filter(Boolean)));
+    }
 
     // ── ensure columns ──────────────────────────────────────────────────────
     await Promise.all([
@@ -172,14 +184,15 @@ const targetRole =
         FROM crops c
         JOIN "user" u ON c.user_id = u.id
         WHERE c.is_crop_waste = true
-          AND u.role = 'buyer'
+          AND (u.role = 'buyer' OR (u.role IS NULL AND u.role_id = 2))
+          ${hasCropFilter ? sql`AND (${crops.map(c => sql`LOWER(TRIM(c.crop_name)) = ${c}`).reduce((acc, cond, i) => i === 0 ? cond : sql`${acc} OR ${cond}`, sql`FALSE`)})` : sql``}
       `;
       matchedCropUserIds = new Set((rows as any[]).map((r: any) => r.user_id));
 
     } else if (hasCropFilter || hasGradeFilter || hasCertFilter || hasDateFilter) {
       // FIX 1: build individual unnested OR conditions instead of ARRAY[..] + sql.join
       // This avoids the sql.join-inside-ARRAY bug entirely.
-      const cropConditions    = crops.map(c => sql`LOWER(TRIM(crop_name)) LIKE ${'%' + c + '%'}`);
+      const cropConditions    = crops.map(c => matchProfile ? sql`LOWER(TRIM(crop_name)) = ${c}` : sql`LOWER(TRIM(crop_name)) LIKE ${'%' + c + '%'}`);
       const gradeConditions   = grades.map(g => sql`LOWER(TRIM(grade)) LIKE ${'%' + g.replace(/\s/g,'') + '%'}`);
       const certConditions    = certTypes.map(c => sql`LOWER(TRIM(certification_type)) LIKE ${'%' + c + '%'}`);
 
@@ -191,6 +204,7 @@ const targetRole =
           -- users who match crop name (or skip if no crop filter)
           SELECT user_id FROM crops
           WHERE 1=1
+          ${matchProfile ? sql`AND COALESCE(is_crop_waste, false) = false` : sql``}
           ${hasCropFilter ? sql`
             AND (
               ${cropConditions.reduce((acc, cond, i) =>
@@ -372,7 +386,7 @@ const targetRole =
     const finalResult = result
       .map((user: any) => {
         const allUserCrops  = cropsMap.get(user.id) || [];
-        const visibleCrops  = showWasteBuyers
+        const visibleCrops  = hasWasteFilter
           ? allUserCrops.filter((c: any) => c.is_crop_waste)
           : allUserCrops;
         const followStatus = user.id === currentUserId ? 'accepted' : viewerFollowMap.get(user.id) || 'none';

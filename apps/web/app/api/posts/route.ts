@@ -34,6 +34,8 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const viewerId = params.get('viewerId');
   const userId = params.get('userId');
+  const rawOffset = Number(params.get('offset') || 0);
+  const offset = Number.isSafeInteger(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
   try {
     await ensureSchema();
     let viewerRole = '';
@@ -52,8 +54,8 @@ export async function GET(request: Request) {
       JOIN "user" u ON u.id = p.user_id
       WHERE (${userId || ''} = '' OR p.user_id = ${userId || ''})
         AND (p.audience = 'everyone' OR p.audience = ${viewerRole} OR p.user_id = ${viewerId || ''})
-      ORDER BY p.created_at DESC
-      LIMIT 50
+      ORDER BY p.created_at DESC, p.id DESC
+      LIMIT 50 OFFSET ${offset}
     `;
     return NextResponse.json(posts);
   } catch (error: any) {

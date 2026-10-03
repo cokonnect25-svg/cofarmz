@@ -189,6 +189,7 @@ function NearbyFarmersContent() {
 });
   const [locationError, setLocationError] = useState<string | null>(null);
 
+const matchProfile = searchParams.get('matchProfile') === 'true';
 const freshVisit = searchParams.get('fresh') === 'true';
 const rawType = searchParams.get('type');
 const rawSupplierType = searchParams.get('supplierType');
@@ -627,6 +628,7 @@ const fetchNearbyFarmers = async (
       params.append('latitude',  latitude.toString());
       params.append('longitude', longitude.toString());
       params.append('type', type);
+      if (matchProfile) params.append('matchProfile', 'true');
       if (type === 'supplier') params.append('supplierType', supplierType);
       if (user?.id) params.append('currentUserId', user.id);
       if (f.enableDistance) params.append('distance', f.distance.toString());
@@ -821,7 +823,13 @@ onClick={() => {
 
           {searchType !== 'fpo' && <>
           {/* Search */}
-          <div className="relative mb-4">
+          {matchProfile && (
+          <div className="mb-4 rounded-2xl border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-800">
+            <p className="font-bold">{searchType === 'supplier' && supplierType === 'equipment' ? 'Equipment suppliers near you' : 'Matches for your profile crops'}</p>
+            <p className="mt-1 text-xs leading-relaxed">{searchType === 'supplier' && supplierType === 'equipment' ? 'Equipment suppliers are shown by distance. Crop matching applies to commodity suppliers.' : 'Profiles with matching crops are shown nearest first. Add crops to your profile to personalize results.'}</p>
+          </div>
+        )}
+        <div className="relative mb-4">
             <input
               type="text"
               placeholder="Search by name, location, crops... (e.g. Rice, Wheat)"

@@ -409,7 +409,7 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
         <section className="mb-9 rounded-[28px] border border-slate-200/60 bg-white/70 p-4 sm:p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div><p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-green-700">From the community</p><h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Posts</h2><p className="mt-1 text-sm text-slate-500">Updates shared for you</p></div>
-            <button onClick={() => router.push('/posts')} className="inline-flex shrink-0 items-center gap-1 rounded-full border border-green-100 bg-green-50 px-3 py-2 text-xs font-bold text-green-700 transition hover:bg-green-100 focus-visible:outline-green-600">View all <i aria-hidden="true" className="ph-bold ph-arrow-up-right"></i></button>
+            <button onClick={() => router.push('/posts/all')} className="inline-flex shrink-0 items-center gap-1 rounded-full border border-green-100 bg-green-50 px-3 py-2 text-xs font-bold text-green-700 transition hover:bg-green-100 focus-visible:outline-green-600">View all <i aria-hidden="true" className="ph-bold ph-arrow-up-right"></i></button>
           </div>
           {profilePosts.length ? (
             <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 hide-scrollbar">
@@ -447,7 +447,7 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
             ].map(category => (
               <button
                 key={category.type}
-                onClick={() => router.push(`/nearby-farmers?type=${category.type}&fresh=true`)}
+                onClick={() => router.push(`/nearby-farmers?type=${category.type}&fresh=true&matchProfile=true`)}
                 className="group flex h-full flex-col items-start rounded-[28px] border border-slate-200/60 bg-white p-4 sm:p-5 text-left shadow-[0_8px_30px_rgba(15,23,42,0.04)] transition hover:-translate-y-1 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-4 active:scale-[0.98] sm:rounded-[28px] lg:p-6"
               >
                 <span className={`mb-5 flex h-14 w-14 items-center justify-center rounded-[20px] bg-gradient-to-br ${category.color} text-white shadow-md sm:h-16 sm:w-16`}>
