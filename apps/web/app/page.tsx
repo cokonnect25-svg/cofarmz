@@ -416,288 +416,46 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
           )}
         </section>
         {/* ── DYNAMIC MATCHING SECTIONS ── */}
-        <section className="mb-12">
-          {loadingMatches ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-10 h-10 rounded-full border-4 border-brand-100 border-t-brand-600 animate-spin"></div>
-                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Matching results...</p>
-              </div>
+        <section className="mb-12" aria-labelledby="nearby-heading">
+          <div className="mb-6">
+            <h2 id="nearby-heading" className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">Buyers &amp; Farmers</h2>
+            <p className="mt-2 text-sm sm:text-base text-slate-500">Connect, collaborate and grow together.</p>
+          </div>
+          <div className="relative mb-5 flex items-center gap-4 overflow-hidden rounded-[28px] border border-green-200 bg-gradient-to-br from-green-50 to-emerald-100/60 p-5 sm:p-7">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-600 sm:h-20 sm:w-20">
+              <i aria-hidden="true" className="ph-fill ph-handshake text-4xl sm:text-5xl"></i>
             </div>
-          ) : (
-            <>
-              {(() => {
-                const userCropNames = userProfile?.crops?.map(c => c.crop_name.toLowerCase()) || [];
-                const userWasteCropNames = userProfile?.crops?.filter(c => c.is_crop_waste).map(c => c.crop_name.toLowerCase()) || [];
-
-                const userCropSet = new Set(userCropNames);
-                const userWasteCropSet = new Set(userWasteCropNames);
-
-                // 1. Buyers interested in your AGRICULTURAL WASTE (uses dedicated wasteOnly fetch)
-                const matchedWasteBuyers = wasteBuyerResults
-                  .map(r => {
-                    const matchingWasteCrops = r.crops
-                      .filter((c: any) => c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
-                      .map((c: any) => c.crop_name);
-                    // Fallback: show buyer with all their waste crops if no specific match
-                    const fallbackCrops = r.crops
-                      .filter((c: any) => c.is_crop_waste)
-                      .map((c: any) => c.crop_name);
-                    const displayCrops = matchingWasteCrops.length > 0 ? matchingWasteCrops : fallbackCrops;
-                    return displayCrops.length > 0 ? { ...r, matchingCrops: displayCrops } : null;
-                  })
-                  .filter(Boolean);
-
-                // 2. ALL nearby buyers — show matching crops as tags, fallback to their own crops
-                const matchedBuyers = matchingResults
-                  .filter(r => r.role === 'buyer')
-                  .map(r => {
-                    const matchingCrops = r.crops
-                      .filter((c: any) => !c.is_crop_waste && userCropSet.has(c.crop_name.toLowerCase()))
-                      .map((c: any) => c.crop_name);
-                    const fallbackCrops = r.crops.filter((c: any) => !c.is_crop_waste).slice(0, 3).map((c: any) => c.crop_name);
-                    return { ...r, matchingCrops: matchingCrops.length > 0 ? matchingCrops : fallbackCrops, isExactMatch: matchingCrops.length > 0 };
-                  })
-                  .sort((a: any, b: any) => (b.isExactMatch ? 1 : 0) - (a.isExactMatch ? 1 : 0) || a.distance - b.distance);
-
-                // 3. ALL nearby farmers — show matching crops as tags, fallback to their own crops
-                const matchedFarmers = matchingResults
-                  .filter(r => r.role === 'farmer')
-                  .map(r => {
-                    const matchingCrops = r.crops
-                      .filter((c: any) => userCropSet.has(c.crop_name.toLowerCase()))
-                      .map((c: any) => c.crop_name);
-                    const fallbackCrops = r.crops.slice(0, 3).map((c: any) => c.crop_name);
-                    return { ...r, matchingCrops: matchingCrops.length > 0 ? matchingCrops : fallbackCrops, isExactMatch: matchingCrops.length > 0 };
-                  })
-                  .sort((a: any, b: any) => (b.isExactMatch ? 1 : 0) - (a.isExactMatch ? 1 : 0) || a.distance - b.distance);
-
-                const renderCard = (person: any, color: string) => (
-                  <div key={person.id}
-                    onClick={() => router.push(`/farmer-profile?id=${person.id}`)}
-                    className="flex-shrink-0 w-44 bg-white rounded-[32px] p-5 shadow-premium border border-gray-50 cursor-pointer hover:shadow-float hover:-translate-y-1 transition-all text-center group">
-<div className="relative mb-4 mx-auto w-20 h-20">
-  <UserAvatar
-    image={person.image}
-    name={person.name}
-    size={80}
-    className="rounded-full border-2 border-white shadow-sm"
-  />
-</div>
-<p className="text-base font-black text-gray-900 mb-0.5 leading-tight break-words">
-  {person.name}
-</p>
-                    <p className="text-[10px] text-gray-400 flex items-center justify-center gap-1 mb-3 font-bold">
-                      <i className="ph-fill ph-map-pin text-brand-500 text-[10px]"></i>
-                      {person.location
-                        ? `${person.location} · ${Math.round(person.distance)} km away`
-                        : `${Math.round(person.distance)} km away`}
-                    </p>
-                    {person.isExactMatch && (
-                      <p className="text-[9px] font-black text-emerald-500 uppercase tracking-wider mb-1">Crop Match</p>
-                    )}
-                    <div className="flex flex-wrap gap-1 justify-center">
-                      {(person.matchingCrops || []).length > 0
-                        ? person.matchingCrops.map((crop: string) => (
-                            <span key={crop} className={`text-[10px] font-bold px-2 py-1 rounded-lg ${color}`}>
-                              {crop}
-                            </span>
-                          ))
-                        : <span className="text-[10px] text-gray-300 font-bold">No crops listed</span>
-                      }
-                    </div>
-                  </div>
-                );
-
-                const renderEmpty = (msg: string) => (
-                  <div className="w-full py-10 text-center bg-gray-50/50 rounded-[32px] border-2 border-dashed border-gray-100 flex flex-col items-center">
-                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-3 shadow-sm text-gray-300">
-                      <i className="ph-bold ph-plant text-2xl"></i>
-                    </div>
-                    <p className="text-gray-400 text-xs font-bold">{msg}</p>
-                    <p className="text-[10px] text-gray-300 mt-1">We'll notify you when a match is found.</p>
-                  </div>
-                );
-
-                return (
-                  <div>
-                    {/* Complete profile prompt when no crops */}
-                   {userProfile?.role !== 'supplier' && userProfile?.role !== 'fpo' && userCropNames.length === 0 && (
-                      <div className="bg-gradient-to-br from-brand-50 to-emerald-50 rounded-3xl p-8 text-center border border-brand-100 mb-6 shadow-premium relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform"></div>
-                        <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-                          <i className="ph-fill ph-plant text-3xl text-brand-500"></i>
-                        </div>
-                        <p className="text-gray-900 font-black text-lg mb-1">Complete your profile</p>
-                        <p className="text-gray-500 text-xs mb-6">Add crops you produce to find buyers nearby!</p>
-                        <button onClick={() => router.push('/user-profile?addCrop=true')}
-                          className="bg-brand-600 text-white px-8 py-3.5 rounded-2xl text-sm font-black shadow-lg shadow-brand-600/30 active:scale-95 transition-transform">
-                          Add Your Crops
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Potential Buyers for your AGRICULTURAL WASTE */}
-                    {userProfile?.role === 'farmer' && (
-                      <div className="mb-12">
-                        <div className="flex items-center justify-between mb-5">
-                          <div>
-                            <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers Interest For Your Crops Wastage</h2>
-                            <p className="text-amber-600 text-xs font-bold uppercase tracking-wider">Interested in your agricultural waste</p>
-                          </div>
-<button onClick={() => {
-  const wasteCropParams = userWasteCropNames.length > 0 
-    ? '&crops=' + encodeURIComponent(userWasteCropNames.join(',')) 
-    : '';
-  router.push(`/nearby-farmers?type=wastage${wasteCropParams}`);
-}}
-                            className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 hover:bg-amber-600 hover:text-white transition-all shadow-sm">
-                            <i className="ph-bold ph-arrow-right"></i>
-                          </button>
-                        </div>
-                        <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
-                          {matchedWasteBuyers.length > 0
-                            ? matchedWasteBuyers.slice(0, 10).map((p: any) => renderCard(p, 'bg-amber-100 text-amber-700'))
-                            : renderEmpty('No buyers found for your waste crops yet')}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Buyers matching your regular crops */}
-                    <div className="mb-10">
-                      <div className="flex items-center justify-between mb-5">
-                        <div>
-                          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Buyers Matching Your Crops</h2>
-                          <p className="text-blue-600 text-xs font-bold uppercase tracking-wider">
-                            {matchedBuyers.some((b: any) => b.isExactMatch) ? 'Buyers interested in your crops' : 'Nearby buyers'}
-                          </p>
-                        </div>
-                        <button onClick={() => {
-  const cropParams = userCropNames.length > 0 
-    ? '&crops=' + encodeURIComponent(userCropNames.join(',')) 
-    : '';
-  router.push(`/nearby-farmers?type=buyers${cropParams}`);
-}}
-                          className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
-                          <i className="ph-bold ph-arrow-right"></i>
-                        </button>
-                      </div>
-                      <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
-                        {matchedBuyers.length > 0
-                          ? matchedBuyers.slice(0, 10).map((p: any) => renderCard(p, 'bg-blue-50 text-blue-700'))
-                          : renderEmpty('No buyers registered yet in your area')}
-                      </div>
-                    </div>
-
-                    {/* Nearby Farmers */}
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-5">
-                        <div>
-                          <h2 className="text-2xl font-black text-gray-900 tracking-tight">Nearby Farmers Interested In Your Crops</h2>
-                          <p className="text-emerald-600 text-xs font-bold uppercase tracking-wider">
-                            {matchedFarmers.some((f: any) => f.isExactMatch) ? 'Farmers growing your crops' : 'Nearby farmers'}
-                          </p>
-                        </div>
-                        <button onClick={() => {
-  const cropParams = userCropNames.length > 0 
-    ? '&crops=' + encodeURIComponent(userCropNames.join(',')) 
-    : '';
-  router.push(`/nearby-farmers?type=farmers${cropParams}`);
-}}
-                          className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
-                          <i className="ph-bold ph-arrow-right"></i>
-                        </button>
-                      </div>
-                      <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
-                        {matchedFarmers.length > 0
-                          ? matchedFarmers.slice(0, 10).map((p: any) => renderCard(p, 'bg-emerald-50 text-emerald-700'))
-                          : renderEmpty('No farmers registered yet in your area')}
-                      </div>
-                    </div>
-                    <div className="mb-4">
-  <div className="flex items-center justify-between mb-5">
-    <div>
-      <h2 className="text-2xl font-black text-gray-900 tracking-tight">
-        Nearby Commodities suppliers
-      </h2>
-      <p className="text-purple-600 text-xs font-bold uppercase tracking-wider">
-        Commodity providers near you
-      </p>
-    </div>
-
-    <button
-      onClick={() => router.push('/nearby-farmers?type=supplier&supplierType=commodities')}
-      className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 hover:bg-purple-600 hover:text-white transition-all shadow-sm"
-    >
-      <i className="ph-bold ph-arrow-right"></i>
-    </button>
-  </div>
-
-  <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
-    {commoditySupplierResults.length > 0
-      ? commoditySupplierResults.slice(0, 10).map((p: any) =>
-          renderCard(p, 'bg-purple-50 text-purple-700')
-        )
-      : renderEmpty('No commodity suppliers available nearby')}
-  </div>
-</div>
-<div className="mb-4">
-  <div className="flex items-center justify-between mb-5">
-    <div>
-      <h2 className="text-2xl font-black text-gray-900 tracking-tight">
-        Nearby Equipment suppliers
-      </h2>
-      <p className="text-purple-600 text-xs font-bold uppercase tracking-wider">
-        Machinery providers near you
-      </p>
-    </div>
-
-    <button
-      onClick={() => router.push('/nearby-farmers?type=supplier&supplierType=equipment')}
-      className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 hover:bg-purple-600 hover:text-white transition-all shadow-sm"
-    >
-      <i className="ph-bold ph-arrow-right"></i>
-    </button>
-  </div>
-
-  <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
-    {equipmentSupplierResults.length > 0
-      ? equipmentSupplierResults.slice(0, 10).map((p: any) =>
-          renderCard(p, 'bg-purple-50 text-purple-700')
-        )
-      : renderEmpty('No equipment suppliers available nearby')}
-  </div>
-</div>
-<div className="mb-4">
-  <div className="flex items-center justify-between mb-5">
-    <div>
-      <h2 className="text-2xl font-black text-gray-900 tracking-tight">
-        Nearby FPOs
-      </h2>
-      <p className="text-teal-600 text-xs font-bold uppercase tracking-wider">
-        Farmer Produce Organisation near you
-      </p>
-    </div>
-    <button
-      onClick={() => router.push('/nearby-farmers?type=fpo')}
-      className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 hover:bg-teal-600 hover:text-white transition-all shadow-sm"
-    >
-      <i className="ph-bold ph-arrow-right"></i>
-    </button>
-  </div>
-  <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 pt-1 px-1 -mx-1">
-    {spoResults.length > 0
-      ? spoResults.slice(0, 10).map((p: any) =>
-          renderCard(p, 'bg-teal-50 text-teal-700')
-        )
-      : renderEmpty('No FPOs available nearby')}
-  </div>
-</div>
-                  </div>
-                );
-              })()}
-            </>
-          )}
+            <div>
+              <h3 className="text-lg sm:text-xl font-extrabold text-slate-900">Your nearby community</h3>
+              <p className="mt-1 text-sm leading-relaxed text-slate-500">Better prices, wider reach and a stronger community.</p>
+            </div>
+            <i aria-hidden="true" className="ph-fill ph-plant pointer-events-none absolute -bottom-5 -right-3 text-9xl text-green-200/40"></i>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:gap-5">
+            {[
+              { label: 'Buyers', description: 'Find fresh produce and great deals.', type: 'buyers', icon: 'ph-shopping-cart', color: 'from-green-400 to-green-600' },
+              { label: 'Farmers', description: 'Discover local growers and their produce.', type: 'farmers', icon: 'ph-plant', color: 'from-sky-400 to-blue-600' },
+              { label: 'Suppliers', description: 'Connect with trusted commodity and equipment partners.', type: 'supplier', icon: 'ph-truck', color: 'from-amber-400 to-orange-500' },
+              { label: 'Wastage Buyers', description: 'Turn agricultural surplus into value.', type: 'wastage', icon: 'ph-recycle', color: 'from-purple-400 to-purple-600' },
+            ].map(category => (
+              <button
+                key={category.type}
+                onClick={() => router.push(`/nearby-farmers?type=${category.type}&fresh=true`)}
+                className="group flex h-full flex-col items-start rounded-[28px] border border-white bg-white p-5 text-left shadow-[0_8px_30px_rgba(15,23,42,0.04)] transition hover:-translate-y-1 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-4 active:scale-[0.98] sm:rounded-[32px] sm:p-7"
+              >
+                <span className={`mb-5 flex h-14 w-14 items-center justify-center rounded-[20px] bg-gradient-to-br ${category.color} text-white shadow-md sm:h-16 sm:w-16`}>
+                  <i aria-hidden="true" className={`ph-fill ${category.icon} text-3xl`}></i>
+                </span>
+                <span className="text-lg sm:text-2xl font-extrabold leading-tight text-slate-900">{category.label}</span>
+                <span className="mt-2 text-sm sm:text-base leading-relaxed text-slate-500">{category.description}</span>
+                <span className="mt-5 inline-flex items-center gap-1 text-xs font-bold text-green-700">Explore nearby <i aria-hidden="true" className="ph-bold ph-arrow-right transition-transform group-hover:translate-x-1"></i></span>
+              </button>
+            ))}
+          </div>
+          <button onClick={() => router.push('/nearby-farmers?type=fpo&fresh=true')} className="mt-5 flex w-full items-center justify-between gap-3 rounded-2xl border border-green-100 bg-green-50 px-5 py-4 text-left text-sm font-bold text-green-800 hover:bg-green-100 focus-visible:outline-green-600">
+            <span className="flex items-center gap-2"><i aria-hidden="true" className="ph-fill ph-users-three text-xl"></i>Explore nearby FPOs</span>
+            <i aria-hidden="true" className="ph-bold ph-arrow-right"></i>
+          </button>
         </section>
 
         {/* ── WHAT WOULD YOU LIKE TO DO (Dynamic Action Grid) ── */}

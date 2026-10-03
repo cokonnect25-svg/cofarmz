@@ -189,6 +189,7 @@ function NearbyFarmersContent() {
 });
   const [locationError, setLocationError] = useState<string | null>(null);
 
+const freshVisit = searchParams.get('fresh') === 'true';
 const rawType = searchParams.get('type');
 const rawSupplierType = searchParams.get('supplierType');
 const rawCrops = searchParams.get('crops');
@@ -223,7 +224,7 @@ const [supplierType, setSupplierType] = useState<'commodities' | 'equipment'>(
 );
   const [searchQuery, setSearchQuery] = useState(() => {
   if (typeof window !== 'undefined') {
-    return sessionStorage.getItem(SEARCH_KEY) || '';
+    return freshVisit ? '' : sessionStorage.getItem(SEARCH_KEY) || '';
   }
   return '';
 });
@@ -248,7 +249,7 @@ const defaultFilters = {
 
 const [filters, setFilters] = useState(() => {
   if (typeof window !== 'undefined') {
-    const saved = sessionStorage.getItem(FILTERS_KEY);
+    const saved = freshVisit ? null : sessionStorage.getItem(FILTERS_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -337,10 +338,10 @@ const onlineStatuses = useOnlineStatuses(farmerIds);
 useEffect(() => {
   if (!mounted) return;
 
-  const savedVisible = sessionStorage.getItem(VISIBLE_KEY);
-  const savedScroll  = sessionStorage.getItem(SCROLL_KEY);
+  const savedVisible = freshVisit ? null : sessionStorage.getItem(VISIBLE_KEY);
+  const savedScroll  = freshVisit ? null : sessionStorage.getItem(SCROLL_KEY);
   const savedType    = sessionStorage.getItem(TYPE_KEY);
-  const savedFilters = sessionStorage.getItem(FILTERS_KEY); // ← READ FILTERS
+  const savedFilters = freshVisit ? null : sessionStorage.getItem(FILTERS_KEY); // ← READ FILTERS
   
   // Remove them so they don't persist across unrelated visits
   sessionStorage.removeItem(VISIBLE_KEY);
@@ -1104,10 +1105,10 @@ onClick={() => {
               <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-5"></div>
               <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 px-2">Sort By</p>
               {(searchType === 'farmers' ? [
-                { key: 'nearby',     label: 'Nearby First',    sub: 'Sort by distance from you',     icon: 'ph-map-pin' },
+                { key: 'nearby',     label: 'Nearest to Farthest',    sub: 'Sort by distance from you',     icon: 'ph-map-pin' },
                 { key: 'experience', label: 'Most Experienced', sub: 'Sort by years of experience',  icon: 'ph-medal'   },
               ] : [
-                { key: 'nearby', label: 'Nearby First', sub: 'Sort by distance from you', icon: 'ph-map-pin' },
+                { key: 'nearby', label: 'Nearest to Farthest', sub: 'Sort by distance from you', icon: 'ph-map-pin' },
                 { key: 'active', label: 'Most Active',  sub: 'Sort by equipment & activity', icon: 'ph-lightning' },
               ]).map(opt => (
                 <button key={opt.key} onClick={() => { setSortBy(opt.key); setShowSortMenu(false); }}
@@ -1195,8 +1196,8 @@ onClick={() => {
                 })
               .sort((a, b) => {
                 if (sortBy === 'nearby') {
-                  const ad = (!a.distance || a.distance >= 9999) ? 999999 : a.distance;
-                  const bd = (!b.distance || b.distance >= 9999) ? 999999 : b.distance;
+                  const ad = (a.distance == null || !Number.isFinite(a.distance) || a.distance < 0 || a.distance >= 9999) ? 999999 : a.distance;
+                  const bd = (b.distance == null || !Number.isFinite(b.distance) || b.distance < 0 || b.distance >= 9999) ? 999999 : b.distance;
                   return ad - bd;
                 }
                 if (sortBy === 'experience') {
