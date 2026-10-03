@@ -458,65 +458,6 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
           </button>
         </section>
 
-        {/* ── WHAT WOULD YOU LIKE TO DO (Dynamic Action Grid) ── */}
-        <section className="mb-14">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-black text-gray-900 tracking-tight">Shortcuts & Tools</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-5">
-            {/* Equipment Rentals */}
-            <div onClick={() => router.push('/machinery-list')}
-              className="bg-white/80 backdrop-blur-xl rounded-[36px] p-6 cursor-pointer hover:bg-brand-50 transition-all group border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 active:scale-95">
-              <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-brand-700 rounded-[22px] flex items-center justify-center mb-5 shadow-lg shadow-brand-500/30 group-hover:scale-110 transition-transform">
-                <i className="ph-fill ph-tractor text-white text-3xl"></i>
-              </div>
-              <h3 className="text-gray-900 font-extrabold text-xl leading-tight mb-1">Fleet & Hire</h3>
-              <p className="text-gray-400 text-[10px] leading-relaxed mb-4 uppercase font-bold tracking-wider">Professional Equipment</p>
-              <div className="flex items-center gap-1 text-brand-600 font-black text-xs opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                Explore <i className="ph-bold ph-arrow-right"></i>
-              </div>
-            </div>
-
-            {/* Nearby Farmers */}
-            <div onClick={() => router.push('/nearby-farmers?type=farmers')}
-              className="bg-white/80 backdrop-blur-xl rounded-[36px] p-6 cursor-pointer hover:bg-blue-50 transition-all group border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 active:scale-95">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-700 rounded-[22px] flex items-center justify-center mb-5 shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
-                <i className="ph-fill ph-users-three text-white text-3xl"></i>
-              </div>
-              <h3 className="text-gray-900 font-extrabold text-xl leading-tight mb-1">Farmer Hub</h3>
-              <p className="text-gray-400 text-[10px] leading-relaxed mb-4 uppercase font-bold tracking-wider">Collaborate Nearby</p>
-              <div className="flex items-center gap-1 text-blue-600 font-black text-xs opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                Discover <i className="ph-bold ph-arrow-right"></i>
-              </div>
-            </div>
-
-            {/* Nearby Buyers */}
-            <div onClick={() => router.push('/nearby-farmers?type=buyers')}
-              className="bg-white/80 backdrop-blur-xl rounded-[36px] p-6 cursor-pointer hover:bg-amber-50 transition-all group border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 active:scale-95">
-              <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-amber-600 rounded-[22px] flex items-center justify-center mb-5 shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform">
-                <i className="ph-fill ph-handshake text-white text-3xl"></i>
-              </div>
-              <h3 className="text-gray-900 font-extrabold text-xl leading-tight mb-1">Crop Market</h3>
-              <p className="text-gray-400 text-[10px] leading-relaxed mb-4 uppercase font-bold tracking-wider">Find Active Buyers</p>
-              <div className="flex items-center gap-1 text-amber-600 font-black text-xs opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                Sell Now <i className="ph-bold ph-arrow-right"></i>
-              </div>
-            </div>
-
-            {/* Reels & Videos */}
-            <div onClick={() => router.push('/reels')}
-              className="bg-white/80 backdrop-blur-xl rounded-[36px] p-6 cursor-pointer hover:bg-purple-50 transition-all group border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 active:scale-95">
-              <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded-[22px] flex items-center justify-center mb-5 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
-                <i className="ph-fill ph-video text-white text-3xl"></i>
-              </div>
-              <h3 className="text-gray-900 font-extrabold text-xl leading-tight mb-1">Farm Tales</h3>
-              <p className="text-gray-400 text-[10px] leading-relaxed mb-4 uppercase font-bold tracking-wider">Showcase Your Work</p>
-              <div className="flex items-center gap-1 text-purple-600 font-black text-xs opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                Watch <i className="ph-bold ph-arrow-right"></i>
-              </div>
-            </div>
-          </div>
-        </section>
 
         {/* Category Tabs */}
         <div className="flex items-center gap-2 mb-8 overflow-x-auto hide-scrollbar pb-2">
