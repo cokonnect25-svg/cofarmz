@@ -382,28 +382,34 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
     : machinery.filter(m => m.name.toLowerCase().includes(selectedCategory.toLowerCase()));
 
   return (
-    <div className="min-min-h-[100dvh] bg-surface-muted">
+    <div className="min-h-[100dvh] bg-[#f6f8f4]">
 
 
       {/* ── HERO SECTION ── */}
-     <section className="bg-hero-green px-6 pt-6 pb-8 rounded-b-[40px] shadow-xl">
-  {/* Greeting */}
-  <div className="flex items-center gap-2 text-green-100 mb-4">
-    <i className="ph-fill ph-map-pin text-[12px] text-green-300"></i>
-    <span className="text-sm font-bold">
-      Welcome back, {effectiveUser?.name?.split(' ')[0] || 'Farmer'} 👋
-    </span>
-  </div>
-
-</section>
+      <section className="relative isolate overflow-hidden bg-gradient-to-br from-green-950 via-green-800 to-emerald-700 px-5 py-8 text-white sm:px-8 sm:py-12">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full border-[40px] border-white/5"></div>
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 right-24 h-64 w-64 rounded-full bg-lime-300/10"></div>
+        <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-6">
+          <div className="max-w-xl">
+            <p className="mb-3 flex items-center gap-2 text-sm font-medium text-green-100"><span className="h-2 w-2 rounded-full bg-lime-300"></span>Welcome back, {effectiveUser?.name?.split(' ')[0] || 'Farmer'}</p>
+            <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">Good connections.<br /><span className="text-lime-200">Better harvests.</span></h1>
+            <p className="mt-3 max-w-md text-sm leading-relaxed text-green-100 sm:text-base">Your farming community, fresh opportunities and the tools to grow.</p>
+            <a href="#nearby-heading" className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-green-900 shadow-sm transition hover:bg-lime-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">Find your community <i aria-hidden="true" className="ph-bold ph-arrow-down"></i></a>
+          </div>
+          <div aria-hidden="true" className="hidden h-36 w-36 shrink-0 items-center justify-center rounded-[40px] border border-white/15 bg-white/10 shadow-xl sm:flex lg:h-44 lg:w-44">
+            <i className="ph-fill ph-plant text-8xl text-lime-200"></i>
+          </div>
+        </div>
+      </section>
 
 
       {/* ── MAIN CONTENT ── */}
-      <div className="max-w-7xl mx-auto px-6 py-10">
+      <div className="max-w-6xl mx-auto px-4 py-7 pb-28 sm:px-8 sm:py-10 sm:pb-28">
         {/* Profile posts — manual swipe carousel, intentionally no auto-scroll */}
-        <section className="mb-10">
-          <div className="mb-4">
-            <div><h2 className="text-2xl font-black text-gray-900">Posts</h2><p className="mt-1 text-xs font-semibold text-gray-500">Updates shared for you</p></div>
+        <section className="mb-9 rounded-[28px] border border-slate-200/60 bg-white/70 p-4 sm:p-6">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div><p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-green-700">From the community</p><h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Posts</h2><p className="mt-1 text-sm text-slate-500">Updates shared for you</p></div>
+            <button onClick={() => router.push('/posts')} className="inline-flex shrink-0 items-center gap-1 rounded-full border border-green-100 bg-green-50 px-3 py-2 text-xs font-bold text-green-700 transition hover:bg-green-100 focus-visible:outline-green-600">View all <i aria-hidden="true" className="ph-bold ph-arrow-up-right"></i></button>
           </div>
           {profilePosts.length ? (
             <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 hide-scrollbar">
@@ -416,9 +422,10 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
           )}
         </section>
         {/* ── DYNAMIC MATCHING SECTIONS ── */}
-        <section className="mb-12" aria-labelledby="nearby-heading">
-          <div className="mb-6">
-            <h2 id="nearby-heading" className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">Buyers &amp; Farmers</h2>
+        <section className="mb-9" aria-labelledby="nearby-heading">
+          <div className="mb-5">
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-green-700">Grow your network</p>
+            <h2 id="nearby-heading" tabIndex={-1} className="scroll-mt-28 outline-none text-2xl sm:text-3xl font-black tracking-tight text-slate-900">Buyers &amp; Farmers</h2>
             <p className="mt-2 text-sm sm:text-base text-slate-500">Connect, collaborate and grow together.</p>
           </div>
           <div className="relative mb-5 flex items-center gap-4 overflow-hidden rounded-[28px] border border-green-200 bg-gradient-to-br from-green-50 to-emerald-100/60 p-5 sm:p-7">
@@ -431,7 +438,7 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
             </div>
             <i aria-hidden="true" className="ph-fill ph-plant pointer-events-none absolute -bottom-5 -right-3 text-9xl text-green-200/40"></i>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:gap-5">
+          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
             {[
               { label: 'Buyers', description: 'Find fresh produce and great deals.', type: 'buyers', icon: 'ph-shopping-cart', color: 'from-green-400 to-green-600' },
               { label: 'Farmers', description: 'Discover local growers and their produce.', type: 'farmers', icon: 'ph-plant', color: 'from-sky-400 to-blue-600' },
@@ -441,14 +448,14 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
               <button
                 key={category.type}
                 onClick={() => router.push(`/nearby-farmers?type=${category.type}&fresh=true`)}
-                className="group flex h-full flex-col items-start rounded-[28px] border border-white bg-white p-5 text-left shadow-[0_8px_30px_rgba(15,23,42,0.04)] transition hover:-translate-y-1 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-4 active:scale-[0.98] sm:rounded-[32px] sm:p-7"
+                className="group flex h-full flex-col items-start rounded-[28px] border border-slate-200/60 bg-white p-4 sm:p-5 text-left shadow-[0_8px_30px_rgba(15,23,42,0.04)] transition hover:-translate-y-1 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-4 active:scale-[0.98] sm:rounded-[28px] lg:p-6"
               >
                 <span className={`mb-5 flex h-14 w-14 items-center justify-center rounded-[20px] bg-gradient-to-br ${category.color} text-white shadow-md sm:h-16 sm:w-16`}>
                   <i aria-hidden="true" className={`ph-fill ${category.icon} text-3xl`}></i>
                 </span>
                 <span className="text-lg sm:text-2xl font-extrabold leading-tight text-slate-900">{category.label}</span>
                 <span className="mt-2 text-sm sm:text-base leading-relaxed text-slate-500">{category.description}</span>
-                <span className="mt-5 inline-flex items-center gap-1 text-xs font-bold text-green-700">Explore nearby <i aria-hidden="true" className="ph-bold ph-arrow-right transition-transform group-hover:translate-x-1"></i></span>
+                <span className="mt-auto inline-flex items-center gap-1 pt-5 text-xs font-bold text-green-700">Explore nearby <i aria-hidden="true" className="ph-bold ph-arrow-right transition-transform group-hover:translate-x-1"></i></span>
               </button>
             ))}
           </div>
@@ -459,12 +466,22 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
         </section>
 
 
+        {/* Equipment Grid */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-green-700">Ready for your next harvest</p>
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Top Picks Near You</h2>
+              <p className="text-gray-500 text-sm mt-1">Top-rated machinery available near you</p>
+            </div>
+          </div>
+
         {/* Category Tabs */}
-        <div className="flex items-center gap-2 mb-8 overflow-x-auto hide-scrollbar pb-2">
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto hide-scrollbar pb-2">
           {CATEGORIES.map(cat => (
             <button key={cat.label}
               onClick={() => setSelectedCategory(cat.label)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all border ${selectedCategory === cat.label
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all border ${selectedCategory === cat.label
                 ? 'bg-brand-600 text-white border-brand-600 shadow-md shadow-brand-600/20'
                 : 'bg-white text-gray-600 border-gray-200 hover:border-brand-300 hover:text-brand-600'
                 }`}>
@@ -478,15 +495,6 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
             View all <i className="ph-bold ph-arrow-right"></i>
           </button>
         </div>
-
-        {/* Equipment Grid */}
-        <section className="mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-black text-gray-900">Top Picks Near You</h2>
-              <p className="text-gray-500 text-sm mt-1">Top-rated machinery available near you</p>
-            </div>
-          </div>
 
           {loadingMachinery ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -502,7 +510,7 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
               ))}
             </div>
           ) : filteredMachinery.length === 0 ? (
-            <div className="bg-white rounded-2xl p-16 text-center border border-dashed border-gray-200">
+            <div className="bg-white rounded-3xl px-5 py-10 text-center border border-dashed border-gray-200">
               <div className="w-16 h-16 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <i className="ph-bold ph-tractor text-3xl text-brand-400"></i>
               </div>
@@ -586,14 +594,14 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
         <section className="bg-gradient-to-r from-brand-800 to-brand-600 rounded-3xl p-8 md:p-12 text-white flex flex-col md:flex-row items-center justify-between gap-6 mb-12 overflow-hidden relative">
           <div className="absolute right-0 top-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
           <div className="relative">
-            <span className="bg-accent text-white text-xs font-black uppercase px-3 py-1 rounded-full mb-3 inline-block">Season Deal</span>
-            <h3 className="text-2xl md:text-3xl font-black mb-2">Spring Seeding Setup</h3>
-            <p className="text-brand-100 text-sm">Get 15% off full tractor + seeder packages this season.</p>
+            <span className="bg-accent text-white text-xs font-black uppercase px-3 py-1 rounded-full mb-3 inline-block">Equipment for your farm</span>
+            <h3 className="text-2xl md:text-3xl font-black mb-2">Make every season count</h3>
+            <p className="text-brand-100 text-sm">Find the right equipment for your farm, all in one place.</p>
           </div>
           <button
             onClick={() => router.push('/machinery-list')}
             className="relative bg-white text-brand-800 px-8 py-4 rounded-2xl font-black text-sm hover:bg-brand-50 transition-colors shadow-lg whitespace-nowrap flex items-center gap-2">
-            Browse Deals <i className="ph-bold ph-arrow-right"></i>
+            Explore equipment <i className="ph-bold ph-arrow-right"></i>
           </button>
         </section>
 
