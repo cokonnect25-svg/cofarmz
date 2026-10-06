@@ -62,6 +62,8 @@ function toE164(raw: string, countryCode = "91") {
 export default function PhoneVerificationGate({ user, pathname }: { user: any; pathname?: string | null }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [phone, setPhone] = useState("");
@@ -84,10 +86,29 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
     }
 
     let cancelled = false;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10000);
     setLoading(true);
+    setProfile(null);
+    setProfileError("");
+    setConfirmation(null);
+    setNativeVerificationId(null);
+    setCode("");
+    setMessage("");
+    verifierRef.current?.clear();
+    verifierRef.current = null;
 
-    fetch(getApiUrl(`/api/users/profile?userId=${user.id}`))
-      .then((res) => (res.ok ? res.json() : null))
+    fetch(getApiUrl(`/api/users/profile?userId=${encodeURIComponent(user.id)}`), {
+      cache: "no-store",
+      credentials: "include",
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Failed to check phone verification");
+        const data = await res.json();
+        if (data?.id !== user.id) throw new Error("Invalid profile response");
+        return data;
+      })
       .then((data) => {
         if (cancelled || !data) return;
         setProfile(data);
@@ -96,30 +117,47 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
         setCountryCode(nextCountryCode);
         setPhone(data.phone ? getLocalPhoneNumber(data.phone, nextCountryCode) : "");
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) setProfileError("Could not check your phone verification. Please retry.");
+      })
       .finally(() => {
+        window.clearTimeout(timeout);
         if (!cancelled) setLoading(false);
       });
 
     return () => {
       cancelled = true;
+      controller.abort();
+      window.clearTimeout(timeout);
     };
-  }, [user?.id, hiddenByRoute]);
+  }, [user?.id, hiddenByRoute, pathname, refreshKey]);
+
+  useEffect(() => {
+    const refresh = () => {
+      // Returning from reCAPTCHA/native OTP must preserve the active challenge.
+      if (document.visibilityState === "visible" && !sending && !verifying && !confirmation && !nativeVerificationId) {
+        setRefreshKey((value) => value + 1);
+      }
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [sending, verifying, confirmation, nativeVerificationId]);
+
+  useEffect(() => () => {
+    verifierRef.current?.clear();
+    verifierRef.current = null;
+  }, []);
 
   useEffect(() => {
     const handleProfileUpdated = (event: Event) => {
       const updatedProfile = (event as CustomEvent<Profile>).detail;
       if (!updatedProfile || updatedProfile.id !== user?.id) return;
 
-      setProfile(updatedProfile);
-      const locationCountryCode = getCountryCodeFromLocation(updatedProfile.location);
-      const nextCountryCode = getCountryCodeFromPhone(updatedProfile.phone, locationCountryCode);
-      setCountryCode(nextCountryCode);
-      setPhone(updatedProfile.phone ? getLocalPhoneNumber(updatedProfile.phone, nextCountryCode) : "");
-      setConfirmation(null);
-      setNativeVerificationId(null);
-      setCode("");
-      setMessage("");
+      setRefreshKey((value) => value + 1);
     };
 
     window.addEventListener("cofarmz:profile-updated", handleProfileUpdated);
@@ -130,10 +168,10 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
     !!user?.id &&
     !hiddenByRoute &&
     !loading &&
-    profile &&
+    profile !== null && profile.id === user.id &&
     profile.role !== "superadmin" &&
     profile.role_id !== 5 &&
-    profile.phone_verified !== true;
+    (profile.phone_verified !== true || !profile.phone?.trim());
 
   async function getVerifier() {
     if (verifierRef.current) return verifierRef.current;
@@ -158,11 +196,14 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
   async function completePhoneVerification(idToken: string) {
     const res = await fetch(getApiUrl("/api/users/verify-phone"), {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: user.id, idToken }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Phone verification failed");
+    if (!res.ok || data.phone_verified !== true || !data.phone?.trim()) {
+      throw new Error(data.error || "Phone verification failed");
+    }
 
     setProfile((prev) => prev ? { ...prev, phone: data.phone, phone_verified: true } : prev);
 
@@ -252,6 +293,22 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
     }
   }
 
+  if (user?.id && !hiddenByRoute && (loading || profileError || profile?.id !== user.id)) {
+    return (
+      <div role="dialog" aria-modal="true" aria-label="Checking phone verification" className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/60 px-4">
+        <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+          <p role="status" className="text-sm font-semibold text-gray-700">
+            {profileError || "Checking your phone verification..."}
+          </p>
+          {profileError && (
+            <button type="button" onClick={() => setRefreshKey((value) => value + 1)} className="mt-4 w-full rounded-2xl bg-green-600 px-4 py-3 text-sm font-black text-white">
+              Retry
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
   if (!shouldVerify) return null;
   const otpSent = !!confirmation || !!nativeVerificationId;
   const selectedPhoneCountry = getPhoneCountry(countryCode);

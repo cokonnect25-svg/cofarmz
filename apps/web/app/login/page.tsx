@@ -142,6 +142,10 @@ const handleGoogleSignIn = async () => {
           url: backendUrl,
           key: 'cofarmz.session_token',
           value: data.signedToken,
+          path: '/',
+          // Match the server's seven-day session; otherwise this is a
+          // session-only cookie that Android can discard on app restart.
+          expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString(),
         });
       }
 

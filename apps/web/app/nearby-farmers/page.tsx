@@ -1,6 +1,7 @@
 'use client';
 
 import FarmerFpo from '@/components/FarmerFpo';
+import RegisteredFpos from '@/components/RegisteredFpos';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useRef, Suspense, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -846,7 +847,7 @@ onClick={() => {
           </>}
         </header>
 
-        {searchType === 'fpo' ? <FarmerFpo mode="directory"/> : <>
+        {searchType === 'fpo' ? <><RegisteredFpos/><FarmerFpo mode="directory"/></> : <>
         {/* Filter modal */}
         {showFilter && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={() => setShowFilter(false)}>
