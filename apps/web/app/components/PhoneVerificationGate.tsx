@@ -62,7 +62,6 @@ function toE164(raw: string, countryCode = "91") {
 export default function PhoneVerificationGate({ user, pathname }: { user: any; pathname?: string | null }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
-  const [profileError, setProfileError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -90,7 +89,6 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
     const timeout = window.setTimeout(() => controller.abort(), 10000);
     setLoading(true);
     setProfile(null);
-    setProfileError("");
     setConfirmation(null);
     setNativeVerificationId(null);
     setCode("");
@@ -118,7 +116,12 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
         setPhone(data.phone ? getLocalPhoneNumber(data.phone, nextCountryCode) : "");
       })
       .catch(() => {
-        if (!cancelled) setProfileError("Could not check your phone verification. Please retry.");
+        if (cancelled) return;
+        // A failed profile read must still let the user supply a number.
+        // Only a successful OTP verification response can unlock the gate.
+        setProfile({ id: user.id, phone: null, phone_verified: false });
+        setPhone("");
+        setCountryCode("91");
       })
       .finally(() => {
         window.clearTimeout(timeout);
@@ -198,7 +201,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, idToken }),
+      body: JSON.stringify({ userId: user.id, idToken, expectedPhone: toE164(phone, countryCode) }),
     });
     const data = await res.json();
     if (!res.ok || data.phone_verified !== true || !data.phone?.trim()) {
@@ -293,18 +296,13 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
     }
   }
 
-  if (user?.id && !hiddenByRoute && (loading || profileError || profile?.id !== user.id)) {
+  if (user?.id && !hiddenByRoute && (loading || profile?.id !== user.id)) {
     return (
       <div role="dialog" aria-modal="true" aria-label="Checking phone verification" className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/60 px-4">
         <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
           <p role="status" className="text-sm font-semibold text-gray-700">
-            {profileError || "Checking your phone verification..."}
+            Checking your phone verification...
           </p>
-          {profileError && (
-            <button type="button" onClick={() => setRefreshKey((value) => value + 1)} className="mt-4 w-full rounded-2xl bg-green-600 px-4 py-3 text-sm font-black text-white">
-              Retry
-            </button>
-          )}
         </div>
       </div>
     );
@@ -315,7 +313,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
   const canSendOtp = isValidLocalPhoneNumber(phone, countryCode) && /^\+[1-9]\d{9,14}$/.test(toE164(phone, countryCode));
 
   return (
-    <div className="fixed inset-0 z-[10050] flex items-end justify-center bg-black/60 px-4 sm:items-center">
+    <div role="dialog" aria-modal="true" aria-label="Verify your phone" className="fixed inset-0 z-[10050] flex items-end justify-center bg-black/60 px-4 sm:items-center">
       <div className="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl">
         <div className="mb-5">
           <p className="text-xs font-black uppercase tracking-widest text-green-700">Mobile verification</p>

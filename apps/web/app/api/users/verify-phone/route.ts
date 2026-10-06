@@ -69,7 +69,7 @@ async function verifyFirebasePhoneToken(idToken: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, idToken } = await request.json();
+    const { userId, idToken, expectedPhone } = await request.json();
 
     if (!userId || !idToken) {
       return NextResponse.json({ error: "userId and idToken are required" }, { status: 400 });
@@ -96,6 +96,16 @@ export async function POST(request: NextRequest) {
     }
 
     const firebaseUser = await verifyFirebasePhoneToken(idToken);
+    if (expectedPhone !== undefined && (
+      typeof expectedPhone !== "string" ||
+      !/^\+[1-9]\d{9,14}$/.test(expectedPhone) ||
+      expectedPhone !== firebaseUser.phone_number
+    )) {
+      return NextResponse.json(
+        { code: "PHONE_TOKEN_MISMATCH", error: "The OTP verified a different phone number. Please send a new OTP for the number you entered." },
+        { status: 400 }
+      );
+    }
     const phoneLookup = normalizePhoneForLookup(firebaseUser.phone_number);
 
     const duplicatePhone = await sql`
@@ -112,8 +122,17 @@ export async function POST(request: NextRequest) {
     `;
 
     if (duplicatePhone.length > 0) {
+      const diagnosticId = crypto.randomUUID();
+      // Server-only identifiers let operators locate the actual matching row
+      // without disclosing another account in the client response.
+      console.warn("Phone verification conflict", {
+        diagnosticId,
+        userId,
+        conflictingUserId: duplicatePhone[0].id,
+        phoneLastFour: phoneLookup.lookup.slice(-4),
+      });
       return NextResponse.json(
-        { error: "This mobile number is already linked to another account." },
+        { code: "PHONE_ALREADY_LINKED", diagnosticId, error: "This mobile number is already linked to another account." },
         { status: 409 }
       );
     }

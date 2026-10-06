@@ -30,7 +30,7 @@ async function renderScenario(native, response, pathname = '/') {
   global.fetch = async (url, options) => {
     requests.push({ url, options });
     if (response instanceof Error) throw response;
-    return { ok: response.status !== 500, json: async () => response };
+    return { ok: !response.status || response.status < 400, json: async () => response };
   };
   const compiled = new Module(filename, module);
   compiled.require = name => {
@@ -64,9 +64,12 @@ async function renderScenario(native, response, pathname = '/') {
       assert.equal(requests[0].options.cache, 'no-store');
       assert.equal(requests[0].options.credentials, 'include');
     }
-    for (const response of [new Error('offline'), { status: 500 }, { id: 'wrong-user' }]) {
+    for (const response of [new Error('offline'), { status: 500 }, { status: 404 }, { id: 'wrong-user' }]) {
       const { result } = await renderScenario(native, response);
-      assert(JSON.stringify(result).includes('Retry'), 'Failed checks must block with a retry');
+      const tree = JSON.stringify(result);
+      assert(tree.includes('Verify your phone'), 'Failed profile reads must offer phone entry');
+      assert(tree.includes('Send OTP'), 'Users must be able to start verification');
+      assert(!tree.includes('Could not check'), 'Do not trap users on the profile-check error');
     }
     assert.equal((await renderScenario(native, { id: 'test-user', phone: '+919876543210', phone_verified: true })).result, null);
     assert.equal((await renderScenario(native, { id: 'test-user', role: 'superadmin', phone: null, phone_verified: false })).result, null);
