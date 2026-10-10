@@ -103,7 +103,6 @@ interface Follower {
 
 interface Crop {
   crop_name: string;
-  years_of_experience: number;
   expertise_level: string;
   expected_yield_date?: string | null;
   expected_yield_quantity?: number | null;
@@ -794,7 +793,7 @@ if (Capacitor.isNativePlatform()) {
             {[
               { key: 'followers', label: 'Followers', count: profile.followers_count, icon: Users, show: true },
               { key: 'following', label: 'Following', count: profile.following_count, icon: UserCheck, show: true },
-              { key: 'crops', label: role === 'buyer' ? 'Crops/Commodities You Want to Buy' : 'Crops', count: profile.crops_count, icon: Wheat, show: true },
+              { key: 'crops', label: role === 'farmer' ? 'Current crops' : role === 'buyer' ? 'Crops/Commodities You Want to Buy' : 'Crops', count: profile.crops_count, icon: Wheat, show: true },
               { key: 'products', label: 'Products', count: products.length, icon: Package, show: true },
               { key: 'equipment', label: 'Equipment', count: profile.equipments_count, icon: Tractor, show: true },
             ].map(({ key, label, count, icon: Icon }) => (
@@ -863,7 +862,7 @@ if (Capacitor.isNativePlatform()) {
         {hasCrops && (
           <div>
             <SectionHeader
-              title={role === 'buyer' ? 'Crops/Commodities You Want to Buy' : 'Crops & Expertise'}
+              title={role === 'farmer' ? 'Current crops' : role === 'buyer' ? 'Crops/Commodities You Want to Buy' : 'Crops & Expertise'}
               count={crops.length}
               expanded={openSections.has('crops')}
               onToggle={() => toggleSection('crops')}
@@ -950,11 +949,6 @@ if (Capacitor.isNativePlatform()) {
 
                         {/* Meta row — always visible */}
                         <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
-                          {crop.years_of_experience > 0 && (
-                            <span className="text-xs text-gray-500">
-                              <span className="font-semibold text-gray-700">{crop.years_of_experience}y</span> experience
-                            </span>
-                          )}
                           {crop.expected_yield_date && (
                             <span className="text-xs text-blue-600 font-medium flex items-center gap-1">
                               <Calendar className="w-3 h-3" />

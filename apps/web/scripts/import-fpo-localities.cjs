@@ -68,6 +68,8 @@ async function importSnapshot(sql,snapshot) {
       if(batch.length===2000)await flush();
     }
     await flush();
+    const [taluks] = await tx`SELECT to_regclass('fpo_taluks') IS NOT NULL AS ready`;
+    if (taluks.ready) await tx`SELECT refresh_fpo_taluks()`;
     return {inserted,snapshot_date:manifest.snapshot_date,states:Object.keys(manifest.states).length};
   });
 }

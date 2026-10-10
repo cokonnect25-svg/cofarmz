@@ -1,3 +1,4 @@
+import { validateTaluk } from '@/lib/fpo-taluk';
 import sql from '@/app/api/utils/sql';
 import { NextResponse } from 'next/server';
 import { requireActor, requireFpoReviewer, fpoError, FpoError } from '@/lib/fpo-access';
@@ -32,14 +33,18 @@ export async function POST(request: Request) {
   try {
     const actor = await requireActor(request,true);
     const body = await request.json();
-    if (body.action === 'provision') return NextResponse.json(await provisionCatalogue(actor.id));
+    if (body.action === 'provision') {
+      if (body.level !== undefined && !['district','taluk'].includes(body.level)) throw new FpoError('Invalid FPO level');
+      return NextResponse.json(await provisionCatalogue(actor.id,body.level || 'district'));
+    }
     if (body.action === 'assign') {
       const district = await validateDistrict(body.state,body.district);
+      const taluk = await validateTaluk(body.taluk_id,district.id);
       const result = await sql.begin(async tx => {
         const [u] = await tx`SELECT * FROM "user" WHERE id=${String(body.farmer_id)} FOR UPDATE`;
         if (u?.role !== 'farmer') throw new FpoError('User must be a farmer');
-        await tx`UPDATE "user" SET district_id=${district.id},"updatedAt"=now() WHERE id=${u.id}`;
-        return assignFarmer(tx,u.id,district.id,'admin_manual');
+        await tx`UPDATE "user" SET district_id=${district.id},taluk_id=${taluk?.id || null},"updatedAt"=now() WHERE id=${u.id}`;
+        return assignFarmer(tx,u.id,district.id,'admin_manual',taluk?.id || null);
       });
       return NextResponse.json(result);
     }

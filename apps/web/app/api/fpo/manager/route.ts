@@ -3,14 +3,19 @@ import { NextResponse } from 'next/server';
 import sql from '@/app/api/utils/sql';
 import { requireActor, FpoError, fpoError } from '@/lib/fpo-access';
 export const dynamic = 'force-dynamic';
+const farmerNext = (rows:any[]) => rows.length===100?rows[rows.length-1].id:null;
 const headers = { 'Cache-Control': 'private, no-store' };
 export async function GET(request: Request) {
   try {
     const actor = await requireActor(request);
-    const [manager] = await sql`SELECT m.must_change_password,f.id,f.name,f.status,d.state,d.district,g.id AS group_id,u.email FROM fpo_manager_accounts m JOIN digital_fpos f ON f.id=m.digital_fpo_id JOIN fpo_districts d ON d.id=f.district_id JOIN farmer_groups g ON g.digital_fpo_id=f.id JOIN "user" u ON u.id=m.user_id WHERE m.user_id=${actor.id}`;
+    const [manager] = await sql`SELECT m.must_change_password,f.id,f.name,f.status,f.district_id,f.taluk_id,t.name AS taluk,d.state,d.district,g.id AS group_id,u.email FROM fpo_manager_accounts m JOIN digital_fpos f ON f.id=m.digital_fpo_id JOIN fpo_districts d ON d.id=f.district_id LEFT JOIN fpo_taluks t ON t.id=f.taluk_id JOIN farmer_groups g ON g.digital_fpo_id=f.id JOIN "user" u ON u.id=m.user_id WHERE m.user_id=${actor.id}`;
     if (!manager) throw new FpoError('This account is not an assigned FPO manager',403);
-    const farmers = manager.must_change_password || manager.status !== 'active' ? [] : await sql`SELECT u.id,u.name FROM farmer_fpo_assignments a JOIN "user" u ON u.id=a.farmer_id WHERE a.group_id=${manager.group_id} AND can_receive_fpo_message(u.id,a.group_id) ORDER BY u.name,u.id`;
-    return NextResponse.json({ manager, farmers }, { headers });
+    const farmers = manager.must_change_password || manager.status !== 'active' ? [] : await sql`SELECT u.id,u.name,t.name AS taluk,u.taluk_id FROM "user" u
+      LEFT JOIN fpo_taluks t ON t.id=u.taluk_id
+      WHERE u.role='farmer' AND u.district_id=${manager.district_id}
+        AND (${manager.taluk_id || null}::bigint IS NULL OR u.taluk_id=${manager.taluk_id || null}::bigint)
+      ORDER BY u.id LIMIT 100`;
+    return NextResponse.json({ manager, farmers, next:farmerNext(farmers) }, { headers });
   } catch(e) { return fpoError(e); }
 }
 export async function POST(request: Request) {

@@ -5,6 +5,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePathname } from 'next/navigation';
 import { getApiUrl } from '@/lib/api';
 import { Capacitor } from '@capacitor/core';
+import dynamic from 'next/dynamic';
+import { getBrowserPosition, getLocationErrorMessage } from '@/lib/browser-location';
+import { getMobileCredential } from '@/lib/mobile-credential';
+
+const MapPicker = dynamic(() => import('./MapPicker'), { ssr: false });
 
 export default function LocationPermissionPopup() {
   const { user, isAuthenticated } = useAuth();
@@ -13,6 +18,8 @@ export default function LocationPermissionPopup() {
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
+  const [showMap, setShowMap] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
 
   const hideNav = ['/login', '/signup', '/forgot-password', '/reset-password', '/select-role', '/auth-callback'].includes(pathname);
 
@@ -50,9 +57,7 @@ export default function LocationPermissionPopup() {
         latitude = pos.coords.latitude;
         longitude = pos.coords.longitude;
       } else {
-        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-          navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
-        );
+        const pos = await getBrowserPosition();
         latitude = pos.coords.latitude;
         longitude = pos.coords.longitude;
       }
@@ -62,7 +67,7 @@ export default function LocationPermissionPopup() {
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10`,
-          { headers: { 'User-Agent': 'CoFarmz/1.0' } }
+          { headers: { 'Accept-Language': 'en' } }
         );
         if (res.ok) {
           const data = await res.json();
@@ -74,30 +79,51 @@ export default function LocationPermissionPopup() {
         locationText = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
       }
 
-      // Save to user profile
-      const saveRes = await fetch(getApiUrl('/api/users/profile'), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-user-id': user!.id },
-        body: JSON.stringify({ userId: user!.id, latitude, longitude, location: locationText }),
-      });
-      if (!saveRes.ok) throw new Error('Unable to save location');
-
-      // Notify other components that location was updated
-      window.dispatchEvent(new CustomEvent('userLocationUpdated', { detail: { latitude, longitude, location: locationText } }));
-      setDone(true);
-      setTimeout(() => setShow(false), 1500);
-    } catch {
-      setError('Location is required to continue. Please allow location access and try again.');
+      await saveLocation(latitude, longitude, locationText);
+    } catch (error) {
+      setError(getLocationErrorMessage(error));
     } finally {
       setSaving(false);
     }
   };
 
-  if (!show) return null;
+  const saveLocation = async (latitude: number, longitude: number, locationText: string) => {
+      const credential = Capacitor.isNativePlatform() ? getMobileCredential() : null;
+      const saveRes = await fetch(getApiUrl('/api/users/profile'), {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...(credential ? { Authorization: `Bearer ${credential}` } : {}) },
+        body: JSON.stringify({ userId: user!.id, latitude, longitude, location: locationText }),
+      });
+      if (!saveRes.ok) {
+        const data = await saveRes.json().catch(() => null);
+        throw new Error(data?.error || 'Your location was detected, but could not be saved. Please retry.');
+      }
+
+      // Notify other components that location was updated
+      window.dispatchEvent(new CustomEvent('userLocationUpdated', { detail: { latitude, longitude, location: locationText } }));
+      setDone(true);
+      setTimeout(() => setShow(false), 1500);
+  };
+
+  const saveSelectedLocation = async () => {
+    if (!selectedLocation) return;
+    setSaving(true);
+    setError('');
+    try {
+      await saveLocation(selectedLocation.lat, selectedLocation.lng, selectedLocation.name);
+    } catch (error) {
+      setError(getLocationErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!show || hideNav || !isAuthenticated) return null;
 
   return (
     <div className="fixed inset-0 z-[99999] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-      <div className="bg-white rounded-t-3xl w-full max-w-lg px-6 pb-10 pt-6 shadow-2xl">
+      <div className="bg-white rounded-t-3xl w-full max-w-lg max-h-[90dvh] overflow-y-auto px-6 pb-10 pt-6 shadow-2xl">
         <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-6"></div>
         {done ? (
           <div className="text-center py-4">
@@ -133,6 +159,20 @@ export default function LocationPermissionPopup() {
                 <><i className="ph-bold ph-map-pin"></i> Detect My Farm Location</>
               )}
             </button>
+            <button type="button" disabled={saving} onClick={() => setShowMap(value => !value)} className="w-full py-3 border border-emerald-200 text-emerald-700 rounded-2xl font-bold text-sm disabled:opacity-60">
+              {showMap ? 'Hide map' : 'Choose Farm Location on Map'}
+            </button>
+            {showMap && (
+              <div className="mt-3 space-y-3">
+                <div className="h-[320px] overflow-hidden rounded-xl border border-gray-200">
+                  <MapPicker onLocationSelect={setSelectedLocation} />
+                </div>
+                {selectedLocation && <p className="text-sm text-gray-600">Selected: {selectedLocation.name}</p>}
+                <button type="button" onClick={saveSelectedLocation} disabled={saving || !selectedLocation} className="w-full py-3 bg-emerald-600 text-white rounded-2xl font-bold text-sm disabled:opacity-60">
+                  {saving ? 'Saving...' : 'Save Selected Location'}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

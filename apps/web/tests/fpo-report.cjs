@@ -60,6 +60,11 @@ const last = { id: 'last', name: '<script>alert("x")</script> రైతు क�
   assert(!preview.includes('onclick='), 'Embedded preview uses the parent print control');
   assert(!preview.includes('<div class="toolbar">'));
   assert(html.includes('onclick="window.print()"'), 'Standalone report retains its print control');
+  const child={id:'3',group_id:'group-child',name:'Taluk FPO',state:'State A',district:'District A',taluk:'Taluk A',taluk_id:'10',status:'active'};
+  const hierarchicalRead=async url=>url==='/api/digital-fpos'?{can_review:true,fpos:[...fpos,child]}:{farmers:[firstPage[0],{id:'child-farmer',name:'Child farmer',group_id:'group-child',assignment_status:'assigned'},{id:'outside',name:'Outside',group_id:'group-b',assignment_status:'assigned'}],next:null};
+  const districtTree=await loadFpoReport(hierarchicalRead,'group-a');assert.equal(districtTree.fpos.length,2);assert.equal(districtTree.farmers.length,2);
+  const childOnly=await loadFpoReport(hierarchicalRead,'group-child');assert.equal(childOnly.fpos.length,1);assert.equal(childOnly.farmers.length,1);
+  assert(renderFpoReport(districtTree.fpos,districtTree.farmers,true).includes('Taluk A Digital FPO'));
   if (process.argv.includes('--preview')) {
     const dir = path.resolve(__dirname, '../tmp/pdfs');
     fs.mkdirSync(dir, { recursive: true });

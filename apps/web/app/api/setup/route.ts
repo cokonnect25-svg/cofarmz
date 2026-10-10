@@ -123,7 +123,6 @@ await sql`
         id SERIAL PRIMARY KEY,
         user_id TEXT NOT NULL,
         crop_name VARCHAR(100) NOT NULL,
-        years_of_experience INTEGER,
         expertise_level VARCHAR(50) DEFAULT 'Beginner',
         expected_yield_date DATE,
         expected_yield_quantity NUMERIC,

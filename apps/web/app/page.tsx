@@ -5,6 +5,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Capacitor } from '@capacitor/core';
 import { getApiUrl } from '@/lib/api';
+import { getBrowserPosition } from '@/lib/browser-location';
 import UserAvatar from '@/app/components/UserAvatar';
 import PostCard, { SocialPost } from '@/app/components/PostCard';
 
@@ -244,9 +245,7 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
                 console.log('User Location:', lat, lon);
 
               } else {
-                const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-                  navigator.geolocation.getCurrentPosition(resolve, reject)
-                );
+                const pos = await getBrowserPosition();
 
                 lat = pos.coords.latitude;
                 lon = pos.coords.longitude;

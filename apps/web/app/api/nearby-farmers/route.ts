@@ -299,7 +299,7 @@ const targetRole =
       )`;
       [allCrops, allEquip, allProducts, allFollowers, allFollowing, allViewerFollows] = await Promise.all([
         sql`
-          SELECT user_id, crop_name, years_of_experience, expertise_level,
+          SELECT user_id, crop_name, expertise_level,
                  is_crop_waste, grade, certification_type,
                  expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom
           FROM crops
@@ -351,7 +351,6 @@ const targetRole =
       if (!cropsMap.has(c.user_id)) cropsMap.set(c.user_id, []);
       cropsMap.get(c.user_id)!.push({
         crop_name:                   c.crop_name,
-        years_of_experience:         c.years_of_experience,
         expertise_level:             c.expertise_level,
         is_crop_waste:               c.is_crop_waste,
         grade:                       c.grade,

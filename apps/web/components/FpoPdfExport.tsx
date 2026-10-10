@@ -33,10 +33,10 @@ export default function FpoPdfExport({ groupId }: { groupId?: string }) {
 
   return <div className="space-y-1">
     <button type="button" disabled={busy} onClick={exportPdf} className="inline-flex items-center gap-2 rounded-xl border border-green-700 bg-white px-4 py-2.5 text-sm font-bold text-green-800 hover:bg-green-50 disabled:opacity-50">
-      <Download size={17} aria-hidden="true" />{busy ? 'Preparing report...' : groupId ? 'Export district PDF' : 'Export all FPOs PDF'}
+      <Download size={17} aria-hidden="true" />{busy ? 'Preparing report...' : groupId ? 'Export FPO PDF' : 'Export all FPOs PDF'}
     </button>
-    <p className="text-xs text-gray-500">{groupId ? 'All farmers in this district.' : 'All districts and their assigned farmers.'} Preview the report, then choose Save as PDF / Print.</p>
-    {preview !== null && <FpoGroupDialog title={groupId ? 'District FPO report' : 'All FPOs report'} onClose={() => setPreview(null)} closeLabel="Close report">
+    <p className="text-xs text-gray-500">{groupId ? 'District reports include farmers in its mandal/taluk FPOs. Taluk reports cover that subgroup.' : 'All FPOs and their assigned farmers.'} Preview the report, then choose Save as PDF / Print.</p>
+    {preview !== null && <FpoGroupDialog title={groupId ? 'FPO report' : 'All FPOs report'} onClose={() => setPreview(null)} closeLabel="Close report">
       <button type="button" disabled={!ready} onClick={() => {
         try {
           const frame = frameRef.current?.contentWindow;

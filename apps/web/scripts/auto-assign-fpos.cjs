@@ -14,7 +14,7 @@ const sql = require('postgres')(process.env.DATABASE_URL, {
 const modules = new Map();
 function load(name) {
   const key = path.basename(name).replace(/\.ts$/, '');
-  if (!['fpo-automation', 'fpo-assignment', 'fpo-location', 'fpo-error'].includes(key)) throw new Error('Unsupported module');
+  if (!['fpo-automation', 'fpo-assignment', 'fpo-location', 'fpo-taluk', 'fpo-error'].includes(key)) throw new Error('Unsupported module');
   if (modules.has(key)) return modules.get(key).exports;
   const mod = { exports: {} }; modules.set(key, mod);
   const source = fs.readFileSync(path.join(__dirname, '../lib', key + '.ts'), 'utf8');

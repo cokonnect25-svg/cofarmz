@@ -7,6 +7,7 @@ import 'leaflet/dist/leaflet.css';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
 import { Loader } from 'lucide-react';
+import { getBrowserPosition, getLocationErrorMessage } from '@/lib/browser-location';
 
 interface MapPickerProps {
   onLocationSelect: (location: { lat: number; lng: number; name: string }) => void;
@@ -64,24 +65,13 @@ export default function MapPicker({ onLocationSelect, initialLocation }: MapPick
         } catch (nativeError) {
           console.error('Native geolocation error, falling back to browser:', nativeError);
           // Fallback to browser geolocation on error
-          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              timeout: 10000,
-              enableHighAccuracy: false
-            });
-          });
+          const position = await getBrowserPosition();
           lat = position.coords.latitude;
           lng = position.coords.longitude;
         }
       } else {
         // Web fallback
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(
-            resolve,
-            reject,
-            { timeout: 10000, enableHighAccuracy: false }
-          );
-        });
+        const position = await getBrowserPosition();
         lat = position.coords.latitude;
         lng = position.coords.longitude;
       }
@@ -90,7 +80,7 @@ export default function MapPicker({ onLocationSelect, initialLocation }: MapPick
       await getReverseGeocodeLocation(lat, lng);
     } catch (error) {
       console.error('Error getting current location:', error);
-      alert('Unable to get your current location. Please try clicking on the map to select a location manually.');
+      alert(getLocationErrorMessage(error));
     } finally {
       setGettingCurrent(false);
     }

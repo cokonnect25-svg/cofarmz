@@ -138,7 +138,7 @@ async function signUp(
   name: string,
   role: 'farmer' | 'buyer' | 'supplier' | 'fpo' | 'superadmin' = 'farmer',
   supplierTypes: Array<'commodities' | 'equipment'> = [],
-  location: {state:string;district:string} = {state:'',district:''}
+  location: {state:string;district:string;taluk_id?:string|null} = {state:'',district:''}
 ) {
   if(role==='farmer' && (!location.state || !location.district)) throw new Error('State and District are required');
   const result = await authClient.signUp.email({ email, password, name });
@@ -157,7 +157,7 @@ async function signUp(
           email: result.data.user.email,
           role,
           supplier_types: role === 'supplier' ? supplierTypes : [],
-          state: location.state, district: location.district,
+          state: location.state, district: location.district,taluk_id:location.taluk_id || null,
           role_confirmed: true,   // skip the role modal on home page
         }),
       });

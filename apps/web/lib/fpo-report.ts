@@ -1,9 +1,12 @@
 export interface ReportFpo {
   id: string;
   group_id: string;
+  district_id?: string | number;
+  taluk_id?: string | number | null;
   name: string;
   state: string;
   district: string;
+  taluk?: string | null;
   status: string;
 }
 
@@ -38,7 +41,9 @@ type ReadJson = (path: string) => Promise<any>;
 export async function loadFpoReport(read: ReadJson, groupId?: string) {
   const directory = await read('/api/digital-fpos');
   if (!directory.can_review) throw new Error('Admin access required');
-  const fpos: ReportFpo[] = directory.fpos.filter((f: ReportFpo) => !groupId || f.group_id === groupId);
+  const selected:ReportFpo|undefined = groupId ? directory.fpos.find((f:ReportFpo)=>f.group_id===groupId) : undefined;
+  const fpos: ReportFpo[] = directory.fpos.filter((f: ReportFpo) => !groupId || f.group_id===groupId || (selected && !selected.taluk_id && (selected.district_id ? String(f.district_id)===String(selected.district_id) : f.district===selected.district && f.state===selected.state)));
+  if (selected) fpos.sort((a,b)=>Number(b.group_id===groupId)-Number(a.group_id===groupId));
   if (groupId && !fpos.length) throw new Error('This district FPO is no longer available');
   const groups = new Set(fpos.map(f => f.group_id));
   const farmers: ReportFarmer[] = [];
@@ -46,7 +51,7 @@ export async function loadFpoReport(read: ReadJson, groupId?: string) {
   let cursor: string | null = '';
   do {
     const params = new URLSearchParams({ after: cursor, details: 'true' });
-    if (groupId) params.set('group', groupId);
+    if (groupId && fpos.length===1) params.set('group', groupId);
     const page = await read(`/api/admin/fpo?${params}`);
     farmers.push(...page.farmers.filter((f: ReportFarmer) => f.group_id && groups.has(f.group_id)));
     cursor = page.next;
@@ -80,7 +85,7 @@ function renderFarmer(farmer: ReportFarmer, index: number) {
 }
 
 export function renderFpoReport(fpos: ReportFpo[], farmers: ReportFarmer[], districtOnly: boolean, generatedAt = new Date(), showToolbar = true) {
-  const title = districtOnly ? `${fpos[0]?.district || 'District'} Digital FPO` : 'All Digital FPOs';
+  const title = districtOnly ? `${fpos[0]?.taluk || fpos[0]?.district || 'District'} Digital FPO` : 'All Digital FPOs';
   const grouped = new Map<string, ReportFarmer[]>();
   for (const farmer of farmers) {
     if (!farmer.group_id) continue;
@@ -98,13 +103,13 @@ export function renderFpoReport(fpos: ReportFpo[], farmers: ReportFarmer[], dist
     @page{size:A4 portrait;margin:15mm} @media print{body{background:white;font-size:11px}main{max-width:none;margin:0;padding:0}.toolbar{display:none}h1{font-size:23px}h2{font-size:16px}table{font-size:10px}th,td{padding:7px}.district+.district{break-before:page}}
   </style></head><body><main>
   ${showToolbar ? '<div class="toolbar"><button type="button" onclick="window.print()">Save as PDF / Print</button><p>Select <strong>Save as PDF</strong> in the print dialog to download this report.</p></div>' : ''}
-  <h1>${escapeHtml(title)}</h1><p class="muted">CoFarmz - district communities and assigned farmers</p>
+  <h1>${escapeHtml(title)}</h1><p class="muted">CoFarmz - district and mandal/taluk communities and assigned farmers</p>
   <p class="muted">Generated: ${escapeHtml(generatedAt.toLocaleString('en-IN'))}</p>
   <div class="summary"><strong>${fpos.length} Digital FPO${fpos.length === 1 ? '' : 's'} | ${farmers.length} tagged farmers</strong><p>Includes active and inactive FPO memberships. Farmers without an FPO assignment are excluded.${districtOnly ? '' : ' Covers all districts, regardless of directory search or status filters.'}</p></div>
   ${!fpos.length ? '<p class="empty">No Digital FPOs available.</p>' : ''}
   ${fpos.map(fpo => {
     const members = grouped.get(fpo.group_id) || [];
-    return `<section class="district"><div class="district-header"><h2>${escapeHtml(fpo.district)} Digital FPO</h2><p>${escapeHtml(fpo.state)} | Status: ${escapeHtml(fpo.status)} | ${members.length} tagged farmers</p><p class="muted">${escapeHtml(fpo.name)}</p></div>
+    return `<section class="district"><div class="district-header"><h2>${escapeHtml(fpo.taluk || fpo.district)} Digital FPO</h2><p>${escapeHtml(fpo.district)}, ${escapeHtml(fpo.state)} | Status: ${escapeHtml(fpo.status)} | ${members.length} tagged farmers</p><p class="muted">${escapeHtml(fpo.name)}</p></div>
     ${members.length ? members.map(renderFarmer).join('') : '<p class="empty">No assigned farmers.</p>'}</section>`;
   }).join('')}
   </main></body></html>`;

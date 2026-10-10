@@ -19,12 +19,14 @@ function load(name, dependencies) {
   const connection = async strings => strings.join('').includes('try_advisory') ? [{ acquired }] : (unlocked++, []);
   connection.release = () => released++;
   const db = async (strings, ...values) => {
-    if (strings.join('').includes('to_regclass')) return [{ subdistricts: mappingsReady, localities: mappingsReady }];
+    if (strings.join('').includes('to_regclass')) return [{ subdistricts: mappingsReady, localities: mappingsReady, taluks: mappingsReady }];
     if (strings.join('').includes('FROM fpo_districts')) return [{ id: 'district' }];
     queried++; cursors.push(values[0]); return batches.shift();
   };
+  db.begin = fn=>fn(db);
   db.reserve = async () => connection;
   const { reconcileFpoAssignments } = load('fpo-automation', {
+    './fpo-taluk': {ensureDistrictTalukFpos:async()=>{}},
     '@/app/api/utils/sql': { __esModule: true, default: db },
     './fpo-assignment': { processFarmer: async (id, dryRun) => {
       assert.equal(dryRun, false); processed.push(id);
@@ -53,7 +55,7 @@ function load(name, dependencies) {
   assert.equal(queried, 3); assert.equal(unlocked, 3); assert.equal(released, 4);
   let resolved = 0;
   const { prepareLocation } = load('fpo-assignment', {
-    '@/app/api/utils/sql': {}, './fpo-error': { FpoError: Error },
+    '@/app/api/utils/sql': {__esModule:true,default:async()=>[{id:'manual'}]}, './fpo-taluk': {validateTaluk:async()=>null}, './fpo-error': { FpoError: Error },
     './fpo-location': {
       validCoordinates: () => true,
       validateDistrict: async () => ({ id: 'selected' }),
@@ -61,7 +63,7 @@ function load(name, dependencies) {
     },
   });
   assert.equal((await prepareLocation({ location: 'Omalur, Tamil Nadu' }, { location: 'Omalur, Tamil Nadu' })).district.id, 'matched');
-  assert.equal(await prepareLocation({ location: 'Elsewhere' }, { district_id: 'manual' }), null);
+  assert.equal((await prepareLocation({ location: 'Elsewhere' }, { district_id: 'manual' })).district.id, 'manual');
   assert.equal(await prepareLocation({ latitude: 12, longitude: 78 }, {}), null);
   assert.equal(resolved, 1);
   console.log('PASS: automatic batches, failure isolation, overlap lock, graceful stop, unchanged-address retry, saved district and GPS protections');

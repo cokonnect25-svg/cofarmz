@@ -5,6 +5,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
+import { getBrowserPosition } from '@/lib/browser-location';
 import { getApiUrl } from '@/lib/api';
 
 const SCROLL_KEY = 'machinery_scrollY';
@@ -182,18 +183,7 @@ export default function MachineryListPage() {
         }
       } else {
         try {
-          position = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(
-              (pos) => resolve({
-                coords: {
-                  latitude: pos.coords.latitude,
-                  longitude: pos.coords.longitude
-                }
-              }),
-              reject,
-              { timeout: 5000 }
-            );
-          });
+          position = await getBrowserPosition();
           hasLocation = true;
         } catch (e) {
           console.warn('Web geolocation failed:', e);

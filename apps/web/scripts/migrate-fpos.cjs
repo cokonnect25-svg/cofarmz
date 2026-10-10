@@ -35,5 +35,6 @@ const sql = require('postgres')(process.env.DATABASE_URL, {ssl:{rejectUnauthoriz
       }
     }
   });
+  await sql.unsafe(fs.readFileSync(path.join(__dirname,'../migrations/20261010_taluk_fpos.sql'),'utf8'));
   console.log('Digital FPO schema, districts and reviewed subdistrict mappings ready. No farmers reassigned.');
 })().catch(e=>{console.error(e.message);process.exitCode=1;}).finally(()=>sql.end());

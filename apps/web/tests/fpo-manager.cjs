@@ -10,7 +10,7 @@ const sql = async (parts,...values) => {
   if(query.includes('SELECT d.district,d.state')) return [{district:'Salem',state:'Tamil Nadu'}];
   if(query.startsWith('UPDATE account') && query.includes('RETURNING id')) return [{id:'account'}];
   if(query.includes('FROM fpo_manager_accounts')) return manager ? [manager] : [];
-  if(query.includes('FROM farmer_fpo_assignments')) return [{id:'farmer',name:'Assigned farmer'}];
+  if(query.includes('FROM farmer_fpo_assignments') || query.includes('FROM "user" u')) return [{id:'farmer',name:'Assigned farmer'}];
   if(query.includes('SELECT id,password FROM account')) return [{id:'account',password:await crypto.hashPassword('temporary-password')}];
   return [];
 };
@@ -43,9 +43,9 @@ function request(body){return new Request('http://localhost/api/test',{method:bo
   assert.equal((await credentials.POST(request({}))).status,403);
   actor=null; assert.equal((await dashboard.GET(request())).status,401);
   actor={id:'manager'};assert.equal((await dashboard.GET(request())).status,403);
-  manager={user_id:'manager',group_id:'assigned-group',status:'active',must_change_password:true};queries=[];
-  let response=await dashboard.GET(request());assert.equal(response.headers.get('cache-control'),'private, no-store');assert.deepEqual((await response.json()).farmers,[]);assert(!queries.some(q=>q.query.includes('FROM farmer_fpo_assignments')));
-  manager.must_change_password=false;response=await dashboard.GET(request());assert.equal((await response.json()).farmers.length,1);assert(queries.some(q=>q.query.includes('can_receive_fpo_message')&&q.values.includes('assigned-group')));
+  manager={user_id:'manager',group_id:'assigned-group',district_id:'district-1',taluk_id:'taluk-1',status:'active',must_change_password:true};queries=[];
+  let response=await dashboard.GET(request());assert.equal(response.headers.get('cache-control'),'private, no-store');assert.deepEqual((await response.json()).farmers,[]);assert(!queries.some(q=>q.query.includes('FROM farmer_fpo_assignments') || q.query.includes('FROM "user" u')));
+  manager.must_change_password=false;response=await dashboard.GET(request());assert.equal((await response.json()).farmers.length,1);assert(queries.some(q=>q.query.includes("u.role='farmer'")&&q.values.includes('district-1')&&q.values.includes('taluk-1')));
   manager.status='inactive';assert.deepEqual((await (await dashboard.GET(request())).json()).farmers,[]);
   assert.equal((await dashboard.POST(request({currentPassword:'temporary-password',newPassword:'short'}))).status,400);
   queries=[];assert.equal((await dashboard.POST(request({currentPassword:'wrong-password',newPassword:'new-secure-password'}))).status,400);assert(!queries.some(q=>q.query.startsWith('UPDATE')));

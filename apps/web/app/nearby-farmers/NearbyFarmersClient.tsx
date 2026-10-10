@@ -11,7 +11,6 @@ import { getApiUrl } from '@/lib/api';
 
 interface FarmerCrop {
   crop_name: string;
-  years_of_experience: number | null;
   expertise_level: string;
 }
 
@@ -89,7 +88,7 @@ export default function NearbyFarmersClient() {
       : initialType
   );
   const [searchQuery, setSearchQuery] = useState(savedState?.searchQuery || '');
-  const [sortBy, setSortBy] = useState(savedState?.sortBy || 'nearby');
+  const [sortBy, setSortBy] = useState(savedState?.sortBy === 'active' ? 'active' : 'nearby');
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [filters, setFilters] = useState({
     distance: savedState?.filters?.distance ?? 50,
@@ -143,11 +142,6 @@ export default function NearbyFarmersClient() {
     })
     .sort((a, b) => {
       if (sortBy === 'nearby') return (a.distance || 9999) - (b.distance || 9999);
-      if (sortBy === 'experience') {
-        const aExp = a.crops?.reduce((sum, c) => sum + (c.years_of_experience || 0), 0) || 0;
-        const bExp = b.crops?.reduce((sum, c) => sum + (c.years_of_experience || 0), 0) || 0;
-        return bExp - aExp;
-      }
       if (sortBy === 'active') {
         return (b.equipment_count || 0) - (a.equipment_count || 0);
       }
@@ -365,7 +359,7 @@ export default function NearbyFarmersClient() {
             onClick={() => setShowSortMenu(true)}
           >
             <i className="ph-bold ph-funnel text-base"></i>
-            {sortBy === 'nearby' ? 'Nearby' : sortBy === 'experience' ? 'Experience' : 'Most Active'}
+            {sortBy === 'nearby' ? 'Nearby' : 'Most Active'}
             <i className="ph-bold ph-caret-down text-sm"></i>
           </button>
         </div>
@@ -379,7 +373,6 @@ export default function NearbyFarmersClient() {
             <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 px-2">Sort By</p>
             {(searchType === 'farmers' ? [
               { key: 'nearby', label: 'Nearby First', sub: 'Sort by distance', icon: 'ph-map-pin' },
-              { key: 'experience', label: 'Most Experienced', sub: 'Sort by years of experience', icon: 'ph-medal' },
             ] : [
               { key: 'nearby', label: 'Nearby First', sub: 'Sort by distance', icon: 'ph-map-pin' },
               { key: 'active', label: 'Most Active', sub: 'Sort by activity & listings', icon: 'ph-lightning' },

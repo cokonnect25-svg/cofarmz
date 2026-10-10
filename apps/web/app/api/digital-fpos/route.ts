@@ -1,3 +1,4 @@
+import { validateTaluk, ensureDistrictTalukFpos } from '@/lib/fpo-taluk';
 import sql from '@/app/api/utils/sql';
 import { NextResponse } from 'next/server';
 import { requireActor, requireFpoReviewer, isSuperAdmin, canReviewFpos, fpoError, FpoError } from '@/lib/fpo-access';
@@ -8,19 +9,22 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     const actor = await requireActor(request);
-    const rows = await sql`SELECT f.*,d.state,d.district,g.id AS group_id,f.name AS group_name,
-      (SELECT count(*)::int FROM farmer_fpo_assignments a JOIN "user" u ON u.id=a.farmer_id WHERE a.group_id=g.id AND u.role='farmer' AND (${canReviewFpos(actor.role)} OR can_receive_fpo_message(u.id,g.id))) AS farmer_count
+    const rows = await sql`SELECT f.*,d.state,d.district,t.name AS taluk,g.id AS group_id,f.name AS group_name,
+      (SELECT count(*)::int FROM farmer_fpo_assignments a JOIN "user" u ON u.id=a.farmer_id WHERE a.group_id=g.id AND u.role='farmer' AND (${canReviewFpos(actor.role)} OR can_receive_fpo_message(u.id,g.id))) AS farmer_count,
+      (SELECT count(*)::int FROM "user" u WHERE u.role='farmer' AND u.district_id=f.district_id) AS district_farmer_count,
+      (SELECT id FROM digital_fpos parent WHERE parent.district_id=f.district_id AND parent.taluk_id IS NULL) AS parent_fpo_id
       FROM digital_fpos f JOIN fpo_districts d ON d.id=f.district_id
+      LEFT JOIN fpo_taluks t ON t.id=f.taluk_id
       JOIN farmer_groups g ON g.digital_fpo_id=f.id
-      WHERE f.status='active' OR ${canReviewFpos(actor.role)} ORDER BY d.state,d.district`;
-    const [mine] = await sql`SELECT a.*,d.state,d.district,f.id AS digital_fpo_id,f.name,g.id AS current_group_id
+      WHERE f.status='active' OR ${canReviewFpos(actor.role)} ORDER BY d.state,d.district,t.name NULLS FIRST`;
+    const [mine] = await sql`SELECT a.*,d.state,d.district,t.name AS taluk,f.id AS digital_fpo_id,f.name,g.id AS current_group_id
       FROM farmer_fpo_assignments a LEFT JOIN fpo_districts d ON d.id=a.district_id
-      LEFT JOIN farmer_groups g ON g.id=a.group_id LEFT JOIN digital_fpos f ON f.id=g.digital_fpo_id WHERE a.farmer_id=${actor.id}`;
+      LEFT JOIN fpo_taluks t ON t.id=a.taluk_id LEFT JOIN farmer_groups g ON g.id=a.group_id LEFT JOIN digital_fpos f ON f.id=g.digital_fpo_id WHERE a.farmer_id=${actor.id}`;
     if (mine?.group_id) {
       const [access] = await sql`SELECT can_receive_fpo_message(${actor.id},${mine.group_id}) AS allowed`;
       if (!access.allowed) mine.assignment_status = 'inactive_fpo';
     }
-    return NextResponse.json({ fpos: canReviewFpos(actor.role) ? rows : rows.map(({id,name,state,district,status}) => ({id,name,state,district,status})), can_create: canReviewFpos(actor.role), mine: mine || null, can_manage: isSuperAdmin(actor.role), can_review: canReviewFpos(actor.role) });
+    return NextResponse.json({ fpos: canReviewFpos(actor.role) ? rows : rows.map(({id,name,state,district,taluk,taluk_id,status}) => ({id,name,state,district,taluk,taluk_id,status})), can_create: canReviewFpos(actor.role), mine: mine || null, can_manage: isSuperAdmin(actor.role), can_review: canReviewFpos(actor.role) });
   } catch (e) { return fpoError(e); }
 }
 export async function POST(request: Request) {
@@ -28,9 +32,15 @@ export async function POST(request: Request) {
     const actor = await requireFpoReviewer(request);
     const body = await request.json();
     const district = await validateDistrict(body.state,body.district);
+    const taluk = await validateTaluk(body.taluk_id,district.id);
     const result = await sql.begin(async tx => {
-      const [fpo] = await tx`INSERT INTO digital_fpos(district_id,name,created_by) VALUES(${district.id},${fpoName(district.district,district.state)},${actor.id}) RETURNING *`;
+      if (taluk) {
+        await tx`INSERT INTO digital_fpos(district_id,name,created_by) VALUES(${district.id},${fpoName(district.district,district.state)},${actor.id}) ON CONFLICT DO NOTHING`;
+        await tx`INSERT INTO farmer_groups(digital_fpo_id) SELECT id FROM digital_fpos WHERE district_id=${district.id} AND taluk_id IS NULL ON CONFLICT(digital_fpo_id) DO NOTHING`;
+      }
+      const [fpo] = await tx`INSERT INTO digital_fpos(district_id,taluk_id,name,created_by) VALUES(${district.id},${taluk?.id || null},${fpoName(taluk ? `${taluk.name}_${district.district}` : district.district,district.state)},${actor.id}) RETURNING *`;
       const [group] = await tx`INSERT INTO farmer_groups(digital_fpo_id) VALUES(${fpo.id}) RETURNING id`;
+      await ensureDistrictTalukFpos(tx,district.id);
       const assigned_count = await enrollSavedDistrict(tx,district.id,group.id);
       return { ...fpo, group_id: group.id, assigned_count };
     });

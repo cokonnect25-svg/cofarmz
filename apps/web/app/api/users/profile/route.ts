@@ -43,11 +43,12 @@ export async function GET(request: NextRequest) {
     // if role_confirmed hasn't been added to the schema in production yet.
     const result = await sql`
       SELECT
-        u.*, d.state, d.district,
+        u.*, d.state, d.district,t.name AS taluk,
         r.display_name as role_display_name,
         r.permissions as role_permissions
       FROM "user" u
       LEFT JOIN fpo_districts d ON d.id = u.district_id
+      LEFT JOIN fpo_taluks t ON t.id=u.taluk_id
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE u.id = ${userId}
     `;
@@ -98,8 +99,8 @@ export async function POST(request: Request) {
       if (u.role_confirmed) throw new FpoError('Your role is already confirmed',403);
       const [r] = await tx`SELECT id FROM roles WHERE name=${role}`;
       if (!r) throw new FpoError('Role is not configured');
-      const [updated] = await tx`UPDATE "user" SET role=${role},role_id=${r.id},supplier_types=${supplierTypes}::text[],role_confirmed=true,district_id=${location?.district?.id || null},"updatedAt"=now() WHERE id=${actor.id} RETURNING id,email,role,role_id,supplier_types`;
-      if (location) await assignFarmer(tx,actor.id,location.district.id,'registration');
+      const [updated] = await tx`UPDATE "user" SET role=${role},role_id=${r.id},supplier_types=${supplierTypes}::text[],role_confirmed=true,district_id=${location?.district?.id || null},taluk_id=NULL,"updatedAt"=now() WHERE id=${actor.id} RETURNING id,email,role,role_id,supplier_types`;
+      if (location) await assignFarmer(tx,actor.id,location.district.id,'registration',null,location.selected_taluk_id);
       return updated;
     });
     return NextResponse.json(result);
@@ -256,6 +257,7 @@ export async function PUT(request: Request) {
       updates.push('latitude = NULL', 'longitude = NULL');
     }
     if (resolved) {
+      if (body.location !== undefined || String(resolved.district?.id || '') !== String(currentUserRows[0].district_id || '')) updates.push('taluk_id = NULL');
       updates.push(`district_id = $${values.length + 1}`);
       values.push(resolved.district?.id || null);
     }
@@ -277,7 +279,7 @@ export async function PUT(request: Request) {
       const [locked] = await tx`SELECT * FROM "user" WHERE id=${userId} FOR UPDATE`;
       if (new Date(locked.updatedAt).getTime() !== new Date(currentUserRows[0].updatedAt).getTime()) throw new FpoError('Profile changed; please retry',409);
       await tx.unsafe(query, values);
-      if (resolved) await assignFarmer(tx,userId,resolved.district?.id || null,resolved.source,resolved.reason);
+      if (resolved) await assignFarmer(tx,userId,resolved.district?.id || null,resolved.source,resolved.reason,resolved.selected_taluk_id);
     });
 
     // Fetch updated user with role information
@@ -288,11 +290,12 @@ export async function PUT(request: Request) {
         u.calling_enabled,
         u.role_id,
         u.supplier_types,
-        u.role, u.district_id, d.state, d.district, u.latitude, u.longitude,
+        u.role, u.district_id,u.taluk_id, d.state, d.district,t.name AS taluk, u.latitude, u.longitude,
         r.display_name as role_display_name,
         r.permissions as role_permissions
       FROM "user" u
       LEFT JOIN fpo_districts d ON d.id = u.district_id
+      LEFT JOIN fpo_taluks t ON t.id=u.taluk_id
       LEFT JOIN roles r ON u.role_id = r.id
       WHERE u.id = ${userId}
     `;

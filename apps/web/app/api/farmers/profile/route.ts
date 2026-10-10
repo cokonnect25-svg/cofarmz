@@ -96,7 +96,6 @@ export async function GET(request: Request) {
         SELECT
           id,
           crop_name,
-          years_of_experience,
           expertise_level,
           expected_yield_date,
           expected_yield_quantity,

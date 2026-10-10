@@ -35,19 +35,20 @@ export default function MyDigitalFpo() {
     const refresh=()=>setRetry(n=>n+1);
     const visible=()=>{if(document.visibilityState==='visible')refresh();};
     window.addEventListener('online',refresh);
+    window.addEventListener('cofarmz:profile-updated',refresh);
     document.addEventListener('visibilitychange',visible);
-    return ()=>{window.removeEventListener('online',refresh);document.removeEventListener('visibilitychange',visible);};
+    return ()=>{window.removeEventListener('cofarmz:profile-updated',refresh);window.removeEventListener('online',refresh);document.removeEventListener('visibilitychange',visible);};
   },[]);
   if(!userId || owner!==userId) return null;
   const assigned=mine?.assignment_status==='assigned';
-  const status=assigned?'Group assigned':mine?.assignment_status==='inactive_fpo'?'Group temporarily inactive':mine?.assignment_status==='pending_fpo'?'Awaiting district FPO':'Location needed';
+  const status=assigned?'Group assigned':mine?.assignment_status==='inactive_fpo'?'Group temporarily inactive':mine?.assignment_status==='pending_fpo'?'Awaiting FPO':'Location needed';
   return <section className="m-4 overflow-hidden rounded-2xl border border-brand-100 bg-white shadow-soft">
     <div className="flex items-start gap-3 p-5"><span className="rounded-xl bg-brand-50 p-3 text-brand-700"><Building2 size={24}/></span><div className="min-w-0 flex-1"><h2 className="text-xs font-bold uppercase tracking-widest text-brand-700">My Digital FPO</h2>
       {loading?<p role="status" className="mt-2 text-sm text-gray-400">Loading your community...</p>:error&&!cached?<div role="alert" className="mt-2 text-sm text-red-700"><p>{error}</p><button onClick={()=>setRetry(n=>n+1)} className="mt-2 font-bold">Try again</button></div>:<>
-        <p className="mt-1 font-bold text-gray-900">{mine?.district?`${mine.district} Digital FPO`:'Your district community'}</p>
+        <p className="mt-1 font-bold text-gray-900">{mine?.district?`${mine.taluk || mine.district} Digital FPO`:'Your district community'}</p>
         {mine?.district&&<p className="mt-1 flex items-center gap-1 text-xs text-gray-500"><MapPin size={12}/>{mine.district}, {mine.state}</p>}
         <span className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${assigned?'bg-brand-50 text-brand-700':'bg-amber-50 text-amber-700'}`}>{status}</span>
-        {!assigned&&<p className="mt-2 text-xs leading-relaxed text-gray-500">{mine?.assignment_status==='pending_fpo'?'Your district is saved. An admin will set up your FPO group.':mine?.assignment_status==='inactive_fpo'?'Your group will reappear in Messages when it is active again.':'Add your state and district in your profile to find your FPO group.'}</p>}
+        {!assigned&&<p className="mt-2 text-xs leading-relaxed text-gray-500">{mine?.assignment_status==='pending_fpo'?'Your home location is saved. Your FPO group is awaiting setup.':mine?.assignment_status==='inactive_fpo'?'Your group will reappear in Messages when it is active again.':'Select your State, District and Mandal / Taluk in Edit profile, then save to join your FPO group.'}</p>}
       </>}
       {cached&&<p role="status" className="mt-2 text-xs text-gray-500">Saved FPO details{error?' ? could not refresh.': ' ? refreshing?'}</p>}
       {cached&&error&&<button onClick={()=>setRetry(n=>n+1)} className="mt-2 text-xs font-bold text-brand-700">Refresh details</button>}

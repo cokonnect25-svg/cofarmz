@@ -1,5 +1,7 @@
 'use client';
 
+import { isValidCropYieldDate } from '@/lib/crop-yield-date';
+import TalukSelect from '@/components/TalukSelect';
 import DistrictSelect from '@/components/DistrictSelect';
 import MyDigitalFpo from '@/components/MyDigitalFpo';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -35,7 +37,6 @@ const MapPicker = dynamic(() => import('@/app/components/MapPicker'), { ssr: fal
 interface FarmerCrop {
   id: number;
   crop_name: string;
-  years_of_experience: number | null;
   expertise_level: string;
   expected_yield_date: string | null;
   expected_yield_quantity: number | null;
@@ -451,7 +452,7 @@ function ProfileContent() {
   const [farmerCrops, setFarmerCrops] = useState<FarmerCrop[]>([]);
   const [productCount, setProductCount] = useState(0);
   const [newCrop, setNewCrop] = useState({
-    crop_name: '', years_of_experience: '', expertise_level: 'Beginner',
+    crop_name: '', expertise_level: 'Beginner',
     expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg',
     is_crop_waste: false, certificate_url: '', image_url: '', grade: '',certification_type: null as string | null,
   });
@@ -574,7 +575,7 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
   const [selectedReel, setSelectedReel] = useState<any | null>(null);
   const [selectedCrop, setSelectedCrop] = useState<FarmerCrop | null>(null);
   const [editForm, setEditForm] = useState({
-    name: '', email: '', phone: '', location: '', gender: '', age: '', bio: '', state: '', district: '',
+    name: '', email: '', phone: '', location: '', gender: '', age: '', bio: '', state: '', district: '', taluk_id: '',
     latitude: null as number | null, longitude: null as number | null,
     calling_enabled: true,
   });
@@ -585,7 +586,7 @@ const [processingFollow, setProcessingFollow] = useState<string | null>(null);
   const profileLocationTimeout = useRef<any>(null);
   const [editingCrop, setEditingCrop] = useState<FarmerCrop | null>(null);
   const [editCropForm, setEditCropForm] = useState({
-    crop_name: '', years_of_experience: '', expertise_level: 'Beginner',
+    crop_name: '', expertise_level: 'Beginner',
     expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg',
     is_crop_waste: false, certificate_url: '', image_url: '', grade: '',certification_type: null as string | null,
   });
@@ -642,8 +643,8 @@ const isEquipmentSupplier = userRole === 'supplier' && (supplierTypes.length ===
 const canManageCrops = userRole !== 'supplier' || isCommoditySupplier;
 const canManageEquipment = userRole !== 'supplier' || isEquipmentSupplier;
 const canUseFarmerCropFields = userRole === 'farmer' || userRole === 'fpo' || isCommoditySupplier;
-const cropProfileLabel = userRole === 'buyer' ? 'Crops/Commodities You Want to Buy' : 'Crops/Commodities';
-const cropProfileEmptyLabel = userRole === 'buyer' ? 'No Crops/Commodities You Want to Buy added yet' : 'No crops added yet';
+const cropProfileLabel = userRole === 'farmer' ? 'Current crops' : userRole === 'buyer' ? 'Crops/Commodities You Want to Buy' : 'Crops/Commodities';
+const cropProfileEmptyLabel = userRole === 'farmer' ? 'No current crops added yet' : userRole === 'buyer' ? 'No Crops/Commodities You Want to Buy added yet' : 'No crops added yet';
 const addCropLabel = userRole === 'buyer' ? 'Add Crop You Want to Buy' : 'Add Crop';
 
 const handleRoleChangeRequest = async () => {
@@ -955,11 +956,11 @@ const fetchFollowersCounts = async () => {
 
     const name = newCrop.crop_name.trim();
     const qty = newCrop.expected_yield_quantity;
-    const exp = newCrop.years_of_experience;
 
     if (!name) { alert('Crop name is required'); return; }
     if (!/^[A-Za-z\s]+$/.test(name)) { alert('Crop name should contain only letters'); return; }
 
+    if (!isValidCropYieldDate(newCrop.expected_yield_date)) { alert('Please select a valid yield date'); return; }
     if (newCrop.expected_yield_date) {
       const selectedDate = new Date(newCrop.expected_yield_date);
       const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -970,11 +971,6 @@ const fetchFollowersCounts = async () => {
       if (isNaN(parsedQty)) { alert('Quantity must be a number'); return; }
       if (parsedQty <= 0) { alert('Quantity must be greater than 0'); return; }
       if (parsedQty > 1000000) { alert('Quantity too large'); return; }
-    }
-    if (exp) {
-      const parsedExp = parseInt(exp);
-      if (isNaN(parsedExp) || parsedExp < 0) { alert('Experience must be a positive number'); return; }
-      if (parsedExp > 80) { alert('Experience seems unrealistic'); return; }
     }
 
     const normalizedNewCrop = newCrop.crop_name.trim().toLowerCase();
@@ -990,7 +986,6 @@ const fetchFollowersCounts = async () => {
         body: JSON.stringify({
           user_id: user.id,
           crop_name: newCrop.crop_name,
-          years_of_experience: canUseFarmerCropFields  ? (newCrop.years_of_experience ? parseInt(newCrop.years_of_experience) : null) : null,
           expertise_level: canUseFarmerCropFields ? newCrop.expertise_level : 'Beginner',
           expected_yield_date: newCrop.expected_yield_date || null,
           expected_yield_quantity: newCrop.expected_yield_quantity ? parseFloat(newCrop.expected_yield_quantity) : null,
@@ -1005,7 +1000,7 @@ const fetchFollowersCounts = async () => {
       });
       const data = await response.json();
       if (response.ok && !data.error) {
-        setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', image_url: '', grade: '', certification_type: null });
+        setNewCrop({ crop_name: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', image_url: '', grade: '', certification_type: null });
         setShowAddCropForm(false);
         setCropSuggestions([]); setShowSuggestions(false);
         await fetchUserCrops();
@@ -1041,7 +1036,6 @@ const fetchFollowersCounts = async () => {
     }
     setEditCropForm({
       crop_name: crop.crop_name,
-      years_of_experience: crop.years_of_experience ? String(crop.years_of_experience) : '',
       expertise_level: crop.expertise_level,
       expected_yield_date: formattedDate,
       expected_yield_quantity: crop.expected_yield_quantity ? String(crop.expected_yield_quantity) : '',
@@ -1073,6 +1067,7 @@ const fetchFollowersCounts = async () => {
 
   const handleSaveEditCrop = async () => {
     if (!editingCrop || !editCropForm.crop_name.trim()) { alert('Please enter a crop name'); return; }
+    if (!isValidCropYieldDate(editCropForm.expected_yield_date)) { alert('Please select a valid yield date'); return; }
     setSavingCrop(true);
     try {
       const response = await fetch(getApiUrl(`/api/farmer-crops`), {
@@ -1081,7 +1076,6 @@ const fetchFollowersCounts = async () => {
         body: JSON.stringify({
           id: editingCrop.id,
           crop_name: editCropForm.crop_name,
-          years_of_experience: canUseFarmerCropFields ? (editCropForm.years_of_experience ? parseInt(editCropForm.years_of_experience) : null) : null,
           expertise_level: canUseFarmerCropFields ? editCropForm.expertise_level : 'Beginner',
           expected_yield_date: editCropForm.expected_yield_date || null,
           expected_yield_quantity: editCropForm.expected_yield_quantity ? parseFloat(editCropForm.expected_yield_quantity) : null,
@@ -1117,7 +1111,7 @@ const fetchFollowersCounts = async () => {
       const nextCountryCode = getCountryCodeFromPhone(p.phone, locationCountryCode);
       const displayPhone = p.phone ? getLocalPhoneNumber(p.phone, nextCountryCode) : '';
       setEditPhoneCountryCode(nextCountryCode);
-      setEditForm({ state: p.state || '', district: p.district || '', name: p.name || user.name || '', email: p.email || user.email || '', phone: displayPhone, location: p.location || '', gender: p.gender || '', age: p.age ? String(p.age) : '', bio: p.bio || '', latitude: p.latitude || null, longitude: p.longitude || null, calling_enabled: p.calling_enabled !== false });
+      setEditForm({ taluk_id: String(p.taluk_id || ''), state: p.state || '', district: p.district || '', name: p.name || user.name || '', email: p.email || user.email || '', phone: displayPhone, location: p.location || '', gender: p.gender || '', age: p.age ? String(p.age) : '', bio: p.bio || '', latitude: p.latitude || null, longitude: p.longitude || null, calling_enabled: p.calling_enabled !== false });
       setShowEditModal(true);
     }
   };
@@ -1152,7 +1146,7 @@ const fetchFollowersCounts = async () => {
           email: editForm.email,
           phone: normalizedEditPhone,
           location: editForm.location,
-          ...(userRole === 'farmer' ? { state: editForm.state, district: editForm.district } : {}),
+          ...(userRole === 'farmer' ? { state: editForm.state, district: editForm.district,taluk_id:editForm.taluk_id || null } : {}),
           gender: editForm.gender || null,
           age: editForm.age ? parseInt(editForm.age) : null,
           bio: editForm.bio,
@@ -1635,7 +1629,6 @@ const fetchFollowersCounts = async () => {
                         </div>
                       </div>
                       <div className="text-xs text-gray-600 space-y-1">
-                        {crop.years_of_experience ? <p>Experience: {crop.years_of_experience} years</p> : null}
                         {crop.expertise_level && <p>Level: {crop.expertise_level}</p>}
                         {crop.is_crop_waste && <p className="text-orange-700 font-semibold">🌾 Crop Waste</p>}
                         {crop.expected_yield_date && <p className="text-green-700 font-medium">{userRole === 'farmer' || userRole === 'fpo' ? 'Expected Yield' : 'Want to Buy By'}: {new Date(crop.expected_yield_date).toLocaleDateString()}</p>}
@@ -1913,18 +1906,6 @@ const fetchFollowersCounts = async () => {
                   <span className="text-sm font-black text-gray-900 bg-white px-3 py-1 rounded-lg border border-gray-100 shadow-sm">{selectedCrop.expertise_level}</span>
                 </div>
               )}
-              {selectedCrop.years_of_experience ? (
-                <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100/50">
-                  <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center"><i className="ph-fill ph-briefcase text-blue-600 text-sm"></i></div><span className="text-sm font-bold text-gray-500">Experience</span></div>
-                  <span className="text-sm font-black text-gray-900 bg-white px-3 py-1 rounded-lg border border-gray-100 shadow-sm">{selectedCrop.years_of_experience} years</span>
-                </div>
-              ) : null}
-              {selectedCrop.expected_yield_date && (
-                <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100/50">
-                  <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center"><i className="ph-fill ph-calendar-check text-green-600 text-sm"></i></div><span className="text-sm font-bold text-gray-500">{selectedCrop.crop_type === 'grow' ? 'Expected Yield' : 'Wanted By'}</span></div>
-                  <span className="text-sm font-black text-green-700 bg-white px-3 py-1 rounded-lg border border-gray-100 shadow-sm">{new Date(selectedCrop.expected_yield_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                </div>
-              )}
               {selectedCrop.expected_yield_quantity && (
                 <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100/50">
                   <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center"><i className="ph-fill ph-scales text-purple-600 text-sm"></i></div><span className="text-sm font-bold text-gray-500">Total Quantity</span></div>
@@ -1980,7 +1961,7 @@ const fetchFollowersCounts = async () => {
           <div className="bg-white rounded-2xl overflow-hidden shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 flex items-center justify-between z-10">
               <h3 className="text-lg font-bold text-white">Add New Crop</h3>
-              <button onClick={() => { setShowAddCropForm(false); setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', image_url: '', grade: '', certification_type: null }); setCropSuggestions([]); setShowSuggestions(false); }} className="p-1 hover:bg-white/20 rounded-lg transition">
+              <button onClick={() => { setShowAddCropForm(false); setNewCrop({ crop_name: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', image_url: '', grade: '', certification_type: null }); setCropSuggestions([]); setShowSuggestions(false); }} className="p-1 hover:bg-white/20 rounded-lg transition">
                 <X className="w-5 h-5 text-white" />
               </button>
             </div>
@@ -1999,10 +1980,6 @@ const fetchFollowersCounts = async () => {
               {/* Farmer-only */}
               {canUseFarmerCropFields && (<>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">Years of Experience</label>
-                  <input type="number" inputMode="numeric" value={newCrop.years_of_experience} onChange={e => { const val = e.target.value.replace(/[^0-9]/g, ''); const num = parseInt(val); if (val === '' || (num >= 0 && num <= 80)) setNewCrop(p => ({ ...p, years_of_experience: val })); }} onKeyDown={e => ['-', '+', 'e', 'E', '.'].includes(e.key) && e.preventDefault()} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
-                </div>
-                <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">Expertise Level</label>
                   <select value={newCrop.expertise_level} onChange={e => setNewCrop(p => ({ ...p, expertise_level: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
                     <option value="Beginner">Beginner</option><option value="Intermediate">Intermediate</option><option value="Expert">Expert</option>
@@ -2018,8 +1995,8 @@ const fetchFollowersCounts = async () => {
               )}
               {/* Date */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">{canUseFarmerCropFields ? 'Expected Yield Date' : 'Want to Buy By'}</label>
-                <input type="date" min={localDate} value={newCrop.expected_yield_date} onChange={e => setNewCrop(p => ({ ...p, expected_yield_date: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
+                <label className="block text-sm font-semibold text-gray-900 mb-2">{canUseFarmerCropFields ? 'Expected Yield Date' : 'Want to Buy By'} <span className="text-red-600">*</span></label>
+                <input required aria-required="true" type="date" min={localDate} value={newCrop.expected_yield_date} onChange={e => setNewCrop(p => ({ ...p, expected_yield_date: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
               </div>
               {/* Quantity + unit */}
               <div className="flex gap-3">
@@ -2074,7 +2051,7 @@ const fetchFollowersCounts = async () => {
               <button
                 onClick={() => {
                   setShowAddCropForm(false);
-                  setNewCrop({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', image_url: '', grade: '', certification_type: null });
+                  setNewCrop({ crop_name: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', image_url: '', grade: '', certification_type: null });
                   setCropSuggestions([]); setShowSuggestions(false);
                 }}
                 className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition active:scale-95"
@@ -2105,7 +2082,7 @@ const fetchFollowersCounts = async () => {
                 <h3 className="text-xl font-black text-gray-900 leading-none mb-1">Edit Crop Details</h3>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Update your agricultural profile</p>
               </div>
-              <button onClick={() => { setEditingCrop(null); setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', image_url: '', grade: '', certification_type: null }); setEditCropSuggestions([]); setShowEditCropSuggestions(false); }} className="p-2 hover:bg-gray-100 rounded-xl transition">
+              <button onClick={() => { setEditingCrop(null); setEditCropForm({ crop_name: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', image_url: '', grade: '', certification_type: null }); setEditCropSuggestions([]); setShowEditCropSuggestions(false); }} className="p-2 hover:bg-gray-100 rounded-xl transition">
                 <X className="w-5 h-5 text-gray-600" />
               </button>
             </div>
@@ -2124,10 +2101,6 @@ const fetchFollowersCounts = async () => {
               {/* Farmer-only */}
               {canUseFarmerCropFields && (<>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">Years of Experience</label>
-                  <input type="number" inputMode="numeric" value={editCropForm.years_of_experience} onChange={e => { const val = e.target.value.replace(/[^0-9]/g, ''); const num = parseInt(val); if (val === '' || (num >= 0 && num <= 80)) setEditCropForm(p => ({ ...p, years_of_experience: val })); }} onKeyDown={e => ['-', '+', 'e', 'E', '.'].includes(e.key) && e.preventDefault()} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-2">Expertise Level</label>
                   <select value={editCropForm.expertise_level} onChange={e => setEditCropForm(p => ({ ...p, expertise_level: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="Beginner">Beginner</option><option value="Intermediate">Intermediate</option><option value="Expert">Expert</option>
@@ -2143,8 +2116,8 @@ const fetchFollowersCounts = async () => {
               )}
               {/* Date — ✅ FIXED: bound to editCropForm, not newCrop */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">{canUseFarmerCropFields ? 'Expected Yield Date' : 'Want to Buy By'}</label>
-                <input type="date" min={localDate} value={editCropForm.expected_yield_date} onChange={e => setEditCropForm(p => ({ ...p, expected_yield_date: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className="block text-sm font-semibold text-gray-900 mb-2">{canUseFarmerCropFields ? 'Expected Yield Date' : 'Want to Buy By'} <span className="text-red-600">*</span></label>
+                <input required aria-required="true" type="date" min={localDate} value={editCropForm.expected_yield_date} onChange={e => setEditCropForm(p => ({ ...p, expected_yield_date: e.target.value }))} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               {/* Quantity + unit */}
               <div className="flex gap-3">
@@ -2208,7 +2181,7 @@ const fetchFollowersCounts = async () => {
               ) : null}
               {/* Actions */}
               <div className="flex gap-3 pt-4">
-                <button onClick={() => { setEditingCrop(null); setEditCropForm({ crop_name: '', years_of_experience: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', image_url: '', grade: '',certification_type: null }); setEditCropSuggestions([]); setShowEditCropSuggestions(false); }} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition">Cancel</button>
+                <button onClick={() => { setEditingCrop(null); setEditCropForm({ crop_name: '', expertise_level: 'Beginner', expected_yield_date: '', expected_yield_quantity: '', expected_yield_quantity_uom: 'kg', is_crop_waste: false, certificate_url: '', image_url: '', grade: '',certification_type: null }); setEditCropSuggestions([]); setShowEditCropSuggestions(false); }} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-900 rounded-lg font-semibold hover:bg-gray-50 transition">Cancel</button>
                 <button onClick={handleSaveEditCrop} disabled={savingCrop} className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   {savingCrop ? (<><div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div><span>Saving...</span></>) : (<><i className="ph-bold ph-check text-sm"></i><span>Save Changes</span></>)}
                 </button>
@@ -2297,7 +2270,7 @@ const fetchFollowersCounts = async () => {
                 </span>
               </label>
               <div>
-                {userRole==='farmer'&&<div className="mb-5 rounded-xl border border-green-100 bg-green-50 p-4"><h3 className="font-bold text-green-900">Home district for Digital FPO</h3><p className="mt-1 mb-3 text-xs text-gray-600">Your saved State and District determine your FPO group. Nearby searches and current GPS location do not change it. Update these fields when your home district changes.</p><DistrictSelect state={editForm.state} district={editForm.district} onChange={(state,district)=>setEditForm(p=>({...p,state,district}))}/></div>}
+                {userRole==='farmer'&&<div className="mb-5 rounded-xl border border-green-100 bg-green-50 p-4"><h3 className="font-bold text-green-900">Home location for Digital FPO</h3><p className="mt-1 mb-3 text-xs text-gray-600">Select your State, then District, then Mandal / Taluk. Saving your profile automatically assigns you to the selected Mandal / Taluk FPO, including if you are currently unassigned.</p><DistrictSelect state={editForm.state} district={editForm.district} onChange={(state,district)=>setEditForm(p=>({...p,state,district,taluk_id:''}))}/><TalukSelect state={editForm.state} district={editForm.district} value={editForm.taluk_id} onChange={taluk_id=>setEditForm(p=>({...p,taluk_id}))}/></div>}
                 <label className="block text-sm font-semibold text-gray-900 mb-2">Location</label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">

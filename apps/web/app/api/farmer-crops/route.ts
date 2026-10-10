@@ -1,3 +1,4 @@
+import { isValidCropYieldDate } from '@/lib/crop-yield-date';
 import sql from "@/app/api/utils/sql";
 import { sendCropMatchPushes } from "@/app/api/utils/crop-match-push";
 import { sendPushToFollowers } from "@/app/api/utils/push";
@@ -11,7 +12,6 @@ async function ensureSchema() {
     id SERIAL PRIMARY KEY,
     user_id TEXT NOT NULL,
     crop_name VARCHAR(100) NOT NULL,
-    years_of_experience INTEGER,
     expertise_level VARCHAR(50) DEFAULT 'Beginner',
     expected_yield_date DATE,
     expected_yield_quantity NUMERIC,
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
 
     const crops = await sql`
       SELECT
-        id, crop_name, years_of_experience, expertise_level,
+        id, crop_name, expertise_level,
         expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom,
         is_crop_waste, crop_type, certification_type, certificate_url, image_url, grade, created_at
       FROM crops
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const {
-      user_id, crop_name, years_of_experience, expertise_level,
+      user_id, crop_name, expertise_level,
       expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom,
       crop_type, is_crop_waste, certificate_url, image_url, grade,
     } = body;
@@ -84,12 +84,7 @@ export async function POST(request: Request) {
       }
     }
 
-    if (years_of_experience !== null && years_of_experience !== undefined) {
-      if (years_of_experience < 0) {
-        return NextResponse.json({ error: 'Invalid experience value' }, { status: 400 });
-      }
-    }
-
+    if (!isValidCropYieldDate(expected_yield_date)) return NextResponse.json({error:'A valid yield date is required'}, {status:400});
     const trimmedCropName = crop_name.trim();
 
     await ensureSchema();
@@ -106,14 +101,13 @@ export async function POST(request: Request) {
 
     const result = await sql`
       INSERT INTO crops (
-        user_id, crop_name, years_of_experience, expertise_level,
+        user_id, crop_name, expertise_level,
         expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom,
         crop_type, is_crop_waste, certificate_url, image_url, grade, certification_type
       )
       VALUES (
         ${user_id},
         ${trimmedCropName},
-        ${years_of_experience ?? null},
         ${expertise_level || 'Beginner'},
         ${expected_yield_date || null},
         ${expected_yield_quantity ?? null},
@@ -139,7 +133,8 @@ export async function POST(request: Request) {
       data: { type: "followed_crop", cropId: result[0].id },
     });
 
-    return NextResponse.json(result[0]);
+    const { years_of_experience: _legacyExperience, ...crop } = result[0];
+    return NextResponse.json(crop);
   } catch (error: any) {
     console.error('Error creating crop:', error);
     return NextResponse.json({ error: `Failed to create crop: ${error.message}` }, { status: 500 });
@@ -150,7 +145,7 @@ export async function PUT(request: Request) {
   try {
     const body = await request.json();
     const {
-      id, crop_name, years_of_experience, expertise_level,
+      id, crop_name, expertise_level,
       expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom,
       crop_type, is_crop_waste, certificate_url, image_url, grade,
     } = body;
@@ -162,6 +157,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'id and crop_name are required' }, { status: 400 });
     }
 
+    if (!isValidCropYieldDate(expected_yield_date)) return NextResponse.json({error:'A valid yield date is required'}, {status:400});
     const trimmedCropName = crop_name.trim();
 
     await ensureSchema();
@@ -193,7 +189,6 @@ export async function PUT(request: Request) {
       UPDATE crops
       SET
         crop_name             = ${trimmedCropName},
-        years_of_experience   = ${years_of_experience ?? null},
         expertise_level       = ${expertise_level || 'Beginner'},
         expected_yield_date   = ${expected_yield_date || null},
         expected_yield_quantity     = ${expected_yield_quantity ?? null},
@@ -215,7 +210,8 @@ export async function PUT(request: Request) {
       await sendCropMatchPushes(user_id, trimmedCropName);
     }
 
-    return NextResponse.json(result[0]);
+    const { years_of_experience: _legacyExperience, ...crop } = result[0];
+    return NextResponse.json(crop);
   } catch (error: any) {
     console.error('Error updating crop:', error);
     return NextResponse.json({ error: `Failed to update crop: ${error.message}` }, { status: 500 });

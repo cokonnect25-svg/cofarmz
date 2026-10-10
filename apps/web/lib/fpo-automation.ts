@@ -1,4 +1,5 @@
 import sql from '@/app/api/utils/sql';
+import { ensureDistrictTalukFpos } from './fpo-taluk';
 import { processFarmer } from './fpo-assignment';
 
 // Run on a dedicated worker or scheduled job, not from a public GET request.
@@ -15,10 +16,13 @@ export async function reconcileFpoAssignments(shouldStop = () => false, onProgre
     if (!locked) { onProgress('Skipped: another assignment worker is already running'); return { skipped: true, ...totals }; }
     onProgress('Checking location mapping setup');
     const [schema] = await sql`SELECT to_regclass('fpo_subdistricts') IS NOT NULL AS subdistricts,
-      to_regclass('fpo_localities') IS NOT NULL AS localities`;
-    if (!schema.subdistricts || !schema.localities) {
+      to_regclass('fpo_localities') IS NOT NULL AS localities,
+      to_regclass('fpo_taluks') IS NOT NULL AS taluks`;
+    if (!schema.subdistricts || !schema.localities || !schema.taluks) {
       throw Object.assign(new Error('Location mapping tables are missing'), { code: 'FPO_SETUP_REQUIRED' });
     }
+    onProgress('Creating missing mandal/taluk subgroups under active district FPOs');
+    await sql.begin(tx=>ensureDistrictTalukFpos(tx));
     onProgress('Loading district catalogue');
     const catalogue = await sql<any[]>`SELECT id,state,district FROM fpo_districts`;
     let after = '';
@@ -28,7 +32,12 @@ export async function reconcileFpoAssignments(shouldStop = () => false, onProgre
         LEFT JOIN farmer_fpo_assignments a ON a.farmer_id=u.id
         WHERE u.role='farmer' AND u.id>${after}
           AND (a.assignment_status IS DISTINCT FROM 'assigned' OR a.group_id IS NULL
-            OR a.district_id IS DISTINCT FROM u.district_id)
+            OR a.district_id IS DISTINCT FROM u.district_id
+            OR a.taluk_id IS DISTINCT FROM u.taluk_id
+            OR (u.taluk_id IS NOT NULL AND EXISTS (SELECT 1 FROM farmer_groups g JOIN digital_fpos f ON f.id=g.digital_fpo_id WHERE g.id=a.group_id AND f.taluk_id IS NULL))
+            OR (u.taluk_id IS NULL AND EXISTS (SELECT 1 FROM digital_fpos f WHERE f.district_id=u.district_id AND f.taluk_id IS NULL AND f.status='active'))
+            OR EXISTS (SELECT 1 FROM digital_fpos f JOIN farmer_groups g ON g.digital_fpo_id=f.id
+              WHERE f.district_id=u.district_id AND f.taluk_id=u.taluk_id AND g.id IS DISTINCT FROM a.group_id))
         ORDER BY u.id LIMIT 100`;
       if (!batch.length) break;
       onProgress(`Matching batch of ${batch.length} farmers using saved addresses and localities`);

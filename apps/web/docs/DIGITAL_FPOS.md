@@ -1,3 +1,32 @@
+# Automatic Mandal / Taluk subgroups and district overview (2026-10-10)
+
+Every district Digital FPO now contains its mandal/taluk FPOs as subgroups, identified by the same district ID and a validated subdistrict ID. Creating a district FPO provisions all of its imported taluk FPOs and groups, including empty ones. The assignment worker also provisions missing subgroups under active district FPOs each sweep; existing names, IDs, creators and inactive status are preserved. Manual taluk creation first ensures its district parent exists. Bulk district creation now provisions subgroups too.
+
+Farmer assignment automatically resolves the saved address within the saved/resolved district, creates a missing subgroup under an active district FPO, and assigns the farmer to it. Explicit validated taluk selections remain authoritative. An empty taluk selector means automatic detection from the saved address. Existing district-only farmers are reconsidered by the worker when taluk mapping becomes available. The existing one membership per farmer is retained, while district review includes farmers in all subgroups plus farmers whose taluk is unidentified. An inactive taluk FPO blocks group access instead of being silently reactivated or bypassed.
+
+On `/digital-fpos`, the directory defaults to district FPOs, with a level filter for taluk FPOs or all FPOs. Open a district to see its mandal/taluk FPO list, statuses, farmer counts, all district farmers and a filter for each taluk or unidentified taluks. Lists paginate in batches of 100. Admin/Super Admin can open subgroup FPOs, return to the parent district, and review farmer profiles. District PDF exports include assigned farmers in its taluk FPOs; a taluk export includes only that subgroup.
+
+FPO managers use the same hierarchy view on `/fpo/dashboard`. An active district manager who has changed the temporary password can review farmers across their own district and filter by taluk. Taluk managers receive only their own taluk list and totals. Unrelated districts, sibling taluks, inactive FPOs and accounts awaiting password replacement are blocked by the server. These are read-only views and do not grant manager publishing, reassignment or account-administration privileges. The hierarchy endpoint is `/api/digital-fpos/[id]/hierarchy`, with `taluk` and `after` filters, and private, non-cacheable responses.
+
+Taluk identity uses district and official subdistrict code from the imported locality catalogue. Local-language aliases sharing a code resolve to the same taluk. Inference requires one exact taluk match within the district. Ambiguous or village-only addresses keep district membership and appear in **Mandal / Taluk not identified**, where an admin or farmer can correct the saved location. The current village data provides district parents, not village-to-taluk parents, so no taluk is guessed from a village name alone.
+
+From `apps/web`, deploy in this order:
+
+```sh
+npm run migrate:fpo -- --apply
+npm run import:fpo-localities -- --apply
+# Deploy the updated application and run an initial automatic sweep:
+npm run auto:fpo:once
+# Run this separately as the persistent assignment worker (default interval: 15 minutes):
+npm run auto:fpo
+```
+
+The existing `20261010_taluk_fpos.sql` migration remains required. No additional migration is needed for hierarchy views or automatic subgroup creation. The worker must be running or scheduled in production for periodic reassignment; adding source code alone does not start it. Profile saves perform assignment immediately. In Edit profile, State, District and Mandal / Taluk are dependent selectors; saving an explicit taluk assigns previously unassigned farmers immediately. The My Digital FPO card refreshes on the profile-save event so the new assignment appears without reloading. Production migration, import, subgroup creation and worker execution have not been performed by these local code changes.
+
+Validation: `node tests/fpo.integration.cjs` (47 PostgreSQL integration tests), `node tests/fpo-automation.cjs`, `node tests/fpo-manager.cjs`, `node tests/fpo-report.cjs`, and `node tests/fpo-taluk-typecheck.cjs`. Coverage includes automatic and concurrent subgroup creation, creation of empty taluk subgroups on district creation, dry-run isolation, worker upgrades, district aggregates, taluk filters, pagination, district/manager scope isolation, password-change gating, inactivity, district moves, and reports including subgroup farmers. Full catalogue import was verified in the preceding implementation. The broader profile type check (`--profile`) has an existing nullable-marker-ref error in `MapPicker.tsx`. Browser verification is still outstanding after the earlier browser connection timeout.
+
+---
+
 # District Digital FPO implementation and rollout
 
 ## Architecture and scope

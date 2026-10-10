@@ -11,17 +11,17 @@ export default function FpoBackfill({onComplete}:{onComplete:()=>Promise<void>})
  const [provisioned,setProvisioned]=useState('');
  const stop=useRef(false),running=useRef(false),mounted=useRef(true);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;stop.current=true;};},[]);
- async function run(dryRun:boolean,provision=false){
+ async function run(dryRun:boolean,provision=false,level:'district'|'taluk'='district'){
   if(running.current)return;
   running.current=true;stop.current=false;setBusy(true);setStopping(false);setError('');setRows([]);setSummary(empty());setMode(dryRun?'Preview':'Assignment');
   setProvisioned('');
   let cursor:string|null='';const totals=empty();
   try{
    if(provision){
-    setMode('Creating district FPOs');
-    const response=await fpoFetch('/api/admin/fpo',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'provision'})});
+    setMode(`Creating ${level==='taluk'?'mandal/taluk':'district'} FPOs`);
+    const response=await fpoFetch('/api/admin/fpo',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'provision',level})});
     const data=await response.json();if(!response.ok)throw new Error(data.error||'Unable to create district FPOs');
-    if(mounted.current){setProvisioned(`${data.districts} districts covered: ${data.created} FPOs created, ${data.existing} existing FPOs preserved.`);setMode('Assignment');}
+    if(mounted.current){setProvisioned(`${level==='taluk'?data.taluks+' mandals/taluks':data.districts+' districts'} covered: ${data.created} FPOs created, ${data.existing} existing FPOs preserved.`);setMode('Assignment');}
    }
    if(stop.current)return;
    do{
@@ -38,10 +38,11 @@ export default function FpoBackfill({onComplete}:{onComplete:()=>Promise<void>})
  return <section className="space-y-4 border-t pt-5"><div><h3 className="font-bold">Group existing farmers by profile location</h3><p className="mt-1 text-sm text-gray-500">Uses saved State/District or a clear match in the saved profile address. Current GPS and Nearby results are ignored. Unclear addresses stay pending for profile correction.</p></div>
   <div className="flex flex-wrap gap-3"><button disabled={busy} onClick={()=>run(true)} className="rounded-xl border border-green-200 px-4 py-2 text-sm font-bold text-green-800 disabled:opacity-50">Preview all farmers</button><button disabled={busy} onClick={()=>run(false)} className="rounded-xl bg-green-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Assign from saved profiles</button>{busy&&<button disabled={stopping} className="text-sm font-bold text-gray-500 disabled:opacity-50" onClick={()=>{stop.current=true;setStopping(true);}}>Stop after this batch</button>}</div>
   <button disabled={busy} onClick={()=>run(false,true)} className="rounded-xl bg-green-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Create all district FPOs and assign farmers</button>
-  <p className="text-xs text-gray-500">Create all covers every catalogue district, including districts without farmers, then assigns from saved profiles. Existing FPOs and inactive status are preserved. Preview only checks current assignment destinations. Processes 10 farmers per batch. Keep this page open. Stop retains completed work. Safe to run again after interruption or catalogue updates.</p>
+  <button disabled={busy} onClick={()=>run(false,true,'taluk')} className="rounded-xl bg-green-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Create all mandal / taluk FPOs and assign farmers</button>
+  <p className="text-xs text-gray-500">Mandal/taluk creation covers the imported subdistrict catalogue and assigns farmers with a clear saved taluk. Each farmer has one membership, with their taluk FPO taking priority. Create all covers every catalogue district, including districts without farmers, then assigns from saved profiles. Existing FPOs and inactive status are preserved. Preview only checks current assignment destinations. Processes 10 farmers per batch. Keep this page open. Stop retains completed work. Safe to run again after interruption or catalogue updates.</p>
   {provisioned&&<p role="status" className="text-sm text-green-800">{provisioned}</p>}
   {error&&<p role="alert" className="text-sm text-red-700">{error} Run again to retry; completed assignments are retained.</p>}
   {mode&&<div role="status" className="rounded-xl bg-green-50 p-4 text-sm"><p className="font-bold">{mode}{busy?' in progress...':''} · {summary.processed} checked</p><div className="mt-2 grid grid-cols-2 gap-2"><p>{summary.assigned} {mode.startsWith('Preview')?'ready for a group':'assigned'}</p><p>{summary.pending_fpo} need district FPO creation</p><p>{summary.pending_location} need profile State/District</p><p>{summary.inactive_fpo} have inactive FPOs</p><p>{summary.errors} errors</p></div></div>}
-  {!!rows.length&&<div className="overflow-x-auto"><table className="w-full text-left text-xs"><caption className="pb-2 text-left font-semibold text-gray-500">Latest batch</caption><thead><tr><th className="p-2">Farmer</th><th className="p-2">District</th><th className="p-2">Result</th></tr></thead><tbody>{rows.map(row=><tr key={row.farmer_id} className="border-t"><td className="p-2 break-all">{row.farmer_id}</td><td className="p-2">{row.district?.district||'Not resolved'}</td><td className="p-2">{row.error||row.reason||row.assignment_status?.replaceAll('_',' ')}</td></tr>)}</tbody></table></div>}
+  {!!rows.length&&<div className="overflow-x-auto"><table className="w-full text-left text-xs"><caption className="pb-2 text-left font-semibold text-gray-500">Latest batch</caption><thead><tr><th className="p-2">Farmer</th><th className="p-2">District</th><th className="p-2">Result</th></tr></thead><tbody>{rows.map(row=><tr key={row.farmer_id} className="border-t"><td className="p-2 break-all">{row.farmer_id}</td><td className="p-2">{row.district?.district||'Not resolved'}</td><td className="p-2">{row.error||(row.will_create_taluk_fpo?'Will create and assign Mandal / Taluk subgroup':row.reason||row.assignment_status?.replaceAll('_',' '))}</td></tr>)}</tbody></table></div>}
  </section>;
 }

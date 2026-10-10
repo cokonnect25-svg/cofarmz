@@ -1,5 +1,6 @@
 'use client';
 
+import TalukSelect from '@/components/TalukSelect';
 import DistrictSelect from '@/components/DistrictSelect';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -14,6 +15,7 @@ export default function SignupPage() {
   const [mounted, setMounted] = useState(false);
   const [state,setState]=useState('');
   const [district,setDistrict]=useState('');
+  const [taluk,setTaluk]=useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,7 +53,7 @@ export default function SignupPage() {
     if (userType === 'farmer' && (!state || !district)) {setError('Select State and District');return;}
     setIsLoading(true);
     try {
-      await signUp(email, password, name, userType, supplierTypes, {state,district});
+      await signUp(email, password, name, userType, supplierTypes, {state,district,taluk_id:taluk || null});
       // Redirect to select-role which shows full Terms & Conditions and lets user pick their role
       window.location.replace('/select-role');
     } catch (err: any) {
@@ -146,7 +148,7 @@ export default function SignupPage() {
             </div>
           </div>
           <p className="text-green-50 text-sm leading-relaxed">
-            "CoFarmz helped me earn extra income by renting my tractor during the off-season. Amazing platform!"
+            &quot;CoFarmz helped me earn extra income by renting my tractor during the off-season. Amazing platform!&quot;
           </p>
           <div className="flex gap-0.5 mt-3">
             {[1, 2, 3, 4, 5].map(i => <span key={i} className="text-yellow-300 text-sm">★</span>)}
@@ -181,7 +183,7 @@ export default function SignupPage() {
             </div>
           )}
 
-          {userType === 'farmer' && <DistrictSelect state={state} district={district} onChange={(s,d)=>{setState(s);setDistrict(d);}}/>}
+          {userType === 'farmer' && <><DistrictSelect state={state} district={district} onChange={(s,d)=>{setState(s);setDistrict(d);setTaluk('');}}/><TalukSelect state={state} district={district} value={taluk} onChange={setTaluk}/></>}
           <form onSubmit={handleSignUp} className="space-y-4">
             {/* Account Type */}
             <div>

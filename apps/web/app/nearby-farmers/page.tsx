@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useRef, Suspense, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/lib/api';
+import { getBrowserPosition } from '@/lib/browser-location';
 import { normalizePhoneNumber } from '@/lib/phone';
 
 import { Capacitor } from '@capacitor/core';
@@ -21,7 +22,6 @@ const SEARCH_KEY = 'nearbyFarmers_searchQuery';
 
 interface FarmerCrop {
   crop_name: string;
-  years_of_experience: number | null;
   expertise_level: string;
   grade?: string;
   certification_type?: string;
@@ -515,16 +515,7 @@ const saveStateAndNavigate = (url: string) => {
       }
     } else {
       try {
-        position = await Promise.race([
-          new Promise((resolve, reject) =>
-            navigator.geolocation.getCurrentPosition(
-              pos => resolve({ coords: { latitude: pos.coords.latitude, longitude: pos.coords.longitude } }),
-              reject,
-              { timeout: 5000, enableHighAccuracy: false }
-            )
-          ),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 6000)),
-        ]);
+        position = await getBrowserPosition();
         hasLocation = true;
       } catch (e) {
         console.warn('Web geolocation failed:', e instanceof Error ? e.message : e);
@@ -1115,7 +1106,6 @@ onClick={() => {
               <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 px-2">Sort By</p>
               {(searchType === 'farmers' ? [
                 { key: 'nearby',     label: 'Nearest to Farthest',    sub: 'Sort by distance from you',     icon: 'ph-map-pin' },
-                { key: 'experience', label: 'Most Experienced', sub: 'Sort by years of experience',  icon: 'ph-medal'   },
               ] : [
                 { key: 'nearby', label: 'Nearest to Farthest', sub: 'Sort by distance from you', icon: 'ph-map-pin' },
                 { key: 'active', label: 'Most Active',  sub: 'Sort by equipment & activity', icon: 'ph-lightning' },
@@ -1146,7 +1136,7 @@ onClick={() => {
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
                 <i className="ph-bold ph-map-pin text-base"></i>
               </span>
-              <span className="whitespace-nowrap">{sortBy === 'nearby' ? 'Nearby' : sortBy === 'experience' ? 'Experience' : 'Most Active'}</span>
+              <span className="whitespace-nowrap">{sortBy === 'nearby' ? 'Nearby' : 'Most Active'}</span>
               <i className="ph-bold ph-caret-down text-xs text-gray-400"></i>
             </button>
             <button
@@ -1208,11 +1198,6 @@ onClick={() => {
                   const ad = (a.distance == null || !Number.isFinite(a.distance) || a.distance < 0 || a.distance >= 9999) ? 999999 : a.distance;
                   const bd = (b.distance == null || !Number.isFinite(b.distance) || b.distance < 0 || b.distance >= 9999) ? 999999 : b.distance;
                   return ad - bd;
-                }
-                if (sortBy === 'experience') {
-                  const ae = a.crops?.reduce((s, c) => s + ((c as any).years_of_experience || 0), 0) || 0;
-                  const be = b.crops?.reduce((s, c) => s + ((c as any).years_of_experience || 0), 0) || 0;
-                  return be - ae;
                 }
                 if (sortBy === 'active') return (b.equipment_count || 0) - (a.equipment_count || 0);
                 return 0;
@@ -1378,7 +1363,7 @@ onClick={e => {
   saveStateAndNavigate(`/farmer-profile?id=${farmer.id}&tab=crops`);
 }} className="flex items-center gap-1.5 px-3 py-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors active:scale-95">
                             <i className="ph-bold ph-plant text-green-600 text-sm"></i>
-                            <span className="text-xs font-bold text-gray-900">{farmer.crops_count || 0} Crops</span>
+                            <span className="text-xs font-bold text-gray-900">{farmer.crops_count || 0} Current crops</span>
                           </button>
                           <button // e.g. Crops button
 onClick={e => {

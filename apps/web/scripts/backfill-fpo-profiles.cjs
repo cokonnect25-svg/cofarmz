@@ -7,7 +7,7 @@ const sql=require('postgres')(process.env.DATABASE_URL,{ssl:{rejectUnauthorized:
 const modules=new Map();
 function load(name) {
  const key=path.basename(name).replace(/\.ts$/,'');
- if(!['fpo-assignment','fpo-location','fpo-error'].includes(key))throw new Error('Unsupported module');
+ if(!['fpo-assignment','fpo-location','fpo-taluk','fpo-error'].includes(key))throw new Error('Unsupported module');
  if(modules.has(key))return modules.get(key).exports;
  const module={exports:{}};modules.set(key,module);
  const source=fs.readFileSync(path.join(__dirname,'../lib',key+'.ts'),'utf8');
@@ -19,7 +19,7 @@ function load(name) {
  const apply=process.argv.includes('--apply');
  const {processFarmer,planFarmerAssignment}=load('fpo-assignment');
  const catalogue=await sql`SELECT id,state,district FROM fpo_districts`;
- const fpos=await sql`SELECT f.district_id,f.status,g.id AS group_id FROM digital_fpos f JOIN farmer_groups g ON g.digital_fpo_id=f.id`;
+ const fpos=await sql`SELECT f.district_id,f.taluk_id,f.status,g.id AS group_id FROM digital_fpos f JOIN farmer_groups g ON g.digital_fpo_id=f.id`;
  const totals={processed:0,assigned:0,pending_fpo:0,pending_location:0,inactive_fpo:0,errors:0};
  const districts=new Map();const reasons=new Map();let after='';
  console.log(apply?'Applying saved-profile assignment backfill. No FPOs will be created.':'Preview only: no profiles or memberships will be changed.');

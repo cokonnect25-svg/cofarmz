@@ -21,9 +21,15 @@ const location=locationModule.exports;
   await db`INSERT INTO fpo_districts ${db(catalogue.map(({state,district})=>({state,district})))}`;
   await db.unsafe(fs.readFileSync(path.join(root,'migrations/20260925_fpo_subdistricts.sql'),'utf8'));
   await db.unsafe(fs.readFileSync(path.join(root,'migrations/20260925_fpo_localities.sql'),'utf8'));
+  const talukSchema=fs.readFileSync(path.join(root,'migrations/20261010_taluk_fpos.sql'),'utf8').split('ALTER TABLE digital_fpos')[0]+'COMMIT;';
+  await db.unsafe(talukSchema);
   const snapshot=await inspectSnapshot();
   const imported=await importSnapshot(db,snapshot);
   assert.equal(imported.states,36);assert(imported.inserted>800000);
+  const taluks=await db`SELECT id,district_id,code,name FROM fpo_taluks ORDER BY id`;
+  assert(taluks.length>6000);
+  assert.equal(taluks.length,(await db`SELECT count(*)::int n FROM (SELECT DISTINCT district_id,code FROM fpo_localities WHERE kind='subdistrict') places`)[0].n);
+  console.log('PASS taluk catalogue uses one organization per subdistrict code',taluks.length);
   console.log('PASS validated and imported full nationwide snapshot',imported.inserted);
   const [coverage]=await db`SELECT count(DISTINCT d.state)::int states,count(DISTINCT d.id)::int districts
     FROM fpo_localities l JOIN fpo_districts d ON d.id=l.district_id`;
@@ -47,6 +53,7 @@ const location=locationModule.exports;
   console.log('PASS locality lookup samples cover all 36 States/UTs;',resolved,'resolved samples');
   const before=(await db`SELECT count(*)::int n FROM fpo_localities`)[0].n;
   const rerun=await importSnapshot(db,snapshot);assert.equal(rerun.inserted,before);
+  assert.deepEqual(await db`SELECT id,district_id,code,name FROM fpo_taluks ORDER BY id`,taluks);
   console.log('PASS repeated nationwide import preserves record count');
   // Missing parent must roll back the entire replacement, including its initial DELETE.
   await db`UPDATE fpo_districts SET district='Renamed for rollback test' WHERE district='Salem' AND state='Tamil Nadu'`;

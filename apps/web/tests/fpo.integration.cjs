@@ -62,6 +62,11 @@ async function user(id,role='farmer',confirmed=true,location=null,lat=null,lng=n
     const localities=fs.readFileSync(path.join(root,'migrations/20260925_fpo_localities.sql'),'utf8');
     await subdistrictConnection.unsafe(localities);await subdistrictConnection.unsafe(localities);
   } finally { subdistrictConnection.release(); }
+  const talukConnection=await db.reserve();
+  try {
+    await talukConnection.unsafe(fs.readFileSync(path.join(root,'migrations/20261010_taluk_fpos.sql'),'utf8'));
+    await talukConnection.unsafe(fs.readFileSync(path.join(root,'migrations/20261010_taluk_fpos.sql'),'utf8'));
+  } finally { talukConnection.release(); }
   await user('admin','superadmin'); await user('new-m','buyer',false);await user('new-c','buyer',false);await user('invalid','buyer',false);
   const fpos=route('digital-fpos');const profiles=route('users/profile');
   const assignment=require('../lib/fpo-assignment.ts');
@@ -190,9 +195,9 @@ async function user(id,role='farmer',confirmed=true,location=null,lat=null,lng=n
     const data=await (await fpos.GET(request('coords',null,'GET'))).json();
     assert.equal(data.can_create,false);
     for(const fpo of data.fpos) {
-      assert.deepEqual(Object.keys(fpo).sort(),['district','id','name','state','status']);
+      assert.deepEqual(Object.keys(fpo).sort(),['district','id','name','state','status','taluk','taluk_id']);
       const profile=await (await route('digital-fpos/[id]').GET(request('coords',null,'GET'),{params:Promise.resolve({id:fpo.id})})).json();
-      assert.deepEqual(Object.keys(profile).sort(),['district','id','name','state','status']);
+      assert.deepEqual(Object.keys(profile).sort(),['district','id','name','state','status','taluk','taluk_id']);
     }
     assert.equal((await fpos.POST(request('coords',{state:'Tamil Nadu',district:'Coimbatore'}))).status,403);
   });
@@ -226,11 +231,11 @@ async function user(id,role='farmer',confirmed=true,location=null,lat=null,lng=n
     assert.equal((await route('admin/fpo/messages').GET(request(null,null,'GET','/api/admin/fpo/messages?group='+madurai.group_id))).status,401);
     assert.equal((await db`SELECT * FROM farmer_fpo_assignments WHERE farmer_id='reviewer'`).length,0);
   });
-  await test('Admin can create FPOs but cannot update, assign or publish',async()=>{
+  await test('Admin can create and publish to FPOs but cannot update status or assign',async()=>{
     assert.equal((await fpos.POST(request('reviewer',{state:'Tamil Nadu',district:'Coimbatore'}))).status,201);
     assert.equal((await fpos.PATCH(request('reviewer',{id:chennai.id,status:'active'},'PATCH'))).status,403);
     assert.equal((await route('admin/fpo').POST(request('reviewer',{action:'assign',farmer_id:'coords',state:'Tamil Nadu',district:'Chennai'}))).status,403);
-    assert.equal((await announcements.POST(request('reviewer',{title:'No',body:'No',groupId:madurai.group_id}))).status,403);
+    assert.equal((await announcements.POST(request('reviewer',{title:'Admin group update',body:'Group update',groupId:madurai.group_id}))).status,201);
   });
   await test('Admin message history paginates and includes expired announcements',async()=>{
     await db`INSERT INTO announcements(title,body,created_by,group_id,expires_at) SELECT 'Archived '||n,'History','admin',${madurai.group_id},now()-interval '1 day' FROM generate_series(1,51) n`;
@@ -378,6 +383,146 @@ async function user(id,role='farmer',confirmed=true,location=null,lat=null,lng=n
     assert.equal(preview.district.id,salem.id);
     const applied=await assignment.processFarmer('indexed-locality');
     assert.equal(applied.assignment_status,'assigned');assert.equal(applied.group_id,preview.group_id);
+  });
+  await test('Taluk subgroups are created and assigned automatically, preserving district fallback for unidentified addresses',async()=>{
+    await fpos.PATCH(request('admin',{id:madurai.id,status:'active'},'PATCH'));
+    await fpos.PATCH(request('admin',{id:chennai.id,status:'active'},'PATCH'));
+    await db`INSERT INTO fpo_localities(district_id,kind,code,name,name_key,source)
+      VALUES(${madurai.district_id},'subdistrict','101','Melur','melur','fixture'),
+            (${madurai.district_id},'subdistrict','101','\u0bae\u0bc7\u0bb2\u0bc2\u0bb0\u0bcd','\u0bae\u0bc7\u0bb2\u0bc2\u0bb0\u0bcd','fixture'),
+            (${madurai.district_id},'subdistrict','102','Usilampatti','usilampatti','fixture')`;
+    await db`SELECT refresh_fpo_taluks()`;
+    const [taluk]=await db`SELECT * FROM fpo_taluks WHERE district_id=${madurai.district_id} AND code='101'`;
+    await user('taluk-match','farmer',true,'Melur, Madurai, Tamil Nadu');
+    await user('taluk-other','farmer',true,'Usilampatti, Madurai, Tamil Nadu');
+    const preview=await assignment.processFarmer('taluk-match',true);assert.equal(preview.will_create_taluk_fpo,true);
+    assert.equal((await db`SELECT id FROM digital_fpos WHERE taluk_id=${taluk.id}`).length,0);
+    await assignment.processFarmer('taluk-match');await assignment.processFarmer('taluk-other');
+    const [created]=await db`SELECT f.*,g.id AS group_id FROM digital_fpos f JOIN farmer_groups g ON g.digital_fpo_id=f.id WHERE f.taluk_id=${taluk.id}`;
+    const [member]=await db`SELECT * FROM farmer_fpo_assignments WHERE farmer_id='taluk-match'`;
+    const [other]=await db`SELECT * FROM farmer_fpo_assignments WHERE farmer_id='taluk-other'`;
+    assert.equal(member.group_id,created.group_id);assert.notEqual(other.group_id,madurai.group_id);
+    await user('district-only','farmer',true,'Madurai, Tamil Nadu');
+    assert.equal((await assignment.processFarmer('district-only')).group_id,madurai.group_id);
+    assert.equal((await db`SELECT can_receive_fpo_message('taluk-other',${created.group_id}) AS allowed`)[0].allowed,false);
+    assert.equal((await db`SELECT can_receive_fpo_message('taluk-match',${madurai.group_id}) AS allowed`)[0].allowed,false);
+    assert.equal((await fpos.POST(request('admin',{state:'Tamil Nadu',district:'Madurai',taluk_id:taluk.id}))).status,409);
+    assert.equal((await fpos.POST(request('admin',{state:'Tamil Nadu',district:'Chennai',taluk_id:taluk.id}))).status,400);
+    await user('taluk-alias','farmer',true,'\u0bae\u0bc7\u0bb2\u0bc2\u0bb0\u0bcd, Madurai, Tamil Nadu');
+    assert.equal((await assignment.processFarmer('taluk-alias')).group_id,created.group_id);
+    const correction=route('admin/fpo');
+    assert.equal((await correction.POST(request('admin',{action:'assign',farmer_id:'taluk-other',state:'Tamil Nadu',district:'Madurai',taluk_id:taluk.id}))).status,200);
+    assert.equal((await db`SELECT group_id FROM farmer_fpo_assignments WHERE farmer_id='taluk-other'`)[0].group_id,created.group_id);
+    await fpos.PATCH(request('admin',{id:created.id,status:'inactive'},'PATCH'));
+    assert.equal((await db`SELECT can_receive_fpo_message('taluk-match',${created.group_id}) AS allowed`)[0].allowed,false);
+    assert.equal((await assignment.processFarmer('taluk-match')).assignment_status,'inactive_fpo');
+    await fpos.PATCH(request('admin',{id:created.id,status:'active'},'PATCH'));
+    await assignment.processFarmer('taluk-match');
+    assert.equal((await profiles.PUT(request('taluk-match',{userId:'taluk-match',state:'Tamil Nadu',district:'Chennai'},'PUT'))).status,200);
+    assert.equal((await db`SELECT can_receive_fpo_message('taluk-match',${created.group_id}) AS allowed`)[0].allowed,false);
+    assert.equal((await db`SELECT taluk_id FROM "user" WHERE id='taluk-match'`)[0].taluk_id,null);
+  });
+  await test('Farmer can save only a validated taluk and loses access after moving within the district',async()=>{
+    const [melur]=await db`SELECT * FROM fpo_taluks WHERE code='101'`;
+    const [other]=await db`SELECT * FROM fpo_taluks WHERE code='102'`;
+    const [fpo]=await db`SELECT g.id FROM farmer_groups g JOIN digital_fpos f ON f.id=g.digital_fpo_id WHERE f.taluk_id=${melur.id}`;
+    const before=await db`SELECT * FROM farmer_fpo_assignments WHERE farmer_id='taluk-alias'`;
+    assert.equal((await profiles.PUT(request('taluk-alias',{userId:'taluk-alias',state:'Tamil Nadu',district:'Chennai',taluk_id:melur.id},'PUT'))).status,400);
+    assert.equal((await db`SELECT group_id FROM farmer_fpo_assignments WHERE farmer_id='taluk-alias'`)[0].group_id,before[0].group_id);
+    assert.equal((await profiles.PUT(request('taluk-alias',{userId:'taluk-alias',state:'Tamil Nadu',district:'Madurai',taluk_id:other.id},'PUT'))).status,200);
+    assert.equal((await db`SELECT can_receive_fpo_message('taluk-alias',${fpo.id}) AS allowed`)[0].allowed,false);
+    await user('taluk-registration','buyer',false);
+    assert.equal((await profiles.POST(request('taluk-registration',{userId:'taluk-registration',role:'farmer',state:'Tamil Nadu',district:'Madurai',taluk_id:melur.id}))).status,200);
+    assert.equal((await db`SELECT group_id FROM farmer_fpo_assignments WHERE farmer_id='taluk-registration'`)[0].group_id,fpo.id);
+  });
+  await test('Bulk taluk provisioning is repeatable and preserves existing district and taluk FPOs',async()=>{
+    const endpoint=route('admin/fpo');
+    const r=await endpoint.POST(request('admin',{action:'provision',level:'taluk'}));assert.equal(r.status,200);
+    const first=await r.json();assert.equal(first.taluks,2);assert.equal(first.created,0);
+    const again=await (await endpoint.POST(request('admin',{action:'provision',level:'taluk'}))).json();
+    assert.equal(again.created,0);assert.equal(again.existing,2);
+    const [melur]=await db`SELECT * FROM fpo_taluks WHERE code='101'`;
+    const [other]=await db`SELECT * FROM fpo_taluks WHERE code='102'`;
+    const [otherGroup]=await db`SELECT g.id FROM farmer_groups g JOIN digital_fpos f ON f.id=g.digital_fpo_id WHERE f.taluk_id=${other.id}`;
+    assert.equal((await assignment.processFarmer('taluk-alias')).group_id,otherGroup.id);
+    assert.equal((await db`SELECT count(*)::int AS n FROM digital_fpos WHERE district_id=${melur.district_id}`)[0].n,3);
+    // A later district creation must keep existing taluk members.
+    await db.begin(tx=>assignment.enrollSavedDistrict(tx,madurai.district_id,madurai.group_id));
+    assert.equal((await db`SELECT group_id FROM farmer_fpo_assignments WHERE farmer_id='taluk-alias'`)[0].group_id,otherGroup.id);
+  });
+  await test('District hierarchy includes subgroup farmers, filters and pagination without leaking manager scopes',async()=>{
+    await db.unsafe('CREATE TABLE fpo_manager_accounts(user_id text primary key REFERENCES "user"(id),digital_fpo_id uuid REFERENCES digital_fpos(id),must_change_password boolean default false)');
+    await user('district-manager','fpo');await user('taluk-manager','fpo');await user('other-manager','fpo');
+    const [talukFpo]=await db`SELECT * FROM digital_fpos WHERE taluk_id=(SELECT id FROM fpo_taluks WHERE code='101')`;
+    await db`INSERT INTO fpo_manager_accounts(user_id,digital_fpo_id) VALUES('district-manager',${madurai.id}),('taluk-manager',${talukFpo.id}),('other-manager',${chennai.id})`;
+    const hierarchy=route('digital-fpos/[id]/hierarchy');
+    const get=(actor,id=madurai.id,query='')=>hierarchy.GET(request(actor,null,'GET','/api/hierarchy'+query),{params:Promise.resolve({id})});
+    assert.equal((await get(null)).status,401);assert.equal((await get('taluk-registration')).status,403);
+    assert.equal((await get('other-manager')).status,403);assert.equal((await get('taluk-manager')).status,403);
+    const managerApi=route('fpo/manager');
+    const districtManager=await (await managerApi.GET(request('district-manager',null,'GET'))).json();
+    assert(districtManager.farmers.some(f=>f.id==='taluk-registration'));assert(!districtManager.farmers.some(f=>f.id==='taluk-match'));
+    const talukManager=await (await managerApi.GET(request('taluk-manager',null,'GET'))).json();
+    assert(talukManager.farmers.every(f=>String(f.taluk_id)===String(talukFpo.taluk_id)));
+    for(const actor of ['admin','reviewer','district-manager']){
+      const r=await get(actor);assert.equal(r.status,200);const d=await r.json();
+      assert.equal(d.subgroups.length,2);assert(d.farmers.some(f=>f.id==='taluk-registration'));assert(d.farmers.some(f=>f.id==='district-only'));
+      assert(!d.farmers.some(f=>f.id==='taluk-match')); // moved to Chennai
+      assert.equal(d.totals.district_farmers,(await db`SELECT count(*)::int n FROM "user" WHERE district_id=${madurai.district_id} AND role='farmer'`)[0].n);
+    }
+    const filtered=await (await get('district-manager',madurai.id,'?taluk='+talukFpo.taluk_id)).json();
+    assert(filtered.farmers.length>0);assert(filtered.farmers.every(f=>String(f.taluk_id)===String(talukFpo.taluk_id)));
+    const own=await (await get('taluk-manager',talukFpo.id)).json();assert.equal(own.subgroups.length,1);assert(own.farmers.every(f=>String(f.taluk_id)===String(talukFpo.taluk_id)));
+    assert.equal((await get('taluk-manager',talukFpo.id,'?taluk=999999')).status,400);
+    const unidentified=await (await get('district-manager',madurai.id,'?taluk=unresolved')).json();assert(unidentified.farmers.every(f=>!f.taluk_id));
+    const [foreign]=await db`INSERT INTO fpo_taluks(district_id,code,name) VALUES(${chennai.district_id},'999','Foreign Taluk') RETURNING *`;
+    assert.equal((await get('district-manager',madurai.id,'?taluk='+foreign.id)).status,400);
+    await db`UPDATE fpo_manager_accounts SET must_change_password=true WHERE user_id='district-manager'`;
+    assert.equal((await get('district-manager')).status,403);
+    await db`UPDATE fpo_manager_accounts SET must_change_password=false WHERE user_id='district-manager'`;
+    await db`INSERT INTO "user"(id,name,email,role,district_id,taluk_id) SELECT 'page-'||n,'Page farmer','page-'||n||'@test.invalid','farmer',${madurai.district_id},${talukFpo.taluk_id} FROM generate_series(1,105) n`;
+    const first=await (await get('reviewer')).json();assert.equal(first.farmers.length,100);assert(first.next);
+    const second=await (await get('reviewer',madurai.id,'?after='+first.next)).json();assert(second.farmers.length>0);assert.equal(second.next,null);
+    assert.equal(new Set([...first.farmers,...second.farmers].map(f=>f.id)).size,first.farmers.length+second.farmers.length);
+    await db`UPDATE digital_fpos SET status='inactive' WHERE id=${madurai.id}`;
+    assert.equal((await get('district-manager')).status,403);assert.equal((await get('reviewer')).status,200);
+    await db`UPDATE digital_fpos SET status='active' WHERE id=${madurai.id}`;
+  });
+  await test('Concurrent automatic assignments create one subgroup and worker upgrades district memberships',async()=>{
+    const [taluk]=await db`INSERT INTO fpo_taluks(district_id,code,name) VALUES(${madurai.district_id},'103','Auto Taluk') RETURNING *`;
+    await user('auto-one','farmer',true,'Auto Taluk, Madurai, Tamil Nadu');await user('auto-two','farmer',true,'Auto Taluk, Madurai, Tamil Nadu');
+    const results=await Promise.all([assignment.processFarmer('auto-one'),assignment.processFarmer('auto-two')]);
+    assert.equal(results[0].group_id,results[1].group_id);
+    assert.equal((await db`SELECT count(*)::int n FROM digital_fpos WHERE taluk_id=${taluk.id}`)[0].n,1);
+    // Simulate an existing district-only farmer before the new taluk directory arrived.
+    await db`UPDATE "user" SET district_id=${madurai.district_id},taluk_id=NULL WHERE id='auto-one'`;
+    await db`UPDATE farmer_fpo_assignments SET district_id=${madurai.district_id},taluk_id=NULL,group_id=${madurai.group_id},assignment_status='assigned' WHERE farmer_id='auto-one'`;
+    const worker=require('../lib/fpo-automation.ts');const result=await worker.reconcileFpoAssignments();assert.equal(result.errors,0);
+    assert.equal((await db`SELECT group_id FROM farmer_fpo_assignments WHERE farmer_id='auto-one'`)[0].group_id,results[0].group_id);
+  });
+  await test('District creation automatically provisions all catalogue taluk subgroups even without farmers',async()=>{
+    const [district]=await db`INSERT INTO fpo_districts(state,district,source) VALUES('Tamil Nadu','Hierarchy District','fixture') RETURNING *`;
+    await db`INSERT INTO fpo_taluks(district_id,code,name) VALUES(${district.id},'201','First Taluk'),(${district.id},'202','Second Taluk')`;
+    const r=await fpos.POST(request('reviewer',{state:'Tamil Nadu',district:'Hierarchy District'}));assert.equal(r.status,201);const root=await r.json();
+    const children=await db`SELECT * FROM digital_fpos WHERE district_id=${district.id} AND taluk_id IS NOT NULL`;assert.equal(children.length,2);
+    const directory=await (await fpos.GET(request('reviewer',null,'GET'))).json();
+    assert(directory.fpos.filter(f=>f.district_id===district.id && f.taluk_id).every(f=>f.parent_fpo_id===root.id));
+    const response=await route('digital-fpos/[id]/hierarchy').GET(request('reviewer',null,'GET'),{params:Promise.resolve({id:root.id})});
+    const hierarchy=await response.json();assert.equal(hierarchy.subgroups.length,2);assert(hierarchy.subgroups.every(s=>s.id && s.farmer_count===0));
+  });
+  await test('Unassigned farmer selects State, District and Taluk in profile and is assigned immediately',async()=>{
+    await user('profile-unassigned');
+    assert.equal((await assignment.processFarmer('profile-unassigned')).assignment_status,'pending_location');
+    const [taluk]=await db`SELECT * FROM fpo_taluks WHERE district_id=${madurai.district_id} AND code='101'`;
+    const response=await profiles.PUT(request('profile-unassigned',{userId:'profile-unassigned',state:'Tamil Nadu',district:'Madurai',taluk_id:String(taluk.id)},'PUT'));
+    assert.equal(response.status,200);const saved=await response.json();
+    assert.equal(String(saved.taluk_id),String(taluk.id));assert.equal(saved.taluk,taluk.name);
+    assert.equal(saved.state,'Tamil Nadu');assert.equal(saved.district,'Madurai');
+    const directory=await (await fpos.GET(request('profile-unassigned',null,'GET'))).json();
+    assert.equal(directory.mine.assignment_status,'assigned');assert.equal(String(directory.mine.taluk_id),String(taluk.id));
+    const [group]=await db`SELECT g.id FROM farmer_groups g JOIN digital_fpos f ON f.id=g.digital_fpo_id WHERE f.taluk_id=${taluk.id}`;
+    assert.equal(directory.mine.group_id,group.id);
+    assert.equal((await db`SELECT can_receive_fpo_message('profile-unassigned',${group.id}) AS allowed`)[0].allowed,true);
   });
   console.log(`${passed} integration tests passed`);
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await db.unsafe('DROP SCHEMA IF EXISTS fpo_integration CASCADE');await db.end();});
