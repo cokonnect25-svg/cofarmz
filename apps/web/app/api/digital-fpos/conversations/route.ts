@@ -5,10 +5,20 @@ export const dynamic = 'force-dynamic';
 const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const headers = { 'Cache-Control': 'private, no-store' };
 
+async function managerScope(actor: {id:string;role:string}) {
+  if (actor.role !== 'fpo') return null;
+  const [manager] = await sql`SELECT m.digital_fpo_id FROM fpo_manager_accounts m
+    JOIN digital_fpos f ON f.id=m.digital_fpo_id
+    WHERE m.user_id=${actor.id} AND NOT m.must_change_password AND f.status='active'`;
+  if (!manager) throw new FpoError('Set your password and use an active assigned FPO account',403);
+  return manager.digital_fpo_id as string;
+}
+
 export async function GET(request: Request) {
   try {
     const actor = await requireActor(request);
-    const reviewer = canReviewFpos(actor.role);
+    const scope = await managerScope(actor);
+    const reviewer = canReviewFpos(actor.role) || !!scope;
     if (actor.role !== 'farmer' && !reviewer) throw new FpoError('Access denied',403);
     const params = new URL(request.url).searchParams;
     const fpoId = params.get('fpoId');
@@ -16,6 +26,7 @@ export async function GET(request: Request) {
     if (!Number.isSafeInteger(offset) || offset < 0) throw new FpoError('Invalid offset');
     // Farmers cannot select another farmer's conversation.
     const farmerId = reviewer ? params.get('farmerId') : actor.id;
+    if (scope && fpoId && scope !== fpoId) throw new FpoError('This conversation belongs to another FPO',403);
     if (fpoId) {
       if (!uuid.test(fpoId) || !farmerId) throw new FpoError('Valid conversation required');
       const [thread] = await sql`SELECT f.id,f.name,f.status,u.name AS farmer_name FROM digital_fpos f
@@ -34,6 +45,7 @@ export async function GET(request: Request) {
       FROM fpo_admin_inbox m JOIN digital_fpos f ON f.id=m.digital_fpo_id
       JOIN "user" u ON u.id=COALESCE(m.recipient_id,m.sender_id)
       WHERE (${reviewer} OR COALESCE(m.recipient_id,m.sender_id)=${actor.id})
+        AND (${scope}::uuid IS NULL OR m.digital_fpo_id=${scope}::uuid)
       ORDER BY m.digital_fpo_id,COALESCE(m.recipient_id,m.sender_id),m.created_at DESC,m.id DESC
     ) threads ORDER BY created_at DESC,fpo_id,farmer_id LIMIT 51 OFFSET ${offset}`;
     return NextResponse.json({ threads: rows.slice(0,50), next: rows.length > 50 ? offset+50 : null },{headers});
@@ -43,10 +55,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const actor = await requireActor(request);
-    if (!canReviewFpos(actor.role)) throw new FpoError('Admin access required',403);
+    const scope = await managerScope(actor);
+    if (!canReviewFpos(actor.role) && !scope) throw new FpoError('FPO reply access required',403);
     const input = await request.json();
     if (!input || typeof input.fpoId !== 'string' || !uuid.test(input.fpoId) || typeof input.farmerId !== 'string' || !input.farmerId) throw new FpoError('Valid conversation required');
     if (typeof input.body !== 'string' || !input.body.trim() || input.body.trim().length > 5000) throw new FpoError('Enter a message of 1 to 5000 characters');
+    if (scope && scope !== input.fpoId) throw new FpoError('This conversation belongs to another FPO',403);
     const [message] = await sql`INSERT INTO fpo_admin_inbox(digital_fpo_id,sender_id,recipient_id,body)
       SELECT f.id,${actor.id},${input.farmerId},${input.body.trim()} FROM digital_fpos f
       WHERE f.id=${input.fpoId} AND f.status='active' AND EXISTS(

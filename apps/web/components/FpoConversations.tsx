@@ -7,7 +7,7 @@ type Thread = { fpo_id:string; farmer_id:string; name:string; farmer_name:string
 export default function FpoConversations({ query = '' }: { query?: string }) {
   const { user } = useAuth();
   const userId=user?.id;
-  const reviewer=['admin','superadmin','super_admin'].includes(user?.role);
+  const reviewer=['admin','superadmin','super_admin','fpo'].includes(user?.role);
   const allowed=user?.role==='farmer'||reviewer;
   const [threads,setThreads]=useState<Thread[]>([]);
   const [error,setError]=useState('');

@@ -12,12 +12,12 @@ const stateCodes: Record<string,string> = {
   'andaman and nicobar islands':'an','dadra and nagar haveli and daman and diu':'dn',
 };
 // Login identifiers are lowercase, ASCII, and within the 64-character local-part limit.
-export function fpoLoginEmail(fpo: {id:string;name:string;district:string;state:string}, disambiguate=false) {
+export function fpoLoginEmail(fpo: {id:string;name:string;district:string;state:string;taluk?:string|null}, disambiguate=false) {
   const clean = (value:string) => value.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
   const code = stateCodes[fpo.state.trim().toLowerCase()] || clean(fpo.state);
   const district = clean(fpo.district);
   const generatedName = fpo.name.startsWith('DigitalFPO_Cofarmz_');
-  const group = generatedName ? district + code : clean(fpo.name);
+  const group = generatedName ? (fpo.taluk ? clean(fpo.taluk) + district + code : district + code) : clean(fpo.name);
   const base = (generatedName ? 'cofarmzfpo' + group : group) || 'cofarmzfpo';
   const suffix = createHash('sha256').update(fpo.id).digest('hex').slice(0,12);
   const needsSuffix = disambiguate || !district || base.length > 64;

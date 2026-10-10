@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   try {
     await requireFpoReviewer(request);
     const id = new URL(request.url).searchParams.get('fpoId'); validId(id);
-    const [fpo] = await sql`SELECT f.id,f.name,d.district,d.state FROM digital_fpos f JOIN fpo_districts d ON d.id=f.district_id WHERE f.id=${id}`;
+    const [fpo] = await sql`SELECT f.id,f.name,d.district,d.state,t.name AS taluk FROM digital_fpos f JOIN fpo_districts d ON d.id=f.district_id LEFT JOIN fpo_taluks t ON t.id=f.taluk_id WHERE f.id=${id}`;
     if (!fpo) throw new FpoError('FPO not found',404);
     const [account] = await sql`SELECT u.email,u.name,m.must_change_password FROM fpo_manager_accounts m JOIN "user" u ON u.id=m.user_id WHERE m.digital_fpo_id=${id}`;
     let generatedEmail = fpoLoginEmail(fpo as any);
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       const [manager] = await tx`SELECT m.user_id,u.email FROM fpo_manager_accounts m JOIN "user" u ON u.id=m.user_id WHERE m.digital_fpo_id=${fpo.id} FOR UPDATE OF m`;
       if (body.action === 'create') {
         if (manager) throw new FpoError('This FPO already has a login. Use reset temporary password.',409);
-        const [district] = await tx`SELECT d.district,d.state FROM fpo_districts d JOIN digital_fpos f ON f.district_id=d.id WHERE f.id=${fpo.id}`;
+        const [district] = await tx`SELECT d.district,d.state,t.name AS taluk FROM fpo_districts d JOIN digital_fpos f ON f.district_id=d.id LEFT JOIN fpo_taluks t ON t.id=f.taluk_id WHERE f.id=${fpo.id}`;
         let email = fpoLoginEmail({...fpo,...district} as any);
         const [existing] = await tx`SELECT id FROM "user" WHERE lower(email)=${email}`;
         if (existing) email = fpoLoginEmail({...fpo,...district} as any,true);

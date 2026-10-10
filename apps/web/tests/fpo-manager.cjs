@@ -33,6 +33,7 @@ function request(body){return new Request('http://localhost/api/test',{method:bo
   crypto=await import('better-auth/crypto');
   const {fpoLoginEmail}=load('lib/fpo-login-email.ts');
   const salem={id:'salem-id',name:'DigitalFPO_Cofarmz_Salem_TamilNadu',district:'Salem',state:'Tamil Nadu'};
+  assert.equal(fpoLoginEmail({...salem,taluk:'Omalur'}),'cofarmzfpoomalursalemtn@cofarmz.com');
   assert.equal(fpoLoginEmail(salem),'cofarmzfposalemtn@cofarmz.com');
   assert.equal(fpoLoginEmail({...salem,name:'My FPO Group'}),'myfpogroup@cofarmz.com');
   assert.notEqual(fpoLoginEmail(salem,true),fpoLoginEmail({...salem,id:'other-id'},true));
