@@ -18,12 +18,20 @@ const filename = path.resolve(__dirname, '../app/api/users/verify-phone/route.ts
 const source = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true },
 }).outputText;
+let statusRows = [{ id: "current", phone: "+919999999999", phone_verified: true }];
+let statusError = false;
+let statusQueries = [];
 let duplicate = false;
 let duplicateChecks = 0;
 let writes = 0;
 let lookupValues;
 const sql = async (parts, ...values) => {
   const query = parts.join('?');
+  if (query.includes('SELECT id, phone, phone_verified')) {
+    statusQueries.push({query, values});
+    if (statusError) throw new Error('offline');
+    return statusRows;
+  }
   if (query.includes('ALTER TABLE')) return [];
   if (query.includes('SELECT id, role')) return [{ id: 'current', role: 'farmer', role_id: 1 }];
   if (query.includes('id <>')) {
@@ -48,6 +56,20 @@ compiled._compile(source, filename);
 const post = (phone, expectedPhone) => compiled.exports.POST({ json: async () => ({ userId: 'current', idToken: token(phone), ...(expectedPhone === undefined ? {} : { expectedPhone }) }) });
 
 (async () => {
+  const getStatus = id => compiled.exports.GET({ nextUrl: new URL('http://localhost/api/users/verify-phone' + (id ? '?userId=' + id : '')) });
+  assert.equal((await getStatus()).status, 400);
+  assert.equal(statusQueries.length, 0);
+  const verified = await getStatus('current');
+  assert.equal(verified.body.phone_verified, true);
+  assert.deepEqual(statusQueries[0].values, ['current']);
+  assert(!statusQueries[0].query.includes('JOIN'), 'Status check must not depend on FPO schema');
+  statusRows = [];
+  assert.equal((await getStatus('missing')).status, 404);
+  statusError = true;
+  const originalError = console.error;
+  console.error = () => {};
+  try { assert.equal((await getStatus('current')).status, 503); }
+  finally { console.error = originalError; statusError = false; }
   const entered = '+917550391602';
   let response = await post('+919999999999', entered);
   assert.equal(response.body.code, 'PHONE_TOKEN_MISMATCH');

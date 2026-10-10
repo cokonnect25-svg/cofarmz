@@ -4,6 +4,25 @@ import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
+// Keep this check independent of FPO/locality schema and profile enrichment.
+export async function GET(request: NextRequest) {
+  const userId = request.nextUrl.searchParams.get("userId");
+  if (!userId) return NextResponse.json({ error: "userId is required" }, { status: 400 });
+  try {
+    const users = await sql`
+      SELECT id, phone, phone_verified, location, role, role_id
+      FROM "user"
+      WHERE id = ${userId}
+      LIMIT 1
+    `;
+    if (!users.length) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    return NextResponse.json(users[0], { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    console.error("Phone verification status error:", error);
+    return NextResponse.json({ error: "Unable to check phone verification" }, { status: 503 });
+  }
+}
+
 function decodeBase64UrlJson(value: string) {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=");

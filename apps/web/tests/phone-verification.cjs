@@ -35,7 +35,7 @@ async function renderScenario(native, response, pathname = '/') {
   const compiled = new Module(filename, module);
   compiled.require = name => {
     if (name === 'react') return react;
-    if (name === '@/lib/api') return { getApiUrl: value => value };
+    if (name === '@/lib/fpo-fetch') return { fpoFetch: (url, options) => global.fetch(url, { ...options, credentials: 'include' }) };
     if (name === '@capacitor/core') return { Capacitor: { isNativePlatform: () => native, getPlatform: () => native ? 'android' : 'web' }, registerPlugin: () => ({}) };
     if (name === '@/lib/phone') return new Proxy({}, { get: (_, key) => key === 'PHONE_COUNTRIES' ? [] : () => key === 'getPhoneCountry' ? { placeholder: '' } : '91' });
     return require(name);
@@ -56,22 +56,24 @@ async function renderScenario(native, response, pathname = '/') {
     for (const profile of [
       { phone: null, phone_verified: false },
       { phone: '+919876543210', phone_verified: false },
-      { phone: null, phone_verified: true },
     ]) {
       const { first, result, requests } = await renderScenario(native, { id: 'test-user', ...profile });
       assert(first, 'Block while the database check is pending');
       assert(JSON.stringify(result).includes('Verify your phone'), 'Require OTP for missing/unverified phones');
+      assert.equal(requests[0].url, '/api/users/verify-phone?userId=test-user');
       assert.equal(requests[0].options.cache, 'no-store');
       assert.equal(requests[0].options.credentials, 'include');
     }
     for (const response of [new Error('offline'), { status: 500 }, { status: 404 }, { id: 'wrong-user' }]) {
       const { result } = await renderScenario(native, response);
       const tree = JSON.stringify(result);
-      assert(tree.includes('Verify your phone'), 'Failed profile reads must offer phone entry');
-      assert(tree.includes('Send OTP'), 'Users must be able to start verification');
-      assert(!tree.includes('Could not check'), 'Do not trap users on the profile-check error');
+      assert(tree.includes('Could not check'), 'Failures must not be mistaken for unverified status');
+      assert(tree.includes('Retry'), 'Allow retrying the status check');
+      assert(!tree.includes('Send OTP'), 'Do not request OTP without an authoritative status');
     }
-    assert.equal((await renderScenario(native, { id: 'test-user', phone: '+919876543210', phone_verified: true })).result, null);
+    for (const phone of [null, '', '+919876543210']) {
+      assert.equal((await renderScenario(native, { id: 'test-user', phone, phone_verified: true })).result, null);
+    }
     assert.equal((await renderScenario(native, { id: 'test-user', role: 'superadmin', phone: null, phone_verified: false })).result, null);
     const hidden = await renderScenario(native, {}, '/login');
     assert.equal(hidden.result, null);

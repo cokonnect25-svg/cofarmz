@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ConfirmationResult, RecaptchaVerifier as RecaptchaVerifierType } from "firebase/auth";
-import { getApiUrl } from "@/lib/api";
+import { fpoFetch } from "@/lib/fpo-fetch";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import {
   getCountryCodeFromLocation,
@@ -62,6 +62,7 @@ function toE164(raw: string, countryCode = "91") {
 export default function PhoneVerificationGate({ user, pathname }: { user: any; pathname?: string | null }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [checkFailed, setCheckFailed] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -88,6 +89,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 10000);
     setLoading(true);
+    setCheckFailed(false);
     setProfile(null);
     setConfirmation(null);
     setNativeVerificationId(null);
@@ -96,7 +98,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
     verifierRef.current?.clear();
     verifierRef.current = null;
 
-    fetch(getApiUrl(`/api/users/profile?userId=${encodeURIComponent(user.id)}`), {
+    fpoFetch(`/api/users/verify-phone?userId=${encodeURIComponent(user.id)}`, {
       cache: "no-store",
       credentials: "include",
       signal: controller.signal,
@@ -117,11 +119,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
       })
       .catch(() => {
         if (cancelled) return;
-        // A failed profile read must still let the user supply a number.
-        // Only a successful OTP verification response can unlock the gate.
-        setProfile({ id: user.id, phone: null, phone_verified: false });
-        setPhone("");
-        setCountryCode("91");
+        setCheckFailed(true);
       })
       .finally(() => {
         window.clearTimeout(timeout);
@@ -174,7 +172,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
     profile !== null && profile.id === user.id &&
     profile.role !== "superadmin" &&
     profile.role_id !== 5 &&
-    (profile.phone_verified !== true || !profile.phone?.trim());
+    profile.phone_verified !== true;
 
   async function getVerifier() {
     if (verifierRef.current) return verifierRef.current;
@@ -197,7 +195,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
   }
 
   async function completePhoneVerification(idToken: string) {
-    const res = await fetch(getApiUrl("/api/users/verify-phone"), {
+    const res = await fpoFetch("/api/users/verify-phone", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -296,6 +294,20 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
     }
   }
 
+  if (user?.id && !hiddenByRoute && checkFailed && !loading) {
+    return (
+      <div role="dialog" aria-modal="true" aria-label="Phone verification unavailable" className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/60 px-4">
+        <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+          <p role="alert" className="text-sm font-semibold text-gray-700">
+            Could not check your phone verification. Please retry.
+          </p>
+          <button type="button" onClick={() => setRefreshKey(value => value + 1)} className="mt-4 w-full rounded-2xl bg-green-600 px-4 py-3 text-sm font-black text-white">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (user?.id && !hiddenByRoute && (loading || profile?.id !== user.id)) {
     return (
       <div role="dialog" aria-modal="true" aria-label="Checking phone verification" className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/60 px-4">
