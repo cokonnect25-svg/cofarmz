@@ -27,6 +27,12 @@ export async function GET(request: Request) {
       FROM social_activity_notifications n JOIN "user" u ON u.id=n.actor_id
       WHERE n.recipient_id=${userId} AND n.created_at>${sinceDate}
       ORDER BY n.created_at DESC LIMIT 40`;
+    const overdueYield = await sql`SELECT c.id,c.crop_name,c.expected_yield_date,
+      to_char(now() AT TIME ZONE 'Asia/Kolkata','YYYY-MM-DD') AS reminder_day
+      FROM crops c JOIN "user" u ON u.id=c.user_id
+      WHERE c.user_id=${userId} AND u.role='farmer'
+       AND c.expected_yield_date < (now() AT TIME ZONE 'Asia/Kolkata')::date
+      ORDER BY c.expected_yield_date LIMIT 50`;
     // 1. New messages received by this user
     const newMessages = await sql`
       SELECT
@@ -347,6 +353,12 @@ export async function GET(request: Request) {
       reel_comment_like: "liked your reel comment",
       post_comment_like: "liked your post comment",
     };
+    overdueYield.forEach((crop:any)=>notifications.push({
+      id:`yield-overdue-${crop.id}-${String(crop.reminder_day).slice(0,10)}`,
+      type:'crop_yield_overdue',title:'Update your crop yield date',
+      body:`The yield date for ${crop.crop_name} has passed. Please set a new yield date in Current crops.`,
+      time:`${crop.reminder_day}T00:00:00+05:30`,link:'/user-profile#current-crops',image:null,
+    }));
     socialActivity.forEach((activity: any) =>
       notifications.push({
         id: `social-${activity.id}`,

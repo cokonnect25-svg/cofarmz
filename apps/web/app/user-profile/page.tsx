@@ -1551,7 +1551,7 @@ const fetchFollowersCounts = async () => {
     <p className="font-bold text-lg text-gray-900">{followingCount}</p>
     <p className="text-xs text-gray-600">Following</p>
   </button>
-  {canManageCrops && <button onClick={() => { if (expandedSection === 'crops') { setExpandedSection(null); } else { setExpandedSection('crops'); fetchUserCrops(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
+  {canManageCrops && <button id="current-crops" onClick={() => { if (expandedSection === 'crops') { setExpandedSection(null); } else { setExpandedSection('crops'); fetchUserCrops(); } }} className="cursor-pointer hover:bg-gray-50 p-2 rounded transition">
     <p className="font-bold text-lg text-gray-900">{farmerCrops.length}</p>
     <p className="text-xs text-gray-600 leading-tight">{cropProfileLabel}</p>
   </button>}

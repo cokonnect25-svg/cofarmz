@@ -34,7 +34,7 @@ export async function reconcileFpoAssignments(shouldStop = () => false, onProgre
           AND (a.assignment_status IS DISTINCT FROM 'assigned' OR a.group_id IS NULL
             OR a.district_id IS DISTINCT FROM u.district_id
             OR a.taluk_id IS DISTINCT FROM u.taluk_id
-            OR (u.taluk_id IS NOT NULL AND EXISTS (SELECT 1 FROM farmer_groups g JOIN digital_fpos f ON f.id=g.digital_fpo_id WHERE g.id=a.group_id AND f.taluk_id IS NULL))
+            OR (EXISTS (SELECT 1 FROM farmer_groups g JOIN digital_fpos f ON f.id=g.digital_fpo_id WHERE g.id=a.group_id AND f.taluk_id IS NULL))
             OR (u.taluk_id IS NULL AND EXISTS (SELECT 1 FROM digital_fpos f WHERE f.district_id=u.district_id AND f.taluk_id IS NULL AND f.status='active'))
             OR EXISTS (SELECT 1 FROM digital_fpos f JOIN farmer_groups g ON g.digital_fpo_id=f.id
               WHERE f.district_id=u.district_id AND f.taluk_id=u.taluk_id AND g.id IS DISTINCT FROM a.group_id))

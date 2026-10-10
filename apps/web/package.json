@@ -19,7 +19,9 @@
     "auto:fpo:once": "node scripts/auto-assign-fpos.cjs --once",
     "diagnose:fpo": "node scripts/diagnose-fpo-assignments.cjs",
     "migrate:fpo": "node scripts/migrate-fpos.cjs",
-    "import:fpo-localities": "node scripts/import-fpo-localities.cjs"
+    "import:fpo-localities": "node scripts/import-fpo-localities.cjs",
+    "remind:yield": "node scripts/crop-yield-reminders.cjs",
+    "remind:yield:once": "node scripts/crop-yield-reminders.cjs --once"
   },
   "dependencies": {
     "20": "^3.1.9",

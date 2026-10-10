@@ -13,13 +13,13 @@ export async function assignFarmer(tx: any, farmerId: string, districtId: string
   let status = u.role !== 'farmer' ? 'not_farmer' : districtId ? 'pending_fpo' : 'pending_location';
   if (u.role === 'farmer' && districtId) {
     if (talukId) await ensureTalukFpo(tx,districtId,talukId);
-    const [f] = await tx`SELECT f.status,g.id FROM digital_fpos f JOIN farmer_groups g ON g.digital_fpo_id=f.id WHERE f.district_id=${districtId} AND (f.taluk_id=${talukId} OR f.taluk_id IS NULL) ORDER BY f.taluk_id NULLS LAST LIMIT 1 FOR SHARE OF f`;
+    const [f] = await tx`SELECT f.status,g.id FROM digital_fpos f JOIN farmer_groups g ON g.digital_fpo_id=f.id WHERE f.district_id=${districtId} AND f.taluk_id=${talukId} LIMIT 1 FOR SHARE OF f`;
     if (f?.status === 'active') { groupId = f.id; status = 'assigned'; }
     else if (f) status = 'inactive_fpo';
   }
   const [assignment] = await tx`
     INSERT INTO farmer_fpo_assignments(farmer_id,district_id,taluk_id,group_id,assignment_status,assignment_source,reason,assigned_at)
-    VALUES(${farmerId},${districtId},${talukId},${groupId},${status},${source},${reason},${groupId ? new Date() : null})
+    VALUES(${farmerId},${districtId},${talukId},${groupId},${status},${source},${!talukId && districtId && u.role === 'farmer' ? 'Select Mandal / Taluk in your profile to join your FPO' : reason},${groupId ? new Date() : null})
     ON CONFLICT(farmer_id) DO UPDATE SET district_id=excluded.district_id,taluk_id=excluded.taluk_id,group_id=excluded.group_id,
       assignment_status=excluded.assignment_status,assignment_source=excluded.assignment_source,reason=excluded.reason,
       assigned_at=CASE WHEN farmer_fpo_assignments.group_id IS NOT DISTINCT FROM excluded.group_id THEN farmer_fpo_assignments.assigned_at ELSE excluded.assigned_at END,

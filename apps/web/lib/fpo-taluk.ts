@@ -26,7 +26,7 @@ export async function resolveTaluk(profile: any, districtId: string | null, db: 
 export function selectFarmerFpo(districtId: string, talukId: string | null, fpos: any[]) {
   const sameDistrict = fpos.filter(f=>String(f.district_id)===String(districtId));
   return (talukId ? sameDistrict.find(f=>String(f.taluk_id)===String(talukId)) : null)
-    || sameDistrict.find(f=>!f.taluk_id);
+    || null;
 }
 
 // Assignment creates only a validated child of an already provisioned district.
