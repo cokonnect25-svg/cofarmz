@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
-import { getApiUrl } from '@/lib/api';
+import { fpoFetch } from '@/lib/fpo-fetch';
 
 type Props = {
   userId?: string | null;
@@ -12,27 +12,30 @@ type Props = {
 
 export default function NativePushNotifications({ userId }: Props) {
   const router = useRouter();
-  const registeredUserRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!userId || !Capacitor.isNativePlatform()) return;
-    if (registeredUserRef.current === userId) return;
 
     let cancelled = false;
+    const listeners: PluginListenerHandle[] = [];
+    const keepListener = (listener: PluginListenerHandle) => {
+      if (cancelled) void listener.remove();
+      else listeners.push(listener);
+    };
 
     const saveToken = async (token: string) => {
-      await fetch(getApiUrl('/api/push-tokens'), {
+      const response = await fpoFetch('/api/push-tokens', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': userId,
         },
         body: JSON.stringify({
           userId,
           token,
           platform: Capacitor.getPlatform(),
         }),
-      }).catch(() => {});
+      });
+      if (!response.ok) throw new Error(`Push token registration failed (${response.status})`);
     };
 
     const setupPush = async () => {
@@ -48,28 +51,30 @@ export default function NativePushNotifications({ userId }: Props) {
             importance: 5,
             visibility: 1,
             sound: 'default',
-          }).catch(() => {});
+          });
         }
 
-        await PushNotifications.removeAllListeners();
-
-        await PushNotifications.addListener('registration', async ({ value }) => {
+        keepListener(await PushNotifications.addListener('registration', async ({ value }) => {
           if (!cancelled) {
-            await saveToken(value);
-            registeredUserRef.current = userId;
+            try {
+              await saveToken(value);
+            } catch (error) {
+              console.error('Push token registration failed:', error);
+            }
           }
-        });
+        }));
 
-        await PushNotifications.addListener('registrationError', (error) => {
+        keepListener(await PushNotifications.addListener('registrationError', (error) => {
           console.error('Push registration error:', error);
-        });
+        }));
 
-        await PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
+        keepListener(await PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
+          if (cancelled) return;
           const url = event.notification.data?.url || '/notifications';
           router.push(typeof url === 'string' && url.startsWith('/') ? url : '/notifications');
-        });
+        }));
 
-        await PushNotifications.register();
+        if (!cancelled) await PushNotifications.register();
       } catch (error) {
         console.error('Push setup failed:', error);
       }
@@ -79,6 +84,7 @@ export default function NativePushNotifications({ userId }: Props) {
 
     return () => {
       cancelled = true;
+      listeners.forEach(listener => { void listener.remove(); });
     };
   }, [router, userId]);
 

@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Page headers use layers up to 40, app navigation 45, and dialogs 50+.
+   Tall centered dialogs must start within the viewport so their close buttons
+   remain reachable when the keyboard opens or on short mobile screens. */
+.app-dialog-overlay {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+.app-dialog-overlay.items-center {
+  align-items: safe center;
+}
+
+.app-dialog-overlay > div,
+.app-dialog-overlay > section {
+  flex-shrink: 0;
+}
+
 /* Shared responsive guardrails for browser and Capacitor webviews. */
 html,
 body {

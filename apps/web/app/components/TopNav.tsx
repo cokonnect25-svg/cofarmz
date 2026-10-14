@@ -205,7 +205,7 @@ const handleOpenNotifPanel = () => {
     <>
       {/* ── TOP NAV ── */}
       <nav
-        className="fixed top-0 left-0 right-0 z-[9999] bg-white shadow-sm border-b border-gray-100"
+        className="fixed top-0 left-0 right-0 z-[45] bg-white shadow-sm border-b border-gray-100"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="app-bar-inner h-[64px] flex items-center gap-1.5 sm:gap-3 xl:gap-6 min-w-0">

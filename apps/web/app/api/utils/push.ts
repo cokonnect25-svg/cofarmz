@@ -136,7 +136,6 @@ async function sendToToken(token: string, payload: PushPayload) {
             priority: "high",
             notification: {
               channel_id: "default",
-              click_action: "OPEN_APP",
               sound: "default",
             },
           },

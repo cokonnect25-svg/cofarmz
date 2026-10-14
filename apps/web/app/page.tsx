@@ -619,7 +619,7 @@ setEquipmentSupplierResults(normalize(equipmentSuppliersData).filter(s => s.role
       </button>
 
       {showRoleModal && (
-        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="app-dialog-overlay fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex flex-col items-center text-center">
               <div className="w-20 h-20 bg-brand-50 rounded-3xl flex items-center justify-center mb-6">

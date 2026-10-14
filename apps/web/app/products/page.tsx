@@ -116,7 +116,7 @@ export default function ProductsPage() {
       {/* Product detail modal */}
       {selectedProduct && (
         <div
-          className="fixed inset-0 z-[200] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+          className="app-dialog-overlay fixed inset-0 z-[200] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
           onClick={() => setSelectedProduct(null)}
         >
           <div

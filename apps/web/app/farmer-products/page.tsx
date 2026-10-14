@@ -223,7 +223,7 @@ export default function FarmerProductsPage() {
       </section>
 
       {showForm && (
-        <div className="fixed inset-0 z-[10001] flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onMouseDown={event => { if (event.target === event.currentTarget && !saving) setShowForm(false); }}>
+        <div className="app-dialog-overlay fixed inset-0 z-[10001] flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onMouseDown={event => { if (event.target === event.currentTarget && !saving) setShowForm(false); }}>
           <form onSubmit={saveProduct} className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-3xl">
             <div className="overflow-y-auto p-5 sm:p-6">
             <div className="mb-5 flex items-center justify-between"><div><h2 className="text-xl font-black text-gray-900">{editingProduct ? 'Edit Product' : 'Add Product'}</h2><p className="text-sm text-gray-500">{editingProduct ? 'Update the product details or image.' : 'Enter the product details and add a photo.'}</p></div><button type="button" onClick={() => setShowForm(false)} disabled={saving} className="rounded-full p-2 hover:bg-gray-100"><X className="h-5 w-5" /></button></div>

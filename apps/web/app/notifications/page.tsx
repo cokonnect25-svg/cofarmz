@@ -54,7 +54,7 @@ function AnnouncementModal({
   return (
     // backdrop — tap outside to close
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-0 sm:px-4"
+      className="app-dialog-overlay fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-0 sm:px-4"
       style={{ paddingBottom: "calc(60px + env(safe-area-inset-bottom))" }}
       onClick={onClose}
     >

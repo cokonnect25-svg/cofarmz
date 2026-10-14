@@ -26,7 +26,7 @@ export default function FpoGroupDialog({ title, onClose, children, closeLabel = 
 
   return <dialog ref={dialogRef} aria-labelledby="fpo-dialog-title" onCancel={onClose}
     onClick={event => { if (event.target === event.currentTarget) onClose(); }}
-    className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-hidden rounded-2xl bg-white p-0 text-gray-800 shadow-2xl backdrop:bg-black/50">
+    className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-2xl overflow-hidden rounded-2xl bg-white p-0 text-gray-800 shadow-2xl backdrop:bg-black/50">
     <div className="flex max-h-[90dvh] flex-col">
       <header className="flex shrink-0 items-center justify-between gap-4 border-b border-gray-100 px-5 py-4">
         <h2 id="fpo-dialog-title" className="min-w-0 break-words text-xl font-bold">{title}</h2>

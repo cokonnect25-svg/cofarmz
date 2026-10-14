@@ -122,7 +122,7 @@ export default function LocationPermissionPopup() {
   if (!show || hideNav || !isAuthenticated) return null;
 
   return (
-    <div className="fixed inset-0 z-[99999] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+    <div className="app-dialog-overlay fixed inset-0 z-[99999] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
       <div className="bg-white rounded-t-3xl w-full max-w-lg max-h-[90dvh] overflow-y-auto px-6 pb-10 pt-6 shadow-2xl">
         <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-6"></div>
         {done ? (

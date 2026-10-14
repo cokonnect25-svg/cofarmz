@@ -1278,7 +1278,7 @@ if (Capacitor.isNativePlatform()) {
       {/* ── Profile Photo Modal ───────────────────────────────────────────────── */}
       {showPhotoModal && (
         <div
-          className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4"
+          className="app-dialog-overlay fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4"
           onClick={() => setShowPhotoModal(false)}
         >
           <div className="relative w-full max-w-[min(94vw,40rem)]" onClick={e => e.stopPropagation()}>
@@ -1332,7 +1332,7 @@ if (Capacitor.isNativePlatform()) {
 
       {/* ── In-App Call Modal ─────────────────────────────────────────────────── */}
       {showShareMenu && (
-        <div className="fixed inset-0 bg-black/50 z-[10030] flex items-end justify-center px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]" onClick={() => setShowShareMenu(false)}>
+        <div className="app-dialog-overlay fixed inset-0 bg-black/50 z-[10030] flex items-end justify-center px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]" onClick={() => setShowShareMenu(false)}>
           <div className="bg-white rounded-2xl w-full max-w-sm p-4 space-y-2 shadow-2xl mb-2" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-black text-gray-900">Share Profile</h3>

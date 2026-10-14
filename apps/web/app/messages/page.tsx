@@ -180,7 +180,7 @@ function formatFileSize(bytes?: number): string {
 function MediaPreviewModal({ url, type, onClose }: { url: string; type: MessageType; onClose: () => void }) {
   if (!url) return null;
   return (
-    <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="app-dialog-overlay fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4" onClick={onClose}>
       <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-white/10 rounded-full hover:bg-white/20 transition">
         <X className="w-6 h-6 text-white" />
       </button>
@@ -338,7 +338,7 @@ function LocationPickerModal({ onSelect, onClose }: { onSelect: (lat: number, ln
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center px-4">
+    <div className="app-dialog-overlay fixed inset-0 bg-black/50 z-[80] flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
         <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2"><MapPin className="w-5 h-5 text-blue-600" />Share Location</h3>
         <button onClick={getCurrentLocation} disabled={gettingLocation}
@@ -938,7 +938,7 @@ function MessagesContent() {
           onChange={(e) => onFileChange(e, 'file')}
         />
       {showDeleteConfirm !== null && (
-        <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center px-4">
+        <div className="app-dialog-overlay fixed inset-0 bg-black/50 z-[80] flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-lg font-black text-gray-900 mb-2">Delete Message?</h3>
             <p className="text-sm text-gray-500 mb-5">This message will be removed for you. Others may still see it.</p>
@@ -951,7 +951,7 @@ function MessagesContent() {
         </div>
       )}
       {showConvDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 z-[80] flex items-center justify-center px-4">
+        <div className="app-dialog-overlay fixed inset-0 bg-black/50 z-[80] flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-lg font-black text-gray-900 mb-2">Delete Conversation?</h3>
             <p className="text-sm text-gray-500 mb-5">All messages with {ownerName} will be permanently deleted. This cannot be undone.</p>

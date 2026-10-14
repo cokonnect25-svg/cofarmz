@@ -1765,7 +1765,7 @@ const fetchFollowersCounts = async () => {
         )}
 
         {cancelDialog && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
+          <div className="app-dialog-overlay fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
             <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
               <h3 className="text-lg font-black text-gray-900 mb-1">Cancel Booking?</h3>
               <p className="text-sm text-gray-500 mb-4">{cancelDialog.booking.machinery_name}</p>
@@ -1892,7 +1892,7 @@ const fetchFollowersCounts = async () => {
 
       {/* ── Crop Detail Bottom-sheet ── */}
       {selectedCrop && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setSelectedCrop(null)}>
+        <div className="app-dialog-overlay fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setSelectedCrop(null)}>
           <div className="bg-white rounded-t-3xl w-full max-w-md p-6 pb-8" onClick={e => e.stopPropagation()}>
             <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-5"></div>
 <div className="mb-5 h-52 w-full rounded-2xl bg-green-50">
@@ -1972,7 +1972,7 @@ const fetchFollowersCounts = async () => {
 
       {/* ── Add Crop Modal ── */}
       {showAddCropForm && canManageCrops && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="app-dialog-overlay fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl overflow-hidden shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 flex items-center justify-between z-10">
               <h3 className="text-lg font-bold text-white">Add New Crop</h3>
@@ -2097,7 +2097,7 @@ const fetchFollowersCounts = async () => {
 
       {/* ── Edit Crop Modal ── */}
       {editingCrop && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="app-dialog-overlay fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl overflow-hidden shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-blue-50">
             <div className="sticky top-0 bg-white px-6 py-5 flex items-center justify-between z-10 border-b border-gray-100/60">
               <div>
@@ -2222,7 +2222,7 @@ const fetchFollowersCounts = async () => {
 
       {/* ── Edit Profile Modal ── */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end justify-center p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:items-center">
+        <div className="app-dialog-overlay fixed inset-0 bg-black/50 z-[100] flex items-end justify-center p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:items-center">
           <div className="bg-white rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-xl max-w-md w-full max-h-[calc(100dvh-2rem)] flex flex-col">
             <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 shrink-0">
               <h3 className="text-lg font-bold text-white">Edit Profile</h3>
@@ -2348,7 +2348,7 @@ const fetchFollowersCounts = async () => {
 
       {/* Profile Image Modal */}
       {showProfileImageModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowProfileImageModal(false)}>
+        <div className="app-dialog-overlay fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowProfileImageModal(false)}>
           <div className="bg-white rounded-2xl overflow-hidden shadow-2xl max-w-md w-full" onClick={e => e.stopPropagation()}>
             <div className="relative bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-white">Your Profile Picture</h3>
@@ -2374,7 +2374,7 @@ const fetchFollowersCounts = async () => {
 
       {/* Image Preview Modal */}
       {showImagePreview && previewImage && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex flex-col items-center justify-center p-4">
+        <div className="app-dialog-overlay fixed inset-0 bg-black/50 z-50 flex flex-col items-center justify-center p-4">
           <div className="bg-white rounded-2xl overflow-hidden shadow-xl max-w-md w-full">
             <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4"><h3 className="text-lg font-bold text-white">Preview Profile Image</h3></div>
             <div className="p-6">
@@ -2395,7 +2395,7 @@ const fetchFollowersCounts = async () => {
 
       {/* Reel Viewer */}
       {selectedReel && (
-        <div className="fixed inset-0 bg-black z-[10020] flex items-center justify-center">
+        <div className="app-dialog-overlay fixed inset-0 bg-black z-[10020] flex items-center justify-center">
           <button onClick={() => setSelectedReel(null)} className="absolute top-4 right-4 z-10 p-2 bg-white/10 hover:bg-white/20 rounded-full transition"><X className="w-6 h-6 text-white" /></button>
           <div className="relative w-full max-w-md h-full bg-black">
             <video ref={el => { if (el) videoRefsMap.current[selectedReel.id] = el; }} src={selectedReel.video_url} className="w-full h-full object-contain" autoPlay loop playsInline muted={isMuted} onClick={e => { const v = e.currentTarget; v.paused ? v.play() : v.pause(); }} />
@@ -2421,7 +2421,7 @@ const fetchFollowersCounts = async () => {
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
       {showShareMenu && (
-        <div className="fixed inset-0 bg-black/50 z-[10030] flex items-end justify-center px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]" onClick={() => setShowShareMenu(false)}>
+        <div className="app-dialog-overlay fixed inset-0 bg-black/50 z-[10030] flex items-end justify-center px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]" onClick={() => setShowShareMenu(false)}>
           <div className="bg-white rounded-2xl w-full max-w-sm p-4 space-y-2 shadow-2xl mb-2" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-black text-gray-900">Share Profile</h3>

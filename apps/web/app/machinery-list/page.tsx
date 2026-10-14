@@ -441,7 +441,7 @@ export default function MachineryListPage() {
 
     {/* Filter Modal - Top Popup */}
     {showFilter && (
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={() => setShowFilter(false)}>
+      <div className="app-dialog-overlay fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={() => setShowFilter(false)}>
         <div className="w-full mx-4 bg-white rounded-2xl p-6 max-w-sm shadow-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-900">Filter Equipment</h2>
@@ -565,7 +565,7 @@ export default function MachineryListPage() {
 
     {/* Sort Bottom Sheet */}
     {showSortMenu && (
-      <div className="fixed inset-0 z-[9999] flex flex-col justify-end" style={{backgroundColor:'rgba(0,0,0,0.45)'}} onClick={() => setShowSortMenu(false)}>
+      <div className="app-dialog-overlay fixed inset-0 z-[9999] flex flex-col justify-end" style={{backgroundColor:'rgba(0,0,0,0.45)'}} onClick={() => setShowSortMenu(false)}>
         <div className="bg-white rounded-t-3xl px-4 pb-8 pt-4" onClick={e => e.stopPropagation()}>
           <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-5"></div>
           <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 px-2">Sort By</p>

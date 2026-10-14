@@ -368,7 +368,7 @@ export default function PostCard({
 
       {expanded && (
         <div
-          className="fixed inset-0 z-[10010] flex items-end justify-center bg-black/60 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:items-center sm:p-5"
+          className="app-dialog-overlay fixed inset-0 z-[10010] flex items-end justify-center bg-black/60 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:items-center sm:p-5"
           onClick={() => setExpanded(false)}
         >
           <section
@@ -522,7 +522,7 @@ export default function PostCard({
 
       {likersOpen && (
         <div
-          className="fixed inset-0 z-[120] flex items-end justify-center bg-black/60 sm:items-center sm:p-5"
+          className="app-dialog-overlay fixed inset-0 z-[120] flex items-end justify-center bg-black/60 sm:items-center sm:p-5"
           onClick={() => setLikersOpen(false)}
         >
           <section
@@ -583,7 +583,7 @@ export default function PostCard({
 
       {shareOpen && (
         <div
-          className="fixed inset-0 z-[110] grid place-items-center bg-black/50 p-5"
+          className="app-dialog-overlay fixed inset-0 z-[110] grid place-items-center bg-black/50 p-5"
           onClick={() => setShareOpen(false)}
         >
           <div

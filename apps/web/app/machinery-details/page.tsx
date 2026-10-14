@@ -1282,7 +1282,7 @@ function MachineryDetailsContent() {
 
         {/* Phone Number Modal */}
         {showPhoneModal && (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end px-4 pb-[calc(60px+env(safe-area-inset-bottom)+16px)]">
+          <div className="app-dialog-overlay fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end px-4 pb-[calc(60px+env(safe-area-inset-bottom)+16px)]">
             <div className="w-full bg-white rounded-t-[32px] p-6 pb-8">
               <div className="flex justify-between items-center mb-5">
                 <h2 className="text-xl font-bold text-gray-900">Your Mobile Number</h2>
@@ -1330,7 +1330,7 @@ onClick={() => {
 
         {/* Date Picker Modal */}
 {showDatePicker && (
-  <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end px-4 pb-[calc(60px+env(safe-area-inset-bottom)+16px)]">
+  <div className="app-dialog-overlay fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end px-4 pb-[calc(60px+env(safe-area-inset-bottom)+16px)]">
     
     <div className="w-full bg-white rounded-t-[32px] max-h-[60vh] flex flex-col shadow-2xl">
       <div className="w-10 h-1.5 bg-gray-300 rounded-full mx-auto mt-2 mb-2"></div>
@@ -1465,7 +1465,7 @@ onClick={() => {
 
         {/* Review Modal */}
         {showReviewModal && (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end">
+          <div className="app-dialog-overlay fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end">
             <div className="w-full bg-white rounded-t-[32px] p-6 pb-8 animate-in slide-in-from-bottom max-h-[70vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-900">Leave a Review</h2>
@@ -1558,7 +1558,7 @@ onClick={() => {
 
         {/* Booking Success Modal */}
         {showBookingSuccess && bookingDetails && (
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end px-4 pb-[calc(60px+env(safe-area-inset-bottom)+16px)]">
+          <div className="app-dialog-overlay fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end px-4 pb-[calc(60px+env(safe-area-inset-bottom)+16px)]">
             <div className="bg-white rounded-t-3xl w-full max-w-md px-6 pt-6 pb-10 animate-slide-up">
               {/* Success icon */}
               <div className="flex flex-col items-center mb-6">

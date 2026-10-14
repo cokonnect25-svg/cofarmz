@@ -717,7 +717,7 @@ const res = await fetch(getApiUrl(`/api/messages/conversations`), {
 
       {/* Delete Conversation Confirmation */}
       {deleteTarget && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
+        <div className="app-dialog-overlay fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-lg font-black text-gray-900 mb-2">Delete Conversation?</h3>
             <p className="text-sm text-gray-500 mb-5">
@@ -744,7 +744,7 @@ const res = await fetch(getApiUrl(`/api/messages/conversations`), {
 
       {/* New Chat Modal */}
       {showNewChat && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
+        <div className="app-dialog-overlay fixed inset-0 bg-black/50 z-50 flex items-end">
           <div className="w-full bg-white rounded-t-[28px] p-6 pb-10 max-h-[80vh] flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-black text-gray-900">New Message</h2>

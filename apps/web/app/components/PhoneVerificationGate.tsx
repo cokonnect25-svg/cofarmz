@@ -296,7 +296,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
 
   if (user?.id && !hiddenByRoute && checkFailed && !loading) {
     return (
-      <div role="dialog" aria-modal="true" aria-label="Phone verification unavailable" className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/60 px-4">
+      <div role="dialog" aria-modal="true" aria-label="Phone verification unavailable" className="app-dialog-overlay fixed inset-0 z-[10050] flex items-center justify-center bg-black/60 px-4">
         <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
           <p role="alert" className="text-sm font-semibold text-gray-700">
             Could not check your phone verification. Please retry.
@@ -310,7 +310,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
   }
   if (user?.id && !hiddenByRoute && (loading || profile?.id !== user.id)) {
     return (
-      <div role="dialog" aria-modal="true" aria-label="Checking phone verification" className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/60 px-4">
+      <div role="dialog" aria-modal="true" aria-label="Checking phone verification" className="app-dialog-overlay fixed inset-0 z-[10050] flex items-center justify-center bg-black/60 px-4">
         <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
           <p role="status" className="text-sm font-semibold text-gray-700">
             Checking your phone verification...
@@ -325,7 +325,7 @@ export default function PhoneVerificationGate({ user, pathname }: { user: any; p
   const canSendOtp = isValidLocalPhoneNumber(phone, countryCode) && /^\+[1-9]\d{9,14}$/.test(toE164(phone, countryCode));
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Verify your phone" className="fixed inset-0 z-[10050] flex items-end justify-center bg-black/60 px-4 sm:items-center">
+    <div role="dialog" aria-modal="true" aria-label="Verify your phone" className="app-dialog-overlay fixed inset-0 z-[10050] flex items-end justify-center bg-black/60 px-4 sm:items-center">
       <div className="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl">
         <div className="mb-5">
           <p className="text-xs font-black uppercase tracking-widest text-green-700">Mobile verification</p>

@@ -27,7 +27,7 @@ function BottomNavContent() {
 
   return (
 <nav
-  className="fixed bottom-0 left-0 right-0 z-[60] md:hidden"
+  className="fixed bottom-0 left-0 right-0 z-[45] md:hidden"
   style={{ paddingBottom: 'env(safe-area-inset-bottom)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}
 >
       <div className="bg-white/98 backdrop-blur-xl border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
