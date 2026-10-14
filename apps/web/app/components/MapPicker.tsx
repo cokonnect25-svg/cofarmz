@@ -25,7 +25,7 @@ if (typeof window !== 'undefined') {
 
 function MapEvents({ onLocationSelect, markerRef }: { 
   onLocationSelect: (lat: number, lng: number) => void;
-  markerRef: React.RefObject<L.Marker>;
+  markerRef: React.RefObject<L.Marker | null>;
 }) {
   useMapEvents({
     click(e) {

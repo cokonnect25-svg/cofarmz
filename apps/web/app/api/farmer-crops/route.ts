@@ -1,3 +1,5 @@
+import { requireActor, FpoError, fpoError } from '@/lib/fpo-access';
+import { validateCropProfileFields } from '@/lib/crop-profile-fields';
 import { isValidCropYieldDate } from '@/lib/crop-yield-date';
 import sql from "@/app/api/utils/sql";
 import { sendCropMatchPushes } from "@/app/api/utils/crop-match-push";
@@ -31,6 +33,8 @@ async function ensureSchema() {
   await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS image_url TEXT`.catch(() => {});
   await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS grade VARCHAR(10)`.catch(() => {});
   await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS certification_type VARCHAR(50) DEFAULT NULL`.catch(() => {});
+  await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS comment TEXT`;
+  await sql`ALTER TABLE crops ADD COLUMN IF NOT EXISTS cultivated_acres NUMERIC`;
   await sql`ALTER TABLE crops DROP CONSTRAINT IF EXISTS crops_crop_type_check`.catch(() => {});
 }
 
@@ -50,7 +54,7 @@ export async function GET(request: Request) {
       SELECT
         id, crop_name, expertise_level,
         expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom,
-        is_crop_waste, crop_type, certification_type, certificate_url, image_url, grade, created_at
+        is_crop_waste, crop_type, certification_type, certificate_url, image_url, grade, comment, cultivated_acres, created_at
       FROM crops
       WHERE user_id = ${userId}
       ORDER BY created_at DESC
@@ -85,9 +89,15 @@ export async function POST(request: Request) {
     }
 
     if (!isValidCropYieldDate(expected_yield_date)) return NextResponse.json({error:'A valid yield date is required'}, {status:400});
+    const actor = await requireActor(request);
     const trimmedCropName = crop_name.trim();
 
     await ensureSchema();
+
+    if (String(user_id) !== String(actor.id)) throw new FpoError('You can only change your own crops',403);
+    let profileFields;
+    try { profileFields = validateCropProfileFields(body, actor.role); }
+    catch (e) { throw new FpoError(e instanceof Error ? e.message : 'Invalid crop details'); }
 
     const existing = await sql`
       SELECT id FROM crops
@@ -103,7 +113,7 @@ export async function POST(request: Request) {
       INSERT INTO crops (
         user_id, crop_name, expertise_level,
         expected_yield_date, expected_yield_quantity, expected_yield_quantity_uom,
-        crop_type, is_crop_waste, certificate_url, image_url, grade, certification_type
+        crop_type, is_crop_waste, certificate_url, image_url, grade, certification_type, comment, cultivated_acres
       )
       VALUES (
         ${user_id},
@@ -117,7 +127,9 @@ export async function POST(request: Request) {
         ${certificate_url || null},
         ${image_url || null},
         ${grade || null},
-        ${certification_type}
+        ${certification_type},
+        ${profileFields.comment},
+        ${profileFields.cultivated_acres}
       )
       RETURNING *
     `;
@@ -136,6 +148,7 @@ export async function POST(request: Request) {
     const { years_of_experience: _legacyExperience, ...crop } = result[0];
     return NextResponse.json(crop);
   } catch (error: any) {
+    if (error instanceof FpoError) return fpoError(error);
     console.error('Error creating crop:', error);
     return NextResponse.json({ error: `Failed to create crop: ${error.message}` }, { status: 500 });
   }
@@ -158,6 +171,7 @@ export async function PUT(request: Request) {
     }
 
     if (!isValidCropYieldDate(expected_yield_date)) return NextResponse.json({error:'A valid yield date is required'}, {status:400});
+    const actor = await requireActor(request);
     const trimmedCropName = crop_name.trim();
 
     await ensureSchema();
@@ -173,6 +187,11 @@ export async function PUT(request: Request) {
     }
 
     const user_id = cropRow[0].user_id;
+
+    if (String(user_id) !== String(actor.id)) throw new FpoError('You can only change your own crops',403);
+    let profileFields;
+    try { profileFields = validateCropProfileFields(body, actor.role); }
+    catch (e) { throw new FpoError(e instanceof Error ? e.message : 'Invalid crop details'); }
 
     const existing = await sql`
       SELECT id FROM crops
@@ -198,7 +217,9 @@ export async function PUT(request: Request) {
         certificate_url       = ${certificate_url || null},
         image_url             = ${image_url || null},
         grade                 = ${grade || null},
-        certification_type    = ${certification_type}
+        certification_type    = ${certification_type},
+        comment               = ${body.comment === undefined ? sql`comment` : profileFields.comment},
+        cultivated_acres      = ${body.cultivated_acres === undefined ? sql`cultivated_acres` : profileFields.cultivated_acres}
       WHERE id = ${parseInt(id)}
       RETURNING *
     `;
@@ -213,6 +234,7 @@ export async function PUT(request: Request) {
     const { years_of_experience: _legacyExperience, ...crop } = result[0];
     return NextResponse.json(crop);
   } catch (error: any) {
+    if (error instanceof FpoError) return fpoError(error);
     console.error('Error updating crop:', error);
     return NextResponse.json({ error: `Failed to update crop: ${error.message}` }, { status: 500 });
   }

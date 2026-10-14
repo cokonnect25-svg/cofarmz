@@ -104,7 +104,9 @@ export async function GET(request: Request) {
           image_url,
           certificate_url,
           grade,
-          certification_type
+          certification_type,
+          to_jsonb(crops)->>'comment' AS comment,
+          to_jsonb(crops)->>'cultivated_acres' AS cultivated_acres
         FROM crops
         WHERE user_id = ${farmerId}
         ORDER BY crop_name

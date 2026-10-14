@@ -18,6 +18,7 @@ export interface ReportFarmer {
   location?: string | null;
   district?: string | null;
   state?: string | null;
+  taluk?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   assignment_source?: string | null;
@@ -36,6 +37,33 @@ export interface ReportFarmer {
 }
 
 type ReadJson = (path: string) => Promise<any>;
+
+export async function loadFilteredFpoReport(read: ReadJson, filters: { district?: string; taluk?: string; group?: string }) {
+  const farmers: ReportFarmer[] = [];
+  let fpos: ReportFpo[] = [], cursor = '';
+  const seen = new Set<string>();
+  do {
+    const params = new URLSearchParams({ ...filters, after: cursor });
+    const page = await read(`/api/fpo/report?${params}`);
+    fpos = page.fpos;
+    farmers.push(...page.farmers);
+    if (page.next === null) break;
+    if (typeof page.next !== 'string' || seen.has(page.next)) throw new Error('Unable to load the complete farmer list. Please retry.');
+    seen.add(page.next);
+    cursor = page.next;
+  } while (true);
+  return { fpos, farmers };
+}
+
+export function renderFarmerCsv(farmers: ReportFarmer[]) {
+  const cell = (value: unknown) => {
+    let text = String(value ?? '');
+    if (/^[\s]*[=+@-]/.test(text)) text = "'" + text;
+    return '"' + text.replaceAll('"', '""') + '"';
+  };
+  const rows = farmers.map(f => [f.id,f.name,f.state,f.district,f.taluk,f.location,f.profile_details?.email,f.profile_details?.phone,f.group_id,f.assignment_status]);
+  return '\uFEFF' + [['Farmer ID','Name','State','District','Mandal / Taluk','Location','Email','Phone','FPO group ID','Assignment status'], ...rows].map(row=>row.map(cell).join(',')).join('\r\n');
+}
 
 // Follow every cursor: exports must not stop at the first 100 farmers.
 export async function loadFpoReport(read: ReadJson, groupId?: string) {
@@ -73,7 +101,7 @@ function renderFarmer(farmer: ReportFarmer, index: number) {
   const date = (value?: string | null) => value && !Number.isNaN(Date.parse(value)) ? new Date(value).toLocaleString('en-IN') : value;
   const fields: [string, unknown][] = [
     ['Farmer ID', farmer.id], ['Email', details.email], ['Phone number', details.phone],
-    ['Address / location', farmer.location], ['District', farmer.district], ['State', farmer.state],
+    ['Address / location', farmer.location], ['District', farmer.district], ['Mandal / Taluk', farmer.taluk], ['State', farmer.state],
     ['Gender', details.gender], ['Age', details.age], ['Bio', details.bio],
     ['Latitude', farmer.latitude], ['Longitude', farmer.longitude],
     ['Email verified', verified(details.email_verified)], ['Phone verified', verified(details.phone_verified)],
@@ -105,7 +133,7 @@ export function renderFpoReport(fpos: ReportFpo[], farmers: ReportFarmer[], dist
   ${showToolbar ? '<div class="toolbar"><button type="button" onclick="window.print()">Save as PDF / Print</button><p>Select <strong>Save as PDF</strong> in the print dialog to download this report.</p></div>' : ''}
   <h1>${escapeHtml(title)}</h1><p class="muted">CoFarmz - district and mandal/taluk communities and assigned farmers</p>
   <p class="muted">Generated: ${escapeHtml(generatedAt.toLocaleString('en-IN'))}</p>
-  <div class="summary"><strong>${fpos.length} Digital FPO${fpos.length === 1 ? '' : 's'} | ${farmers.length} tagged farmers</strong><p>Includes active and inactive FPO memberships. Farmers without an FPO assignment are excluded.${districtOnly ? '' : ' Covers all districts, regardless of directory search or status filters.'}</p></div>
+  <div class="summary"><strong>${fpos.length} Digital FPO${fpos.length === 1 ? '' : 's'} | ${farmers.length} tagged farmers</strong><p>Includes active and inactive FPO memberships within the selected scope. Farmers without an FPO assignment are excluded.</p></div>
   ${!fpos.length ? '<p class="empty">No Digital FPOs available.</p>' : ''}
   ${fpos.map(fpo => {
     const members = grouped.get(fpo.group_id) || [];

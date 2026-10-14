@@ -14,6 +14,7 @@ const sql = async (parts,...values) => {
 };
 const nativeLoad = Module._load;
 Module._load = function(name,parent,isMain) {
+  if (name === '@/lib/fpo-access') return {requireActor:async()=>({id:'farmer',role:'farmer'}),FpoError:class extends Error {},fpoError:e=>Response.json({error:e.message},{status:e.status||400})};
   if (name === '@/app/api/utils/sql') return {__esModule:true,default:sql};
   if (name === '@/app/api/utils/crop-match-push') return {sendCropMatchPushes:async()=>{}};
   if (name === '@/app/api/utils/push') return {sendPushToFollowers:async()=>{}};

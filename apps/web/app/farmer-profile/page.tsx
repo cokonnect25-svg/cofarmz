@@ -103,6 +103,8 @@ interface Follower {
 
 interface Crop {
   crop_name: string;
+  comment?: string | null;
+  cultivated_acres?: number | string | null;
   expertise_level: string;
   expected_yield_date?: string | null;
   expected_yield_quantity?: number | null;
@@ -955,6 +957,7 @@ if (Capacitor.isNativePlatform()) {
                               {role === 'buyer' ? 'Needed by' : 'Yield by'}: {new Date(crop.expected_yield_date).toLocaleDateString('en-IN')}
                             </span>
                           )}
+                          {role === 'farmer' && crop.cultivated_acres != null && <span className="text-xs text-green-700 font-medium">Acres cultivated: {crop.cultivated_acres}</span>}
                           {crop.expected_yield_quantity && (
                             <span className="text-xs text-blue-600 font-medium">
                               Qty: {crop.expected_yield_quantity} {crop.expected_yield_quantity_uom || 'kg'}
@@ -967,6 +970,7 @@ if (Capacitor.isNativePlatform()) {
                       {isOpen && (
                         <div className="border-t border-dashed border-gray-200">
 
+                          {crop.comment && <div className="px-3 py-3 text-sm text-gray-700 whitespace-pre-wrap break-words"><strong>Comment:</strong> {crop.comment}</div>}
                           {/* ── Cert / Grade Panel ── */}
                           {hasCert ? (
                             <div className="bg-yellow-50/70 px-3 py-3">
