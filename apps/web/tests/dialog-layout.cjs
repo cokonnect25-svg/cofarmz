@@ -70,11 +70,18 @@ function classes(file, prefix) {
     </script>`);
   const browser = process.env.DIALOG_TEST_BROWSER || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
   for (const size of ['390,844', '1280,900', '390,400']) {
+    // Desktop Chrome has a minimum window width. An iframe gives the document
+    // the exact mobile viewport, including media queries and dynamic vh units.
+    const [width, height] = size.split(',').map(Number);
+    const wrapper = path.join(folder, `viewport-${width}-${height}.html`);
+    fs.writeFileSync(wrapper, `<!doctype html><iframe src="dialogs.html" style="border:0;width:${width}px;height:${height}px" onload="document.getElementById('results').textContent=this.contentDocument.getElementById('results').textContent"></iframe><pre id="results"></pre>`);
     const output = execFileSync(browser, ['--headless', '--disable-gpu', '--no-first-run',
       '--no-default-browser-check', '--disable-extensions', '--allow-file-access-from-files',
       `--user-data-dir=${path.join(folder, size.replace(',', '-'))}`, `--window-size=${size}`,
-      '--dump-dom', `file:///${file.replaceAll('\\', '/')}`], { encoding: 'utf8', timeout: 25000, stdio: ['ignore','pipe','pipe'] });
+      '--virtual-time-budget=1000', '--dump-dom', `file:///${wrapper.replaceAll('\\', '/')}`], { encoding: 'utf8', timeout: 25000, stdio: ['ignore','pipe','pipe'] });
     const result = JSON.parse(output.match(/<pre id="results">([^<]+)<\/pre>/)[1]);
+    assert.equal(result.width, width);
+    assert.equal(result.height, height);
     assert.deepEqual(result.errors, [], JSON.stringify(result));
     console.log(`PASS: ${result.overlays} dialog layers, tall dialog scrolling, centered FPO preview, navigation restored (${result.width}x${result.height})`);
   }
