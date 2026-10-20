@@ -144,7 +144,7 @@ export default function FAQPage() {
               <p className="text-white font-bold text-sm mb-1">Still have questions?</p>
               <p className="text-gray-400 text-xs mb-4">Our team is ready to help you.</p>
               <a
-                href="https://wa.me/919177738383"
+                href="https://wa.me/919177738368"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold py-2.5 rounded-xl transition-all"
@@ -198,7 +198,7 @@ export default function FAQPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a
-              href="https://wa.me/919177738383"
+              href="https://wa.me/919177738368"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 bg-white text-green-700 font-bold text-sm px-6 py-3 rounded-xl hover:bg-green-50 transition"
@@ -209,7 +209,7 @@ export default function FAQPage() {
               WhatsApp Support
             </a>
             <a
-              href="tel:+919177738383"
+              href="tel:+919177738368"
               className="inline-flex items-center justify-center gap-2 bg-white/20 text-white font-bold text-sm px-6 py-3 rounded-xl hover:bg-white/30 transition border border-white/30"
             >
               📞 Call +91 91777 38383

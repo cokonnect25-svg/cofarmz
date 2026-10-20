@@ -311,7 +311,7 @@ export default function AboutPage() {
 
                   {/* Phone Row */}
                   <a
-                    href="tel:+919177738383"
+                    href="tel:+919177738368"
                     className="flex items-center gap-4 p-2 -m-2 rounded-2xl hover:bg-brand-50 transition-all group/link"
                   >
                     <div className="w-12 h-12 rounded-xl bg-brand-100 text-brand-600 flex items-center justify-center text-xl">

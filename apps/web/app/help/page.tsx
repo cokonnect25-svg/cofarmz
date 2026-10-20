@@ -36,11 +36,11 @@ export default function HelpPage() {
           <h2 className="text-xl font-black text-white mb-2">Still need help?</h2>
           <p className="text-gray-400 text-sm mb-6">Our support team is available Mon–Sat, 9 AM – 6 PM IST</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href="https://wa.me/919177738383" target="_blank" rel="noopener noreferrer"
+            <a href="https://wa.me/919177738368" target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white font-bold text-sm px-6 py-3 rounded-xl transition">
               💬 WhatsApp Us
             </a>
-            <a href="tel:+919177738383"
+            <a href="tel:+919177738368"
               className="inline-flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-bold text-sm px-6 py-3 rounded-xl transition">
               📞 +91 91777 38383
             </a>
