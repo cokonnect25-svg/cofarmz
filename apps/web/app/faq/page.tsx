@@ -51,7 +51,7 @@ const faqs = {
   support: [
     {
       q: 'How do I contact CoFarmz support?',
-      a: 'You can reach us via WhatsApp or phone at +91 91777 38383. Our team is available Monday–Saturday, 9 AM to 6 PM IST.',
+      a: 'You can reach us via WhatsApp or phone at +91 91777 38368. Our team is available Monday–Saturday, 9 AM to 6 PM IST.',
     },
     {
       q: 'Is my personal data secure?',
@@ -59,7 +59,7 @@ const faqs = {
     },
     {
       q: 'I found a bug or issue. How do I report it?',
-      a: 'Please contact us on WhatsApp at +91 91777 38383 with a screenshot and description of the issue. We aim to resolve all bugs within 24–48 hours.',
+      a: 'Please contact us on WhatsApp at +91 91777 38368 with a screenshot and description of the issue. We aim to resolve all bugs within 24–48 hours.',
     },
   ],
 };
@@ -212,7 +212,7 @@ export default function FAQPage() {
               href="tel:+919177738368"
               className="inline-flex items-center justify-center gap-2 bg-white/20 text-white font-bold text-sm px-6 py-3 rounded-xl hover:bg-white/30 transition border border-white/30"
             >
-              📞 Call +91 91777 38383
+              📞 Call +91 91777 38368
             </a>
           </div>
         </div>

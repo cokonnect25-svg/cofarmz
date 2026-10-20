@@ -70,7 +70,7 @@ export default function TermsPage() {
 
           <div>
             <h2 className="text-gray-900 font-bold text-base mb-2">9. Contact</h2>
-            <p>For questions about these terms, contact us at +91 91777 38383 or via WhatsApp.</p>
+            <p>For questions about these terms, contact us at +91 91777 38368 or via WhatsApp.</p>
           </div>
 
         </div>

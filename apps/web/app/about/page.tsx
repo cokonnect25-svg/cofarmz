@@ -320,7 +320,7 @@ export default function AboutPage() {
                     <div className="flex-1 text-left">
                       <p className="text-xs font-bold text-brand-600 uppercase tracking-wide">Call / WhatsApp</p>
                       <p className="text-base font-black text-gray-800 group-hover/link:text-brand-700 transition-colors">
-                        +91 91777 38383
+                        +91 91777 38368
                       </p>
                     </div>
                     <div className="text-brand-400 text-xl group-hover/link:translate-x-1 transition-transform">

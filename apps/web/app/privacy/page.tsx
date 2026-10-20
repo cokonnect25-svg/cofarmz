@@ -124,7 +124,7 @@ export default function PrivacyPage() {
               </p>
 
               <p>
-                <strong>WhatsApp:</strong> +91 91777 38383
+                <strong>WhatsApp:</strong> +91 91777 38368
               </p>
 
             </div>

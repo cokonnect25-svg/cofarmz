@@ -42,7 +42,7 @@ export default function HelpPage() {
             </a>
             <a href="tel:+919177738368"
               className="inline-flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-bold text-sm px-6 py-3 rounded-xl transition">
-              📞 +91 91777 38383
+              📞 +91 91777 38368
             </a>
           </div>
         </div>
