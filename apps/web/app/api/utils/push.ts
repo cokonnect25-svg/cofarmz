@@ -111,7 +111,7 @@ async function sendToToken(token: string, payload: PushPayload) {
   const projectId = getFirebaseProjectId();
   if (!projectId) {
     console.warn("Skipping push notification: FIREBASE_PROJECT_ID is not configured");
-    return { ok: false, status: 0 };
+    return { ok: false, status: 0, unregistered: false };
   }
 
   const accessToken = await getAccessToken();
@@ -151,12 +151,20 @@ async function sendToToken(token: string, payload: PushPayload) {
     }
   );
 
+  let unregistered = false;
   if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    console.error("FCM send failed:", response.status, text);
+    const errorBody = await response.json().catch(() => null);
+    // HTTP 400 can indicate a bad payload, and 404 can indicate a bad project.
+    // Only an explicit FCM UNREGISTERED error proves this device is invalid.
+    unregistered = errorBody?.error?.details?.some(
+      (detail: { '@type'?: string; errorCode?: string }) =>
+        detail['@type'] === 'type.googleapis.com/google.firebase.fcm.v1.FcmError' &&
+        detail.errorCode === 'UNREGISTERED'
+    ) === true;
+    console.error('FCM send failed:', response.status, errorBody);
   }
 
-  return { ok: response.ok, status: response.status };
+  return { ok: response.ok, status: response.status, unregistered };
 }
 
 export async function sendPushToUser(userId: string, payload: PushPayload) {
@@ -176,7 +184,7 @@ export async function sendPushToUser(userId: string, payload: PushPayload) {
     const results = await Promise.all(
       rows.map(async (row: any) => {
         const result = await sendToToken(row.token, payload);
-        if (result.status === 404 || result.status === 400) {
+        if (result.unregistered) {
           await sql`
             UPDATE push_tokens
             SET enabled = false, updated_at = NOW()
