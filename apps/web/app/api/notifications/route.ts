@@ -1,3 +1,4 @@
+import { profileReminderNeeds } from '@/lib/profile-reminder-needs';
 export const dynamic = "force-dynamic";
 import { requireActor, fpoError } from '@/lib/fpo-access';
 import sql from "@/app/api/utils/sql";
@@ -569,7 +570,7 @@ export async function GET(request: Request) {
         viewerMatch.latitude == null ||
         viewerMatch.longitude == null)
     ) {
-      const needsCrops = Number(viewerMatch.crop_count) === 0;
+      const { needsCrops } = profileReminderNeeds(viewerMatch);
       notifications.push({
         id: `profile-match-setup-${userId}-${recommendationTime.slice(0, 10)}`,
         type: "profile_match_setup",

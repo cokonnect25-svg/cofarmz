@@ -1,3 +1,4 @@
+import { enqueueWhatsApp, matchEventKey } from '@/lib/whatsapp';
 import sql from "@/app/api/utils/sql";
 import { sendPushToUser } from "@/app/api/utils/push";
 
@@ -81,7 +82,10 @@ export async function sendCropMatchPushes(
     const sourceRoleLabel = source.role === "farmer" ? "farmer" : "buyer";
     const matchRoleLabel = source.role === "farmer" ? "buyer" : "farmer";
 
+    // WhatsApp queues independently; enqueue failures never interrupt FCM.
     await Promise.all([
+      enqueueWhatsApp(sourceUserId, 'nearby_matches', matchEventKey(matches.map(m=>m.id),cropName)),
+      ...matches.map(match=>enqueueWhatsApp(match.id,'nearby_matches',matchEventKey([sourceUserId],cropName))),
       sendPushToUser(sourceUserId, {
         title: `New ${matchRoleLabel} match for ${cropName}`,
         body: `${matches[0].name || `A nearby ${matchRoleLabel}`} matches your ${cropName} crop.`,

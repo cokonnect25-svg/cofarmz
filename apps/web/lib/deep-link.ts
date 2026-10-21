@@ -20,6 +20,9 @@ const ALLOWED_IN_APP_PATHS = new Set([
   '/reels',
   '/machinery-details',
   '/posts',
+  '/user-profile',
+  '/nearby-farmers',
+  '/whatsapp',
 ]);
 
 export function buildOpenUrl(path: string, params: Record<string, string | number | null | undefined> = {}) {

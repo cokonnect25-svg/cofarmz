@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import WhatsAppPreferences from '@/app/components/WhatsAppPreferences';
 import { getApiUrl } from '@/lib/api';
 
 
@@ -238,6 +239,7 @@ function SettingsContent() {
         {/* Preferences Tab (Default) */}
         {tab === 'preferences' && (
           <>
+            <WhatsAppPreferences />
             <section className="px-6 mb-6 relative z-10">
               <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2.5 px-2">Preferences</h3>
               <div className="bg-white rounded-[24px] shadow-soft overflow-hidden">

@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { buildAndroidIntentUrl, COFARMZ_PLAY_STORE_URL } from '@/lib/deep-link';
+import { buildAndroidIntentUrl, COFARMZ_PLAY_STORE_URL, getInAppPathFromSharedUrl, COFARMZ_WEB_ORIGIN } from '@/lib/deep-link';
 
 function OpenInAppContent() {
   const searchParams = useSearchParams();
@@ -10,7 +10,8 @@ function OpenInAppContent() {
   const params = new URLSearchParams(searchParams.toString());
   params.delete('path');
   const query = params.toString();
-  const targetPath = query ? `${path}?${query}` : path;
+  const requestedPath = query ? `${path}?${query}` : path;
+  const targetPath = getInAppPathFromSharedUrl(`${COFARMZ_WEB_ORIGIN}${requestedPath}`) || '/';
   const androidIntentUrl = buildAndroidIntentUrl(targetPath);
 
   useEffect(() => {
@@ -35,6 +36,7 @@ function OpenInAppContent() {
           <a href={androidIntentUrl} className="rounded-xl bg-green-700 px-4 py-3 text-sm font-black text-white shadow-sm">
             Open CoFarmz app
           </a>
+          <a href={targetPath} className="text-sm font-bold text-green-700">Continue on website</a>
           <a href={COFARMZ_PLAY_STORE_URL} className="rounded-xl bg-gray-100 px-4 py-3 text-sm font-black text-gray-800">
             Install CoFarmz
           </a>

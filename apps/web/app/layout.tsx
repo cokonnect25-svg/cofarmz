@@ -9,6 +9,7 @@ import GoogleTranslate from "@/app/components/GoogleTranslate";
 import LocationPermissionPopup from "@/app/components/LocationPermissionPopup";
 import BottomNav from "@/app/components/BottomNav";
 import PhoneVerificationGate from "@/app/components/PhoneVerificationGate";
+import WhatsAppReturn from "@/app/components/WhatsAppReturn";
 import NativePushNotifications from "@/app/components/NativePushNotifications";
 import MandatoryUpdateGate from "@/app/components/MandatoryUpdateGate";
 import Script from "next/script";
@@ -151,6 +152,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       <PhoneVerificationGate user={user} pathname={pathname} />
       <MandatoryUpdateGate />
       <NativePushNotifications userId={user?.id} />
+      <WhatsAppReturn userId={user?.id} />
       <LocationPermissionPopup />
     </div>
   );
