@@ -18,8 +18,17 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Exclude API routes from static build
-  rewrites: async () => [],
+  // Also register the proxy with Next.js: Netlify may build from apps/web
+  // without loading the repository-root netlify.toml. beforeFiles takes
+  // precedence over local API handlers, which cannot reach the private VM.
+  rewrites: async () => process.env.NETLIFY === 'true' ? {
+    beforeFiles: [{
+      source: '/api/:path*',
+      destination: 'https://cofarmz-backend-866114557322.asia-south1.run.app/api/:path*?__cofarmz_website=1',
+    }],
+    afterFiles: [],
+    fallback: [],
+  } : [],
   webpack: (config) => {
     return config;
   },

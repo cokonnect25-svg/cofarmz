@@ -54,7 +54,8 @@ const websiteHandler = toNextJsHandler(websiteAuth);
 function getHandler(req: Request) {
   // Netlify adds this fixed routing marker, including on Google's callback GET
   // where the browser does not send an Origin header. It is not an auth token.
-  return req.headers.get("x-cofarmz-website") === "cofarmz.com"
+  return (req.headers.get("x-cofarmz-website") === "cofarmz.com"
+    || new URL(req.url).searchParams.get("__cofarmz_website") === "1")
     ? websiteHandler
     : handler;
 }

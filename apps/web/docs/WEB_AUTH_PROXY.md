@@ -6,6 +6,13 @@ rewrite. The browser continues using `https://cofarmz.com/api/...`, including
 OAuth callbacks and session requests. Cloud Run executes the API handlers and
 connects to PostgreSQL through its existing private network connection.
 
+`next.config.ts` also registers a `beforeFiles` external rewrite when Netlify's
+built-in `NETLIFY=true` build flag is present. This covers builds that do not load
+the root TOML. It sends the fixed `__cofarmz_website=1` query marker, which selects
+the same website auth context as the TOML proxy header. No new environment setting
+is needed. Rebuild Netlify after this change; redeploying an old artifact will not
+generate the rewrite. Local and Android builds do not enable it.
+
 This includes protected APIs, not just authentication: they also need database
 access. No Android source, Google ID-token endpoint, or native API URL changes
 are required. The proxy does not apply to local development or mobile builds.

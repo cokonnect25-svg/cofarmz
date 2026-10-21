@@ -44,6 +44,19 @@ function load(file, mocks) {
       }) },
     });
     for (const method of ['GET', 'POST']) {
+      const response = await route[method](new Request('https://backend.example/api/auth/callback/google?code=example&__cofarmz_website=1', { method }));
+      assert.equal((await response.json()).baseURL, 'https://cofarmz.com');
+    }
+    process.env.NETLIFY = 'true';
+    const config = load('next.config.ts', {}).default;
+    const rewrites = await config.rewrites();
+    assert.equal(rewrites.beforeFiles[0].source, '/api/:path*');
+    assert.match(rewrites.beforeFiles[0].destination, /run\.app\/api\/:path\*\?__cofarmz_website=1$/);
+    delete process.env.NETLIFY;
+    assert.deepEqual(await config.rewrites(), []);
+    process.env.MOBILE_BUILD = 'true';
+    assert.equal(load('next.config.ts', {}).default.output, 'export');
+    for (const method of ['GET', 'POST']) {
       for (const [marker, expected] of [
         ['cofarmz.com', 'https://cofarmz.com'],
         [null, 'https://native.example'],
