@@ -45,10 +45,19 @@
 // }
 
 
-import { auth } from "@/lib/auth";
+import { auth, websiteAuth } from "@/lib/auth";
 import { toNextJsHandler } from "better-auth/next-js";
 
 const handler = toNextJsHandler(auth);
+const websiteHandler = toNextJsHandler(websiteAuth);
+
+function getHandler(req: Request) {
+  // Netlify adds this fixed routing marker, including on Google's callback GET
+  // where the browser does not send an Origin header. It is not an auth token.
+  return req.headers.get("x-cofarmz-website") === "cofarmz.com"
+    ? websiteHandler
+    : handler;
+}
 
 const DEFAULT_APP_ORIGIN = "https://cofarmz-backend-866114557322.asia-south1.run.app";
 const ALLOWED_ORIGINS = Array.from(new Set([
@@ -89,12 +98,12 @@ function addCors(res: Response, req: Request) {
 }
 
 export async function GET(req: Request) {
-  const res = await handler.GET(req);
+  const res = await getHandler(req).GET(req);
   return addCors(res, req);
 }
 
 export async function POST(req: Request) {
-  const res = await handler.POST(req);
+  const res = await getHandler(req).POST(req);
   return addCors(res, req);
 }
 

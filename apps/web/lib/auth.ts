@@ -9,18 +9,23 @@ const cleanEnvValue = (value?: string) => value?.trim().replace(/^["']|["']$/g, 
 // In the existing Cloud Run configuration, GOOGLE_CLIENT_ID_MOBILE contains
 // the Web OAuth client used by both Better Auth and the Capacitor server flow.
 const googleWebClientId = cleanEnvValue(
-  process.env.GOOGLE_CLIENT_ID_MOBILE || process.env.GOOGLE_CLIENT_ID
-);
+  process.env.GOOGLE_CLIENT_ID_MOBILE
+) || cleanEnvValue(process.env.GOOGLE_CLIENT_ID);
 
-export const auth = betterAuth({
-  baseURL: appBaseURL,
-  secret: process.env.BETTER_AUTH_SECRET!,
-  database: new Pool({
+// Both auth contexts use the same database and signing secret. Only the public
+// OAuth URL differs; native requests retain the existing Cloud Run base URL.
+const database = new Pool({
     connectionString: process.env.DATABASE_URL!,
     max: 5,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
-  }),
+});
+
+function createAuth(baseURL: string) {
+  return betterAuth({
+  baseURL,
+  secret: process.env.BETTER_AUTH_SECRET!,
+  database,
   emailAndPassword: {
     enabled: true,
   },
@@ -56,3 +61,7 @@ advanced: {
   }
 }
 });
+}
+
+export const auth = createAuth(appBaseURL);
+export const websiteAuth = createAuth("https://cofarmz.com");
