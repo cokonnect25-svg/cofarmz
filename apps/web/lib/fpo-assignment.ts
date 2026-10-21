@@ -7,7 +7,10 @@ import { resolveLegacyLocation, validCoordinates, validateDistrict } from './fpo
 export async function assignFarmer(tx: any, farmerId: string, districtId: string | null, source: string, reason: string | null = null, selectedTaluk?: string | null) {
   const [u] = await tx`SELECT * FROM "user" WHERE id=${farmerId} FOR UPDATE`;
   if (!u) throw new FpoError('Farmer not found',404);
-  const talukId = selectedTaluk == null ? await resolveTaluk(selectedTaluk === null ? {...u,taluk_id:null} : u,districtId,tx) : selectedTaluk;
+  // Non-farmers must be untagged without depending on location resolution.
+  // Preserve their saved taluk so a later farmer role can reuse it.
+  const talukId = u.role !== 'farmer' ? u.taluk_id || null
+    : selectedTaluk == null ? await resolveTaluk(selectedTaluk === null ? {...u,taluk_id:null} : u,districtId,tx) : selectedTaluk;
   await tx`UPDATE "user" SET taluk_id=${talukId} WHERE id=${farmerId}`;
   let groupId = null;
   let status = u.role !== 'farmer' ? 'not_farmer' : districtId ? 'pending_fpo' : 'pending_location';

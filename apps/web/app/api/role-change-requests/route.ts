@@ -1,5 +1,6 @@
-import { requireActor, fpoError } from '@/lib/fpo-access';
+import { requireActor, fpoError, FpoError } from '@/lib/fpo-access';
 import { assignFarmer } from '@/lib/fpo-assignment';
+import { resolveLegacyLocation } from '@/lib/fpo-location';
 import { NextResponse } from "next/server";
 import sql from "@/app/api/utils/sql";
 import { sendPushToUser } from "@/app/api/utils/push";
@@ -153,49 +154,48 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    const pending = await sql`
+    const reviewed = await sql.begin(async transaction => {
+      const [pending] = await transaction`
       SELECT id, user_id, requested_role
       FROM role_change_requests
       WHERE id = ${Number(requestId)} AND status = 'pending'
-      LIMIT 1
+      FOR UPDATE
     `;
-    if (pending.length === 0) {
-      return NextResponse.json({ error: "This request has already been reviewed" }, { status: 409 });
-    }
+      if (!pending) throw new FpoError('This request has already been reviewed',409);
+      if (!ALLOWED_ROLES.has(pending.requested_role)) throw new FpoError('Invalid requested role');
 
-    const roleId = pending[0].requested_role === "farmer" ? 1 : 2;
+    const roleId = pending.requested_role === "farmer" ? 1 : 2;
     if (action === "approved") {
-      await sql.begin(async (transaction) => {
-        const [u] = await transaction`SELECT district_id FROM "user" WHERE id=${pending[0].user_id} FOR UPDATE`;
+        const [u] = await transaction`SELECT * FROM "user" WHERE id=${pending.user_id} FOR UPDATE`;
+        if (!u) throw new FpoError('User not found',404);
+        const resolved = pending.requested_role === 'farmer' && !u.district_id
+          ? await resolveLegacyLocation(u) : null;
+        const districtId = u.district_id || resolved?.district?.id || null;
         await transaction`
           UPDATE "user"
-          SET role = ${pending[0].requested_role}, role_id = ${roleId}, role_confirmed = true, "updatedAt"=now()
-          WHERE id = ${pending[0].user_id}
+          SET role = ${pending.requested_role}, role_id = ${roleId}, role_confirmed = true,
+              district_id=${districtId}, "updatedAt"=now()
+          WHERE id = ${pending.user_id}
         `;
-        await assignFarmer(transaction,pending[0].user_id,u.district_id,'profile_update');
-        await transaction`
+        await assignFarmer(transaction,pending.user_id,districtId,resolved?.source || 'profile_update',resolved?.reason || null);
+    }
+    await transaction`
           UPDATE role_change_requests
-          SET status = 'approved', reviewed_by = ${adminId}, reviewed_at = NOW()
+          SET status = ${action}, reviewed_by = ${adminId}, reviewed_at = NOW()
           WHERE id = ${Number(requestId)} AND status = 'pending'
         `;
-      });
-    } else {
-      await sql`
-        UPDATE role_change_requests
-        SET status = 'rejected', reviewed_by = ${adminId}, reviewed_at = NOW()
-        WHERE id = ${Number(requestId)} AND status = 'pending'
-      `;
-    }
+    return pending;
+    });
 
-    await sendPushToUser(pending[0].user_id, {
+    await sendPushToUser(reviewed.user_id, {
       title: `Role-change request ${action}`,
       body: action === "approved"
-        ? `Your profile is now a ${pending[0].requested_role}.`
+        ? `Your profile is now a ${reviewed.requested_role}.`
         : "The admin rejected your role-change request. Your current role remains unchanged.",
       url: "/user-profile",
-      tag: `role-change-${pending[0].user_id}`,
+      tag: `role-change-${reviewed.user_id}`,
       data: { type: "role_change", status: action },
-    });
+    }).catch(error => console.error('Role-change notification failed', error));
 
     return NextResponse.json({ success: true, status: action });
   } catch (error) {
