@@ -25,3 +25,11 @@ For Cloud Run, deploy the updated backend and configure a scheduler to POST `/ap
 No new APK is required for these backend notification triggers. Firebase credentials and an enabled device push token are required, as for message alerts. Profile reminders stop once crops/location or the supplier's required listings are present. The daily match alert selects the nearest opposite-role user with a matching crop.
 
 Validation: `node tests/daily-mobile-reminders.cjs` checks reminder categories, delivery retries, and deduplication with mocked SQL/FCM. Real-device delivery still needs verification after backend deployment and scheduler configuration.
+
+## Catchy copy and evening exploration
+
+Daily copy rotates automatically using user ID and the India calendar day. No AI subscription or external text service is required. Match alerts use actual matching crop/profile information; copy never invents demand, discounts, or unread activity. Immediate crop-addition match alerts also use the friendlier wording.
+
+The combined worker/endpoint runs between 09:00 and 21:00 Asia/Kolkata. Before 18:00 it sends at most one discovery/profile reminder per user per day. From 18:00 to 20:59 it sends one rotating evening invitation, such as “Seeds in the soil. Ideas on CoFarmz.”, linking to `/reels`. Yield reminders remain a separate daily alert. Messages and other transactional alerts keep their existing delivery behavior. Keep the scheduler hourly so both windows are covered. The standalone yield-only function is unchanged with respect to delivery time.
+
+Android now has a dedicated white sprout notification icon configured through Firebase manifest metadata. Rebuild and distribute the APK to apply this icon; the copy and scheduling changes need backend deployment. This is a simplified farm symbol, not a full-color wordmark. Firebase default icon configuration follows https://firebase.google.com/docs/cloud-messaging/android/get-started . No production deployment, scheduler configuration, or device-delivery verification was performed by this code change.

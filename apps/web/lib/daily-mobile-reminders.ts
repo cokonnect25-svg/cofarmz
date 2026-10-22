@@ -1,9 +1,12 @@
 import sql from '@/app/api/utils/sql';
 import { ensurePushTokenTable, sendPushToUser } from '@/app/api/utils/push';
 import { sendDailyYieldReminders } from '@/lib/crop-yield-reminders';
+import { indiaNotificationClock, notificationCopy, cropMatchCopy } from '@/lib/notification-copy';
 
 // Run from a scheduler: feed polling cannot notify a phone while the app is closed.
-export async function sendDailyMobileReminders() {
+export async function sendDailyMobileReminders(now = new Date()) {
+  const clock = indiaNotificationClock(now);
+  if (clock.hour < 9 || clock.hour >= 21) return {skipped:true,sent:0,failed:0};
   const yieldResult = await sendDailyYieldReminders();
   await ensurePushTokenTable();
   await sql`CREATE TABLE IF NOT EXISTS daily_mobile_reminders (
@@ -43,8 +46,7 @@ export async function sendDailyMobileReminders() {
             ORDER BY (SIN(RADIANS(${Number(user.latitude)}))*SIN(RADIANS(u.latitude))+
               COS(RADIANS(${Number(user.latitude)}))*COS(RADIANS(u.latitude))*
               COS(RADIANS(u.longitude)-RADIANS(${Number(user.longitude)}))) DESC,u.id,c.crop_name LIMIT 1`;
-          if (match) reminders.push({kind:'profile_match',title:`${match.name || 'A nearby crop partner'} is your closest crop match`,
-            body:`Connect directly for ${match.crop_name}.`,url:`/farmer-profile?id=${encodeURIComponent(match.id)}`});
+          if (match) reminders.push({kind:'profile_match',...cropMatchCopy(match.name,match.crop_name),url:`/farmer-profile?id=${encodeURIComponent(match.id)}`});
         }
       }
       if (user.role === 'supplier') {
@@ -54,13 +56,18 @@ export async function sendDailyMobileReminders() {
         if (Number(user.equipment_count)===0 && (!types.length || types.includes('equipment'))) reminders.push({kind:'profile_completion_equipment',
           title:'Add equipment to complete your supplier profile',body:'List your equipment so nearby users can discover and contact you.',url:'/rent-machinery'});
       }
-      for (const reminder of reminders) {
+      // One daytime discovery/profile alert, one evening invitation at most.
+      const scheduled = clock.hour >= 18
+        ? (['farmer','buyer','supplier'].includes(user.role) ? [{kind:'explore_evening',title:'Explore CoFarmz',body:'Take a look at your farming community.',url:'/reels'}] : [])
+        : reminders.slice(0,1);
+      for (const reminder of scheduled) {
         await sql`INSERT INTO daily_mobile_reminders(user_id,reminder_day,kind)
           VALUES(${user.id},(now() AT TIME ZONE 'Asia/Kolkata')::date,${reminder.kind}) ON CONFLICT DO NOTHING`;
         const [pending] = await sql`SELECT 1 FROM daily_mobile_reminders WHERE user_id=${user.id}
           AND reminder_day=(now() AT TIME ZONE 'Asia/Kolkata')::date AND kind=${reminder.kind} AND sent_at IS NULL`;
         if (!pending) continue;
-        const result = await sendPushToUser(user.id,{...reminder,tag:`daily-${reminder.kind}`,data:{type:reminder.kind.startsWith('profile_completion') ? 'profile_completion' : reminder.kind}});
+        const copy = notificationCopy(reminder.kind,user.id,clock.day,reminder);
+        const result = await sendPushToUser(user.id,{...reminder,...copy,tag:`daily-${reminder.kind}`,data:{type:reminder.kind.startsWith('profile_completion') ? 'profile_completion' : reminder.kind}});
         if (result.succeeded > 0) {
           await sql`UPDATE daily_mobile_reminders SET sent_at=now() WHERE user_id=${user.id}
             AND reminder_day=(now() AT TIME ZONE 'Asia/Kolkata')::date AND kind=${reminder.kind}`;

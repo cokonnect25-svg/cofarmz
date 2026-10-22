@@ -27,8 +27,8 @@ export async function sendDailyYieldReminders() {
       AND u.role='farmer' AND c.expected_yield_date < (now() AT TIME ZONE 'Asia/Kolkata')::date)`;
   let sent=0,failed=0;
   for(const row of pending){
-   const result=await sendPushToUser(row.user_id,{title:'Update your crop yield date',
-    body:`The yield date for ${row.crop_names} has passed. Please update your current crops with a new yield date.`,
+   const result=await sendPushToUser(row.user_id,{title:'Harvest plans changed? 🌾',
+    body:`The yield date for ${row.crop_names} has passed. Keep buyers in the loop: update your crop yield date.`,
     url:'/user-profile#current-crops',tag:'crop-yield-reminder'});
    if(result.succeeded>0){await sql`UPDATE crop_yield_reminders SET push_sent_at=now() WHERE id=${row.id}`;sent++;}
    else failed++;

@@ -87,8 +87,8 @@ export async function sendCropMatchPushes(
       enqueueWhatsApp(sourceUserId, 'nearby_matches', matchEventKey(matches.map(m=>m.id),cropName)),
       ...matches.map(match=>enqueueWhatsApp(match.id,'nearby_matches',matchEventKey([sourceUserId],cropName))),
       sendPushToUser(sourceUserId, {
-        title: `New ${matchRoleLabel} match for ${cropName}`,
-        body: `${matches[0].name || `A nearby ${matchRoleLabel}`} matches your ${cropName} crop.`,
+        title: `Your ${cropName} connection starts here 🌾`,
+        body: `${matches[0].name || `A nearby ${matchRoleLabel}`} matches your crop interest. Tap to explore their profile and connect.`,
         url: `/farmer-profile?id=${matches[0].id}`,
         tag: `crop-match-${sourceUserId}-${String(cropName).toLowerCase()}`,
         data: {
@@ -99,8 +99,8 @@ export async function sendCropMatchPushes(
       }),
       ...matches.map((match: MatchUser) =>
         sendPushToUser(match.id, {
-          title: `New ${sourceRoleLabel} match for ${cropName}`,
-          body: `${source.name || `A nearby ${sourceRoleLabel}`} just added ${cropName}, matching your crop interest.`,
+          title: `${cropName} on your mind? Meet a new match 🌱`,
+          body: `${source.name || `A nearby ${sourceRoleLabel}`} just added ${cropName}. Explore their profile and start a conversation.`,
           url: `/farmer-profile?id=${sourceUserId}`,
           tag: `crop-match-${match.id}-${sourceUserId}-${String(cropName).toLowerCase()}`,
           data: {
