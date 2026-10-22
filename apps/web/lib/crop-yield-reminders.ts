@@ -30,7 +30,7 @@ export async function sendDailyYieldReminders() {
    const result=await sendPushToUser(row.user_id,{title:'Update your crop yield date',
     body:`The yield date for ${row.crop_names} has passed. Please update your current crops with a new yield date.`,
     url:'/user-profile#current-crops',tag:'crop-yield-reminder'});
-   if(result.failed===0 || result.succeeded>0){await sql`UPDATE crop_yield_reminders SET push_sent_at=now() WHERE id=${row.id}`;sent++;}
+   if(result.succeeded>0){await sql`UPDATE crop_yield_reminders SET push_sent_at=now() WHERE id=${row.id}`;sent++;}
    else failed++;
   }
   return {skipped:false,sent,failed};

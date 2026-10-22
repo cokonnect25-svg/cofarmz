@@ -8,15 +8,16 @@ function load(file){
  if(modules.has(file))return modules.get(file).exports;
  const mod={exports:{}};modules.set(file,mod);
  const compiled=ts.transpileModule(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
- new Function('require','module','exports',compiled)(id=>id==='@/app/api/utils/sql'?{__esModule:true,default:sql}:id==='@/app/api/utils/push'?load('app/api/utils/push.ts'):require(id),mod,mod.exports);
+ new Function('require','module','exports',compiled)(id=>id==='@/app/api/utils/sql'?{__esModule:true,default:sql}:id.startsWith('@/')?load(id.slice(2)+'.ts'):require(id),mod,mod.exports);
  return mod.exports;
 }
 let stopped=false,wake;
 const stop=()=>{stopped=true;if(wake)wake();};process.on('SIGINT',stop);process.on('SIGTERM',stop);
 (async()=>{do{
- try{console.log(JSON.stringify({at:new Date().toISOString(),...await load('lib/crop-yield-reminders.ts').sendDailyYieldReminders()}));}
+ try{console.log(JSON.stringify({at:new Date().toISOString(),...await load('lib/daily-mobile-reminders.ts').sendDailyMobileReminders()}));}
  catch(e){console.error('Yield reminder sweep failed:',e.code||e.name);if(process.argv.includes('--once'))process.exitCode=1;}
  if(stopped||process.argv.includes('--once'))break;
  await new Promise(resolve=>{const timer=setTimeout(resolve,60*60*1000);wake=()=>{clearTimeout(timer);resolve();};});
  }while(!stopped);
 })().catch(e=>{console.error(e.name);process.exitCode=1;}).finally(()=>sql.end({timeout:5}));
+
