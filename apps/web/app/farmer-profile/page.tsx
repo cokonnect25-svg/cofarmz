@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense, useCallback, useRef } from 'react';
 import {
   ArrowLeft, MessageCircle, Phone, MapPin, Heart, MessageSquare,
-  ChevronUp, ChevronDown, Leaf, ShoppingCart, Award, Package,
+  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Leaf, ShoppingCart, Award, Package,
   Tractor, Users, UserCheck, Star, Calendar, TrendingUp,
   BadgeCheck, Wheat, Info, ExternalLink, PlayCircle, X, Share2
 } from 'lucide-react';
@@ -189,6 +189,33 @@ const ROLE_CONFIG = {
 };
 
 // ─── Section Header ───────────────────────────────────────────────────────────
+
+
+function ProfileCardRail({ label, count, children }: { label: string; count: number; children: import('react').ReactNode }) {
+  const rail = useRef<HTMLDivElement>(null);
+  const [canGoBack, setCanGoBack] = useState(false);
+  const [canGoForward, setCanGoForward] = useState(false);
+  const updateControls = useCallback(() => {
+    const element = rail.current;
+    if (!element) return;
+    setCanGoBack(element.scrollLeft > 2);
+    setCanGoForward(element.scrollLeft + element.clientWidth < element.scrollWidth - 2);
+  }, []);
+  useEffect(() => {
+    updateControls();
+    const observer = new ResizeObserver(updateControls);
+    if (rail.current) observer.observe(rail.current);
+    return () => observer.disconnect();
+  }, [count, updateControls]);
+  const move = (direction: number) => {
+    const element = rail.current;
+    if (element) element.scrollBy({ left: direction * element.clientWidth * 0.85, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  };
+  return <div>
+    {count > 1 && <div className="flex items-center justify-between px-4 pt-3"><p className="text-xs font-medium text-gray-500">Scroll to explore</p><div className="flex gap-2"><button type="button" aria-label={`Previous ${label}`} disabled={!canGoBack} onClick={() => move(-1)} className="grid h-9 w-9 place-items-center rounded-full border border-gray-200 bg-white text-gray-700 transition hover:bg-gray-50 disabled:opacity-30"><ChevronLeft className="h-4 w-4"/></button><button type="button" aria-label={`Next ${label}`} disabled={!canGoForward} onClick={() => move(1)} className="grid h-9 w-9 place-items-center rounded-full border border-gray-200 bg-white text-gray-700 transition hover:bg-gray-50 disabled:opacity-30"><ChevronRight className="h-4 w-4"/></button></div></div>}
+    <div ref={rail} role="region" aria-label={label} tabIndex={0} onScroll={updateControls} className="flex min-w-0 snap-x snap-mandatory items-start gap-4 overflow-x-auto overscroll-x-contain scroll-px-4 p-4 pb-5 [scrollbar-width:thin] [scrollbar-color:#86b89a_transparent] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-600">{children}</div>
+  </div>;
+}
 
 function SectionHeader({
   title, count, expanded, onToggle, icon: Icon, color = 'text-gray-900'
@@ -801,7 +828,11 @@ if (Capacitor.isNativePlatform()) {
             ].map(({ key, label, count, icon: Icon }) => (
               <button
                 key={key}
-                onClick={() => toggleSection(key)}
+                onClick={() => {
+                  if (key === 'crops' || key === 'equipment') {
+                    document.getElementById(`profile-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  } else toggleSection(key);
+                }}
                 className={`py-3 flex flex-col items-center gap-0.5 transition ${openSections.has(key) ? `${rc.accentLight}` : 'hover:bg-gray-100'}`}
               >
                 <Icon className={`w-4 h-4 ${openSections.has(key) ? rc.accent : 'text-gray-400'}`} />
@@ -858,21 +889,14 @@ if (Capacitor.isNativePlatform()) {
       </div>
 
       {/* ── Expandable Sections ───────────────────────────────────────────────── */}
-      <div className="mt-2 bg-white border-y divide-y divide-gray-100">
+      <div className="mx-auto mt-5 grid w-full max-w-7xl grid-cols-1 items-start gap-5 px-4 pb-6 lg:grid-cols-2 [&>div]:order-3 [&>div]:rounded-2xl [&>div]:border [&>div]:border-gray-100 [&>div]:bg-white [&>div]:lg:col-span-2">
 
         {/* ── Crops / Commodities ─────────────────────────────────────────────── */}
         {hasCrops && (
-          <div>
-            <SectionHeader
-              title={role === 'farmer' ? 'Current crops' : role === 'buyer' ? 'Crops/Commodities You Want to Buy' : 'Crops & Expertise'}
-              count={crops.length}
-              expanded={openSections.has('crops')}
-              onToggle={() => toggleSection('crops')}
-              icon={Wheat}
-              color="text-green-600"
-            />
-            {openSections.has('crops') && (
-              <div className="px-4 pb-3 space-y-2 pt-1">
+          <section id="profile-crops" className="order-1 min-w-0 scroll-mt-20 overflow-hidden rounded-3xl border border-green-100 bg-white shadow-sm">
+            <div className="flex items-center gap-3 border-b border-green-100 bg-green-50/70 p-5"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-green-600 text-white shadow-sm"><Wheat className="h-6 w-6"/></span><div className="min-w-0 flex-1"><h3 className="text-lg font-black text-gray-900">{role === 'farmer' ? 'Current crops' : role === 'buyer' ? 'Crops wanted' : 'Crops & Expertise'}</h3><p className="mt-0.5 text-xs text-green-700">{role === 'buyer' ? 'What this buyer is looking for' : 'Explore what’s growing on the farm'}</p></div><span className="rounded-full border border-green-200 bg-white px-3 py-1 text-sm font-bold text-green-700">{crops.length}</span></div>
+            {(
+              <ProfileCardRail label="Crop cards" count={crops.length}>
                 {crops.map((crop, idx) => {
                   const isOpen = expandedCropIdx === idx;
                   const isWaste = crop.is_crop_waste;
@@ -903,11 +927,11 @@ if (Capacitor.isNativePlatform()) {
                   return (
                     <div
                       key={idx}
-                      className={`rounded-2xl border overflow-hidden transition-all duration-200 ${
-                        isWaste ? 'border-amber-200 bg-amber-50' : 'border-gray-100 bg-gray-50'
+                      className={`w-[84%] min-w-0 flex-none snap-start rounded-2xl border overflow-hidden transition-all duration-200 sm:w-72 ${
+                        isWaste ? 'border-amber-200 bg-amber-50' : 'border-green-100 bg-white shadow-sm hover:shadow-md'
                       } ${isOpen ? 'shadow-md border-green-200' : ''}`}
                     >
-                    <div className="h-36 w-full bg-green-50">
+                    <div className="aspect-[16/10] w-full bg-gradient-to-br from-green-50 to-emerald-100">
                       {crop.image_url ? (
                         <img src={crop.image_url} alt={crop.crop_name} className="h-full w-full object-cover" />
                       ) : (
@@ -917,13 +941,14 @@ if (Capacitor.isNativePlatform()) {
                       )}
                     </div>                      {/* ── Crop Header — always tap to expand ── */}
                       <button
-                        className="w-full text-left p-3"
+                        aria-expanded={isOpen}
+                        className="w-full text-left p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-600"
                         onClick={() => setExpandedCropIdx(isOpen ? null : idx)}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
                             <span className="text-base">{isWaste ? '♻️' : '🌾'}</span>
-                            <span className={`font-black text-sm ${isWaste ? 'text-amber-800' : 'text-gray-900'}`}>
+                            <span className={`font-black text-base ${isWaste ? 'text-amber-800' : 'text-gray-900'}`}>
                               {crop.crop_name}
                             </span>
                             {crop.expertise_level && <ExpertiseBadge level={crop.expertise_level} />}
@@ -1079,9 +1104,9 @@ if (Capacitor.isNativePlatform()) {
                     </div>
                   );
                 })}
-              </div>
+              </ProfileCardRail>
             )}
-          </div>
+          </section>
         )}
 
         {posts.length > 0 && (
@@ -1125,17 +1150,10 @@ if (Capacitor.isNativePlatform()) {
         )}
 
         {(hasEquipment || profile.equipments_count > 0) && (
-          <div>
-            <SectionHeader
-              title="Equipment Available"
-              count={profile.equipments_count}
-              expanded={openSections.has('equipment')}
-              onToggle={() => toggleSection('equipment')}
-              icon={Tractor}
-              color="text-orange-600"
-            />
-            {openSections.has('equipment') && (
-              <div className="divide-y divide-gray-50">
+          <section id="profile-equipment" className="order-2 min-w-0 scroll-mt-20 overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
+            <div className="flex items-center gap-3 border-b border-orange-100 bg-orange-50/70 p-5"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-orange-500 text-white shadow-sm"><Tractor className="h-6 w-6"/></span><div className="min-w-0 flex-1"><h3 className="text-lg font-black text-gray-900">Equipment Available</h3><p className="mt-0.5 text-xs text-orange-700">Machinery for your next farm task</p></div><span className="rounded-full border border-orange-200 bg-white px-3 py-1 text-sm font-bold text-orange-700">{equipment.length || profile.equipments_count}</span></div>
+            {(
+              <ProfileCardRail label="Equipment cards" count={equipment.length}>
                 {equipment.length === 0 ? (
                   <EmptyState text="No equipment listed yet" />
                 ) : (
@@ -1152,24 +1170,24 @@ if (Capacitor.isNativePlatform()) {
                       <button
                         key={equipId}
                         onClick={() => router.push(`/machinery-details?id=${equipId}`)}
-                        className="w-full px-4 py-3 flex gap-3 hover:bg-gray-50 active:bg-gray-100 transition text-left"
+                        className="group flex w-[84%] min-w-0 flex-none snap-start flex-col sm:w-72 overflow-hidden rounded-2xl border border-orange-100 bg-white text-left shadow-sm transition hover:border-orange-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
                       >
                         {equipImg ? (
                           <img
                             src={equipImg}
                             alt={equipName}
-                            className="w-16 h-16 rounded-xl object-cover flex-shrink-0 bg-gray-100"
+                            className="aspect-[16/10] w-full bg-orange-50 object-cover"
                           />
                         ) : (
-                          <div className="w-16 h-16 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0">
-                            <Tractor className="w-7 h-7 text-orange-300" />
+                          <div className="aspect-[16/10] w-full bg-gradient-to-br from-orange-50 to-amber-100 flex items-center justify-center">
+                            <Tractor className="h-12 w-12 text-orange-300" />
                           </div>
                         )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-gray-900 text-sm">{equipName}</p>
+                        <div className="w-full min-w-0 p-4">
+                          <p className="text-base font-black text-gray-900">{equipName}</p>
                           {equipModel ? <p className="text-xs text-gray-500">Model: {equipModel}</p> : null}
                           {equipCond  ? <p className="text-xs text-gray-400">Condition: {equipCond}</p> : null}
-                          <div className="flex items-center justify-between mt-1">
+                          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-orange-50 pt-3">
                             <p className="text-sm font-black text-green-600">
                               ₹{Number(equipRate).toLocaleString('en-IN')}/day
                             </p>
@@ -1180,14 +1198,14 @@ if (Capacitor.isNativePlatform()) {
                             )}
                           </div>
                         </div>
-                        <ExternalLink className="w-4 h-4 text-gray-300 flex-shrink-0 self-center" />
+                        <span className="mx-4 mb-4 inline-flex items-center gap-1.5 text-xs font-bold text-orange-700">View equipment <ExternalLink className="h-3.5 w-3.5" /></span>
                       </button>
                     );
                   })
                 )}
-              </div>
+              </ProfileCardRail>
             )}
-          </div>
+          </section>
         )}
 
         {/* ── Followers ────────────────────────────────────────────────────────── */}
