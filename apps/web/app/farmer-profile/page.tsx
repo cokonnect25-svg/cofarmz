@@ -191,7 +191,7 @@ const ROLE_CONFIG = {
 // ─── Section Header ───────────────────────────────────────────────────────────
 
 
-function ProfileCardRail({ label, count, children }: { label: string; count: number; children: import('react').ReactNode }) {
+function ProfileCardRail({ label, count, reserveControls = false, children }: { label: string; count: number; reserveControls?: boolean; children: import('react').ReactNode }) {
   const rail = useRef<HTMLDivElement>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
@@ -211,9 +211,9 @@ function ProfileCardRail({ label, count, children }: { label: string; count: num
     const element = rail.current;
     if (element) element.scrollBy({ left: direction * element.clientWidth * 0.85, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   };
-  return <div>
-    {count > 1 && <div className="flex items-center justify-between px-4 pt-3"><p className="text-xs font-medium text-gray-500">Scroll to explore</p><div className="flex gap-2"><button type="button" aria-label={`Previous ${label}`} disabled={!canGoBack} onClick={() => move(-1)} className="grid h-9 w-9 place-items-center rounded-full border border-gray-200 bg-white text-gray-700 transition hover:bg-gray-50 disabled:opacity-30"><ChevronLeft className="h-4 w-4"/></button><button type="button" aria-label={`Next ${label}`} disabled={!canGoForward} onClick={() => move(1)} className="grid h-9 w-9 place-items-center rounded-full border border-gray-200 bg-white text-gray-700 transition hover:bg-gray-50 disabled:opacity-30"><ChevronRight className="h-4 w-4"/></button></div></div>}
-    <div ref={rail} role="region" aria-label={label} tabIndex={0} onScroll={updateControls} className="flex min-w-0 snap-x snap-mandatory items-start gap-4 overflow-x-auto overscroll-x-contain scroll-px-4 p-4 pb-5 [scrollbar-width:thin] [scrollbar-color:#86b89a_transparent] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-600">{children}</div>
+  return <div className="flex min-h-0 flex-1 flex-col">
+    {(count > 1 || reserveControls) && <div className="flex min-h-12 items-center justify-between px-4 pt-3"><p className="text-xs font-medium text-gray-500">{count > 1 ? 'Scroll to explore' : '1 item'}</p><div className="flex h-9 gap-2"><button type="button" aria-label={`Previous ${label}`} disabled={count < 2 || !canGoBack} onClick={() => move(-1)} className="grid h-9 w-9 place-items-center rounded-full border border-gray-200 bg-white text-gray-700 transition hover:bg-gray-50 disabled:opacity-30"><ChevronLeft className="h-4 w-4"/></button><button type="button" aria-label={`Next ${label}`} disabled={count < 2 || !canGoForward} onClick={() => move(1)} className="grid h-9 w-9 place-items-center rounded-full border border-gray-200 bg-white text-gray-700 transition hover:bg-gray-50 disabled:opacity-30"><ChevronRight className="h-4 w-4"/></button></div></div>}
+    <div ref={rail} role="region" aria-label={label} tabIndex={0} onScroll={updateControls} className={`flex min-w-0 flex-1 snap-x snap-mandatory items-stretch gap-4 overflow-x-auto overscroll-x-contain scroll-px-4 p-4 [scrollbar-width:thin] [scrollbar-color:#86b89a_transparent] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-600 ${count === 1 ? '[&>*]:w-full' : ''}`}>{children}</div>
   </div>;
 }
 
@@ -889,14 +889,14 @@ if (Capacitor.isNativePlatform()) {
       </div>
 
       {/* ── Expandable Sections ───────────────────────────────────────────────── */}
-      <div className="mx-auto mt-5 grid w-full max-w-7xl grid-cols-1 items-start gap-5 px-4 pb-6 lg:grid-cols-2 [&>div]:order-3 [&>div]:rounded-2xl [&>div]:border [&>div]:border-gray-100 [&>div]:bg-white [&>div]:lg:col-span-2">
+      <div className="mx-auto mt-5 grid w-full max-w-7xl grid-cols-1 items-stretch gap-5 px-4 pb-6 lg:grid-cols-2 [&>div]:order-3 [&>div]:rounded-2xl [&>div]:border [&>div]:border-gray-100 [&>div]:bg-white [&>div]:lg:col-span-2">
 
         {/* ── Crops / Commodities ─────────────────────────────────────────────── */}
         {hasCrops && (
-          <section id="profile-crops" className="order-1 min-w-0 scroll-mt-20 overflow-hidden rounded-3xl border border-green-100 bg-white shadow-sm">
+          <section id="profile-crops" className="order-1 flex min-w-0 flex-col scroll-mt-20 overflow-hidden rounded-3xl border border-green-100 bg-white shadow-sm">
             <div className="flex items-center gap-3 border-b border-green-100 bg-green-50/70 p-5"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-green-600 text-white shadow-sm"><Wheat className="h-6 w-6"/></span><div className="min-w-0 flex-1"><h3 className="text-lg font-black text-gray-900">{role === 'farmer' ? 'Current crops' : role === 'buyer' ? 'Crops wanted' : 'Crops & Expertise'}</h3><p className="mt-0.5 text-xs text-green-700">{role === 'buyer' ? 'What this buyer is looking for' : 'Explore what’s growing on the farm'}</p></div><span className="rounded-full border border-green-200 bg-white px-3 py-1 text-sm font-bold text-green-700">{crops.length}</span></div>
             {(
-              <ProfileCardRail label="Crop cards" count={crops.length}>
+              <ProfileCardRail label="Crop cards" count={crops.length} reserveControls={equipment.length > 1}>
                 {crops.map((crop, idx) => {
                   const isOpen = expandedCropIdx === idx;
                   const isWaste = crop.is_crop_waste;
@@ -927,11 +927,11 @@ if (Capacitor.isNativePlatform()) {
                   return (
                     <div
                       key={idx}
-                      className={`w-[84%] min-w-0 flex-none snap-start rounded-2xl border overflow-hidden transition-all duration-200 sm:w-72 ${
+                      className={`w-[84%] min-w-0 flex-none snap-start flex flex-col rounded-2xl border overflow-hidden transition-all duration-200 sm:w-72 ${
                         isWaste ? 'border-amber-200 bg-amber-50' : 'border-green-100 bg-white shadow-sm hover:shadow-md'
                       } ${isOpen ? 'shadow-md border-green-200' : ''}`}
                     >
-                    <div className="aspect-[16/10] w-full bg-gradient-to-br from-green-50 to-emerald-100">
+                    <div className="h-40 w-full shrink-0 sm:h-44 bg-gradient-to-br from-green-50 to-emerald-100">
                       {crop.image_url ? (
                         <img src={crop.image_url} alt={crop.crop_name} className="h-full w-full object-cover" />
                       ) : (
@@ -1150,10 +1150,10 @@ if (Capacitor.isNativePlatform()) {
         )}
 
         {(hasEquipment || profile.equipments_count > 0) && (
-          <section id="profile-equipment" className="order-2 min-w-0 scroll-mt-20 overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
+          <section id="profile-equipment" className="order-2 flex min-w-0 flex-col scroll-mt-20 overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
             <div className="flex items-center gap-3 border-b border-orange-100 bg-orange-50/70 p-5"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-orange-500 text-white shadow-sm"><Tractor className="h-6 w-6"/></span><div className="min-w-0 flex-1"><h3 className="text-lg font-black text-gray-900">Equipment Available</h3><p className="mt-0.5 text-xs text-orange-700">Machinery for your next farm task</p></div><span className="rounded-full border border-orange-200 bg-white px-3 py-1 text-sm font-bold text-orange-700">{equipment.length || profile.equipments_count}</span></div>
             {(
-              <ProfileCardRail label="Equipment cards" count={equipment.length}>
+              <ProfileCardRail label="Equipment cards" count={equipment.length} reserveControls={crops.length > 1}>
                 {equipment.length === 0 ? (
                   <EmptyState text="No equipment listed yet" />
                 ) : (
@@ -1176,14 +1176,14 @@ if (Capacitor.isNativePlatform()) {
                           <img
                             src={equipImg}
                             alt={equipName}
-                            className="aspect-[16/10] w-full bg-orange-50 object-cover"
+                            className="h-40 w-full shrink-0 sm:h-44 bg-orange-50 object-cover"
                           />
                         ) : (
-                          <div className="aspect-[16/10] w-full bg-gradient-to-br from-orange-50 to-amber-100 flex items-center justify-center">
+                          <div className="h-40 w-full shrink-0 sm:h-44 bg-gradient-to-br from-orange-50 to-amber-100 flex items-center justify-center">
                             <Tractor className="h-12 w-12 text-orange-300" />
                           </div>
                         )}
-                        <div className="w-full min-w-0 p-4">
+                        <div className="w-full min-w-0 flex-1 p-4">
                           <p className="text-base font-black text-gray-900">{equipName}</p>
                           {equipModel ? <p className="text-xs text-gray-500">Model: {equipModel}</p> : null}
                           {equipCond  ? <p className="text-xs text-gray-400">Condition: {equipCond}</p> : null}
