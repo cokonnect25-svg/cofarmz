@@ -406,7 +406,7 @@ useEffect(() => {
 
   // Manage which sections are open (multi-expand)
   const [openSections, setOpenSections] = useState<Set<string>>(() => {
-    const initial = new Set<string>();
+    const initial = new Set<string>(['crops', 'equipment']);
     if (tabParam) initial.add(tabParam);
     return initial;
   });
