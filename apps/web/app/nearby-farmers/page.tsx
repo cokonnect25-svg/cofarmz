@@ -103,63 +103,26 @@ const COUNTRY_OPTIONS = [
 // ── Online Status Hook (batch check) — same as chat page ───────────────────
 function useOnlineStatuses(userIds: string[]) {
   const [statuses, setStatuses] = useState<Record<string, { isOnline: boolean; lastSeen: string | null }>>({});
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (userIds.length === 0) return;
-    let shouldReconnect = true;
+    let cancelled = false;
 
-    const connect = () => {
-      if (!shouldReconnect) return;
-      try {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const ws = new WebSocket(`${protocol}//${window.location.host}/api/socket`);
-
-        ws.onopen = () => {
-          ws.send(JSON.stringify({ type: 'subscribe_batch', userIds }));
-        };
-
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.type === 'presence_batch') {
-              setStatuses(data.statuses);
-            } else if (data.type === 'presence') {
-              setStatuses(prev => ({
-                ...prev,
-                [data.userId]: { isOnline: data.isOnline, lastSeen: data.lastSeen }
-              }));
-            }
-          } catch (e) {}
-        };
-
-        ws.onclose = () => {
-          if (!shouldReconnect) return;
-          if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-          reconnectTimeoutRef.current = setTimeout(connect, 5000);
-        };
-
-        wsRef.current = ws;
-      } catch (e) {}
-    };
-
-    connect();
-
-    const pollInterval = setInterval(async () => {
+    const poll = async () => {
       try {
         const res = await fetch(getApiUrl(`/api/users/online-batch?userIds=${userIds.join(',')}`));
-        if (res.ok) {
+        if (res.ok && !cancelled) {
           const data = await res.json();
+          if (cancelled) return;
           setStatuses(data.statuses || {});
         }
       } catch {}
-    }, 15000);
+    };
+    void poll();
+    const pollInterval = setInterval(poll, 15000);
 
     return () => {
-      shouldReconnect = false;
-      wsRef.current?.close();
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      cancelled = true;
       clearInterval(pollInterval);
     };
   }, [userIds.join(',')]);

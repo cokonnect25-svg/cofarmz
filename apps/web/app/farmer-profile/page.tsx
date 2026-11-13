@@ -896,7 +896,7 @@ if (Capacitor.isNativePlatform()) {
           <section id="profile-crops" className="order-1 flex min-w-0 flex-col scroll-mt-20 overflow-hidden rounded-3xl border border-green-100 bg-white shadow-sm">
             <div className="flex items-center gap-3 border-b border-green-100 bg-green-50/70 p-5"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-green-600 text-white shadow-sm"><Wheat className="h-6 w-6"/></span><div className="min-w-0 flex-1"><h3 className="text-lg font-black text-gray-900">{role === 'farmer' ? 'Current crops' : role === 'buyer' ? 'Crops wanted' : 'Crops & Expertise'}</h3><p className="mt-0.5 text-xs text-green-700">{role === 'buyer' ? 'What this buyer is looking for' : 'Explore what’s growing on the farm'}</p></div><span className="rounded-full border border-green-200 bg-white px-3 py-1 text-sm font-bold text-green-700">{crops.length}</span></div>
             {(
-              <ProfileCardRail label="Crop cards" count={crops.length} reserveControls={equipment.length > 1}>
+              <div role="region" aria-label="Crop list" tabIndex={0} className="max-h-[32rem] space-y-3 overflow-y-auto overflow-x-hidden p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-600">
                 {crops.map((crop, idx) => {
                   const isOpen = expandedCropIdx === idx;
                   const isWaste = crop.is_crop_waste;
@@ -927,11 +927,11 @@ if (Capacitor.isNativePlatform()) {
                   return (
                     <div
                       key={idx}
-                      className={`w-[84%] min-w-0 flex-none snap-start flex flex-col rounded-2xl border overflow-hidden transition-all duration-200 sm:w-72 ${
+                      className={`grid w-full min-w-0 grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-x-3 rounded-2xl border overflow-hidden transition-all duration-200 sm:grid-cols-[6rem_minmax(0,1fr)] ${
                         isWaste ? 'border-amber-200 bg-amber-50' : 'border-green-100 bg-white shadow-sm hover:shadow-md'
                       } ${isOpen ? 'shadow-md border-green-200' : ''}`}
                     >
-                    <div className="h-40 w-full shrink-0 sm:h-44 bg-gradient-to-br from-green-50 to-emerald-100">
+                    <div className="m-2 h-20 w-16 self-start overflow-hidden rounded-xl sm:h-24 sm:w-20 bg-gradient-to-br from-green-50 to-emerald-100">
                       {crop.image_url ? (
                         <img src={crop.image_url} alt={crop.crop_name} className="h-full w-full object-cover" />
                       ) : (
@@ -942,7 +942,7 @@ if (Capacitor.isNativePlatform()) {
                     </div>                      {/* ── Crop Header — always tap to expand ── */}
                       <button
                         aria-expanded={isOpen}
-                        className="w-full text-left p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-600"
+                        className="min-w-0 w-full text-left py-3 pr-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-600"
                         onClick={() => setExpandedCropIdx(isOpen ? null : idx)}
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -993,7 +993,7 @@ if (Capacitor.isNativePlatform()) {
 
                       {/* ── Expanded Panel ── */}
                       {isOpen && (
-                        <div className="border-t border-dashed border-gray-200">
+                        <div className="col-span-2 border-t border-dashed border-gray-200">
 
                           {crop.comment && <div className="px-3 py-3 text-sm text-gray-700 whitespace-pre-wrap break-words"><strong>Comment:</strong> {crop.comment}</div>}
                           {/* ── Cert / Grade Panel ── */}
@@ -1104,7 +1104,7 @@ if (Capacitor.isNativePlatform()) {
                     </div>
                   );
                 })}
-              </ProfileCardRail>
+              </div>
             )}
           </section>
         )}

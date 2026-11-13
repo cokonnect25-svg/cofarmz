@@ -1627,8 +1627,8 @@ const fetchFollowersCounts = async () => {
                 {farmerCrops.length === 0
                   ? <div className="text-center py-8"><p className="text-sm text-gray-600 mb-3">{cropProfileEmptyLabel}</p></div>
                   : <div className="space-y-3">{farmerCrops.map(crop => (
-                    <div key={crop.id} className="bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-green-50 hover:border-green-200 transition-colors active:scale-[0.98]" onClick={() => setSelectedCrop(crop)}>
-{crop.image_url && <img src={crop.image_url} alt={crop.crop_name} className="mb-3 h-32 w-full rounded-lg object-cover" />}                      <div className="flex justify-between items-start mb-2">
+                    <div key={crop.id} className="flex items-start gap-3 bg-gray-50 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-green-50 hover:border-green-200 transition-colors active:scale-[0.98]" onClick={() => setSelectedCrop(crop)}>
+<div className="h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-green-100 sm:h-24 sm:w-20">{crop.image_url ? <img src={crop.image_url} alt={crop.crop_name} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-green-600"><i aria-hidden="true" className="ph-bold ph-plant text-3xl"></i></div>}</div><div className="min-w-0 flex-1">                      <div className="flex justify-between items-start mb-2">
                         <h4 className="font-semibold text-sm text-gray-900">{crop.crop_name}</h4>
                         <div className="flex gap-1">
                           <button onClick={(e) => { e.stopPropagation(); handleEditCropClick(crop); }} className="text-blue-600 hover:text-blue-700 text-xs p-1">
@@ -1639,7 +1639,7 @@ const fetchFollowersCounts = async () => {
                           </button>
                         </div>
                       </div>
-                      <div className="text-xs text-gray-600 space-y-1">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
                         {crop.expertise_level && <p>Level: {crop.expertise_level}</p>}
                         {crop.is_crop_waste && <p className="text-orange-700 font-semibold">🌾 Crop Waste</p>}
                         {crop.expected_yield_date && <p className="text-green-700 font-medium">{userRole === 'farmer' || userRole === 'fpo' ? 'Expected Yield' : 'Want to Buy By'}: {new Date(crop.expected_yield_date).toLocaleDateString()}</p>}
@@ -1662,6 +1662,7 @@ const fetchFollowersCounts = async () => {
                           ) : null;
                         })()}
                       </div>
+                    </div>
                     </div>
                   ))}</div>
                 }

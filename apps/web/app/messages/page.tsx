@@ -58,54 +58,26 @@ function safeTime(dateStr: any): string {
 function useOnlineStatus(userId: string | null) {
   const [isOnline, setIsOnline] = useState(false);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!userId) return;
-    let shouldReconnect = true;
+    let cancelled = false;
 
-    const connect = () => {
-      if (!shouldReconnect) return;
-
-      try {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const ws = new WebSocket(`${protocol}//${window.location.host}/api/socket`);
-        ws.onopen = () => ws.send(JSON.stringify({ type: 'subscribe', userId }));
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.type === 'presence' && data.userId === userId) {
-              setIsOnline(data.isOnline);
-              setLastSeen(data.lastSeen);
-            }
-          } catch {}
-        };
-        ws.onclose = () => {
-          setIsOnline(false);
-          if (!shouldReconnect) return;
-          if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-          reconnectTimeoutRef.current = setTimeout(connect, 5000);
-        };
-        ws.onerror = () => ws.close();
-        wsRef.current = ws;
-      } catch {}
-    };
-    connect();
-    const pollInterval = setInterval(async () => {
+    const poll = async () => {
       try {
         const res = await fetch(getApiUrl(`/api/users/online?userId=${userId}`));
-        if (res.ok) {
+        if (res.ok && !cancelled) {
           const data = await res.json();
+          if (cancelled) return;
           setIsOnline(data.isOnline);
           setLastSeen(data.lastSeen);
         }
       } catch {}
-    }, 10000);
+    };
+    void poll();
+    const pollInterval = setInterval(poll, 10000);
     return () => {
-      shouldReconnect = false;
-      wsRef.current?.close();
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      cancelled = true;
       clearInterval(pollInterval);
     };
   }, [userId]);
